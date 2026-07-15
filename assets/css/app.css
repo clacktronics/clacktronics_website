@@ -1,0 +1,148 @@
+/* Shared chrome for ClackOS applications — self-contained pages under
+   content/<menu>/ that run standalone or inside a ClackOS window (iframe). */
+:root {
+  color-scheme: only light;
+  --ink: #09140d;
+  --ink-soft: #14231a;
+  --paper: #f8f2dd;
+  --paper-deep: #f3ecd1;
+  --paper-line: #d8cfa9;
+  --sage: #66755a;
+  --leaf: #4fae7d;
+  --leaf-deep: #276b47;
+  --menu-text: #f5efdb;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  background: var(--paper);
+}
+.app { display: flex; flex-direction: column; min-height: 100%; }
+.app-main { padding: 20px 26px; display: flex; flex-direction: column; gap: 16px; flex: 1; }
+
+/* ---- buttons ---- */
+.btn {
+  all: unset; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 500;
+  padding: 9px 20px; border-radius: 6px; border: 1px solid var(--ink);
+  background: var(--paper); color: var(--ink);
+}
+.btn::before { content: '[ '; }
+.btn::after { content: ' ]'; }
+.btn:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+.btn.primary { background: var(--ink); color: #f2ecd6; }
+.btn.primary:hover { background: var(--leaf-deep); border-color: var(--leaf-deep); }
+.btn.ghost:hover { background: var(--paper-deep); }
+
+/* ---- inputs ---- */
+input[type="text"], select {
+  font: inherit; font-size: 12.5px; color: var(--ink); background: var(--paper-deep);
+  border: 1px solid var(--ink); border-radius: 6px; padding: 6px 10px;
+}
+input[type="text"]:focus-visible, select:focus-visible {
+  outline: 2px solid var(--leaf); outline-offset: 1px;
+}
+input[type="range"] { accent-color: var(--leaf-deep); }
+
+/* ---- in-app menu bar ---- */
+.rm-bar {
+  display: flex; gap: 2px; padding: 0 8px;
+  background: var(--paper-deep); border-bottom: 1px solid var(--paper-line);
+}
+.rm { position: relative; }
+.rm > button {
+  all: unset; cursor: pointer; padding: 8px 12px; font: inherit; font-size: 12px; color: var(--ink);
+}
+.rm > button:hover, .rm.open > button { background: var(--ink); color: var(--menu-text); }
+.rm > button:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+.rm-dd {
+  position: absolute; top: 100%; left: 0; min-width: 240px; z-index: 20;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 0 0 8px 8px;
+  display: none; padding: 6px 2px;
+}
+.rm.open .rm-dd { display: block; }
+.rm-dd button {
+  all: unset; box-sizing: border-box; display: block; width: 100%; cursor: pointer;
+  padding: 7px 14px; font: inherit; font-size: 12px; color: var(--ink); white-space: nowrap;
+}
+.rm-dd button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
+.rm-dd button:disabled { color: #b3ab8d; cursor: default; }
+.rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
+
+.app-lbl {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--leaf-deep);
+}
+.app-status { font-size: 11.5px; color: var(--sage); line-height: 1.7; }
+.app-panel {
+  border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep);
+  padding: 12px 14px; font-size: 11.5px; line-height: 1.8; color: var(--ink-soft);
+}
+
+/* ---- sound recorder ---- */
+.rec-top { display: flex; gap: 14px; align-items: stretch; }
+.rec-counter { display: flex; flex-direction: column; gap: 6px; min-width: 92px; }
+.rec-pos, .rec-len {
+  font-size: 13px; color: var(--ink); background: var(--paper-deep);
+  border: 1px solid var(--ink); border-radius: 6px; padding: 8px 10px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.rec-scope { flex: 1; min-width: 120px; border: 1px solid var(--ink); border-radius: 6px; background: var(--ink); }
+.rec-seek { width: 100%; }
+.rec-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+.rec-record { color: #a04a3a; }
+
+/* ---- pattern editor ---- */
+.pat-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.pat-head label { display: flex; gap: 10px; align-items: center; color: var(--ink); font-weight: 500; }
+.pat-name { width: 160px; }
+.pat-main { display: flex; flex-wrap: wrap; gap: 28px; }
+.pat-sample { width: 130px; height: 185px; border: 1px solid var(--ink); border-radius: 6px; }
+.pat-grid {
+  display: grid; grid-template-columns: repeat(8, 22px); grid-auto-rows: 22px;
+  gap: 1px; background: var(--paper-line); border: 1px solid var(--ink);
+  border-radius: 4px; overflow: hidden; width: max-content; touch-action: none;
+}
+.pat-cell { all: unset; background: var(--paper); cursor: crosshair; }
+.pat-cell.on { background: var(--ink); }
+.pat-cell:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+.pat-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ---- paint ---- */
+.paint-main { display: flex; gap: 14px; padding: 14px; flex: 1; min-height: 0; }
+.paint-tools {
+  display: grid; grid-template-columns: repeat(2, 36px); grid-auto-rows: 36px; gap: 6px;
+  align-content: start; flex: none;
+}
+.paint-tool {
+  all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; border: 1px solid var(--ink); border-radius: 6px;
+  background: var(--paper); color: var(--ink);
+}
+.paint-tool:hover { background: var(--paper-deep); }
+.paint-tool.active { background: var(--ink); color: var(--menu-text); }
+.paint-tool:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.paint-size { grid-column: span 2; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.paint-size input { width: 100%; }
+.paint-canvas-wrap { flex: 1; overflow: auto; min-height: 0; }
+.paint-stack {
+  position: relative; width: 640px; height: 400px;
+  border: 1px solid var(--ink); cursor: crosshair; touch-action: none;
+}
+.paint-stack canvas { position: absolute; inset: 0; }
+.paint-stack .overlay { pointer-events: none; }
+.paint-bottom { display: flex; align-items: center; gap: 14px; padding: 0 14px 14px; flex-wrap: wrap; }
+.paint-current { position: relative; width: 38px; height: 38px; flex: none; }
+.paint-current .fg, .paint-current .bg {
+  position: absolute; width: 24px; height: 24px; border: 1px solid var(--ink); border-radius: 4px;
+}
+.paint-current .bg { right: 0; bottom: 0; }
+.paint-current .fg { left: 0; top: 0; z-index: 1; }
+.paint-palette { display: grid; grid-template-columns: repeat(14, 20px); grid-auto-rows: 20px; gap: 3px; }
+.paint-swatch {
+  all: unset; cursor: pointer; border: 1px solid var(--ink); border-radius: 3px;
+}
+.paint-swatch:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.paint-status { padding: 0 16px 12px; font-size: 11.5px; color: var(--sage); }

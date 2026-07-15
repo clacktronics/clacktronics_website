@@ -22,12 +22,20 @@ content/
     menu.json
   view/                     ← VIEW menu (actions only)
     menu.json
-  desktop/                  ← DESKTOP menu (wallpaper picker)
+  desktop/                  ← DESKTOP menu
     menu.json
-  special/                  ← SPECIAL menu
+    patterns.html           ← pattern editor app
+  applications/             ← APPLICATIONS menu
     menu.json
+    paint.html              ← Paint app
+    recorder.html           ← Sound Recorder app
     about.md
 ```
+
+Apps (`*.html`) are complete standalone pages — open
+`content/applications/paint.html` directly and it works on its own — and
+ClackOS shows the very same page inside a desktop window (an iframe). They
+share `assets/css/app.css` for the look.
 
 There is **no build step**: the browser fetches `site.json`, each folder's
 `menu.json`, and the markdown files at runtime. Edit a `.md` file, refresh,
@@ -103,29 +111,37 @@ listing every post newest-first, grouped by year.
 ```
 
 ```json
-{ "type": "app", "app": "patterns", "label": "Edit pattern…" }
+{ "type": "app", "page": "paint.html", "label": "Paint…", "title": "Paint",
+  "width": 820, "height": 620, "multi": true }
 ```
 
 Built-in actions: `close-front`, `tidy`, `toggle-taskbar`, `copy`, `restart`.
 `{ "type": "wallpapers" }` expands to the wallpaper picker (wallpapers are SVG
-tiles defined in `assets/js/clackos.js`). `"app"` items open JS-built windows
-from the `apps` registry in `clackos.js`. An app with `multi: true` opens a
+tiles defined in `assets/js/clackos.js`). `"app"` items open the given HTML
+page from the same menu folder in a desktop window; `multi: true` opens a
 fresh instance every time it's picked from the menu. Current apps:
 
-- `patterns` (Desktop → Edit pattern…) — a Windows 3-style 8×8 desktop
-  pattern editor. Saved patterns live in the browser's localStorage, appear
-  in the Desktop menu alongside the built-in wallpapers, and the chosen
-  wallpaper is remembered between visits.
-- `recorder` (Special → Sound Recorder…) — a Windows 98-style sound
-  recorder with the full sndrec32 feature set. Records from the microphone
-  (needs HTTPS + permission) with a live oscilloscope; recordings are
-  inserted at the current position like the original. File: New, Open,
-  Save/Save As (16-bit mono .wav), Revert, Properties. Edit: Copy,
-  Paste Insert, Paste Mix (one clipboard shared across instances),
-  Insert/Mix with File, Delete Before/After Current Position. Effects:
-  Increase/Decrease Volume, Increase/Decrease Speed (pitch shifts, like the
-  original), Add Echo, Reverse. Multi-instance: every menu pick opens
-  another recorder.
+- `desktop/patterns.html` (Desktop → Edit pattern…) — a Windows 3-style 8×8
+  desktop pattern editor. Saved patterns live in the browser's localStorage,
+  appear in the Desktop menu alongside the built-in wallpapers, and the
+  chosen wallpaper is remembered between visits. The desktop listens for
+  localStorage changes, so applying works live from the windowed app, a
+  standalone tab, or another window.
+- `applications/recorder.html` (Applications → Sound Recorder…) — a Windows
+  98-style sound recorder with the full sndrec32 feature set. Records from
+  the microphone (needs HTTPS + permission) with a live oscilloscope;
+  recordings are inserted at the current position like the original. File:
+  New, Open, Save/Save As (16-bit mono .wav), Revert, Properties. Edit:
+  Copy, Paste Insert, Paste Mix (one clipboard shared across instances via
+  BroadcastChannel), Insert/Mix with File, Delete Before/After Current
+  Position. Effects: Increase/Decrease Volume, Increase/Decrease Speed
+  (pitch shifts, like the original), Add Echo, Reverse. Multi-instance.
+- `applications/paint.html` (Applications → Paint…) — a Windows 95-style
+  Paint: pencil, brush, eraser, airbrush, flood fill, colour picker, line,
+  rectangle (outline/filled) and ellipse tools with a size slider; the
+  classic 28-colour box with left/right-click foreground/background
+  colours; undo/redo; File New/Open/Save (PNG download); Image menu with
+  Clear, Invert Colours and Flip Horizontal/Vertical. Multi-instance.
 
 ### Adding a whole new menu
 

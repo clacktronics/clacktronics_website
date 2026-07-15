@@ -1,9 +1,0 @@
-{
-  "label": "Special",
-  "items": [
-    { "type": "window", "md": "about.md", "label": "About ClackOS…" },
-    { "type": "app", "app": "recorder", "label": "Sound Recorder…" },
-    { "type": "sep" },
-    { "type": "action", "action": "restart", "label": "Restart" }
-  ]
-}

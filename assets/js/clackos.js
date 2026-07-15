@@ -259,650 +259,11 @@ function buildWallpaperMenu(container) {
   }
 }
 
-/* ---------------- Audio helpers (Sound Recorder) ---------------- */
-/* one clipboard shared by every recorder instance, like the real thing */
-let audioClipboard = null;
-
-function encodeWav(samples, rate) {
-  const n = samples.length;
-  const buf = new ArrayBuffer(44 + n * 2);
-  const v = new DataView(buf);
-  const wstr = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  wstr(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); wstr(8, 'WAVE');
-  wstr(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-  wstr(36, 'data'); v.setUint32(40, n * 2, true);
-  for (let i = 0; i < n; i++) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-  }
-  return new Blob([buf], { type: 'audio/wav' });
-}
-
-async function decodeToMono(arrayBuffer, actx) {
-  const buf = await actx.decodeAudioData(arrayBuffer);
-  const ch = buf.numberOfChannels;
-  const out = new Float32Array(buf.length);
-  for (let c = 0; c < ch; c++) {
-    const d = buf.getChannelData(c);
-    for (let i = 0; i < buf.length; i++) out[i] += d[i] / ch;
-  }
-  return { samples: out, rate: buf.sampleRate };
-}
-
-function resampleLinear(src, srcRate, dstRate) {
-  if (srcRate === dstRate) return src;
-  const n = Math.round(src.length * dstRate / srcRate);
-  const out = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const t = i * srcRate / dstRate;
-    const i0 = Math.floor(t), f = t - i0;
-    out[i] = (src[i0] || 0) * (1 - f) + (src[i0 + 1] || 0) * f;
-  }
-  return out;
-}
-
-/* ---------------- App windows (JS-built, not markdown) ---------------- */
-const apps = {
-  patterns: {
-    title: 'Desktop — Edit Pattern',
-    width: '600', height: '540',
-    mount(body) {
-      body.innerHTML = `
-        <div class="pat">
-          <div class="pat-head">
-            <label>Name <input class="pat-name" maxlength="24" placeholder="My pattern"></label>
-            <select class="pat-sel" aria-label="Saved patterns"></select>
-          </div>
-          <div class="pat-main">
-            <div>
-              <p class="pat-lbl">Sample</p>
-              <div class="pat-sample"></div>
-            </div>
-            <div>
-              <p class="pat-lbl">Pixels — click or drag to flip</p>
-              <div class="pat-grid" aria-label="8 by 8 pattern grid"></div>
-            </div>
-          </div>
-          <div class="pat-btns">
-            <button class="btn primary" data-pat="apply">Apply to desktop</button>
-            <button class="btn ghost" data-pat="add">Add</button>
-            <button class="btn ghost" data-pat="remove">Remove</button>
-            <button class="btn ghost" data-pat="clear">Clear</button>
-          </div>
-          <p class="pat-hint">Add saves the pattern under its name (overwriting a pattern with the
-          same name); saved patterns appear in the Desktop menu. Apply also saves, then sets the
-          desktop. Patterns live in this browser's storage.</p>
-        </div>`;
-
-      let rows = new Array(8).fill(0);
-      const grid = body.querySelector('.pat-grid');
-      const cells = [];
-      for (let i = 0; i < 64; i++) {
-        const c = document.createElement('button');
-        c.className = 'pat-cell';
-        c.setAttribute('aria-label', `pixel column ${i % 8 + 1}, row ${(i >> 3) + 1}`);
-        grid.appendChild(c);
-        cells.push(c);
-      }
-      const sample = body.querySelector('.pat-sample');
-      const nameInput = body.querySelector('.pat-name');
-      const sel = body.querySelector('.pat-sel');
-
-      const bit = i => (rows[i >> 3] >> (7 - (i % 8))) & 1;
-      const flip = (i, v) => {
-        const mask = 1 << (7 - (i % 8));
-        rows[i >> 3] = v ? rows[i >> 3] | mask : rows[i >> 3] & ~mask;
-      };
-      const render = () => {
-        cells.forEach((c, i) => c.classList.toggle('on', !!bit(i)));
-        const wp = patternWallpaper(rows);
-        sample.style.backgroundColor = wp.color;
-        sample.style.backgroundImage = wp.image;
-      };
-      const refreshSel = () => {
-        sel.innerHTML = '<option value="">Saved patterns…</option>' +
-          Object.keys(loadPatterns()).map(n => `<option>${esc(n)}</option>`).join('');
-      };
-
-      /* click to toggle, drag to paint with the first cell's new value */
-      let paint = null;
-      grid.addEventListener('pointerdown', e => {
-        const i = cells.indexOf(e.target);
-        if (i < 0) return;
-        paint = !bit(i);
-        flip(i, paint);
-        render();
-      });
-      grid.addEventListener('pointerover', e => {
-        if (paint === null || !(e.buttons & 1)) return;
-        const i = cells.indexOf(e.target);
-        if (i >= 0) { flip(i, paint); render(); }
-      });
-      window.addEventListener('pointerup', () => { paint = null; });
-
-      sel.addEventListener('change', () => {
-        const saved = loadPatterns()[sel.value];
-        if (saved) { rows = saved.slice(); nameInput.value = sel.value; render(); }
-      });
-
-      body.querySelector('.pat-btns').addEventListener('click', e => {
-        const act = e.target.dataset.pat;
-        if (!act) return;
-        const name = nameInput.value.trim();
-        const store = loadPatterns();
-        if (act === 'clear') { rows = new Array(8).fill(0); render(); return; }
-        if (act === 'remove') {
-          if (!name || !store[name]) return;
-          delete store[name];
-          savePatterns(store);
-          refreshSel();
-          if (currentWallpaper === name) applyWallpaper('Sand dots');
-          else wallpaperDropdowns.forEach(buildWallpaperMenu);
-          return;
-        }
-        /* add + apply both save under the given name */
-        const finalName = name || 'Untitled';
-        if (wallpapers[finalName]) {
-          nameInput.value = '';
-          nameInput.placeholder = `"${finalName}" is a built-in`;
-          return;
-        }
-        store[finalName] = rows.slice();
-        savePatterns(store);
-        refreshSel();
-        sel.value = finalName;
-        nameInput.value = finalName;
-        if (act === 'apply') applyWallpaper(finalName);
-        else wallpaperDropdowns.forEach(buildWallpaperMenu);
-      });
-
-      refreshSel();
-      render();
-    }
-  },
-
-  recorder: {
-    title: 'Sound Recorder',
-    width: '560', height: '470',
-    multi: true,
-    mount(body, ctx) {
-      body.innerHTML = `
-        <div class="rec">
-          <div class="rec-menubar">
-            <div class="rm"><button>File</button><div class="rm-dd">
-              <button data-cmd="new">New</button>
-              <button data-cmd="open">Open&hellip;</button>
-              <button data-cmd="save" data-need="sound">Save</button>
-              <button data-cmd="saveas" data-need="sound">Save As&hellip;</button>
-              <button data-cmd="revert">Revert</button>
-              <div class="sep"></div>
-              <button data-cmd="props">Properties</button>
-            </div></div>
-            <div class="rm"><button>Edit</button><div class="rm-dd">
-              <button data-cmd="copy" data-need="sound">Copy</button>
-              <button data-cmd="paste-insert" data-need="clip">Paste Insert</button>
-              <button data-cmd="paste-mix" data-need="clip">Paste Mix</button>
-              <div class="sep"></div>
-              <button data-cmd="insert-file">Insert File&hellip;</button>
-              <button data-cmd="mix-file">Mix with File&hellip;</button>
-              <div class="sep"></div>
-              <button data-cmd="del-before" data-need="sound">Delete Before Current Position</button>
-              <button data-cmd="del-after" data-need="sound">Delete After Current Position</button>
-            </div></div>
-            <div class="rm"><button>Effects</button><div class="rm-dd">
-              <button data-cmd="vol-up" data-need="sound">Increase Volume (by 25%)</button>
-              <button data-cmd="vol-down" data-need="sound">Decrease Volume</button>
-              <div class="sep"></div>
-              <button data-cmd="speed-up" data-need="sound">Increase Speed (by 100%)</button>
-              <button data-cmd="speed-down" data-need="sound">Decrease Speed</button>
-              <div class="sep"></div>
-              <button data-cmd="echo" data-need="sound">Add Echo</button>
-              <button data-cmd="reverse" data-need="sound">Reverse</button>
-            </div></div>
-          </div>
-          <div class="rec-main">
-            <div class="rec-top">
-              <div class="rec-counter">
-                <span class="rec-lbl">Position:</span>
-                <span class="rec-pos">0.00 sec.</span>
-              </div>
-              <canvas class="rec-scope" width="220" height="84" aria-label="Waveform display"></canvas>
-              <div class="rec-counter">
-                <span class="rec-lbl">Length:</span>
-                <span class="rec-len">0.00 sec.</span>
-              </div>
-            </div>
-            <input class="rec-seek" type="range" min="0" max="1000" value="0" aria-label="Seek position">
-            <div class="rec-btns">
-              <button class="btn ghost" data-rec="rew" aria-label="Seek to start">&#9198;</button>
-              <button class="btn ghost" data-rec="fwd" aria-label="Seek to end">&#9197;</button>
-              <button class="btn ghost" data-rec="play" aria-label="Play">&#9654;</button>
-              <button class="btn ghost" data-rec="stop" aria-label="Stop">&#9632;</button>
-              <button class="btn ghost rec-record" data-rec="rec" aria-label="Record">&#9679;</button>
-            </div>
-            <p class="rec-status">No sound. Press &#9679; to record from the microphone.</p>
-            <div class="rec-props" hidden></div>
-          </div>
-        </div>`;
-
-      const posEl = body.querySelector('.rec-pos');
-      const lenEl = body.querySelector('.rec-len');
-      const status = body.querySelector('.rec-status');
-      const canvas = body.querySelector('.rec-scope');
-      const seek = body.querySelector('.rec-seek');
-      const cx = canvas.getContext('2d');
-
-      /* the sound is raw mono PCM so every menu command can splice it */
-      let samples = null, rate = 48000, pos = 0;
-      let fileName = 'Untitled.wav';
-      let saved = null;                       /* snapshot for File -> Revert */
-      let audioCtx = null, analyser = null;
-      let recorder = null, stream = null, micSrc = null, chunks = [];
-      let source = null, playing = false, startAt = 0;
-      let raf = 0, recTimer = 0, playTimer = 0, recStart = 0;
-
-      const fmt = s => s.toFixed(2) + ' sec.';
-      const dur = () => samples ? samples.length / rate : 0;
-      const posIdx = () => Math.min(samples ? samples.length : 0, Math.round(pos * rate));
-      const clamp = x => Math.max(-1, Math.min(1, x));
-      const setPos = s => {
-        posEl.textContent = fmt(s);
-        seek.value = dur() ? Math.min(1000, s / dur() * 1000) : 0;
-      };
-      const refresh = () => {
-        if (pos > dur()) pos = dur();
-        lenEl.textContent = fmt(dur());
-        setPos(pos);
-      };
-      const say = t => { status.textContent = t; };
-
-      /* ---- scope ---- */
-      const drawScope = data => {
-        const w = canvas.width, h = canvas.height;
-        cx.fillStyle = '#09140d';
-        cx.fillRect(0, 0, w, h);
-        cx.strokeStyle = '#4fae7d';
-        cx.lineWidth = 2;
-        cx.beginPath();
-        if (!data) { cx.moveTo(0, h / 2); cx.lineTo(w, h / 2); }
-        else for (let i = 0; i < data.length; i++) {
-          const x = i / data.length * w, y = data[i] / 255 * h;
-          i ? cx.lineTo(x, y) : cx.moveTo(x, y);
-        }
-        cx.stroke();
-      };
-      const scopeLoop = () => {
-        raf = requestAnimationFrame(scopeLoop);
-        const data = new Uint8Array(analyser.fftSize);
-        analyser.getByteTimeDomainData(data);
-        drawScope(data);
-      };
-      const stopScope = () => { cancelAnimationFrame(raf); raf = 0; drawScope(null); };
-
-      /* the analyser is visualisation-only and never feeds the speakers,
-       * so a live microphone can't feed back */
-      const ensureCtx = () => {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          analyser = audioCtx.createAnalyser();
-          analyser.fftSize = 512;
-          rate = samples ? rate : audioCtx.sampleRate;
-        }
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-      };
-
-      /* ---- transport ---- */
-      async function record() {
-        if (recorder || playing) return;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch {
-          say('Microphone unavailable or permission denied.');
-          return;
-        }
-        ensureCtx();
-        micSrc = audioCtx.createMediaStreamSource(stream);
-        micSrc.connect(analyser);
-        chunks = [];
-        recorder = new MediaRecorder(stream);
-        recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-        recorder.onstop = async () => {
-          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-          micSrc.disconnect();
-          stream.getTracks().forEach(t => t.stop());
-          stream = null;
-          recorder = null;
-          try {
-            const dec = await decodeToMono(await blob.arrayBuffer(), audioCtx);
-            /* like the original: the recording is inserted at the position */
-            if (!samples || !samples.length) {
-              samples = dec.samples;
-              rate = dec.rate;
-              pos = dur();
-            } else {
-              const add = resampleLinear(dec.samples, dec.rate, rate);
-              const at = posIdx();
-              const out = new Float32Array(samples.length + add.length);
-              out.set(samples.subarray(0, at));
-              out.set(add, at);
-              out.set(samples.subarray(at), at + add.length);
-              samples = out;
-              pos = (at + add.length) / rate;
-            }
-            say(`Recorded ${fmt(dec.samples.length / dec.rate)} — inserted at position.`);
-          } catch {
-            say('Could not decode the recording.');
-          }
-          refresh();
-        };
-        recorder.start();
-        recStart = performance.now();
-        const base = dur(), basePos = pos;
-        recTimer = setInterval(() => {
-          const t = (performance.now() - recStart) / 1000;
-          lenEl.textContent = fmt(base + t);
-          posEl.textContent = fmt(basePos + t);
-        }, 50);
-        say('Recording…');
-        if (!raf) scopeLoop();
-      }
-
-      function play() {
-        if (!samples || !samples.length || recorder || playing) return;
-        ensureCtx();
-        const buf = audioCtx.createBuffer(1, samples.length, rate);
-        buf.copyToChannel(samples, 0);
-        source = audioCtx.createBufferSource();
-        source.buffer = buf;
-        source.connect(analyser);
-        source.connect(audioCtx.destination);
-        const offset = pos >= dur() - 0.01 ? 0 : pos;
-        startAt = audioCtx.currentTime - offset;
-        playing = true;
-        say('Playing…');
-        source.onended = () => {
-          playing = false;
-          clearInterval(playTimer);
-          stopScope();
-          pos = Math.min(dur(), audioCtx.currentTime - startAt);
-          setPos(pos);
-          say('Stopped.');
-        };
-        source.start(0, offset);
-        if (!raf) scopeLoop();
-        playTimer = setInterval(() => {
-          pos = Math.min(dur(), audioCtx.currentTime - startAt);
-          setPos(pos);
-        }, 50);
-      }
-
-      const stopPlay = () => { if (source && playing) source.stop(); };
-      function stopAll() {
-        if (recorder) {
-          clearInterval(recTimer);
-          recorder.stop();
-          stopScope();
-        } else {
-          stopPlay();
-        }
-      }
-
-      body.querySelector('.rec-btns').addEventListener('click', e => {
-        const btn = e.target.closest('[data-rec]');
-        if (!btn) return;
-        switch (btn.dataset.rec) {
-          case 'rec': record(); break;
-          case 'stop': stopAll(); break;
-          case 'play': play(); break;
-          case 'rew': stopPlay(); pos = 0; setPos(0); break;
-          case 'fwd': stopPlay(); pos = dur(); setPos(pos); break;
-        }
-      });
-      seek.addEventListener('input', () => {
-        stopPlay();
-        pos = seek.value / 1000 * dur();
-        posEl.textContent = fmt(pos);
-      });
-
-      /* ---- edits ---- */
-      const snapshot = () => { saved = samples ? { samples: samples.slice(), rate, fileName } : null; };
-      function insertData(other, otherRate) {
-        const add = resampleLinear(other, otherRate, rate);
-        const at = posIdx();
-        const out = new Float32Array((samples ? samples.length : 0) + add.length);
-        if (samples) out.set(samples.subarray(0, at));
-        out.set(add, at);
-        if (samples) out.set(samples.subarray(at), at + add.length);
-        samples = out;
-        pos = (at + add.length) / rate;
-      }
-      function mixData(other, otherRate) {
-        const add = resampleLinear(other, otherRate, rate);
-        const at = posIdx();
-        const out = new Float32Array(Math.max(samples ? samples.length : 0, at + add.length));
-        if (samples) out.set(samples);
-        for (let i = 0; i < add.length; i++) out[at + i] = clamp(out[at + i] + add[i]);
-        samples = out;
-      }
-
-      const filePick = document.createElement('input');
-      filePick.type = 'file';
-      filePick.accept = 'audio/*,.wav';
-      let fileCb = null;
-      filePick.addEventListener('change', () => {
-        const f = filePick.files[0];
-        filePick.value = '';
-        if (f && fileCb) fileCb(f);
-      });
-      const pickFile = cb => { fileCb = cb; filePick.click(); };
-      const decodeFile = async f => {
-        ensureCtx();
-        return decodeToMono(await f.arrayBuffer(), audioCtx);
-      };
-
-      function saveWav(as) {
-        if (!samples || !samples.length) { say('Nothing to save.'); return; }
-        if (as) {
-          const n = prompt('Save as:', fileName);
-          if (!n) return;
-          fileName = /\.wav$/i.test(n) ? n : n + '.wav';
-        }
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(encodeWav(samples, rate));
-        a.download = fileName;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-        snapshot();
-        say(`Saved ${fileName} (downloaded).`);
-      }
-
-      function showProps() {
-        const el = body.querySelector('.rec-props');
-        el.hidden = !el.hidden;
-        if (el.hidden) return;
-        el.innerHTML = samples && samples.length
-          ? `<b>${esc(fileName)}</b><br>Length: ${fmt(dur())}<br>Sample rate: ${rate} Hz<br>` +
-            `Format: 16-bit mono PCM (.wav)<br>Data size: ${(samples.length * 2 / 1024).toFixed(1)} KB`
-          : 'No sound loaded.';
-      }
-
-      async function runCmd(cmd) {
-        stopAll();
-        switch (cmd) {
-          case 'new':
-            samples = new Float32Array(0);
-            pos = 0;
-            fileName = 'Untitled.wav';
-            snapshot();
-            refresh();
-            say('New sound.');
-            break;
-          case 'open':
-            pickFile(async f => {
-              try {
-                const dec = await decodeFile(f);
-                samples = dec.samples;
-                rate = dec.rate;
-                pos = 0;
-                fileName = f.name.replace(/\.[^.]+$/, '') + '.wav';
-                snapshot();
-                refresh();
-                say(`Opened ${f.name}.`);
-              } catch { say(`Could not decode ${f.name}.`); }
-            });
-            break;
-          case 'save': saveWav(false); break;
-          case 'saveas': saveWav(true); break;
-          case 'revert':
-            if (saved) {
-              samples = saved.samples.slice();
-              rate = saved.rate;
-              fileName = saved.fileName;
-            } else {
-              samples = null;
-            }
-            pos = 0;
-            refresh();
-            say('Reverted to last saved sound.');
-            break;
-          case 'props': showProps(); break;
-          case 'copy':
-            audioClipboard = { samples: samples.slice(), rate };
-            say('Copied whole sound to the clipboard.');
-            break;
-          case 'paste-insert':
-            insertData(audioClipboard.samples, audioClipboard.rate);
-            refresh();
-            say('Clipboard inserted at position.');
-            break;
-          case 'paste-mix':
-            mixData(audioClipboard.samples, audioClipboard.rate);
-            refresh();
-            say('Clipboard mixed in at position.');
-            break;
-          case 'insert-file':
-            pickFile(async f => {
-              try {
-                const dec = await decodeFile(f);
-                insertData(dec.samples, dec.rate);
-                refresh();
-                say(`${f.name} inserted at position.`);
-              } catch { say(`Could not decode ${f.name}.`); }
-            });
-            break;
-          case 'mix-file':
-            pickFile(async f => {
-              try {
-                const dec = await decodeFile(f);
-                mixData(dec.samples, dec.rate);
-                refresh();
-                say(`${f.name} mixed in at position.`);
-              } catch { say(`Could not decode ${f.name}.`); }
-            });
-            break;
-          case 'del-before':
-            samples = samples.slice(posIdx());
-            pos = 0;
-            refresh();
-            say('Deleted everything before the position.');
-            break;
-          case 'del-after':
-            samples = samples.slice(0, posIdx());
-            pos = dur();
-            refresh();
-            say('Deleted everything after the position.');
-            break;
-          case 'vol-up': {
-            const out = samples.slice();
-            for (let i = 0; i < out.length; i++) out[i] = clamp(out[i] * 1.25);
-            samples = out;
-            say('Volume increased by 25%.');
-            break;
-          }
-          case 'vol-down': {
-            const out = samples.slice();
-            for (let i = 0; i < out.length; i++) out[i] *= 0.8;
-            samples = out;
-            say('Volume decreased.');
-            break;
-          }
-          case 'speed-up': {
-            const out = new Float32Array(Math.floor(samples.length / 2));
-            for (let i = 0; i < out.length; i++) out[i] = samples[i * 2];
-            samples = out;
-            refresh();
-            say('Speed doubled (pitch goes up, like the original).');
-            break;
-          }
-          case 'speed-down': {
-            const out = new Float32Array(samples.length * 2);
-            for (let i = 0; i < out.length; i++) {
-              const t = i / 2, i0 = Math.floor(t), f = t - i0;
-              out[i] = (samples[i0] || 0) * (1 - f) + (samples[i0 + 1] || 0) * f;
-            }
-            samples = out;
-            refresh();
-            say('Speed halved (pitch goes down, like the original).');
-            break;
-          }
-          case 'echo': {
-            const d = Math.round(0.2 * rate);
-            const out = samples.slice();
-            for (let i = d; i < out.length; i++) out[i] = clamp(out[i] + samples[i - d] * 0.5);
-            samples = out;
-            say('Echo added.');
-            break;
-          }
-          case 'reverse':
-            samples = samples.slice().reverse();
-            say('Reversed.');
-            break;
-        }
-      }
-
-      /* ---- in-window menu bar ---- */
-      const rms = body.querySelectorAll('.rm');
-      const closeRm = () => rms.forEach(m => m.classList.remove('open'));
-      rms.forEach(m => {
-        m.querySelector(':scope > button').addEventListener('click', e => {
-          e.stopPropagation();
-          const was = m.classList.contains('open');
-          closeRm();
-          if (!was) {
-            const hasSound = !!(samples && samples.length);
-            m.querySelectorAll('[data-need="sound"]').forEach(b => { b.disabled = !hasSound; });
-            m.querySelectorAll('[data-need="clip"]').forEach(b => { b.disabled = !audioClipboard; });
-            m.classList.add('open');
-          }
-        });
-      });
-      body.querySelector('.rec-menubar').addEventListener('click', e => {
-        const cmd = e.target.closest('[data-cmd]');
-        if (!cmd || cmd.disabled) return;
-        closeRm();
-        runCmd(cmd.dataset.cmd);
-      });
-      document.addEventListener('click', closeRm);
-
-      ctx.onClose(() => {
-        document.removeEventListener('click', closeRm);
-        clearInterval(recTimer);
-        clearInterval(playTimer);
-        cancelAnimationFrame(raf);
-        if (recorder) try { recorder.stop(); } catch {}
-        if (stream) stream.getTracks().forEach(t => t.stop());
-        stopPlay();
-        if (audioCtx) audioCtx.close();
-      });
-
-      drawScope(null);
-    }
-  }
-};
-
 /* ---------------- Windows ---------------- */
 const windows = new Map();
+/* apps are standalone pages under content/<menu>/ shown in an iframe;
+ * defs are registered from menu.json entries at boot */
+const appDefs = new Map();
 let spawnOffset = 0;
 let appInstances = 0;
 
@@ -918,13 +279,26 @@ async function openWindow(id) {
 
   let meta, contentHtml, mount = null;
   if (id.startsWith('app:')) {
-    const app = apps[id.slice(4).split('#')[0]];
-    if (!app) return;
+    const page = id.slice(4).split('#')[0];
+    const def = appDefs.get(page);
+    if (!def) return;
     /* multi-instance apps get a fresh window id on every open */
-    if (app.multi && !id.includes('#')) id = `${id}#${++appInstances}`;
-    meta = { title: app.title, width: app.width, height: app.height };
-    windowTitles.set(id, app.title);
-    mount = app.mount;
+    if (def.multi && !id.includes('#')) id = `${id}#${++appInstances}`;
+    meta = { title: def.title || def.label || page, width: def.width, height: def.height };
+    windowTitles.set(id, meta.title);
+    mount = body => {
+      const f = document.createElement('iframe');
+      f.className = 'appframe';
+      f.src = 'content/' + page;
+      f.title = meta.title;
+      /* clicks inside the app should still raise its window */
+      f.addEventListener('load', () => {
+        try {
+          f.contentDocument.addEventListener('pointerdown', () => focusWindow(el));
+        } catch {}
+      });
+      body.appendChild(f);
+    };
   } else {
     let content;
     try {
@@ -946,7 +320,8 @@ async function openWindow(id) {
   /* windows open at 80% of the desktop unless frontmatter says otherwise;
    * width/height accept px numbers or percentages ("width: 60%") */
   const sizeOf = (v, avail) => {
-    if (v && v.trim().endsWith('%')) return Math.round(avail * parseFloat(v) / 100);
+    v = v == null ? '' : String(v);
+    if (v.trim().endsWith('%')) return Math.round(avail * parseFloat(v) / 100);
     const n = parseInt(v, 10);
     return Math.min(n || Math.round(avail * 0.8), avail - 24);
   };
@@ -994,6 +369,8 @@ async function openWindow(id) {
     if (e.target.classList.contains('dot')) return;
     e.preventDefault();
     focusWindow(el);
+    /* iframes must not swallow pointer events mid-drag */
+    document.body.classList.add('win-drag');
     const startX = e.clientX, startY = e.clientY;
     const origL = el.offsetLeft, origT = el.offsetTop;
     const move = ev => {
@@ -1006,6 +383,7 @@ async function openWindow(id) {
       rec.maxed = null;
     };
     const up = () => {
+      document.body.classList.remove('win-drag');
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
     };
@@ -1020,6 +398,7 @@ async function openWindow(id) {
       e.preventDefault();
       e.stopPropagation();
       focusWindow(el);
+      document.body.classList.add('win-drag');
       const dir = handle.dataset.dir;
       const startX = e.clientX, startY = e.clientY;
       const orig = { l: el.offsetLeft, t: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
@@ -1044,6 +423,7 @@ async function openWindow(id) {
         rec.maxed = null;
       };
       const up = () => {
+        document.body.classList.remove('win-drag');
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
       };
@@ -1179,7 +559,11 @@ function buildMenu(folder, def) {
       b.innerHTML = `${esc(item.label || '')} ${shortcut}`;
       if (item.disabled) b.disabled = true;
       if (item.type === 'window') b.dataset.action = `open:${folder}/${item.md}`;
-      else if (item.type === 'app') b.dataset.action = `open:app:${item.app}`;
+      else if (item.type === 'app') {
+        const page = `${folder}/${item.page}`;
+        appDefs.set(page, item);
+        b.dataset.action = `open:app:${page}`;
+      }
       else if (item.action) b.dataset.action = item.action;
       dd.appendChild(b);
     }
@@ -1264,6 +648,18 @@ async function boot() {
 }
 
 boot().catch(err => console.error('ClackOS failed to boot:', err));
+
+/* app pages (pattern editor) talk to the desktop through localStorage;
+ * same-origin iframes and other tabs raise storage events here */
+window.addEventListener('storage', e => {
+  if (e.key === PAT_KEY) {
+    wallpaperDropdowns.forEach(buildWallpaperMenu);
+    if (!wallpapers[currentWallpaper] && !getWallpaper(currentWallpaper)) applyWallpaper('Sand dots');
+    else if (!wallpapers[currentWallpaper]) applyWallpaper(currentWallpaper);
+  } else if (e.key === 'clackos-wallpaper' && e.newValue && e.newValue !== currentWallpaper) {
+    applyWallpaper(e.newValue);
+  }
+});
 
 window.addEventListener('resize', () => {
   windows.forEach(rec => {

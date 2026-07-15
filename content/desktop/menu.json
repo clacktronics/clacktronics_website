@@ -3,6 +3,6 @@
   "items": [
     { "type": "wallpapers" },
     { "type": "sep" },
-    { "type": "app", "app": "patterns", "label": "Edit pattern…" }
+    { "type": "app", "page": "patterns.html", "label": "Edit pattern…", "title": "Desktop — Edit Pattern", "width": 620, "height": 560 }
   ]
 }

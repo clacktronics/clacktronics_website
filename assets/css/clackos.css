@@ -227,79 +227,10 @@ pre.code {
 }
 .page a:not(.btn):hover, .plain a:hover { color: var(--leaf); }
 
-/* ---------- Pattern editor (Desktop → Edit pattern…) ---------- */
-.pat { padding: 24px 28px; font-size: 12.5px; }
-.pat-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 20px; }
-.pat-head label { display: flex; gap: 10px; align-items: center; color: var(--ink); font-weight: 500; }
-.pat-name, .pat-sel {
-  font: inherit; font-size: 12.5px; color: var(--ink); background: var(--paper-deep);
-  border: 1px solid var(--ink); border-radius: 6px; padding: 6px 10px;
-}
-.pat-name { width: 160px; }
-.pat-name:focus-visible, .pat-sel:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
-.pat-main { display: flex; flex-wrap: wrap; gap: 28px; margin-bottom: 20px; }
-.pat-lbl {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--leaf-deep); margin-bottom: 10px;
-}
-.pat-sample { width: 130px; height: 185px; border: 1px solid var(--ink); border-radius: 6px; }
-.pat-grid {
-  display: grid; grid-template-columns: repeat(8, 22px); grid-auto-rows: 22px;
-  gap: 1px; background: var(--paper-line); border: 1px solid var(--ink);
-  border-radius: 4px; overflow: hidden; width: max-content; touch-action: none;
-}
-.pat-cell { all: unset; background: var(--paper); cursor: crosshair; }
-.pat-cell.on { background: var(--ink); }
-.pat-cell:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
-.pat-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
-.pat-hint { font-size: 11.5px; line-height: 1.7; color: var(--sage); max-width: 46em; }
-
-/* ---------- Sound recorder (Special → Sound Recorder) ---------- */
-.rec { font-size: 12.5px; display: flex; flex-direction: column; min-height: 100%; }
-.rec-main { padding: 20px 26px; display: flex; flex-direction: column; gap: 16px; }
-.rec-menubar {
-  display: flex; gap: 2px; padding: 0 8px;
-  background: var(--paper-deep); border-bottom: 1px solid var(--paper-line);
-}
-.rm { position: relative; }
-.rm > button {
-  all: unset; cursor: pointer; padding: 8px 12px; font: inherit; font-size: 12px; color: var(--ink);
-}
-.rm > button:hover, .rm.open > button { background: var(--ink); color: var(--menu-text); }
-.rm > button:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
-.rm-dd {
-  position: absolute; top: 100%; left: 0; min-width: 240px; z-index: 20;
-  background: var(--paper); border: 2px solid var(--ink); border-radius: 0 0 8px 8px;
-  display: none; padding: 6px 2px;
-}
-.rm.open .rm-dd { display: block; }
-.rm-dd button {
-  all: unset; box-sizing: border-box; display: block; width: 100%; cursor: pointer;
-  padding: 7px 14px; font: inherit; font-size: 12px; color: var(--ink); white-space: nowrap;
-}
-.rm-dd button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
-.rm-dd button:disabled { color: #b3ab8d; cursor: default; }
-.rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
-.rec-props {
-  border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep);
-  padding: 12px 14px; font-size: 11.5px; line-height: 1.8; color: var(--ink-soft);
-}
-.rec-top { display: flex; gap: 14px; align-items: stretch; }
-.rec-counter { display: flex; flex-direction: column; gap: 6px; min-width: 92px; }
-.rec-lbl {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--leaf-deep);
-}
-.rec-pos, .rec-len {
-  font-size: 13px; color: var(--ink); background: var(--paper-deep);
-  border: 1px solid var(--ink); border-radius: 6px; padding: 8px 10px;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-.rec-scope { flex: 1; min-width: 120px; border: 1px solid var(--ink); border-radius: 6px; background: var(--ink); }
-.rec-seek { width: 100%; accent-color: var(--leaf-deep); }
-.rec-btns { display: flex; flex-wrap: wrap; gap: 10px; }
-.rec-record { color: #a04a3a; }
-.rec-status { font-size: 11.5px; color: var(--sage); line-height: 1.7; }
+/* ---------- App windows (iframe pages from content/) ---------- */
+.appframe { display: block; width: 100%; height: 100%; border: 0; background: var(--paper); }
+/* while dragging or resizing a window, iframes must not swallow pointer events */
+body.win-drag iframe { pointer-events: none; }
 
 /* ---------- Taskbar ---------- */
 #taskbar {
