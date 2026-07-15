@@ -1,0 +1,10 @@
+{
+  "label": "File",
+  "items": [
+    { "type": "window", "md": "home.md", "label": "Open Clacktronics", "shortcut": "⌘O" },
+    { "type": "window", "md": "readme.md", "label": "Open README.txt" },
+    { "type": "window", "md": "catalogue.md", "label": "Open Catalogue" },
+    { "type": "sep" },
+    { "type": "action", "action": "close-front", "label": "Close front window", "shortcut": "⌘W" }
+  ]
+}

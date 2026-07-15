@@ -1,0 +1,4 @@
+{
+  "menus": ["file", "edit", "view", "desktop", "special"],
+  "boot": ["file/home.md"]
+}

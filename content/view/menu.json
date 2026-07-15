@@ -1,0 +1,7 @@
+{
+  "label": "View",
+  "items": [
+    { "type": "action", "action": "tidy", "label": "Tidy windows" },
+    { "type": "action", "action": "toggle-taskbar", "label": "Toggle taskbar" }
+  ]
+}

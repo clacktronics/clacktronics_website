@@ -1,0 +1,8 @@
+{
+  "label": "Special",
+  "items": [
+    { "type": "window", "md": "about.md", "label": "About ClackOS…" },
+    { "type": "sep" },
+    { "type": "action", "action": "restart", "label": "Restart" }
+  ]
+}
