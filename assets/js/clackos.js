@@ -377,12 +377,208 @@ const apps = {
       refreshSel();
       render();
     }
+  },
+
+  recorder: {
+    title: 'Sound Recorder',
+    width: '520', height: '330',
+    multi: true,
+    mount(body, ctx) {
+      body.innerHTML = `
+        <div class="rec">
+          <div class="rec-top">
+            <div class="rec-counter">
+              <span class="rec-lbl">Position:</span>
+              <span class="rec-pos">0.00 sec.</span>
+            </div>
+            <canvas class="rec-scope" width="220" height="84" aria-label="Waveform display"></canvas>
+            <div class="rec-counter">
+              <span class="rec-lbl">Length:</span>
+              <span class="rec-len">0.00 sec.</span>
+            </div>
+          </div>
+          <input class="rec-seek" type="range" min="0" max="1000" value="0" aria-label="Seek position">
+          <div class="rec-btns">
+            <button class="btn ghost" data-rec="rew" aria-label="Seek to start">&#9198;</button>
+            <button class="btn ghost" data-rec="fwd" aria-label="Seek to end">&#9197;</button>
+            <button class="btn ghost" data-rec="play" aria-label="Play">&#9654;</button>
+            <button class="btn ghost" data-rec="stop" aria-label="Stop">&#9632;</button>
+            <button class="btn ghost rec-record" data-rec="rec" aria-label="Record">&#9679;</button>
+            <button class="btn ghost" data-rec="save" aria-label="Save recording">Save</button>
+          </div>
+          <p class="rec-status">No recording. Press &#9679; to record from the microphone.</p>
+        </div>`;
+
+      const posEl = body.querySelector('.rec-pos');
+      const lenEl = body.querySelector('.rec-len');
+      const status = body.querySelector('.rec-status');
+      const canvas = body.querySelector('.rec-scope');
+      const seek = body.querySelector('.rec-seek');
+      const cx = canvas.getContext('2d');
+      const audio = new Audio();
+
+      let audioCtx = null, analyser = null, mediaSrc = null;
+      let recorder = null, stream = null, micSrc = null, chunks = [];
+      let lastBlob = null, blobUrl = null;
+      let length = 0, recStart = 0, raf = 0, recTimer = 0, playTimer = 0;
+
+      const fmt = s => s.toFixed(2) + ' sec.';
+      const setPos = s => {
+        posEl.textContent = fmt(s);
+        seek.value = length ? Math.min(1000, s / length * 1000) : 0;
+      };
+
+      const drawScope = data => {
+        const w = canvas.width, h = canvas.height;
+        cx.fillStyle = '#09140d';
+        cx.fillRect(0, 0, w, h);
+        cx.strokeStyle = '#4fae7d';
+        cx.lineWidth = 2;
+        cx.beginPath();
+        if (!data) { cx.moveTo(0, h / 2); cx.lineTo(w, h / 2); }
+        else for (let i = 0; i < data.length; i++) {
+          const x = i / data.length * w, y = data[i] / 255 * h;
+          i ? cx.lineTo(x, y) : cx.moveTo(x, y);
+        }
+        cx.stroke();
+      };
+      const scopeLoop = () => {
+        raf = requestAnimationFrame(scopeLoop);
+        const data = new Uint8Array(analyser.fftSize);
+        analyser.getByteTimeDomainData(data);
+        drawScope(data);
+      };
+      const stopScope = () => { cancelAnimationFrame(raf); raf = 0; drawScope(null); };
+
+      /* the analyser is visualisation-only and never feeds the speakers,
+       * so a live microphone can't feed back */
+      const ensureCtx = () => {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 512;
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+      };
+
+      async function record() {
+        if (recorder) return;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch {
+          status.textContent = 'Microphone unavailable or permission denied.';
+          return;
+        }
+        ensureCtx();
+        audio.pause();
+        micSrc = audioCtx.createMediaStreamSource(stream);
+        micSrc.connect(analyser);
+        chunks = [];
+        recorder = new MediaRecorder(stream);
+        recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+        recorder.onstop = () => {
+          lastBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+          if (blobUrl) URL.revokeObjectURL(blobUrl);
+          blobUrl = URL.createObjectURL(lastBlob);
+          audio.src = blobUrl;
+          micSrc.disconnect();
+          stream.getTracks().forEach(t => t.stop());
+          stream = null;
+          recorder = null;
+          status.textContent = `Recorded ${fmt(length)} — play it back, or save it as a file.`;
+        };
+        recorder.start();
+        recStart = performance.now();
+        length = 0;
+        recTimer = setInterval(() => {
+          length = (performance.now() - recStart) / 1000;
+          lenEl.textContent = fmt(length);
+          setPos(length);
+        }, 50);
+        status.textContent = 'Recording…';
+        if (!raf) scopeLoop();
+      }
+
+      function stopAll() {
+        if (recorder) {
+          clearInterval(recTimer);
+          recorder.stop();
+          stopScope();
+          setPos(0);
+        } else {
+          audio.pause();
+        }
+      }
+
+      function play() {
+        if (!audio.src) return;
+        ensureCtx();
+        if (!mediaSrc) {
+          mediaSrc = audioCtx.createMediaElementSource(audio);
+          mediaSrc.connect(analyser);
+          mediaSrc.connect(audioCtx.destination);
+        }
+        audio.play();
+      }
+
+      audio.addEventListener('play', () => {
+        status.textContent = 'Playing…';
+        if (!raf) scopeLoop();
+        playTimer = setInterval(() => setPos(Math.min(audio.currentTime, length)), 50);
+      });
+      audio.addEventListener('pause', () => {
+        clearInterval(playTimer);
+        stopScope();
+        status.textContent = 'Stopped.';
+      });
+
+      body.querySelector('.rec-btns').addEventListener('click', e => {
+        const btn = e.target.closest('[data-rec]');
+        if (!btn) return;
+        switch (btn.dataset.rec) {
+          case 'rec': record(); break;
+          case 'stop': stopAll(); break;
+          case 'play': play(); break;
+          case 'rew': if (audio.src) { audio.currentTime = 0; setPos(0); } break;
+          case 'fwd': if (audio.src) { audio.currentTime = Math.max(0, length - 0.05); setPos(length); } break;
+          case 'save': {
+            if (!lastBlob) break;
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            const t = lastBlob.type;
+            a.download = 'clackos-recording.' + (t.includes('mp4') ? 'm4a' : t.includes('ogg') ? 'ogg' : 'webm');
+            a.click();
+            break;
+          }
+        }
+      });
+      seek.addEventListener('input', () => {
+        if (!audio.src || !length) return;
+        const s = seek.value / 1000 * length;
+        audio.currentTime = s;
+        posEl.textContent = fmt(s);
+      });
+
+      ctx.onClose(() => {
+        clearInterval(recTimer);
+        clearInterval(playTimer);
+        cancelAnimationFrame(raf);
+        if (recorder) try { recorder.stop(); } catch {}
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        audio.pause();
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+        if (audioCtx) audioCtx.close();
+      });
+
+      drawScope(null);
+    }
   }
 };
 
 /* ---------------- Windows ---------------- */
 const windows = new Map();
 let spawnOffset = 0;
+let appInstances = 0;
 
 async function openWindow(id) {
   const existing = windows.get(id);
@@ -396,8 +592,10 @@ async function openWindow(id) {
 
   let meta, contentHtml, mount = null;
   if (id.startsWith('app:')) {
-    const app = apps[id.slice(4)];
+    const app = apps[id.slice(4).split('#')[0]];
     if (!app) return;
+    /* multi-instance apps get a fresh window id on every open */
+    if (app.multi && !id.includes('#')) id = `${id}#${++appInstances}`;
     meta = { title: app.title, width: app.width, height: app.height };
     windowTitles.set(id, app.title);
     mount = app.mount;
@@ -449,13 +647,13 @@ async function openWindow(id) {
     <div class="rs se" data-dir="se"></div><div class="rs sw" data-dir="sw"></div>
     <div class="frame" aria-hidden="true"></div>`;
 
-  const winbody = el.querySelector('.winbody');
-  if (mount) mount(winbody);
-  else winbody.innerHTML = contentHtml;
-
   desktop.appendChild(el);
-  const rec = { id, el, minimised: false, maxed: null };
+  const rec = { id, el, minimised: false, maxed: null, cleanups: [] };
   windows.set(id, rec);
+
+  const winbody = el.querySelector('.winbody');
+  if (mount) mount(winbody, { onClose: fn => rec.cleanups.push(fn) });
+  else winbody.innerHTML = contentHtml;
 
   const titlebar = el.querySelector('.titlebar');
 
@@ -542,6 +740,7 @@ function focusWindow(el) {
 function closeWindow(id) {
   const rec = windows.get(id);
   if (!rec) return;
+  rec.cleanups.forEach(fn => { try { fn(); } catch {} });
   rec.el.classList.add('closing');
   setTimeout(() => { rec.el.remove(); windows.delete(id); updateTaskbar(); }, 160);
 }

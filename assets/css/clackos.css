@@ -254,6 +254,25 @@ pre.code {
 .pat-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
 .pat-hint { font-size: 11.5px; line-height: 1.7; color: var(--sage); max-width: 46em; }
 
+/* ---------- Sound recorder (Special → Sound Recorder) ---------- */
+.rec { padding: 22px 26px; font-size: 12.5px; display: flex; flex-direction: column; gap: 16px; }
+.rec-top { display: flex; gap: 14px; align-items: stretch; }
+.rec-counter { display: flex; flex-direction: column; gap: 6px; min-width: 92px; }
+.rec-lbl {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--leaf-deep);
+}
+.rec-pos, .rec-len {
+  font-size: 13px; color: var(--ink); background: var(--paper-deep);
+  border: 1px solid var(--ink); border-radius: 6px; padding: 8px 10px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.rec-scope { flex: 1; min-width: 120px; border: 1px solid var(--ink); border-radius: 6px; background: var(--ink); }
+.rec-seek { width: 100%; accent-color: var(--leaf-deep); }
+.rec-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+.rec-record { color: #a04a3a; }
+.rec-status { font-size: 11.5px; color: var(--sage); line-height: 1.7; }
+
 /* ---------- Taskbar ---------- */
 #taskbar {
   position: fixed; left: 0; right: 0; bottom: 0; height: 44px; z-index: 8500;

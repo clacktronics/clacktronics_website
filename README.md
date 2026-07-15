@@ -109,10 +109,17 @@ listing every post newest-first, grouped by year.
 Built-in actions: `close-front`, `tidy`, `toggle-taskbar`, `copy`, `restart`.
 `{ "type": "wallpapers" }` expands to the wallpaper picker (wallpapers are SVG
 tiles defined in `assets/js/clackos.js`). `"app"` items open JS-built windows
-from the `apps` registry in `clackos.js` — currently `patterns`, a Windows
-3-style 8×8 desktop pattern editor. Patterns you save there are stored in the
-browser's localStorage, appear in the Desktop menu alongside the built-in
-wallpapers, and the chosen wallpaper is remembered between visits.
+from the `apps` registry in `clackos.js`. An app with `multi: true` opens a
+fresh instance every time it's picked from the menu. Current apps:
+
+- `patterns` (Desktop → Edit pattern…) — a Windows 3-style 8×8 desktop
+  pattern editor. Saved patterns live in the browser's localStorage, appear
+  in the Desktop menu alongside the built-in wallpapers, and the chosen
+  wallpaper is remembered between visits.
+- `recorder` (Special → Sound Recorder…) — a Windows 95-style sound
+  recorder: records from the microphone (needs HTTPS + permission), shows a
+  live oscilloscope, plays back, seeks, and saves the recording as a file.
+  Multi-instance: every menu pick opens another recorder.
 
 ### Adding a whole new menu
 
