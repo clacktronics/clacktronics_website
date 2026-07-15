@@ -116,10 +116,16 @@ fresh instance every time it's picked from the menu. Current apps:
   pattern editor. Saved patterns live in the browser's localStorage, appear
   in the Desktop menu alongside the built-in wallpapers, and the chosen
   wallpaper is remembered between visits.
-- `recorder` (Special → Sound Recorder…) — a Windows 95-style sound
-  recorder: records from the microphone (needs HTTPS + permission), shows a
-  live oscilloscope, plays back, seeks, and saves the recording as a file.
-  Multi-instance: every menu pick opens another recorder.
+- `recorder` (Special → Sound Recorder…) — a Windows 98-style sound
+  recorder with the full sndrec32 feature set. Records from the microphone
+  (needs HTTPS + permission) with a live oscilloscope; recordings are
+  inserted at the current position like the original. File: New, Open,
+  Save/Save As (16-bit mono .wav), Revert, Properties. Edit: Copy,
+  Paste Insert, Paste Mix (one clipboard shared across instances),
+  Insert/Mix with File, Delete Before/After Current Position. Effects:
+  Increase/Decrease Volume, Increase/Decrease Speed (pitch shifts, like the
+  original), Add Echo, Reverse. Multi-instance: every menu pick opens
+  another recorder.
 
 ### Adding a whole new menu
 
