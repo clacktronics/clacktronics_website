@@ -139,9 +139,12 @@ fresh instance every time it's picked from the menu. Current apps:
 - `applications/circuit.html` (Applications → Circuit Simulator…) — Paul
   Falstad's CircuitJS1, vendored unmodified under `vendor/circuitjs1/`
   (GPLv2 — see the COPYING.txt and PROVENANCE.md there). The wrapper
-  page applies the ClackOS colour theme purely through CircuitJS1's own
-  startup URL parameters (whiteBackground, positiveColor, …,
-  euroResistors). Load your own circuit at startup by dropping a
+  page applies the ClackOS colour theme in two vendor-untouched layers:
+  canvas colours through CircuitJS1's own startup URL parameters
+  (whiteBackground, positiveColor, …, euroResistors), and the GUI chrome
+  (menus, toolbar, dialogs, side panel) by injecting
+  `assets/css/circuitjs-skin.css` into the same-origin iframe after
+  load. Load your own circuit at startup by dropping a
   CircuitJS text file in `content/applications/circuits/` and opening
   `circuit.html?circuit=<name>.txt` — the wrapper compresses it into the
   simulator's `ctz` parameter. `?ctz=` links exported from the simulator

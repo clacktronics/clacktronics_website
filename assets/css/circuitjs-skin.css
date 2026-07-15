@@ -1,0 +1,182 @@
+/* ClackOS skin for the vendored CircuitJS1 GUI.
+   Injected into the simulator's document by content/applications/circuit.html —
+   the vendor tree itself stays unmodified. Canvas colours are set separately
+   via CircuitJS1's startup URL parameters. */
+
+:root {
+  --ink: #09140d;
+  --ink-soft: #14231a;
+  --paper: #f8f2dd;
+  --paper-deep: #f3ecd1;
+  --paper-line: #d8cfa9;
+  --sage: #66755a;
+  --leaf: #4fae7d;
+  --leaf-deep: #276b47;
+  --menu-text: #f5efdb;
+}
+
+body {
+  font-family: 'IBM Plex Mono', monospace !important;
+  background: var(--paper) !important;
+  color: var(--ink-soft);
+  scrollbar-width: thin;
+  scrollbar-color: var(--sage) var(--paper-deep);
+}
+
+/* ---- top menu bar ---- */
+.gwt-MenuBar-horizontal {
+  background: var(--ink) !important;
+  border: none !important;
+  color: var(--menu-text) !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 12.5px !important;
+}
+.gwt-MenuBar-horizontal .gwt-MenuItem {
+  color: var(--menu-text) !important;
+  padding: 6px 12px !important;
+}
+.gwt-MenuBar-horizontal .gwt-MenuItem-selected {
+  background: var(--leaf-deep) !important;
+  color: var(--menu-text) !important;
+}
+
+/* ---- dropdown menus ---- */
+.gwt-MenuBarPopup {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: 6px 6px 0 rgba(9, 20, 13, 0.35);
+  border-radius: 0 0 8px 8px;
+}
+.gwt-MenuBarPopup .menuPopupTopLeft, .gwt-MenuBarPopup .menuPopupTopCenter,
+.gwt-MenuBarPopup .menuPopupTopRight, .gwt-MenuBarPopup .menuPopupMiddleLeft,
+.gwt-MenuBarPopup .menuPopupMiddleRight, .gwt-MenuBarPopup .menuPopupMiddleCenter,
+.gwt-MenuBarPopup .menuPopupBottomLeft, .gwt-MenuBarPopup .menuPopupBottomCenter,
+.gwt-MenuBarPopup .menuPopupBottomRight {
+  background: transparent !important;
+}
+.gwt-MenuBarPopup .gwt-MenuBar-vertical {
+  background: var(--paper) !important;
+  border: 2px solid var(--ink) !important;
+  border-radius: 0 0 8px 8px;
+  padding: 5px 2px !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 12px !important;
+}
+.gwt-MenuBar-vertical .gwt-MenuItem {
+  color: var(--ink) !important;
+  padding: 6px 14px !important;
+  border-radius: 0 !important;
+}
+.gwt-MenuBar-vertical .gwt-MenuItem-selected {
+  background: var(--ink) !important;
+  color: var(--menu-text) !important;
+}
+.gwt-MenuItem-disabled, .disabled { color: #b3ab8d !important; }
+.gwt-MenuBar .subMenuIcon-selected { background: var(--ink) !important; }
+.menuSeparatorInner {
+  background: var(--paper-line) !important;
+  border: none !important;
+  height: 1px !important;
+}
+
+/* ---- toolbar ---- */
+.palette-container {
+  background: var(--paper-deep) !important;
+  border-bottom: 1px solid var(--paper-line) !important;
+}
+.topButton {
+  border: 1px solid var(--ink) !important;
+  border-radius: 6px !important;
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+}
+.topButton:hover { background: var(--paper-deep) !important; }
+.topButton-selected { background: var(--ink) !important; color: var(--menu-text) !important; }
+
+/* ---- buttons (Reset, RUN/Stop, dialog buttons) ---- */
+.gwt-Button {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 12px !important;
+  color: var(--ink) !important;
+  background: var(--paper) !important;
+  border: 1px solid var(--ink) !important;
+  border-radius: 6px !important;
+  padding: 5px 12px !important;
+  cursor: pointer;
+}
+.gwt-Button:hover { background: var(--paper-deep) !important; }
+.gwt-Button.chbut-black { background: var(--ink) !important; color: var(--menu-text) !important; }
+.gwt-Button.chbut-white { background: var(--paper) !important; color: var(--ink) !important; }
+
+/* ---- right-hand panel ---- */
+.verticalPanel {
+  background: var(--paper-deep) !important;
+  border-left: 1px solid var(--paper-line);
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+.gwt-Label, .gwt-InlineLabel, .gwt-CheckBox, .gwt-RadioButton {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 12px !important;
+  color: var(--ink-soft);
+}
+.gwt-Label-selected {
+  border-top: 1px solid var(--ink) !important;
+  border-bottom: 1px solid var(--ink) !important;
+  color: var(--ink) !important;
+}
+.gwt-Label-1off { color: var(--sage) !important; }
+.gwt-Label-2off { color: #b3ab8d !important; }
+input[type="range"] { accent-color: var(--leaf-deep); }
+/* the sidebar sliders are canvas-drawn with a hardcoded red fill;
+ * rotate that red to ClackOS green (greys and black are unaffected) */
+.verticalPanel canvas { filter: hue-rotate(130deg) saturate(0.55) brightness(0.85); }
+
+/* ---- dialogs ---- */
+.gwt-DialogBox {
+  background: var(--paper) !important;
+  border: 2px solid var(--ink) !important;
+  border-radius: 10px;
+  box-shadow: 8px 8px 0 rgba(9, 20, 13, 0.35) !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+.gwt-DialogBox .Caption {
+  background: var(--ink) !important;
+  color: var(--menu-text) !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 12.5px !important;
+  letter-spacing: 0.03em;
+  border: none !important;
+  padding: 8px 14px !important;
+  border-radius: 8px 8px 0 0;
+}
+.gwt-DialogBox .dialogTopLeft, .gwt-DialogBox .dialogTopCenter, .gwt-DialogBox .dialogTopRight,
+.gwt-DialogBox .dialogMiddleLeft, .gwt-DialogBox .dialogMiddleRight,
+.gwt-DialogBox .dialogBottomLeft, .gwt-DialogBox .dialogBottomCenter, .gwt-DialogBox .dialogBottomRight {
+  background: transparent !important;
+}
+.gwt-DialogBox .dialogMiddleCenter { background: var(--paper) !important; }
+
+/* ---- form fields ---- */
+.gwt-TextBox, .gwt-TextArea, .gwt-ListBox {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 12px !important;
+  color: var(--ink) !important;
+  background: var(--paper-deep) !important;
+  border: 1px solid var(--ink) !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+}
+.gwt-TextBox:focus-visible, .gwt-TextArea:focus-visible, .gwt-ListBox:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 1px;
+}
+
+/* ---- scrollbars (WebKit) ---- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--paper-deep); }
+::-webkit-scrollbar-thumb {
+  background: var(--sage);
+  border-radius: 6px;
+  border: 2px solid var(--paper-deep);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--leaf-deep); }
