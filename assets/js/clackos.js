@@ -44,11 +44,18 @@ function esc(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/* Inline markdown: `code` -> keyword span, **bold**, *italic*, [text](href).
- * Links may use window:<md-path> to open a window or action:<name> to run
- * a desktop action; anything else is a normal external link. */
+/* Inline markdown: `code` -> keyword span, **bold**, *italic*, ![alt](src),
+ * [text](href). Links may use window:<md-path> to open a window or
+ * action:<name> to run a desktop action; anything else is a normal
+ * external link. */
 function inline(s) {
   s = esc(s);
+  /* images become placeholder tokens so the link pass can wrap them */
+  const imgs = [];
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_, alt, src) => {
+    imgs.push(`<img src="${src}" alt="${alt}" loading="lazy">`);
+    return `\x00${imgs.length - 1}\x00`;
+  });
   s = s.replace(/`([^`]+)`/g, '<span class="k">$1</span>');
   s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
   s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>');
@@ -59,10 +66,18 @@ function inline(s) {
       return `<a href="#" data-action="${href.slice(7)}">${text.trim()}</a>`;
     return `<a href="${href}" target="_blank" rel="noopener">${text.trim()}</a>`;
   });
+  s = s.replace(/\x00(\d+)\x00/g, (_, i) => imgs[i]);
   return s;
 }
 
 function mdToHtml(body, meta) {
+  /* lift fenced code blocks out before splitting on blank lines */
+  const fences = [];
+  body = body.replace(/```\w*\r?\n([\s\S]*?)```/g, (_, code) => {
+    fences.push(`<pre class="code">${esc(code.replace(/\s+$/, ''))}</pre>`);
+    return `\x00fence${fences.length - 1}\x00`;
+  });
+
   const blocks = body.split(/\r?\n[ \t]*\r?\n/).map(b => b.trim()).filter(Boolean);
   const out = [];
   let footerNext = false;
@@ -77,7 +92,12 @@ function mdToHtml(body, meta) {
     }
     footerNext = false;
 
-    if (/^##\s+/.test(block)) {
+    const fence = /^\x00fence(\d+)\x00$/.exec(block);
+    if (fence) {
+      out.push(fences[+fence[1]]);
+    } else if (/^>\s?/.test(block)) {
+      out.push(`<blockquote>${inline(block.replace(/^>\s?/gm, '')).replace(/\r?\n/g, '<br>')}</blockquote>`);
+    } else if (/^##\s+/.test(block)) {
       out.push(`<p class="eyebrow">${inline(block.replace(/^##\s+/, ''))}</p>`);
     } else if (/^#\s+/.test(block)) {
       out.push(`<h1>${inline(block.replace(/^#\s+/, ''))}</h1>`);

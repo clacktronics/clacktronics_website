@@ -16,6 +16,8 @@ content/
     home.md                 ← the landing window
     readme.md
     catalogue.md
+    blog.md                 ← blog index (generated, see below)
+    blog/                   ← one post per file: YYYY-MM-DD-slug.md
   edit/                     ← EDIT menu (actions only)
     menu.json
   view/                     ← VIEW menu (actions only)
@@ -55,6 +57,23 @@ tagline: Optional line     ← "page" style only, rendered under the h1
 ---
 ```
 
+### Blog posts
+
+Posts live in `content/file/blog/` as `YYYY-MM-DD-slug.md` files with the
+same frontmatter as any window (use `tagline:` for the displayed date).
+They were converted from the old Jekyll/WordPress site; images point at
+`https://clacktronics.co.uk/assets/`.
+
+To add a post: drop the file in `content/file/blog/`, then regenerate the
+index window:
+
+```sh
+python3 scripts/build_blog_index.py
+```
+
+This rewrites `content/file/blog.md` (the window behind File → Open Blog),
+listing every post newest-first, grouped by year.
+
 ### Markdown that the renderer understands
 
 - `# Heading` — window heading (in `page` style, followed by the tagline and rule)
@@ -62,6 +81,9 @@ tagline: Optional line     ← "page" style only, rendered under the h1
 - `**bold**`, `*italic*`
 - `` `text` `` — green keyword highlight (used for `$`, part numbers, hex colours)
 - `1. item` — numbered feature list, rendered as the bordered `01/02/03` box
+- `![alt](src)` — image (linked images `[![](thumb)](full)` work too)
+- ` ``` ` fenced code blocks
+- `> quote` — blockquote
 - `[label](window:file/catalogue.md)` — link that opens another window
 - `[label](action:tidy)` — link that runs a desktop action
 - `[label](https://…)` — normal external link
