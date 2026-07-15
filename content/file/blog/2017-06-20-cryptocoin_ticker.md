@@ -1,8 +1,6 @@
 ---
 title: Cryptocoin ticker
 tagline: 20 June 2017
-width: 640
-height: 560
 style: plain
 ---
 # Cryptocoin ticker

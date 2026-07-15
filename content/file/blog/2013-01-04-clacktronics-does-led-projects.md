@@ -1,8 +1,6 @@
 ---
 title: Clacktronics does LED Projects
 tagline: 4 January 2013
-width: 640
-height: 560
 style: plain
 ---
 # Clacktronics does LED Projects

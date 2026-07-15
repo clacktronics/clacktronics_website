@@ -1,7 +1,5 @@
 ---
 title: Catalogue
-width: 480
-height: 340
 style: plain
 ---
 # Catalogue

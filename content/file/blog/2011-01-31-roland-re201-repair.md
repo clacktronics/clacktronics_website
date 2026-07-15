@@ -1,8 +1,6 @@
 ---
 title: Roland Space Echo RE-201 Repair
 tagline: 31 January 2011
-width: 640
-height: 560
 style: plain
 ---
 # Roland Space Echo RE-201 Repair

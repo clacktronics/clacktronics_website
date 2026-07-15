@@ -1,8 +1,6 @@
 ---
 title: (Late) Spring Cleanout - AVRsyn
 tagline: 7 June 2011
-width: 640
-height: 560
 style: plain
 ---
 # (Late) Spring Cleanout - AVRsyn

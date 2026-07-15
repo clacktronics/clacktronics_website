@@ -1,8 +1,6 @@
 ---
 title: Paris Opera
 tagline: 26 June 2017
-width: 640
-height: 560
 style: plain
 ---
 # Paris Opera

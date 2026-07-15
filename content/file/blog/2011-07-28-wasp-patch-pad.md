@@ -1,8 +1,6 @@
 ---
 title: Wasp Patch Pad by SYNFINITY
 tagline: 28 July 2011
-width: 640
-height: 560
 style: plain
 ---
 # Wasp Patch Pad by SYNFINITY

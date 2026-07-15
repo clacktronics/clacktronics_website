@@ -1,8 +1,6 @@
 ---
 title: Scanner Cloud
 tagline: 18 May 2016
-width: 640
-height: 560
 style: plain
 ---
 # Scanner Cloud

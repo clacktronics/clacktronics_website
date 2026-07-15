@@ -1,8 +1,6 @@
 ---
 title: Star Synare 3 Page
 tagline: 29 September 2011
-width: 640
-height: 560
 style: plain
 ---
 # Star Synare 3 Page

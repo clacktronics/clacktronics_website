@@ -1,8 +1,6 @@
 ---
 title: Blog
 tagline: 44 posts from the workbench
-width: 560
-height: 560
 style: plain
 ---
 # Blog

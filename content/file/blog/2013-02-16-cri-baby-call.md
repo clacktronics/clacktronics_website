@@ -1,8 +1,6 @@
 ---
 title: Cri "baby" Call
 tagline: 16 February 2013
-width: 640
-height: 560
 style: plain
 ---
 # Cri "baby" Call

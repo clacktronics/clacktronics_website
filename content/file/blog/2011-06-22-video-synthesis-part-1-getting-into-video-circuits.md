@@ -1,8 +1,6 @@
 ---
 title: Video Synthesis Part 1 : Getting into Video Circuits
 tagline: 22 June 2011
-width: 640
-height: 560
 style: plain
 ---
 # Video Synthesis Part 1 : Getting into Video Circuits

@@ -1,8 +1,6 @@
 ---
 title: Modded Realistic Reverb 2
 tagline: 5 September 2011
-width: 640
-height: 560
 style: plain
 ---
 # Modded Realistic Reverb 2

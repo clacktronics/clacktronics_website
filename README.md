@@ -50,10 +50,10 @@ Each markdown file starts with frontmatter describing its window:
 ```markdown
 ---
 title: Projects            ← titlebar / taskbar text
-width: 480                 ← initial window size in px
-height: 360
 style: plain               ← "plain" or "page" (rich landing-page look)
-tagline: Optional line     ← "page" style only, rendered under the h1
+tagline: Optional line     ← rendered under the h1 with a rule
+width: 480                 ← optional; px or % (default: 80% of the desktop)
+height: 60%
 ---
 ```
 

@@ -1,8 +1,6 @@
 ---
 title: EDP Wasp Restoration Part 1.
 tagline: 20 April 2011
-width: 640
-height: 560
 style: plain
 ---
 # EDP Wasp Restoration Part 1.

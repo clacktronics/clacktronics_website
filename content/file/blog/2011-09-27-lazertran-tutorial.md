@@ -1,8 +1,6 @@
 ---
 title: Lazertran Tutorial
 tagline: 27 September 2011
-width: 640
-height: 560
 style: plain
 ---
 # Lazertran Tutorial

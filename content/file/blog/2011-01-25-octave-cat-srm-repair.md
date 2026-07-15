@@ -1,8 +1,6 @@
 ---
 title: Octave Cat SRM Repair
 tagline: 25 January 2011
-width: 640
-height: 560
 style: plain
 ---
 # Octave Cat SRM Repair

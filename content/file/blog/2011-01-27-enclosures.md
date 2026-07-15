@@ -1,8 +1,6 @@
 ---
 title: Small Eddystone / Hammond Enclosures
 tagline: 27 January 2011
-width: 640
-height: 560
 style: plain
 ---
 # Small Eddystone / Hammond Enclosures

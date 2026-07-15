@@ -1,8 +1,6 @@
 ---
 title: New Website
 tagline: 2 March 2015
-width: 640
-height: 560
 style: plain
 ---
 # New Website

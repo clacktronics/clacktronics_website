@@ -1,8 +1,6 @@
 ---
 title: Juno 60 Memory Repair
 tagline: 14 March 2011
-width: 640
-height: 560
 style: plain
 ---
 # Juno 60 Memory Repair

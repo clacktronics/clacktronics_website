@@ -1,8 +1,6 @@
 ---
 title: Colours, Speakers and Pulses
 tagline: 13 January 2016
-width: 640
-height: 560
 style: plain
 ---
 # Colours, Speakers and Pulses

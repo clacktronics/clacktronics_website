@@ -1,8 +1,6 @@
 ---
 title: Clacktronics back in new year!
 tagline: 25 January 2012
-width: 640
-height: 560
 style: plain
 ---
 # Clacktronics back in new year!

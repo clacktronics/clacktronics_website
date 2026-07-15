@@ -1,8 +1,6 @@
 ---
 title: AKG BX-20 Repair
 tagline: 7 February 2011
-width: 640
-height: 560
 style: plain
 ---
 # AKG BX-20 Repair

@@ -1,8 +1,6 @@
 ---
 title: Shapeoko 2 Wasteboard
 tagline: 20 March 2016
-width: 640
-height: 560
 style: plain
 ---
 # Shapeoko 2 Wasteboard

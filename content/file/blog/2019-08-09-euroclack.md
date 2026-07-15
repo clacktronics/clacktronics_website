@@ -1,8 +1,6 @@
 ---
 title: EuroClack - Mini Speaker
 tagline: 9 August 2019
-width: 640
-height: 560
 style: plain
 ---
 # EuroClack - Mini Speaker

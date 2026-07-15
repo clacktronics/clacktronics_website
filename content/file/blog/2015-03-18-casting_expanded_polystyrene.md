@@ -1,8 +1,6 @@
 ---
 title: Casting expanded polystyrene
 tagline: 18 March 2015
-width: 640
-height: 560
 style: plain
 ---
 # Casting expanded polystyrene

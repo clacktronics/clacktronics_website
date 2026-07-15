@@ -1,7 +1,5 @@
 ---
 title: clacktronics.co.uk
-width: 620
-height: 560
 style: page
 tagline: Hardware for people who read the datasheet twice.
 ---

@@ -1,8 +1,6 @@
 ---
 title: Wasp Drive - First batch complete!!
 tagline: 4 July 2011
-width: 640
-height: 560
 style: plain
 ---
 # Wasp Drive - First batch complete!!

@@ -1,8 +1,6 @@
 ---
 title: The 3D printed bandwagon
 tagline: 9 January 2013
-width: 640
-height: 560
 style: plain
 ---
 # The 3D printed bandwagon

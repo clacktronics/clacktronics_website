@@ -1,8 +1,6 @@
 ---
 title: Oxford OSCar
 tagline: 27 September 2011
-width: 640
-height: 560
 style: plain
 ---
 # Oxford OSCar

@@ -1,8 +1,6 @@
 ---
 title: Realistic Reverb Noismaking Mods
 tagline: 7 April 2011
-width: 640
-height: 560
 style: plain
 ---
 # Realistic Reverb Noismaking Mods

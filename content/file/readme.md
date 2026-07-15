@@ -1,7 +1,5 @@
 ---
 title: README.txt
-width: 480
-height: 360
 style: plain
 ---
 # README.txt

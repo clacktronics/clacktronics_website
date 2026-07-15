@@ -262,9 +262,16 @@ async function openWindow(id) {
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-label', title);
 
+  /* windows open at 80% of the desktop unless frontmatter says otherwise;
+   * width/height accept px numbers or percentages ("width: 60%") */
+  const sizeOf = (v, avail) => {
+    if (v && v.trim().endsWith('%')) return Math.round(avail * parseFloat(v) / 100);
+    const n = parseInt(v, 10);
+    return Math.min(n || Math.round(avail * 0.8), avail - 24);
+  };
   const dw = desktop.clientWidth, dh = desktop.clientHeight;
-  const w = Math.min(parseInt(meta.width, 10) || 480, dw - 24);
-  const h = Math.min(parseInt(meta.height, 10) || 360, dh - 24);
+  const w = sizeOf(meta.width, dw);
+  const h = sizeOf(meta.height, dh);
   el.style.width = w + 'px';
   el.style.height = h + 'px';
   el.style.left = Math.max(12, (dw - w) / 2 + spawnOffset) + 'px';

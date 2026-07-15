@@ -1,8 +1,6 @@
 ---
 title: Tottenham to Walthamstow
 tagline: 7 May 2013
-width: 640
-height: 560
 style: plain
 ---
 # Tottenham to Walthamstow

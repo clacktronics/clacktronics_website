@@ -25,8 +25,6 @@ frontmatter = '\n'.join([
     '---',
     'title: Blog',
     f'tagline: {len(posts)} posts from the workbench',
-    'width: 560',
-    'height: 560',
     'style: plain',
     '---',
 ])

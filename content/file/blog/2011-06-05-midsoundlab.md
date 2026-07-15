@@ -1,8 +1,6 @@
 ---
 title: MFOS Soundlab Synthesizer with MIDI
 tagline: 5 June 2011
-width: 640
-height: 560
 style: plain
 ---
 # MFOS Soundlab Synthesizer with MIDI

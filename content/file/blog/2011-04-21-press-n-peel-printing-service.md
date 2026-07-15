@@ -1,8 +1,6 @@
 ---
 title: Press N Peel Printing service
 tagline: 21 April 2011
-width: 640
-height: 560
 style: plain
 ---
 # Press N Peel Printing service

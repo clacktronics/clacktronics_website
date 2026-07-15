@@ -1,8 +1,6 @@
 ---
 title: Wanted - 'Tympani' or 'lo Tom' info
 tagline: 25 March 2015
-width: 640
-height: 560
 style: plain
 ---
 # Wanted - 'Tympani' or 'lo Tom' info

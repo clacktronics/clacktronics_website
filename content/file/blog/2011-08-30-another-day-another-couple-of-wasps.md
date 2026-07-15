@@ -1,8 +1,6 @@
 ---
 title: Another Day, Another Couple of Wasps
 tagline: 30 August 2011
-width: 640
-height: 560
 style: plain
 ---
 # Another Day, Another Couple of Wasps
