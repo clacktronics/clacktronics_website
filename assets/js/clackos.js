@@ -214,10 +214,36 @@ const wallpapers = {
 let currentWallpaper = 'Sand dots';
 const wallpaperDropdowns = [];
 
+/* user-drawn 8x8 patterns (Desktop -> Edit pattern...), kept in localStorage */
+const PAT_KEY = 'clackos-patterns';
+const PAT_FG = '#7c7355', PAT_BG = '#e3ddc6';
+
+function loadPatterns() {
+  try { return JSON.parse(localStorage.getItem(PAT_KEY)) || {}; } catch { return {}; }
+}
+function savePatterns(map) {
+  try { localStorage.setItem(PAT_KEY, JSON.stringify(map)); } catch {}
+}
+function patternWallpaper(rows) {
+  let px = '';
+  rows.forEach((row, y) => {
+    for (let x = 0; x < 8; x++)
+      if ((row >> (7 - x)) & 1)
+        px += `<rect x='${x * 2}' y='${y * 2}' width='2' height='2' fill='${PAT_FG}'/>`;
+  });
+  return { color: PAT_BG, image: svgTile(16, 16, px) };
+}
+function getWallpaper(name) {
+  if (wallpapers[name]) return wallpapers[name];
+  const rows = loadPatterns()[name];
+  return rows ? patternWallpaper(rows) : null;
+}
+
 function applyWallpaper(name) {
-  const wp = wallpapers[name];
+  const wp = getWallpaper(name);
   if (!wp) return;
   currentWallpaper = name;
+  try { localStorage.setItem('clackos-wallpaper', name); } catch {}
   desktop.style.backgroundColor = wp.color;
   desktop.style.backgroundImage = wp.image;
   wallpaperDropdowns.forEach(buildWallpaperMenu);
@@ -225,13 +251,134 @@ function applyWallpaper(name) {
 
 function buildWallpaperMenu(container) {
   container.innerHTML = '';
-  for (const name of Object.keys(wallpapers)) {
+  for (const name of [...Object.keys(wallpapers), ...Object.keys(loadPatterns())]) {
     const b = document.createElement('button');
     b.innerHTML = `<span>${name}</span><span class="check">${name === currentWallpaper ? '&#10003;' : ''}</span>`;
     b.addEventListener('click', () => { applyWallpaper(name); closeMenus(); });
     container.appendChild(b);
   }
 }
+
+/* ---------------- App windows (JS-built, not markdown) ---------------- */
+const apps = {
+  patterns: {
+    title: 'Desktop — Edit Pattern',
+    width: '600', height: '540',
+    mount(body) {
+      body.innerHTML = `
+        <div class="pat">
+          <div class="pat-head">
+            <label>Name <input class="pat-name" maxlength="24" placeholder="My pattern"></label>
+            <select class="pat-sel" aria-label="Saved patterns"></select>
+          </div>
+          <div class="pat-main">
+            <div>
+              <p class="pat-lbl">Sample</p>
+              <div class="pat-sample"></div>
+            </div>
+            <div>
+              <p class="pat-lbl">Pixels — click or drag to flip</p>
+              <div class="pat-grid" aria-label="8 by 8 pattern grid"></div>
+            </div>
+          </div>
+          <div class="pat-btns">
+            <button class="btn primary" data-pat="apply">Apply to desktop</button>
+            <button class="btn ghost" data-pat="add">Add</button>
+            <button class="btn ghost" data-pat="remove">Remove</button>
+            <button class="btn ghost" data-pat="clear">Clear</button>
+          </div>
+          <p class="pat-hint">Add saves the pattern under its name (overwriting a pattern with the
+          same name); saved patterns appear in the Desktop menu. Apply also saves, then sets the
+          desktop. Patterns live in this browser's storage.</p>
+        </div>`;
+
+      let rows = new Array(8).fill(0);
+      const grid = body.querySelector('.pat-grid');
+      const cells = [];
+      for (let i = 0; i < 64; i++) {
+        const c = document.createElement('button');
+        c.className = 'pat-cell';
+        c.setAttribute('aria-label', `pixel column ${i % 8 + 1}, row ${(i >> 3) + 1}`);
+        grid.appendChild(c);
+        cells.push(c);
+      }
+      const sample = body.querySelector('.pat-sample');
+      const nameInput = body.querySelector('.pat-name');
+      const sel = body.querySelector('.pat-sel');
+
+      const bit = i => (rows[i >> 3] >> (7 - (i % 8))) & 1;
+      const flip = (i, v) => {
+        const mask = 1 << (7 - (i % 8));
+        rows[i >> 3] = v ? rows[i >> 3] | mask : rows[i >> 3] & ~mask;
+      };
+      const render = () => {
+        cells.forEach((c, i) => c.classList.toggle('on', !!bit(i)));
+        const wp = patternWallpaper(rows);
+        sample.style.backgroundColor = wp.color;
+        sample.style.backgroundImage = wp.image;
+      };
+      const refreshSel = () => {
+        sel.innerHTML = '<option value="">Saved patterns…</option>' +
+          Object.keys(loadPatterns()).map(n => `<option>${esc(n)}</option>`).join('');
+      };
+
+      /* click to toggle, drag to paint with the first cell's new value */
+      let paint = null;
+      grid.addEventListener('pointerdown', e => {
+        const i = cells.indexOf(e.target);
+        if (i < 0) return;
+        paint = !bit(i);
+        flip(i, paint);
+        render();
+      });
+      grid.addEventListener('pointerover', e => {
+        if (paint === null || !(e.buttons & 1)) return;
+        const i = cells.indexOf(e.target);
+        if (i >= 0) { flip(i, paint); render(); }
+      });
+      window.addEventListener('pointerup', () => { paint = null; });
+
+      sel.addEventListener('change', () => {
+        const saved = loadPatterns()[sel.value];
+        if (saved) { rows = saved.slice(); nameInput.value = sel.value; render(); }
+      });
+
+      body.querySelector('.pat-btns').addEventListener('click', e => {
+        const act = e.target.dataset.pat;
+        if (!act) return;
+        const name = nameInput.value.trim();
+        const store = loadPatterns();
+        if (act === 'clear') { rows = new Array(8).fill(0); render(); return; }
+        if (act === 'remove') {
+          if (!name || !store[name]) return;
+          delete store[name];
+          savePatterns(store);
+          refreshSel();
+          if (currentWallpaper === name) applyWallpaper('Sand dots');
+          else wallpaperDropdowns.forEach(buildWallpaperMenu);
+          return;
+        }
+        /* add + apply both save under the given name */
+        const finalName = name || 'Untitled';
+        if (wallpapers[finalName]) {
+          nameInput.value = '';
+          nameInput.placeholder = `"${finalName}" is a built-in`;
+          return;
+        }
+        store[finalName] = rows.slice();
+        savePatterns(store);
+        refreshSel();
+        sel.value = finalName;
+        nameInput.value = finalName;
+        if (act === 'apply') applyWallpaper(finalName);
+        else wallpaperDropdowns.forEach(buildWallpaperMenu);
+      });
+
+      refreshSel();
+      render();
+    }
+  }
+};
 
 /* ---------------- Windows ---------------- */
 const windows = new Map();
@@ -247,14 +394,24 @@ async function openWindow(id) {
     return;
   }
 
-  let content;
-  try {
-    content = await loadContent(id);
-  } catch (err) {
-    console.error(err);
-    return;
+  let meta, contentHtml, mount = null;
+  if (id.startsWith('app:')) {
+    const app = apps[id.slice(4)];
+    if (!app) return;
+    meta = { title: app.title, width: app.width, height: app.height };
+    windowTitles.set(id, app.title);
+    mount = app.mount;
+  } else {
+    let content;
+    try {
+      content = await loadContent(id);
+    } catch (err) {
+      console.error(err);
+      return;
+    }
+    meta = content.meta;
+    contentHtml = content.html;
   }
-  const meta = content.meta;
   const title = meta.title || id;
 
   const el = document.createElement('section');
@@ -292,7 +449,9 @@ async function openWindow(id) {
     <div class="rs se" data-dir="se"></div><div class="rs sw" data-dir="sw"></div>
     <div class="frame" aria-hidden="true"></div>`;
 
-  el.querySelector('.winbody').innerHTML = content.html;
+  const winbody = el.querySelector('.winbody');
+  if (mount) mount(winbody);
+  else winbody.innerHTML = contentHtml;
 
   desktop.appendChild(el);
   const rec = { id, el, minimised: false, maxed: null };
@@ -495,6 +654,7 @@ function buildMenu(folder, def) {
       b.innerHTML = `${esc(item.label || '')} ${shortcut}`;
       if (item.disabled) b.disabled = true;
       if (item.type === 'window') b.dataset.action = `open:${folder}/${item.md}`;
+      else if (item.type === 'app') b.dataset.action = `open:app:${item.app}`;
       else if (item.action) b.dataset.action = item.action;
       dd.appendChild(b);
     }
@@ -560,7 +720,9 @@ setInterval(tick, 15000);
 
 /* ---------------- Boot ---------------- */
 async function boot() {
-  applyWallpaper('Sand dots');
+  let savedWp = null;
+  try { savedWp = localStorage.getItem('clackos-wallpaper'); } catch {}
+  applyWallpaper(savedWp && getWallpaper(savedWp) ? savedWp : 'Sand dots');
   updateTaskbar();
 
   const site = await loadJSON('content/site.json');

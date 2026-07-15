@@ -1,6 +1,8 @@
 {
   "label": "Desktop",
   "items": [
-    { "type": "wallpapers" }
+    { "type": "wallpapers" },
+    { "type": "sep" },
+    { "type": "app", "app": "patterns", "label": "Edit pattern…" }
   ]
 }

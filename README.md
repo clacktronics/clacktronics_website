@@ -102,9 +102,17 @@ listing every post newest-first, grouped by year.
 { "type": "wallpapers" }
 ```
 
+```json
+{ "type": "app", "app": "patterns", "label": "Edit pattern…" }
+```
+
 Built-in actions: `close-front`, `tidy`, `toggle-taskbar`, `copy`, `restart`.
 `{ "type": "wallpapers" }` expands to the wallpaper picker (wallpapers are SVG
-tiles defined in `assets/js/clackos.js`).
+tiles defined in `assets/js/clackos.js`). `"app"` items open JS-built windows
+from the `apps` registry in `clackos.js` — currently `patterns`, a Windows
+3-style 8×8 desktop pattern editor. Patterns you save there are stored in the
+browser's localStorage, appear in the Desktop menu alongside the built-in
+wallpapers, and the chosen wallpaper is remembered between visits.
 
 ### Adding a whole new menu
 

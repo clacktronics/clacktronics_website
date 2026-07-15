@@ -227,6 +227,33 @@ pre.code {
 }
 .page a:not(.btn):hover, .plain a:hover { color: var(--leaf); }
 
+/* ---------- Pattern editor (Desktop → Edit pattern…) ---------- */
+.pat { padding: 24px 28px; font-size: 12.5px; }
+.pat-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 20px; }
+.pat-head label { display: flex; gap: 10px; align-items: center; color: var(--ink); font-weight: 500; }
+.pat-name, .pat-sel {
+  font: inherit; font-size: 12.5px; color: var(--ink); background: var(--paper-deep);
+  border: 1px solid var(--ink); border-radius: 6px; padding: 6px 10px;
+}
+.pat-name { width: 160px; }
+.pat-name:focus-visible, .pat-sel:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.pat-main { display: flex; flex-wrap: wrap; gap: 28px; margin-bottom: 20px; }
+.pat-lbl {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--leaf-deep); margin-bottom: 10px;
+}
+.pat-sample { width: 130px; height: 185px; border: 1px solid var(--ink); border-radius: 6px; }
+.pat-grid {
+  display: grid; grid-template-columns: repeat(8, 22px); grid-auto-rows: 22px;
+  gap: 1px; background: var(--paper-line); border: 1px solid var(--ink);
+  border-radius: 4px; overflow: hidden; width: max-content; touch-action: none;
+}
+.pat-cell { all: unset; background: var(--paper); cursor: crosshair; }
+.pat-cell.on { background: var(--ink); }
+.pat-cell:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+.pat-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.pat-hint { font-size: 11.5px; line-height: 1.7; color: var(--sage); max-width: 46em; }
+
 /* ---------- Taskbar ---------- */
 #taskbar {
   position: fixed; left: 0; right: 0; bottom: 0; height: 44px; z-index: 8500;
