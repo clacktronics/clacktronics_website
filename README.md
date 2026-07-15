@@ -136,6 +136,16 @@ fresh instance every time it's picked from the menu. Current apps:
   BroadcastChannel), Insert/Mix with File, Delete Before/After Current
   Position. Effects: Increase/Decrease Volume, Increase/Decrease Speed
   (pitch shifts, like the original), Add Echo, Reverse. Multi-instance.
+- `applications/circuit.html` (Applications → Circuit Simulator…) — Paul
+  Falstad's CircuitJS1, vendored unmodified under `vendor/circuitjs1/`
+  (GPLv2 — see the COPYING.txt and PROVENANCE.md there). The wrapper
+  page applies the ClackOS colour theme purely through CircuitJS1's own
+  startup URL parameters (whiteBackground, positiveColor, …,
+  euroResistors). Load your own circuit at startup by dropping a
+  CircuitJS text file in `content/applications/circuits/` and opening
+  `circuit.html?circuit=<name>.txt` — the wrapper compresses it into the
+  simulator's `ctz` parameter. `?ctz=` links exported from the simulator
+  itself (File → Export as Link) pass straight through.
 - `applications/paint.html` (Applications → Paint…) — a Windows 95-style
   Paint: pencil, brush, eraser, airbrush, flood fill, colour picker, line,
   rectangle (outline/filled) and ellipse tools with a size slider; the
