@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Markdown Editor — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<link rel="stylesheet" href="../../vendor/easymde/easymde.min.css">
+<style>
+.app { height: 100%; }
+.md-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 14px; }
+.md-wrap .EasyMDEContainer {
+  flex: 1; min-height: 0; position: relative;
+  display: flex; flex-flow: row wrap; align-items: stretch; align-content: stretch;
+}
+.md-wrap .editor-toolbar { width: 100%; flex: none; }
+/* side-by-side: editor and preview share the row instead of EasyMDE's
+   fixed positioning, which breaks inside this flex layout */
+.EasyMDEContainer .CodeMirror-sided { flex: none !important; width: 50% !important; }
+.editor-preview-side {
+  position: static !important; flex: none; width: 50%; height: auto;
+  min-height: 0; overflow: auto;
+}
+
+/* ---- ClackOS skin for EasyMDE ---- */
+.EasyMDEContainer .CodeMirror {
+  flex: 1; min-height: 0;
+  border: 1px solid var(--ink); border-radius: 0 0 8px 8px;
+  background: var(--paper); color: var(--ink-soft);
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.7;
+}
+.CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
+.CodeMirror-selected { background: rgba(79, 174, 125, 0.25) !important; }
+.CodeMirror-focused .CodeMirror-selected { background: rgba(79, 174, 125, 0.35) !important; }
+.cm-s-easymde .cm-header { color: var(--ink); }
+.cm-s-easymde .cm-quote { color: var(--sage); font-style: italic; }
+.cm-s-easymde .cm-link, .cm-s-easymde .cm-url { color: var(--leaf-deep); }
+.cm-s-easymde .cm-comment { background: var(--paper-deep); color: var(--leaf-deep); border-radius: 3px; }
+.cm-s-easymde .cm-hr { color: var(--paper-line); }
+
+.editor-toolbar {
+  border: 1px solid var(--ink); border-bottom: none; border-radius: 8px 8px 0 0;
+  background: var(--paper-deep); opacity: 1;
+}
+.editor-toolbar button {
+  color: var(--ink) !important; border-radius: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.editor-toolbar button:hover, .editor-toolbar button.active {
+  background: var(--ink); border-color: var(--ink);
+}
+.editor-toolbar button:hover::after, .editor-toolbar button.active::after { color: var(--menu-text); }
+.editor-toolbar i.separator { border-left: 1px solid var(--paper-line); border-right: none; }
+/* text glyphs instead of FontAwesome (nothing external) */
+.editor-toolbar button i.fa { display: none; }
+.editor-toolbar button::after {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+}
+.editor-toolbar button.bold::after { content: 'B'; }
+.editor-toolbar button.italic::after { content: 'I'; font-style: italic; }
+.editor-toolbar button.strikethrough::after { content: 'S'; text-decoration: line-through; }
+.editor-toolbar button.heading::after { content: 'H'; }
+.editor-toolbar button.quote::after { content: '\201C'; font-size: 17px; }
+.editor-toolbar button.code::after { content: '</>'; font-size: 11px; }
+.editor-toolbar button.unordered-list::after { content: '\2022'; font-size: 16px; }
+.editor-toolbar button.ordered-list::after { content: '1.'; font-size: 11px; }
+.editor-toolbar button.table::after { content: '\229E'; font-size: 15px; }
+.editor-toolbar button.horizontal-rule::after { content: '\2014'; }
+.editor-toolbar button.link::after { content: 'a'; text-decoration: underline; }
+.editor-toolbar button.image::after { content: '\25A3'; }
+.editor-toolbar button.preview::after { content: '\00B6'; }
+.editor-toolbar button.side-by-side::after { content: '\25EB'; }
+.editor-toolbar button.fullscreen::after { content: '\26F6'; }
+.editor-toolbar button.undo::after { content: '\21B6'; }
+.editor-toolbar button.redo::after { content: '\21B7'; }
+
+/* preview panes rendered like ClackOS pages */
+.editor-preview, .editor-preview-side {
+  background: var(--paper); color: var(--ink-soft);
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.85;
+  padding: 24px 28px;
+}
+.editor-preview-side { border: 1px solid var(--ink); border-left: none; border-radius: 0 0 8px 0; }
+.editor-preview h1, .editor-preview-side h1,
+.editor-preview h2, .editor-preview-side h2 {
+  font-family: 'Dosis', sans-serif; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink); margin: 18px 0 10px;
+}
+.editor-preview h1, .editor-preview-side h1 { font-size: 26px; }
+.editor-preview h2, .editor-preview-side h2 { font-size: 20px; }
+.editor-preview h3, .editor-preview-side h3 { color: var(--leaf-deep); margin: 14px 0 8px; }
+.editor-preview p, .editor-preview-side p { margin-bottom: 12px; }
+.editor-preview a, .editor-preview-side a { color: var(--leaf-deep); }
+.editor-preview code, .editor-preview-side code {
+  background: var(--paper-deep); color: var(--leaf-deep); padding: 1px 5px; border-radius: 4px;
+}
+.editor-preview pre, .editor-preview-side pre {
+  background: var(--ink); color: var(--menu-text); padding: 12px 14px;
+  border-radius: 8px; overflow-x: auto; margin-bottom: 12px;
+}
+.editor-preview pre code, .editor-preview-side pre code { background: none; color: inherit; padding: 0; }
+.editor-preview blockquote, .editor-preview-side blockquote {
+  border-left: 3px solid var(--leaf-deep); padding-left: 14px; color: var(--sage);
+  font-style: italic; margin: 0 0 12px;
+}
+.editor-preview table, .editor-preview-side table { border-collapse: collapse; margin-bottom: 12px; }
+.editor-preview th, .editor-preview td, .editor-preview-side th, .editor-preview-side td {
+  border: 1px solid var(--paper-line); padding: 6px 10px;
+}
+.editor-preview th, .editor-preview-side th { background: var(--paper-deep); color: var(--ink); }
+.editor-preview ul, .editor-preview ol, .editor-preview-side ul, .editor-preview-side ol {
+  margin: 0 0 12px 22px;
+}
+.editor-preview hr, .editor-preview-side hr { border: none; border-top: 1px solid var(--ink); margin: 16px 0; }
+.editor-preview img, .editor-preview-side img { max-width: 100%; border: 1px solid var(--ink); border-radius: 6px; }
+
+.md-status { padding: 6px 16px 12px; }
+body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -8px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="rm-bar">
+    <div class="rm"><button>File</button><div class="rm-dd">
+      <button data-cmd="new">New</button>
+      <button data-cmd="open">Open&hellip;</button>
+      <button data-cmd="save">Save</button>
+      <button data-cmd="saveas">Save As&hellip;</button>
+    </div></div>
+  </div>
+  <div class="md-wrap">
+    <textarea id="ed"></textarea>
+  </div>
+  <p class="app-status md-status" id="status">untitled.md</p>
+</div>
+
+<script src="../../vendor/easymde/easymde.min.js"></script>
+<script>
+(() => {
+const status = document.getElementById('status');
+let fileName = 'untitled.md';
+let handle = null;      /* FileSystemFileHandle when the browser supports it */
+let dirty = false;
+
+const mde = new EasyMDE({
+  element: document.getElementById('ed'),
+  autofocus: true,
+  spellChecker: false,
+  nativeSpellcheck: true,
+  autoDownloadFontAwesome: false,
+  status: false,
+  sideBySideFullscreen: false,
+  tabSize: 4,
+  toolbar: ['bold', 'italic', 'strikethrough', '|', 'heading', 'quote', 'code', '|',
+            'unordered-list', 'ordered-list', 'table', 'horizontal-rule', '|',
+            'link', 'image', '|', 'preview', 'side-by-side', 'fullscreen', '|',
+            'undo', 'redo'],
+  initialValue: `# New document
+
+Write **markdown** here — headings, *emphasis*, ~~strikethrough~~, [links](https://clacktronics.co.uk),
+\`inline code\`, and:
+
+- lists
+- of
+- things
+
+1. or numbered
+2. ones
+
+> blockquotes too
+
+| tables | work |
+|--------|------|
+| yes    | fine |
+
+\`\`\`c
+// fenced code blocks
+int main(void) { return 0; }
+\`\`\`
+
+Use the toolbar or standard shortcuts (Ctrl+B, Ctrl+I…). ¶ previews, ◫ splits the view. Ctrl+S saves.
+`
+});
+
+const show = () => {
+  status.textContent = fileName + (dirty ? ' — unsaved changes' : '') +
+    (handle ? '' : '  (saving downloads the file)');
+  document.title = fileName + ' — Markdown Editor — ClackOS';
+};
+mde.codemirror.on('change', () => { if (!dirty) { dirty = true; show(); } });
+
+const fsAccess = 'showOpenFilePicker' in window;
+const mdTypes = [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown', '.txt'] } }];
+
+async function openFile() {
+  if (fsAccess) {
+    try {
+      const [h] = await window.showOpenFilePicker({ types: mdTypes });
+      const f = await h.getFile();
+      mde.value(await f.text());
+      handle = h;
+      fileName = f.name;
+      dirty = false;
+      show();
+    } catch {}
+    return;
+  }
+  picker.click();
+}
+
+const picker = document.createElement('input');
+picker.type = 'file';
+picker.accept = '.md,.markdown,.txt,text/markdown,text/plain';
+picker.addEventListener('change', async () => {
+  const f = picker.files[0];
+  picker.value = '';
+  if (!f) return;
+  mde.value(await f.text());
+  handle = null;
+  fileName = f.name;
+  dirty = false;
+  show();
+});
+
+async function writeTo(h) {
+  const w = await h.createWritable();
+  await w.write(mde.value());
+  await w.close();
+}
+
+async function saveFile(as) {
+  if (fsAccess) {
+    try {
+      if (as || !handle)
+        handle = await window.showSaveFilePicker({ types: mdTypes, suggestedName: fileName });
+      await writeTo(handle);
+      fileName = (await handle.getFile()).name;
+      dirty = false;
+      show();
+    } catch {}
+    return;
+  }
+  /* fallback: download */
+  if (as) {
+    const n = prompt('Save as:', fileName);
+    if (!n) return;
+    fileName = /\.(md|markdown|txt)$/i.test(n) ? n : n + '.md';
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([mde.value()], { type: 'text/markdown' }));
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  dirty = false;
+  show();
+}
+
+function newFile() {
+  mde.value('');
+  handle = null;
+  fileName = 'untitled.md';
+  dirty = false;
+  show();
+}
+
+/* menu */
+const rms = document.querySelectorAll('.rm');
+const closeRm = () => rms.forEach(m => m.classList.remove('open'));
+rms.forEach(m => {
+  m.querySelector(':scope > button').addEventListener('click', e => {
+    e.stopPropagation();
+    const was = m.classList.contains('open');
+    closeRm();
+    if (!was) m.classList.add('open');
+  });
+});
+document.querySelector('.rm-bar').addEventListener('click', e => {
+  const cmd = e.target.closest('[data-cmd]');
+  if (!cmd) return;
+  closeRm();
+  ({ new: newFile, open: openFile, save: () => saveFile(false), saveas: () => saveFile(true) })[cmd.dataset.cmd]();
+});
+document.addEventListener('click', closeRm);
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    saveFile(e.shiftKey);
+  }
+});
+
+/* drag and drop */
+document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
+document.addEventListener('dragleave', () => document.body.classList.remove('dragging'));
+document.addEventListener('drop', async e => {
+  e.preventDefault();
+  document.body.classList.remove('dragging');
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  mde.value(await f.text());
+  handle = null;
+  fileName = f.name;
+  dirty = false;
+  show();
+});
+
+show();
+})();
+</script>
+</body>
+</html>

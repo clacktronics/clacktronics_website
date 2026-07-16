@@ -167,6 +167,16 @@ fresh instance every time it's picked from the menu. Current apps:
   Schematic tab hidden — netlist simulation and plotting are fully
   functional. The ClackOS look is injected via
   `assets/css/eecircuit-skin.css`.
+- `applications/markdown.html` (Applications → Markdown Editor…) — a
+  markdown text editor built on EasyMDE (vendored under
+  `vendor/easymde/`, MIT). Full markdown support: toolbar with
+  headings, emphasis, strikethrough, quotes, lists, tables, code, links
+  and images; syntax-highlighted editing; inline preview and
+  side-by-side split rendered in the ClackOS style. Open/save uses the
+  File System Access API where the browser supports it (true in-place
+  saving); elsewhere saving downloads the file. Drag-and-drop works,
+  Ctrl+S saves. The toolbar icons are plain text glyphs, so nothing is
+  fetched from icon CDNs.
 - `applications/paint.html` (Applications → Paint…) — a Windows 95-style
   Paint: pencil, brush, eraser, airbrush, flood fill, colour picker, line,
   rectangle (outline/filled) and ellipse tools with a size slider; the
