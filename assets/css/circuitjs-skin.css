@@ -48,11 +48,12 @@ body div > canvas { mix-blend-mode: multiply; }
 }
 
 /* ---- dropdown menus ---- */
-.gwt-MenuBarPopup {
+/* the popup wrapper contains invisible decorator padding, so the shadow
+   must live on the visible inner menu box, not the wrapper */
+.gwt-MenuBarPopup, .gwt-PopupPanel {
   border: none !important;
   background: transparent !important;
-  box-shadow: 6px 6px 0 rgba(9, 20, 13, 0.35);
-  border-radius: 0 0 8px 8px;
+  box-shadow: none !important;
 }
 .gwt-MenuBarPopup .menuPopupTopLeft, .gwt-MenuBarPopup .menuPopupTopCenter,
 .gwt-MenuBarPopup .menuPopupTopRight, .gwt-MenuBarPopup .menuPopupMiddleLeft,
@@ -61,10 +62,12 @@ body div > canvas { mix-blend-mode: multiply; }
 .gwt-MenuBarPopup .menuPopupBottomRight {
   background: transparent !important;
 }
-.gwt-MenuBarPopup .gwt-MenuBar-vertical {
+.gwt-MenuBarPopup .gwt-MenuBar-vertical,
+.gwt-PopupPanel .gwt-MenuBar-vertical {
   background: var(--paper) !important;
   border: 2px solid var(--ink) !important;
   border-radius: 0 0 8px 8px;
+  box-shadow: 6px 6px 0 rgba(9, 20, 13, 0.35);
   padding: 5px 2px !important;
   font-family: 'IBM Plex Mono', monospace !important;
   font-size: 12px !important;
