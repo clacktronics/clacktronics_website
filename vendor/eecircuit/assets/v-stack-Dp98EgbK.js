@@ -1,0 +1,1 @@
+import{r as e}from"./chunk-DECur_0Z.js";import{S as t,y as n}from"./flex-BbJzwhnV.js";import{t as r}from"./stack-DRxNVPg-.js";var i=n(),a=(0,e(t(),1).forwardRef)(function(e,t){return(0,i.jsx)(r,{align:`center`,...e,direction:`column`,ref:t})});a.displayName=`VStack`;export{a as t};

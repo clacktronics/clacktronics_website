@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EEcircuit — ClackOS</title>
+<style>
+html, body { height: 100%; margin: 0; }
+iframe { display: block; width: 100%; height: 100%; border: 0; }
+</style>
+</head>
+<body>
+<iframe id="sim" title="EEcircuit SPICE simulator" src="../../vendor/eecircuit/index.html"></iframe>
+<script>
+/* skin the (same-origin) app without touching the vendored files */
+const sim = document.getElementById('sim');
+sim.addEventListener('load', () => {
+  try {
+    const doc = sim.contentDocument;
+    const add = href => {
+      const l = doc.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = href;
+      doc.head.appendChild(l);
+      return l;
+    };
+    add('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    const skin = add(new URL('../../assets/css/eecircuit-skin.css', location.href).href);
+    setTimeout(() => doc.head.appendChild(skin), 2500);
+  } catch (e) { console.warn('could not skin EEcircuit:', e); }
+});
+</script>
+</body>
+</html>

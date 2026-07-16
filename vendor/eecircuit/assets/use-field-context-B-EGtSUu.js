@@ -1,0 +1,1 @@
+import{st as e}from"./button-C4UhSzJH.js";var[t,n]=e({name:`FieldsetContext`,hookName:`useFieldsetContext`,providerName:`<FieldsetProvider />`,strict:!1}),[r,i]=e({name:`FieldContext`,hookName:`useFieldContext`,providerName:`<FieldProvider />`,strict:!1});export{n as i,i as n,t as r,r as t};

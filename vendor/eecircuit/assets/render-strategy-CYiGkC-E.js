@@ -1,0 +1,1 @@
+import{l as e,st as t}from"./button-C4UhSzJH.js";var[n,r]=t({name:`RenderStrategyContext`,hookName:`useRenderStrategyContext`,providerName:`<RenderStrategyPropsProvider />`}),i=t=>e()(t,[`lazyMount`,`unmountOnExit`]);export{i as n,r,n as t};

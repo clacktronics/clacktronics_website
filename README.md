@@ -158,6 +158,15 @@ fresh instance every time it's picked from the menu. Current apps:
   vendor bundle. Open files with the button or drag-and-drop (several at
   once works), or link to a file kept in `content/applications/kicad/`
   with `kicad.html?file=<name>`.
+- `applications/eecircuit.html` (Applications → EEcircuit (SPICE)…) —
+  EEcircuit, a browser SPICE simulator (ngspice as WebAssembly) with a
+  netlist editor and WebGL plotting, mirrored from eecircuit.com under
+  `vendor/eecircuit/` (app and engine are MIT — see LICENSE and
+  PROVENANCE.md there). The schematic-editor component is not openly
+  licensed, so it is not redistributed: its workers are stubbed and the
+  Schematic tab hidden — netlist simulation and plotting are fully
+  functional. The ClackOS look is injected via
+  `assets/css/eecircuit-skin.css`.
 - `applications/paint.html` (Applications → Paint…) — a Windows 95-style
   Paint: pencil, brush, eraser, airbrush, flood fill, colour picker, line,
   rectangle (outline/filled) and ellipse tools with a size slider; the

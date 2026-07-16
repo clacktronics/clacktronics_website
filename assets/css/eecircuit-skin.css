@@ -1,0 +1,39 @@
+/* ClackOS skin for the vendored EEcircuit app.
+   Injected into the same-origin iframe by content/applications/eecircuit.html. */
+
+html, body { background: #f8f2dd !important; }
+
+body, .chakra-button, .chakra-tabs__trigger, .chakra-radio-card__label,
+.chakra-text, .chakra-heading, input:not(.monaco-editor input), select, label {
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+
+/* the schematic feature is disabled in this deployment (see
+   vendor/eecircuit/PROVENANCE.md) — hide its tab */
+.chakra-tabs__trigger[data-value="schematic"] { display: none !important; }
+
+/* tabs */
+.chakra-tabs__trigger { border-radius: 6px !important; color: #14231a !important; }
+.chakra-tabs__trigger[aria-selected="true"] {
+  background: #09140d !important;
+  color: #f5efdb !important;
+}
+
+/* buttons */
+.chakra-button {
+  border-radius: 6px !important;
+  border: 1px solid #09140d !important;
+  font-size: 12.5px !important;
+}
+.chakra-button:hover { background: #f3ecd1; }
+
+/* cards / panels that ship white */
+.chakra-radio-card__item, .chakra-card, [data-part="content"] {
+  background: #f8f2dd !important;
+  border-color: #d8cfa9 !important;
+}
+
+/* scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #f3ecd1; }
+::-webkit-scrollbar-thumb { background: #66755a; border-radius: 6px; border: 2px solid #f3ecd1; }

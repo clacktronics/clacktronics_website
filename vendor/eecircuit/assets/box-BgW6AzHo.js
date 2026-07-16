@@ -1,0 +1,1 @@
+import{s as e}from"./flex-BbJzwhnV.js";var t=e(`div`);t.displayName=`Box`;export{t};

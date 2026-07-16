@@ -1,0 +1,1 @@
+var e=e=>e===`M`?`Meg`:e,t=e=>{let t=e.replace(/(\d+(?:\.\d+)?)\s*M\b/g,`$1Meg`);return t=t.replace(/\]\s*M\b/g,`]Meg`),t};export{e as n,t};
