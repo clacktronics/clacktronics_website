@@ -23,6 +23,13 @@ body {
   scrollbar-color: var(--sage) var(--paper-deep);
 }
 
+/* ---- circuit canvas ---- */
+/* CircuitJS1 only paints a white or black background into the canvas
+ * pixels; multiplying the canvas over a paper backing turns that white
+ * into ClackOS cream while leaving the wire colours saturated. */
+body div:has(> canvas) { background: var(--paper) !important; }
+body div > canvas { mix-blend-mode: multiply; }
+
 /* ---- top menu bar ---- */
 .gwt-MenuBar-horizontal {
   background: var(--ink) !important;

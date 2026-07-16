@@ -25,12 +25,12 @@ iframe { display: block; width: 100%; height: 100%; border: 0; }
  */
 (async () => {
   const params = new URLSearchParams({
-    whiteBackground: 'true',
-    positiveColor: '#276b47',   /* leaf-deep for positive voltage */
-    negativeColor: '#a04a3a',   /* muted red for negative */
+    whiteBackground: 'true',    /* painted white; the skin multiplies it to paper-cream */
+    positiveColor: '#00c000',   /* bright green positive voltage */
+    negativeColor: '#ea0000',   /* bright red negative voltage */
     neutralColor: '#66755a',    /* sage for ground/neutral */
     selectColor: '#4fae7d',     /* leaf for selection */
-    currentColor: '#a8841f',    /* dark amber current dots (visible on white) */
+    currentColor: '#a8841f',    /* dark amber current dots */
     euroResistors: 'true'
   });
   const q = new URLSearchParams(location.search);
