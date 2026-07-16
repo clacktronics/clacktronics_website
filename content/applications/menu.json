@@ -4,6 +4,7 @@
     { "type": "app", "page": "paint.html", "label": "Paint…", "title": "Paint", "width": 820, "height": 620, "multi": true },
     { "type": "app", "page": "recorder.html", "label": "Sound Recorder…", "title": "Sound Recorder", "width": 560, "height": 470, "multi": true },
     { "type": "app", "page": "circuit.html", "label": "Circuit Simulator…", "title": "Circuit Simulator", "multi": true },
+    { "type": "app", "page": "kicad.html", "label": "KiCAD Viewer…", "title": "KiCAD Viewer", "multi": true },
     { "type": "sep" },
     { "type": "window", "md": "about.md", "label": "About ClackOS…" },
     { "type": "action", "action": "restart", "label": "Restart" }

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>KiCAD Viewer — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+.kv-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 12px 16px; border-bottom: 1px solid var(--paper-line);
+  background: var(--paper-deep);
+}
+.kv-bar .app-status { flex: 1; min-width: 200px; }
+#viewer { flex: 1; min-height: 0; background: var(--paper); }
+#viewer kicanvas-embed { display: block; width: 100%; height: 100%; }
+body.dragging #viewer { outline: 3px dashed var(--leaf-deep); outline-offset: -8px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="kv-bar">
+    <button class="btn ghost" id="open">Open KiCAD file…</button>
+    <button class="btn ghost" id="example">Example schematic</button>
+    <span class="app-status" id="status">Open or drop .kicad_sch / .kicad_pcb files (several at once is fine).</span>
+  </div>
+  <div id="viewer"></div>
+</div>
+
+<script type="module" src="../../vendor/kicanvas/kicanvas-clackos.js"></script>
+<script>
+(() => {
+const viewer = document.getElementById('viewer');
+const status = document.getElementById('status');
+
+/* files: [{ src }] for URLs or [{ text }] for loaded content */
+function show(files, label) {
+  viewer.innerHTML = '';
+  const emb = document.createElement('kicanvas-embed');
+  emb.setAttribute('controls', 'full');
+  for (const f of files) {
+    const s = document.createElement('kicanvas-source');
+    if (f.src) s.setAttribute('src', f.src);
+    else s.textContent = f.text;
+    emb.appendChild(s);
+  }
+  viewer.appendChild(emb);
+  status.textContent = `Viewing ${label}.`;
+}
+
+async function showNamed(name) {
+  try {
+    const res = await fetch('kicad/' + name);
+    if (!res.ok) throw new Error(res.status);
+    show([{ text: await res.text() }], name);
+  } catch (e) {
+    status.textContent = `Could not load ${name} (${e.message}).`;
+  }
+}
+
+async function showPicked(fileList) {
+  const files = [...fileList].filter(f => /\.(kicad_sch|kicad_pcb|kicad_wks)$/i.test(f.name));
+  if (!files.length) {
+    status.textContent = 'No .kicad_sch / .kicad_pcb files there.';
+    return;
+  }
+  show(await Promise.all(files.map(async f => ({ text: await f.text() }))),
+    files.map(f => f.name).join(', '));
+}
+
+const picker = document.createElement('input');
+picker.type = 'file';
+picker.accept = '.kicad_sch,.kicad_pcb,.kicad_wks';
+picker.multiple = true;
+picker.addEventListener('change', () => { showPicked(picker.files); picker.value = ''; });
+
+document.getElementById('open').addEventListener('click', () => picker.click());
+document.getElementById('example').addEventListener('click', () => showNamed('example.kicad_sch'));
+
+document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
+document.addEventListener('dragleave', () => document.body.classList.remove('dragging'));
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  document.body.classList.remove('dragging');
+  if (e.dataTransfer.files.length) showPicked(e.dataTransfer.files);
+});
+
+const wanted = new URLSearchParams(location.search).get('file');
+if (wanted) showNamed(wanted);
+})();
+</script>
+</body>
+</html>

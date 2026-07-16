@@ -149,6 +149,15 @@ fresh instance every time it's picked from the menu. Current apps:
   `circuit.html?circuit=<name>.txt` — the wrapper compresses it into the
   simulator's `ctz` parameter. `?ctz=` links exported from the simulator
   itself (File → Export as Link) pass straight through.
+- `applications/kicad.html` (Applications → KiCAD Viewer…) — views KiCAD
+  schematics and boards using KiCanvas (vendored under `vendor/kicanvas/`,
+  MIT — see LICENSE.md and PROVENANCE.md there). KiCanvas compiles its
+  themes into the bundle, so `scripts/build_kicanvas_theme.py` generates
+  `kicanvas-clackos.js` from the pristine bundle by remapping the default
+  theme's colours to the ClackOS palette — re-run it after updating the
+  vendor bundle. Open files with the button or drag-and-drop (several at
+  once works), or link to a file kept in `content/applications/kicad/`
+  with `kicad.html?file=<name>`.
 - `applications/paint.html` (Applications → Paint…) — a Windows 95-style
   Paint: pencil, brush, eraser, airbrush, flood fill, colour picker, line,
   rectangle (outline/filled) and ellipse tools with a size slider; the
