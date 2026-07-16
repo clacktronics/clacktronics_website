@@ -1,7 +1,7 @@
 ---
 title: clacktronics.co.uk
 style: page
-tagline: Hardware for people who read the datasheet twice.
+tagline: Hardware for people who fail to read the datasheet twice.
 ---
 # Clacktronics
 
