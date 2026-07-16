@@ -200,6 +200,19 @@ input[type="range"] { accent-color: var(--leaf-deep); }
   outline-offset: 1px;
 }
 
+/* ---- credit (injected by the wrapper page) ---- */
+.clackos-credit {
+  position: fixed; right: 0; bottom: 0; width: 166px;
+  box-sizing: border-box; padding: 10px 12px;
+  background: var(--paper-deep);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px; line-height: 1.7; color: var(--sage);
+  border-top: 1px solid var(--paper-line);
+  z-index: 5;
+}
+.clackos-credit a { color: var(--leaf-deep); text-decoration: underline; }
+.clackos-credit a:hover { color: var(--leaf); }
+
 /* ---- scrollbars (WebKit) ---- */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--paper-deep); }

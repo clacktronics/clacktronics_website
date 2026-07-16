@@ -64,6 +64,16 @@ iframe { display: block; width: 100%; height: 100%; border: 0; }
       add('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
       const skin = add(new URL('../../assets/css/circuitjs-skin.css', location.href).href);
       setTimeout(() => doc.head.appendChild(skin), 2000);
+      /* credit + licence for the (unmodified) vendored simulator */
+      const credit = doc.createElement('div');
+      credit.className = 'clackos-credit';
+      credit.innerHTML =
+        'Simulator: <a href="https://www.falstad.com/circuit/" target="_blank" rel="noopener">CircuitJS1</a> ' +
+        'by Paul Falstad, JS port by Iain Sharp &amp; contributors.<br>' +
+        'Free software, <a href="' + new URL('../../vendor/circuitjs1/COPYING.txt', location.href).href +
+        '" target="_blank">GPL&nbsp;v2</a> · ' +
+        '<a href="https://github.com/pfalstad/circuitjs1" target="_blank" rel="noopener">source</a>';
+      doc.body.appendChild(credit);
     } catch (e) { console.warn('could not skin simulator:', e); }
   });
   sim.src = '../../vendor/circuitjs1/circuitjs.html?' + params.toString();
