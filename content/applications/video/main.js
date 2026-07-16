@@ -1,0 +1,761 @@
+import { BrowserFFmpegEngine } from './ffmpeg-engine.js';
+
+const $ = selector => document.querySelector(selector);
+const $$ = selector => [...document.querySelectorAll(selector)];
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const player = $('#player');
+const audioPreview = $('#audio-preview');
+
+const state = {
+  assets: new Map(),
+  segments: [],
+  nextAssetId: 1,
+  currentTime: 0,
+  segmentIndex: -1,
+  playing: false,
+  reverse: false,
+  speed: 1,
+  loop: false,
+  markerA: null,
+  markerB: null,
+  audioLayer: null,
+  canvasWidth: 1280,
+  canvasHeight: 720,
+  loadToken: 0,
+  reverseFrame: 0,
+  reverseLast: 0,
+  exporting: false,
+  insertMode: 'after',
+  audioPickMode: 'mix'
+};
+
+const engine = new BrowserFFmpegEngine({
+  onState: value => { $('#engine-state').textContent = `ENGINE: ${value}`; },
+  onProgress: value => setProgress(value, `Rendering… ${Math.round(value * 100)}%`)
+});
+
+function formatTime(seconds, compact = false) {
+  if (!Number.isFinite(seconds)) seconds = 0;
+  seconds = Math.max(0, seconds);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor(seconds % 3600 / 60);
+  const secs = Math.floor(seconds % 60);
+  const millis = Math.floor((seconds % 1) * 1000);
+  if (compact) {
+    const decimalSeconds = (seconds % 60).toFixed(2).padStart(5, '0');
+    return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${decimalSeconds}` : `${minutes}:${decimalSeconds}`;
+  }
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(millis).padStart(3, '0')}`;
+}
+
+function setStatus(message, kind = 'ready') {
+  $('#status').textContent = message;
+  $('#status-light').className = `status-light${kind === 'busy' ? ' busy' : kind === 'error' ? ' error' : ''}`;
+}
+
+function setProgress(value, label) {
+  $('#progress-wrap').hidden = false;
+  $('#progress-bar').style.width = `${Math.round(clamp(value, 0, 1) * 100)}%`;
+  $('#progress-label').textContent = label;
+}
+
+function projectDuration() {
+  return state.segments.reduce((total, segment) => total + segment.end - segment.start, 0);
+}
+
+function segmentOffset(index) {
+  let offset = 0;
+  for (let i = 0; i < index; i += 1) offset += state.segments[i].end - state.segments[i].start;
+  return offset;
+}
+
+function locate(globalTime) {
+  if (!state.segments.length) return null;
+  const total = projectDuration();
+  const time = clamp(globalTime, 0, total);
+  let offset = 0;
+  for (let index = 0; index < state.segments.length; index += 1) {
+    const segment = state.segments[index];
+    const duration = segment.end - segment.start;
+    if (time < offset + duration || index === state.segments.length - 1) {
+      const local = clamp(time - offset, 0, duration);
+      return { index, segment, offset, local, sourceTime: segment.start + local };
+    }
+    offset += duration;
+  }
+  return null;
+}
+
+function loopBounds() {
+  const total = projectDuration();
+  if (state.markerA !== null && state.markerB !== null && Math.abs(state.markerA - state.markerB) > 0.001) {
+    return { start: Math.min(state.markerA, state.markerB), end: Math.max(state.markerA, state.markerB) };
+  }
+  return { start: 0, end: total };
+}
+
+function mediaMetadata(url) {
+  return new Promise((resolve, reject) => {
+    const probe = document.createElement('video');
+    const timeout = setTimeout(() => finish(new Error('Timed out reading video metadata.')), 12000);
+    const finish = value => {
+      clearTimeout(timeout);
+      probe.removeAttribute('src');
+      probe.load();
+      value instanceof Error ? reject(value) : resolve(value);
+    };
+    probe.preload = 'metadata';
+    probe.muted = true;
+    probe.onloadedmetadata = () => {
+      if (!Number.isFinite(probe.duration) || probe.duration <= 0) finish(new Error('No usable video duration.'));
+      else finish({ duration: probe.duration, width: probe.videoWidth || 1280, height: probe.videoHeight || 720 });
+    };
+    probe.onerror = () => finish(new Error('The browser cannot decode this file directly.'));
+    probe.src = url;
+    probe.load();
+  });
+}
+
+function revokeAsset(asset) {
+  if (asset.originalUrl) URL.revokeObjectURL(asset.originalUrl);
+  if (asset.previewUrl && asset.previewUrl !== asset.originalUrl) URL.revokeObjectURL(asset.previewUrl);
+}
+
+function clearProject({ announce = true } = {}) {
+  pausePlayback();
+  for (const asset of state.assets.values()) revokeAsset(asset);
+  state.assets.clear();
+  state.segments = [];
+  state.currentTime = 0;
+  state.segmentIndex = -1;
+  state.markerA = null;
+  state.markerB = null;
+  state.loadToken += 1;
+  player.removeAttribute('src');
+  player.load();
+  clearAudio();
+  renderTimeline();
+  updateUi();
+  if (announce) setStatus('New empty project. Open or drop a video.');
+}
+
+async function prepareVideoAsset(file) {
+  const asset = {
+    id: state.nextAssetId++, file, name: file.name,
+    originalUrl: URL.createObjectURL(file), previewUrl: null,
+    duration: 0, width: 0, height: 0, hasAudio: null, normalized: false
+  };
+  asset.previewUrl = asset.originalUrl;
+  try {
+    Object.assign(asset, await mediaMetadata(asset.previewUrl));
+  } catch {
+    setStatus(`Converting ${file.name} to a browser preview locally…`, 'busy');
+    $('#engine-state').textContent = 'ENGINE: COMPATIBILITY';
+    try {
+      const previewBlob = await engine.normalizeForPreview(asset);
+      asset.previewUrl = URL.createObjectURL(previewBlob);
+      asset.normalized = true;
+      Object.assign(asset, await mediaMetadata(asset.previewUrl));
+    } catch (error) {
+      revokeAsset(asset);
+      throw error;
+    }
+  }
+  return asset;
+}
+
+async function openVideo(file, mode = 'open') {
+  if (!file) return;
+  if (file.size > 1024 * 1024 * 1024) setStatus('Large file: browser memory may be the limiting factor.', 'busy');
+  else setStatus(`Reading ${file.name}…`, 'busy');
+  try {
+    const asset = await prepareVideoAsset(file);
+    if (mode === 'open' || !state.segments.length) {
+      clearProject({ announce: false });
+      state.assets.set(asset.id, asset);
+      state.segments = [{ assetId: asset.id, start: 0, end: asset.duration }];
+      state.canvasWidth = asset.width % 2 ? asset.width + 1 : asset.width;
+      state.canvasHeight = asset.height % 2 ? asset.height + 1 : asset.height;
+      state.currentTime = 0;
+    } else {
+      state.assets.set(asset.id, asset);
+      const active = locate(state.currentTime);
+      const insertIndex = mode === 'before' ? active.index : active.index + 1;
+      const insertAt = segmentOffset(insertIndex);
+      state.segments.splice(insertIndex, 0, { assetId: asset.id, start: 0, end: asset.duration });
+      if (state.markerA !== null && state.markerA >= insertAt) state.markerA += asset.duration;
+      if (state.markerB !== null && state.markerB >= insertAt) state.markerB += asset.duration;
+      if (state.audioLayer && state.audioLayer.startAt >= insertAt) state.audioLayer.startAt += asset.duration;
+      state.currentTime = insertAt;
+    }
+    renderTimeline();
+    updateUi();
+    await loadAt(state.currentTime, false);
+    setStatus(`${asset.name} ready${asset.normalized ? ' — compatibility preview created in browser.' : '.'}`);
+  } catch (error) {
+    setStatus(error.message || `Could not open ${file.name}.`, 'error');
+  }
+}
+
+function renderTimeline() {
+  const timeline = $('#clip-timeline');
+  timeline.replaceChildren();
+  if (!state.segments.length) {
+    const empty = document.createElement('span');
+    empty.className = 'timeline-empty';
+    empty.textContent = 'Open a video to start a timeline.';
+    timeline.append(empty);
+    $('#clip-count').textContent = '0 clips';
+    return;
+  }
+  const total = projectDuration();
+  state.segments.forEach((segment, index) => {
+    const asset = state.assets.get(segment.assetId);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'clip-segment';
+    button.dataset.segmentIndex = index;
+    button.style.flex = `${Math.max(0.05, (segment.end - segment.start) / total)} 1 0`;
+    const name = document.createElement('b');
+    name.textContent = asset.name;
+    const detail = document.createElement('span');
+    detail.textContent = `${formatTime(segment.end - segment.start, true)} · ${index + 1}`;
+    button.append(name, detail);
+    button.addEventListener('click', () => loadAt(segmentOffset(index), state.playing && !state.reverse));
+    timeline.append(button);
+  });
+  const playhead = document.createElement('span');
+  playhead.className = 'timeline-playhead';
+  playhead.id = 'timeline-playhead';
+  timeline.append(playhead);
+  $('#clip-count').textContent = `${state.segments.length} clip${state.segments.length === 1 ? '' : 's'}`;
+}
+
+function updateUi() {
+  const total = projectDuration();
+  state.currentTime = clamp(state.currentTime, 0, total || 0);
+  $('#current-time').textContent = formatTime(state.currentTime);
+  $('#duration').textContent = formatTime(total);
+  $('#project-duration').textContent = total ? formatTime(total, true) : '—';
+  $('#project-size').textContent = state.segments.length ? `${state.canvasWidth} × ${state.canvasHeight}` : '—';
+  $('#project-direction').textContent = state.reverse ? 'Reverse' : 'Forward';
+  $('#seek').disabled = !state.segments.length;
+  $('#seek').value = total ? state.currentTime / total * 1000 : 0;
+  $('#empty-state').hidden = !!state.segments.length;
+  $('#viewer-badge').hidden = !state.segments.length;
+  $('#reverse-btn').setAttribute('aria-pressed', String(state.reverse));
+  $('#reverse-btn').textContent = state.reverse ? 'REV ON' : 'REV';
+  $('#loop').checked = state.loop;
+  $('#a-readout').textContent = state.markerA === null ? 'A —' : `A ${formatTime(state.markerA, true)}`;
+  $('#b-readout').textContent = state.markerB === null ? 'B —' : `B ${formatTime(state.markerB, true)}`;
+  updateMarker($('#marker-a'), state.markerA, total);
+  updateMarker($('#marker-b'), state.markerB, total);
+  const playhead = $('#timeline-playhead');
+  if (playhead) playhead.style.left = `${total ? state.currentTime / total * 100 : 0}%`;
+  const active = locate(state.currentTime);
+  $$('.clip-segment').forEach((element, index) => element.classList.toggle('active', index === active?.index));
+  if (active) {
+    const asset = state.assets.get(active.segment.assetId);
+    $('#viewer-badge').textContent = `${active.index + 1}/${state.segments.length} · ${asset.name}`;
+  }
+  if (state.audioLayer) {
+    $('#audio-name').textContent = `${state.audioLayer.asset.name} @ ${formatTime(state.audioLayer.startAt, true)}`;
+  }
+}
+
+function updateMarker(element, value, total) {
+  element.hidden = value === null || !total;
+  if (!element.hidden) element.style.left = `${clamp(value / total * 100, 0, 100)}%`;
+}
+
+async function waitForMetadata(token) {
+  if (player.readyState >= 1) return;
+  await new Promise((resolve, reject) => {
+    const loaded = () => { cleanup(); resolve(); };
+    const failed = () => { cleanup(); reject(new Error('Preview could not be loaded.')); };
+    const cleanup = () => {
+      player.removeEventListener('loadedmetadata', loaded);
+      player.removeEventListener('error', failed);
+    };
+    player.addEventListener('loadedmetadata', loaded, { once: true });
+    player.addEventListener('error', failed, { once: true });
+  });
+  if (token !== state.loadToken) throw new Error('Superseded preview load.');
+}
+
+async function loadAt(globalTime, autoplay = false) {
+  const found = locate(globalTime);
+  if (!found) return;
+  state.currentTime = clamp(globalTime, 0, projectDuration());
+  const asset = state.assets.get(found.segment.assetId);
+  const token = ++state.loadToken;
+  try {
+    if (player.dataset.assetId !== String(asset.id)) {
+      player.pause();
+      player.src = asset.previewUrl;
+      player.dataset.assetId = String(asset.id);
+      player.load();
+      await waitForMetadata(token);
+    }
+    if (token !== state.loadToken) return;
+    state.segmentIndex = found.index;
+    player.playbackRate = state.speed;
+    player.muted = state.reverse || state.audioLayer?.mode === 'replace';
+    if (Math.abs(player.currentTime - found.sourceTime) > 0.025) player.currentTime = found.sourceTime;
+    updateUi();
+    syncAudioPreview(autoplay);
+    if (autoplay && !state.reverse) await player.play();
+  } catch (error) {
+    if (!/Superseded/.test(error.message)) setStatus(error.message, 'error');
+  }
+}
+
+function pausePlayback() {
+  state.playing = false;
+  player.pause();
+  audioPreview.pause();
+  cancelAnimationFrame(state.reverseFrame);
+  state.reverseFrame = 0;
+  state.reverseLast = 0;
+  $('#play-symbol').textContent = '▶';
+}
+
+async function startPlayback() {
+  if (!state.segments.length || state.playing) return;
+  const bounds = loopBounds();
+  if (!state.reverse && state.currentTime >= bounds.end - 0.01) state.currentTime = bounds.start;
+  if (state.reverse && state.currentTime <= bounds.start + 0.01) state.currentTime = bounds.end;
+  state.playing = true;
+  $('#play-symbol').textContent = '❚❚';
+  if (state.reverse) {
+    player.pause();
+    audioPreview.pause();
+    player.muted = true;
+    state.reverseLast = 0;
+    state.reverseFrame = requestAnimationFrame(reverseTick);
+    setStatus(`Playing in reverse at ${state.speed}×. Reverse preview audio is muted.`);
+  } else {
+    await loadAt(state.currentTime, true);
+    setStatus(`Playing at ${state.speed}×.`);
+  }
+}
+
+function togglePlayback() {
+  if (state.playing) {
+    pausePlayback();
+    setStatus('Paused.');
+  } else startPlayback();
+}
+
+function reverseTick(now) {
+  if (!state.playing || !state.reverse) return;
+  if (!state.reverseLast) state.reverseLast = now;
+  const elapsed = Math.min(0.1, (now - state.reverseLast) / 1000);
+  state.reverseLast = now;
+  const bounds = loopBounds();
+  let target = state.currentTime - elapsed * state.speed;
+  if (target <= bounds.start) {
+    if (state.loop) target = bounds.end;
+    else {
+      state.currentTime = bounds.start;
+      loadAt(state.currentTime, false);
+      pausePlayback();
+      setStatus('Reached the start.');
+      return;
+    }
+  }
+  const found = locate(target);
+  if (found?.index === state.segmentIndex && player.readyState >= 1) {
+    state.currentTime = target;
+    if ('fastSeek' in player) player.fastSeek(found.sourceTime);
+    else player.currentTime = found.sourceTime;
+    updateUi();
+  } else {
+    loadAt(target, false);
+  }
+  state.reverseFrame = requestAnimationFrame(reverseTick);
+}
+
+function setReverse(value, play = false) {
+  const wasPlaying = state.playing;
+  pausePlayback();
+  state.reverse = value;
+  player.muted = value || state.audioLayer?.mode === 'replace';
+  updateUi();
+  if (play || wasPlaying) startPlayback();
+  else setStatus(value ? 'Reverse playback armed. Press play.' : 'Forward playback armed.');
+}
+
+function syncAudioPreview(shouldPlay = state.playing && !state.reverse) {
+  const layer = state.audioLayer;
+  player.muted = state.reverse || layer?.mode === 'replace';
+  if (!layer || state.reverse) {
+    audioPreview.pause();
+    return;
+  }
+  audioPreview.volume = Math.min(1, layer.gain);
+  audioPreview.playbackRate = state.speed;
+  const layerTime = state.currentTime - layer.startAt;
+  if (layerTime < 0) {
+    audioPreview.pause();
+    audioPreview.currentTime = 0;
+    return;
+  }
+  const sourceTime = layer.sourceStart + layerTime;
+  if (Number.isFinite(audioPreview.duration) && sourceTime >= audioPreview.duration) {
+    audioPreview.pause();
+    return;
+  }
+  if (Math.abs(audioPreview.currentTime - sourceTime) > 0.25) audioPreview.currentTime = Math.max(0, sourceTime);
+  if (shouldPlay) audioPreview.play().catch(() => {});
+}
+
+function advanceForward() {
+  if (!state.playing || state.reverse) return;
+  const found = locate(state.currentTime);
+  const bounds = loopBounds();
+  if (state.loop && state.currentTime >= bounds.end - 0.035) {
+    loadAt(bounds.start, true);
+  } else if (found && found.index < state.segments.length - 1) {
+    loadAt(segmentOffset(found.index + 1), true);
+  } else if (state.loop) {
+    loadAt(bounds.start, true);
+  } else {
+    state.currentTime = projectDuration();
+    pausePlayback();
+    updateUi();
+    setStatus('Playback complete.');
+  }
+}
+
+player.addEventListener('timeupdate', () => {
+  if (!state.playing || state.reverse || state.segmentIndex < 0) return;
+  const segment = state.segments[state.segmentIndex];
+  if (!segment) return;
+  const offset = segmentOffset(state.segmentIndex);
+  state.currentTime = clamp(offset + player.currentTime - segment.start, 0, projectDuration());
+  const bounds = loopBounds();
+  if ((state.loop && state.currentTime >= bounds.end - 0.035) || player.currentTime >= segment.end - 0.035) advanceForward();
+  else {
+    updateUi();
+    syncAudioPreview(true);
+  }
+});
+player.addEventListener('ended', advanceForward);
+
+function setMarker(which) {
+  if (!state.segments.length) return;
+  if (which === 'a') state.markerA = state.currentTime;
+  else state.markerB = state.currentTime;
+  updateUi();
+  setStatus(`${which.toUpperCase()} marker set at ${formatTime(state.currentTime)}.`);
+}
+
+function clearMarkers() {
+  state.markerA = null;
+  state.markerB = null;
+  updateUi();
+  setStatus('A/B markers cleared. Loop now uses the full timeline.');
+}
+
+function cutBefore() {
+  const found = locate(state.currentTime);
+  if (!found) return;
+  pausePlayback();
+  const removed = state.currentTime;
+  const replacement = { ...found.segment, start: found.sourceTime };
+  state.segments = [replacement, ...state.segments.slice(found.index + 1)].filter(segment => segment.end - segment.start > 0.001);
+  if (state.markerA !== null) state.markerA = Math.max(0, state.markerA - removed);
+  if (state.markerB !== null) state.markerB = Math.max(0, state.markerB - removed);
+  if (state.audioLayer) {
+    if (state.audioLayer.startAt >= removed) state.audioLayer.startAt -= removed;
+    else {
+      state.audioLayer.sourceStart += removed - state.audioLayer.startAt;
+      state.audioLayer.startAt = 0;
+    }
+  }
+  state.currentTime = 0;
+  trimMarkers();
+  renderTimeline();
+  updateUi();
+  loadAt(0, false);
+  setStatus('Cut everything before the playhead.');
+}
+
+function cutAfter() {
+  const found = locate(state.currentTime);
+  if (!found) return;
+  pausePlayback();
+  const replacement = { ...found.segment, end: found.sourceTime };
+  state.segments = [...state.segments.slice(0, found.index), replacement].filter(segment => segment.end - segment.start > 0.001);
+  state.currentTime = projectDuration();
+  trimMarkers();
+  renderTimeline();
+  updateUi();
+  loadAt(state.currentTime, false);
+  setStatus('Cut everything after the playhead.');
+}
+
+function trimMarkers() {
+  const total = projectDuration();
+  if (state.markerA !== null) state.markerA = clamp(state.markerA, 0, total);
+  if (state.markerB !== null) state.markerB = clamp(state.markerB, 0, total);
+}
+
+function chooseInsert(mode) {
+  if (!state.segments.length) return $('#video-picker').click();
+  state.insertMode = mode;
+  $('#insert-picker').click();
+}
+
+function chooseAudio(mode) {
+  state.audioPickMode = mode;
+  $(`input[name="audio-mode"][value="${mode}"]`).checked = true;
+  $('#audio-picker').click();
+}
+
+function installAudio(file, mode) {
+  if (!file) return;
+  clearAudio();
+  const asset = { id: state.nextAssetId++, file, name: file.name, hasAudio: null };
+  const url = URL.createObjectURL(file);
+  state.audioLayer = { asset, url, mode, gain: Number($('#audio-gain').value) / 100, startAt: state.currentTime, sourceStart: 0 };
+  audioPreview.src = url;
+  audioPreview.load();
+  $('#audio-name').textContent = `${file.name} @ ${formatTime(state.currentTime, true)}`;
+  $('#audio-drop').classList.add('has-audio');
+  player.muted = mode === 'replace' || state.reverse;
+  syncAudioPreview(false);
+  setStatus(`${file.name} will ${mode === 'replace' ? 'replace' : 'mix over'} audio from the playhead.`);
+}
+
+function clearAudio() {
+  if (state.audioLayer?.url) URL.revokeObjectURL(state.audioLayer.url);
+  state.audioLayer = null;
+  audioPreview.pause();
+  audioPreview.removeAttribute('src');
+  audioPreview.load();
+  player.muted = state.reverse;
+  $('#audio-name').textContent = 'No extra audio';
+  $('#audio-drop').classList.remove('has-audio');
+}
+
+async function exportProject() {
+  if (!state.segments.length || state.exporting) {
+    if (!state.segments.length) setStatus('Open a video before exporting.', 'error');
+    return;
+  }
+  const format = $('#format').value;
+  const customExtension = $('#custom-extension').value.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+  const bake = $('#bake-playback').checked;
+  state.exporting = true;
+  $('.export-btn').disabled = true;
+  $('#cancel-export').hidden = false;
+  setProgress(0, 'Loading local FFmpeg engine…');
+  setStatus('Preparing browser-only export. This can take a while for long files.', 'busy');
+  try {
+    const result = await engine.exportProject({
+      segments: state.segments,
+      assets: state.assets,
+      audioLayer: state.audioLayer,
+      width: state.canvasWidth,
+      height: state.canvasHeight,
+      speed: bake ? state.speed : 1,
+      reverse: bake ? state.reverse : false,
+      format,
+      extension: customExtension
+    });
+    setProgress(1, 'Export complete.');
+    const baseName = ($('#export-name').value.trim() || 'clack-video').replace(/[<>:"/\\|?*]+/g, '-');
+    const anchor = document.createElement('a');
+    anchor.href = URL.createObjectURL(result.blob);
+    anchor.download = `${baseName}.${result.extension}`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(anchor.href), 10000);
+    setStatus(`Exported ${anchor.download} entirely in this browser.`);
+  } catch (error) {
+    console.error('Video Lab export failed:', error);
+    engine.cancel();
+    setProgress(0, 'Export failed.');
+    const message = error?.message || String(error) || 'Unknown export error';
+    const detail = /memory|abort/i.test(message) ? 'The browser may have run out of memory; try a shorter clip or smaller source.' : message;
+    setStatus(`Export failed: ${detail}`, 'error');
+  } finally {
+    state.exporting = false;
+    $('.export-btn').disabled = false;
+    $('#cancel-export').hidden = true;
+  }
+}
+
+function cancelExport() {
+  if (!state.exporting) return;
+  engine.cancel();
+  state.exporting = false;
+  $('.export-btn').disabled = false;
+  $('#cancel-export').hidden = true;
+  setProgress(0, 'Export cancelled.');
+  setStatus('Export cancelled. The local engine was reset.');
+}
+
+function showDialog(kind) {
+  const title = $('#dialog-title');
+  const content = $('#dialog-content');
+  if (kind === 'shortcuts') {
+    title.textContent = '// Keyboard shortcuts';
+    content.innerHTML = `<ul>
+      <li><code>Space</code> play / pause</li><li><code>J</code> reverse playback</li>
+      <li><code>K</code> pause</li><li><code>L</code> forward playback</li>
+      <li><code>I</code> set A marker</li><li><code>O</code> set B marker</li>
+      <li><code>,</code> / <code>.</code> step one frame</li>
+      <li><code>Ctrl+O</code> open video</li><li><code>Ctrl+E</code> export</li>
+    </ul>`;
+  } else {
+    title.textContent = '// Formats & browser limits';
+    content.innerHTML = `<p>Native MP4, WebM, Ogg and browser-supported MOV files preview immediately. MKV, AVI, MPEG, MTS, VOB, FLV, WMV and other FFmpeg-readable files are converted to a temporary MP4 preview on this device.</p>
+      <p>Exports include MP4, WebM, MOV, MKV, AVI, GIF, MP3, WAV, Ogg and a custom container option. Proprietary codecs omitted from the FFmpeg WebAssembly build and DRM-protected media cannot be decoded.</p>
+      <p>Files are never uploaded. The practical limit is browser memory: short and medium projects work best; multi-gigabyte or long reverse renders can exceed the tab's memory allowance.</p>`;
+  }
+  $('#info-dialog').showModal();
+}
+
+const actions = {
+  open: () => $('#video-picker').click(),
+  new: () => clearProject(),
+  export: exportProject,
+  'cancel-export': cancelExport,
+  'insert-before': () => chooseInsert('before'),
+  'insert-after': () => chooseInsert('after'),
+  'cut-before': cutBefore,
+  'cut-after': cutAfter,
+  play: togglePlayback,
+  stop: () => { pausePlayback(); loadAt(loopBounds().start, false); setStatus('Stopped.'); },
+  'to-start': () => { pausePlayback(); loadAt(loopBounds().start, false); },
+  'to-end': () => { pausePlayback(); loadAt(loopBounds().end, false); },
+  'frame-back': () => { pausePlayback(); loadAt(state.currentTime - 1 / 30, false); },
+  'frame-forward': () => { pausePlayback(); loadAt(state.currentTime + 1 / 30, false); },
+  'toggle-reverse': () => setReverse(!state.reverse),
+  'toggle-loop': () => { state.loop = !state.loop; updateUi(); setStatus(`Loop ${state.loop ? 'enabled' : 'disabled'}.`); },
+  'marker-a': () => setMarker('a'),
+  'marker-b': () => setMarker('b'),
+  'clear-markers': clearMarkers,
+  'audio-mix': () => chooseAudio('mix'),
+  'audio-replace': () => chooseAudio('replace'),
+  'audio-remove': () => { clearAudio(); setStatus('Extra audio removed.'); },
+  help: () => showDialog('formats'),
+  shortcuts: () => showDialog('shortcuts')
+};
+
+document.addEventListener('click', event => {
+  const actionButton = event.target.closest('[data-action]');
+  if (actionButton) {
+    const action = actions[actionButton.dataset.action];
+    if (action && !actionButton.disabled) action();
+    $$('.rm').forEach(menu => menu.classList.remove('open'));
+  }
+});
+
+$$('.rm').forEach(menu => {
+  menu.querySelector(':scope > button').addEventListener('click', event => {
+    event.stopPropagation();
+    const wasOpen = menu.classList.contains('open');
+    $$('.rm').forEach(item => item.classList.remove('open'));
+    if (!wasOpen) menu.classList.add('open');
+  });
+});
+
+$('#video-picker').addEventListener('change', event => {
+  openVideo(event.target.files[0], 'open');
+  event.target.value = '';
+});
+$('#insert-picker').addEventListener('change', event => {
+  openVideo(event.target.files[0], state.insertMode);
+  event.target.value = '';
+});
+$('#audio-picker').addEventListener('change', event => {
+  installAudio(event.target.files[0], state.audioPickMode);
+  event.target.value = '';
+});
+
+$('#seek').addEventListener('input', event => {
+  const wasPlaying = state.playing;
+  pausePlayback();
+  loadAt(Number(event.target.value) / 1000 * projectDuration(), false);
+  if (wasPlaying) startPlayback();
+});
+$('#speed').addEventListener('change', event => {
+  state.speed = Number(event.target.value);
+  player.playbackRate = state.speed;
+  audioPreview.playbackRate = state.speed;
+  setStatus(`Playback speed set to ${state.speed}×.`);
+});
+$('#loop').addEventListener('change', event => {
+  state.loop = event.target.checked;
+  setStatus(`Loop ${state.loop ? 'enabled' : 'disabled'}${state.markerA !== null && state.markerB !== null ? ' between A and B' : ''}.`);
+});
+$('#audio-gain').addEventListener('input', event => {
+  const gain = Number(event.target.value) / 100;
+  $('#audio-gain-value').textContent = `${event.target.value}%`;
+  if (state.audioLayer) {
+    state.audioLayer.gain = gain;
+    audioPreview.volume = Math.min(1, gain);
+  }
+});
+$$('input[name="audio-mode"]').forEach(radio => radio.addEventListener('change', event => {
+  if (state.audioLayer) {
+    state.audioLayer.mode = event.target.value;
+    player.muted = state.reverse || event.target.value === 'replace';
+    setStatus(`Extra audio mode changed to ${event.target.value}.`);
+  }
+}));
+$('#format').addEventListener('change', event => {
+  $('#custom-extension-field').hidden = event.target.value !== 'custom';
+});
+
+function installDropTarget(element, handler) {
+  ['dragenter', 'dragover'].forEach(type => element.addEventListener(type, event => {
+    event.preventDefault();
+    element.classList.add('dragging');
+  }));
+  ['dragleave', 'drop'].forEach(type => element.addEventListener(type, event => {
+    event.preventDefault();
+    element.classList.remove('dragging');
+  }));
+  element.addEventListener('drop', event => handler(event.dataTransfer.files[0]));
+}
+
+installDropTarget($('#drop-zone'), file => {
+  if (!file) return;
+  if (file.type.startsWith('audio/')) installAudio(file, 'mix');
+  else openVideo(file, state.segments.length ? 'after' : 'open');
+});
+installDropTarget($('#audio-drop'), file => { if (file) installAudio(file, $('input[name="audio-mode"]:checked').value); });
+
+document.addEventListener('keydown', event => {
+  if (event.target.matches('input, select, textarea') || $('#info-dialog').open) return;
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') {
+    event.preventDefault(); $('#video-picker').click(); return;
+  }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'e') {
+    event.preventDefault(); exportProject(); return;
+  }
+  const keyActions = {
+    ' ': () => togglePlayback(),
+    j: () => setReverse(true, true),
+    k: () => pausePlayback(),
+    l: () => { setReverse(false); startPlayback(); },
+    i: () => setMarker('a'),
+    o: () => setMarker('b'),
+    ',': () => actions['frame-back'](),
+    '.': () => actions['frame-forward']()
+  };
+  const action = keyActions[event.key.toLowerCase()];
+  if (action) { event.preventDefault(); action(); }
+});
+
+window.addEventListener('beforeunload', () => {
+  for (const asset of state.assets.values()) revokeAsset(asset);
+  if (state.audioLayer?.url) URL.revokeObjectURL(state.audioLayer.url);
+});
+
+renderTimeline();
+updateUi();

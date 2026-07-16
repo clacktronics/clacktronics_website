@@ -5,6 +5,7 @@
     { "type": "app", "page": "python.html", "label": "Python…", "title": "Python", "multi": true },
     { "type": "app", "page": "paint.html", "label": "Paint…", "title": "Paint", "width": 820, "height": 620, "multi": true },
     { "type": "app", "page": "recorder.html", "label": "Sound Recorder…", "title": "Sound Recorder", "width": 560, "height": 470, "multi": true },
+    { "type": "app", "page": "video/index.html", "label": "Video Lab…", "title": "Video Lab", "width": 1180, "height": 780, "multi": true },
     { "type": "app", "page": "circuit.html", "label": "Circuit Simulator…", "title": "Circuit Simulator", "multi": true },
     { "type": "app", "page": "kicad.html", "label": "KiCAD Viewer…", "title": "KiCAD Viewer", "multi": true },
     { "type": "app", "page": "eecircuit.html", "label": "EEcircuit (SPICE)…", "title": "EEcircuit", "multi": true },

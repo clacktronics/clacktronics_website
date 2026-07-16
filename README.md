@@ -29,6 +29,7 @@ content/
     menu.json
     paint.html              ← Paint app
     recorder.html           ← Sound Recorder app
+    video/                  ← browser-only Video Lab app + FFmpeg core
     about.md
 ```
 
@@ -136,6 +137,14 @@ fresh instance every time it's picked from the menu. Current apps:
   BroadcastChannel), Insert/Mix with File, Delete Before/After Current
   Position. Effects: Increase/Decrease Volume, Increase/Decrease Speed
   (pitch shifts, like the original), Add Echo, Reverse. Multi-instance.
+- `applications/video/index.html` (Applications → Video Lab…) — a
+  browser-only video player and editor with native preview plus a version-pinned
+  FFmpeg WebAssembly compatibility/export engine. Supports forward and
+  reverse playback, 0.25×–4× speed, full and A/B loops, clip insertion,
+  cuts before/after the playhead, and a replacement or mixed audio layer.
+  Exports MP4, WebM, MOV, MKV, AVI, GIF, MP3, WAV, Ogg, and custom containers;
+  no media is uploaded. The app and codec core live in their own folder so the
+  rest of ClackOS requires only the menu entry above.
 - `applications/circuit.html` (Applications → Circuit Simulator…) — Paul
   Falstad's CircuitJS1, vendored unmodified under `vendor/circuitjs1/`
   (GPLv2 — see the COPYING.txt and PROVENANCE.md there). The wrapper

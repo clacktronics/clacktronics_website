@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="only light">
+  <meta name="theme-color" content="#09140d">
+  <title>Video Lab — ClackOS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2309140d'/%3E%3Cpath d='M5 4.5v7l6-3.5z' fill='%234fae7d'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="video-lab">
+  <nav class="rm-bar" aria-label="Video Lab menu">
+    <div class="rm">
+      <button type="button">File</button>
+      <div class="rm-dd">
+        <button type="button" data-action="open">Open video… <kbd>Ctrl+O</kbd></button>
+        <button type="button" data-action="new">New project</button>
+        <div class="sep"></div>
+        <button type="button" data-action="export">Export… <kbd>Ctrl+E</kbd></button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Edit</button>
+      <div class="rm-dd">
+        <button type="button" data-action="insert-before">Insert clip before</button>
+        <button type="button" data-action="insert-after">Insert clip after</button>
+        <div class="sep"></div>
+        <button type="button" data-action="cut-before">Cut before playhead</button>
+        <button type="button" data-action="cut-after">Cut after playhead</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Playback</button>
+      <div class="rm-dd">
+        <button type="button" data-action="marker-a">Set A marker <kbd>I</kbd></button>
+        <button type="button" data-action="marker-b">Set B marker <kbd>O</kbd></button>
+        <button type="button" data-action="clear-markers">Clear A/B markers</button>
+        <div class="sep"></div>
+        <button type="button" data-action="toggle-loop">Toggle loop</button>
+        <button type="button" data-action="toggle-reverse">Toggle reverse <kbd>J</kbd></button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Audio</button>
+      <div class="rm-dd">
+        <button type="button" data-action="audio-mix">Mix audio at playhead…</button>
+        <button type="button" data-action="audio-replace">Replace audio at playhead…</button>
+        <button type="button" data-action="audio-remove">Remove new audio</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Help</button>
+      <div class="rm-dd">
+        <button type="button" data-action="help">Formats &amp; browser limits</button>
+        <button type="button" data-action="shortcuts">Keyboard shortcuts</button>
+      </div>
+    </div>
+    <span class="engine-state" id="engine-state">ENGINE: STANDBY</span>
+  </nav>
+
+  <main class="app-main">
+    <section class="workspace" aria-label="Video workspace">
+      <div class="viewer-column">
+        <div class="viewer" id="drop-zone">
+          <video id="player" playsinline preload="metadata" aria-label="Video preview"></video>
+          <div class="empty-state" id="empty-state">
+            <span class="empty-icon" aria-hidden="true">▶</span>
+            <b>Drop a video here</b>
+            <span>or open one from your computer</span>
+            <button class="btn primary" type="button" data-action="open">Open video</button>
+          </div>
+          <div class="viewer-badge" id="viewer-badge" hidden>NO CLIP</div>
+          <div class="drop-hint" id="drop-hint">DROP TO ADD CLIP</div>
+        </div>
+
+        <div class="transport" aria-label="Playback controls">
+          <div class="time-row">
+            <output class="timecode" id="current-time">00:00:00.000</output>
+            <div class="marker-readout" aria-live="polite">
+              <span id="a-readout">A —</span>
+              <span id="b-readout">B —</span>
+            </div>
+            <output class="timecode" id="duration">00:00:00.000</output>
+          </div>
+          <div class="seek-stack">
+            <input id="seek" type="range" min="0" max="1000" value="0" step="0.01" aria-label="Timeline position" disabled>
+            <span class="seek-marker marker-a" id="marker-a" hidden></span>
+            <span class="seek-marker marker-b" id="marker-b" hidden></span>
+          </div>
+          <div class="transport-row">
+            <div class="transport-buttons">
+              <button class="icon-btn" type="button" data-action="to-start" aria-label="Go to start">|◀</button>
+              <button class="icon-btn" type="button" data-action="frame-back" aria-label="Previous frame">◀|</button>
+              <button class="icon-btn main-play" type="button" data-action="play" aria-label="Play or pause"><span id="play-symbol">▶</span></button>
+              <button class="icon-btn" type="button" data-action="stop" aria-label="Stop">■</button>
+              <button class="icon-btn" type="button" data-action="frame-forward" aria-label="Next frame">|▶</button>
+              <button class="icon-btn" type="button" data-action="to-end" aria-label="Go to end">▶|</button>
+            </div>
+            <label class="compact-field">Speed
+              <select id="speed">
+                <option value="0.25">0.25×</option>
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+                <option value="4">4×</option>
+              </select>
+            </label>
+            <button class="toggle-btn" type="button" data-action="toggle-reverse" id="reverse-btn" aria-pressed="false">REV</button>
+            <label class="check-field"><input id="loop" type="checkbox"> LOOP</label>
+          </div>
+        </div>
+
+        <section class="timeline-panel" aria-labelledby="timeline-title">
+          <div class="section-head">
+            <span class="app-lbl" id="timeline-title">// Clip timeline</span>
+            <span class="muted" id="clip-count">0 clips</span>
+          </div>
+          <div class="clip-timeline" id="clip-timeline" aria-label="Project clips">
+            <span class="timeline-empty">Open a video to start a timeline.</span>
+          </div>
+          <div class="edit-row">
+            <button class="btn ghost" type="button" data-action="insert-before">Insert before</button>
+            <button class="btn ghost" type="button" data-action="insert-after">Insert after</button>
+            <span class="spacer"></span>
+            <button class="btn ghost" type="button" data-action="cut-before">Cut before</button>
+            <button class="btn ghost" type="button" data-action="cut-after">Cut after</button>
+          </div>
+        </section>
+      </div>
+
+      <aside class="control-column" aria-label="Audio and export settings">
+        <section class="control-section" aria-labelledby="audio-title">
+          <div class="section-head">
+            <span class="app-lbl" id="audio-title">// Audio layer</span>
+            <button class="text-btn" type="button" data-action="audio-remove">CLEAR</button>
+          </div>
+          <div class="audio-drop" id="audio-drop">
+            <span id="audio-name">No extra audio</span>
+            <button class="btn ghost" type="button" data-action="audio-mix">Choose audio</button>
+          </div>
+          <div class="mode-row" role="radiogroup" aria-label="Audio layer mode">
+            <label><input type="radio" name="audio-mode" value="mix" checked> Mix over</label>
+            <label><input type="radio" name="audio-mode" value="replace"> Replace</label>
+          </div>
+          <label class="range-field" for="audio-gain">
+            <span>Layer gain <output id="audio-gain-value">100%</output></span>
+            <input id="audio-gain" type="range" min="0" max="200" value="100" step="1">
+          </label>
+          <p class="note">New audio starts at the current playhead. Reverse preview is silent; reverse audio is rendered on export.</p>
+        </section>
+
+        <section class="control-section" id="export-panel" aria-labelledby="export-title">
+          <div class="section-head">
+            <span class="app-lbl" id="export-title">// Export</span>
+            <span class="local-badge">LOCAL ONLY</span>
+          </div>
+          <label class="field">Format
+            <select id="format">
+              <option value="mp4">MP4 · H.264 / AAC</option>
+              <option value="webm">WebM · VP8 / Vorbis</option>
+              <option value="mov">MOV · H.264 / AAC</option>
+              <option value="mkv">Matroska · H.264 / AAC</option>
+              <option value="avi">AVI · MPEG-4 / MP3</option>
+              <option value="gif">Animated GIF</option>
+              <option value="mp3">Audio only · MP3</option>
+              <option value="wav">Audio only · WAV</option>
+              <option value="ogg">Audio only · Ogg Vorbis</option>
+              <option value="custom">Custom container</option>
+            </select>
+          </label>
+          <label class="field" id="custom-extension-field" hidden>File extension
+            <input id="custom-extension" type="text" value="mpg" maxlength="12" spellcheck="false">
+          </label>
+          <label class="field">File name
+            <input id="export-name" type="text" value="clack-video" spellcheck="false">
+          </label>
+          <label class="check-field export-check"><input id="bake-playback" type="checkbox" checked> Bake speed &amp; reverse into export</label>
+          <button class="btn primary export-btn" type="button" data-action="export">Export in browser</button>
+          <button class="btn ghost cancel-btn" id="cancel-export" type="button" data-action="cancel-export" hidden>Cancel</button>
+          <div class="progress-wrap" id="progress-wrap" hidden>
+            <div class="progress-track"><span id="progress-bar"></span></div>
+            <span id="progress-label">Preparing engine…</span>
+          </div>
+          <p class="note">The version-pinned FFmpeg core is about 31 MB and loads on first use. It runs in a browser worker; nothing is uploaded.</p>
+        </section>
+
+        <section class="control-section details-section" aria-labelledby="project-title">
+          <span class="app-lbl" id="project-title">// Project</span>
+          <dl class="project-details">
+            <div><dt>Canvas</dt><dd id="project-size">—</dd></div>
+            <div><dt>Duration</dt><dd id="project-duration">—</dd></div>
+            <div><dt>Direction</dt><dd id="project-direction">Forward</dd></div>
+          </dl>
+        </section>
+      </aside>
+    </section>
+
+    <footer class="statusbar">
+      <span class="status-light" id="status-light"></span>
+      <span id="status" role="status" aria-live="polite">Ready. Open or drop a video; files stay on this device.</span>
+    </footer>
+  </main>
+
+  <input id="video-picker" type="file" accept="video/*,.mkv,.avi,.mov,.mpg,.mpeg,.m4v,.mts,.m2ts,.ts,.vob,.ogv,.3gp,.flv,.wmv,.webm" hidden>
+  <input id="insert-picker" type="file" accept="video/*,.mkv,.avi,.mov,.mpg,.mpeg,.m4v,.mts,.m2ts,.ts,.vob,.ogv,.3gp,.flv,.wmv,.webm" hidden>
+  <input id="audio-picker" type="file" accept="audio/*,.wav,.mp3,.aac,.m4a,.flac,.ogg,.opus,.wma,.aiff,.aif" hidden>
+  <audio id="audio-preview" preload="metadata"></audio>
+
+  <dialog id="info-dialog">
+    <form method="dialog" class="dialog-card">
+      <div class="dialog-head">
+        <span class="app-lbl" id="dialog-title">// Browser formats</span>
+        <button class="dialog-close" aria-label="Close">×</button>
+      </div>
+      <div id="dialog-content"></div>
+      <button class="btn primary" value="close">Close</button>
+    </form>
+  </dialog>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>
