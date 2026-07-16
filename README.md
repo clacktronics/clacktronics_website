@@ -175,7 +175,11 @@ fresh instance every time it's picked from the menu. Current apps:
   side-by-side split rendered in the ClackOS style. Open/save uses the
   File System Access API where the browser supports it (true in-place
   saving); elsewhere saving downloads the file. Drag-and-drop works,
-  Ctrl+S saves. The toolbar icons are plain text glyphs, so nothing is
+  Ctrl+S saves. File → Open from website… lists every markdown file the
+  site serves (discovered from site.json, the menu.json files and the
+  blog index) and opens it in the editor — note the site itself is
+  read-only, so publishing an edit means saving the file and pushing it
+  to the repo. The toolbar icons are plain text glyphs, so nothing is
   fetched from icon CDNs.
 - `applications/python.html` (Applications → Python…) — a Thonny-style
   Python IDE running entirely in the browser on Pyodide (vendored under
