@@ -6,11 +6,26 @@
 <title>EEcircuit — ClackOS</title>
 <style>
 html, body { height: 100%; margin: 0; }
-iframe { display: block; width: 100%; height: 100%; border: 0; }
+body { display: flex; flex-direction: column; }
+iframe { display: block; width: 100%; flex: 1; min-height: 0; border: 0; }
+.credit {
+  margin: 0; padding: 6px 16px; font-size: 10.5px; line-height: 1.6;
+  font-family: 'IBM Plex Mono', monospace; color: #66755a;
+  border-top: 1px solid #d8cfa9; background: #f3ecd1;
+}
+.credit a { color: #276b47; text-decoration: underline; }
+.credit a:hover { color: #4fae7d; }
 </style>
 </head>
 <body>
 <iframe id="sim" title="EEcircuit SPICE simulator" src="../../vendor/eecircuit/index.html"></iframe>
+<p class="credit">Simulator:
+  <a href="https://eecircuit.com/" target="_blank" rel="noopener">EEcircuit</a>
+  by Danial Chitnis &amp; contributors, running ngspice as WebAssembly · free software,
+  <a href="../../vendor/eecircuit/LICENSE" target="_blank">MIT</a>
+  (ngspice: BSD-3-Clause) ·
+  <a href="https://github.com/eelab-dev/EEcircuit" target="_blank" rel="noopener">source</a>
+</p>
 <script>
 /* skin the (same-origin) app without touching the vendored files */
 const sim = document.getElementById('sim');

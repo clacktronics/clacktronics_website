@@ -17,6 +17,12 @@
 }
 .kv-bar .app-status { flex: 1; min-width: 200px; }
 #viewer { flex: 1; min-height: 0; background: var(--paper); }
+.kv-credit {
+  padding: 6px 16px; font-size: 10.5px; color: var(--sage);
+  border-top: 1px solid var(--paper-line); background: var(--paper-deep);
+}
+.kv-credit a { color: var(--leaf-deep); text-decoration: underline; }
+.kv-credit a:hover { color: var(--leaf); }
 #viewer kicanvas-embed { display: block; width: 100%; height: 100%; }
 body.dragging #viewer { outline: 3px dashed var(--leaf-deep); outline-offset: -8px; }
 </style>
@@ -29,6 +35,12 @@ body.dragging #viewer { outline: 3px dashed var(--leaf-deep); outline-offset: -8
     <span class="app-status" id="status">Open or drop .kicad_sch / .kicad_pcb files (several at once is fine).</span>
   </div>
   <div id="viewer"></div>
+  <p class="kv-credit">Viewer:
+    <a href="https://kicanvas.org/" target="_blank" rel="noopener">KiCanvas</a>
+    by Alethea Katherine Flowers &amp; contributors · free software,
+    <a href="../../vendor/kicanvas/LICENSE.md" target="_blank">MIT</a> ·
+    <a href="https://github.com/theacodes/kicanvas" target="_blank" rel="noopener">source</a>
+  </p>
 </div>
 
 <script type="module" src="../../vendor/kicanvas/kicanvas-clackos.js"></script>
