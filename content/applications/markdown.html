@@ -15,12 +15,14 @@
 .md-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 14px; }
 .md-wrap .EasyMDEContainer {
   flex: 1; min-height: 0; position: relative;
-  display: flex; flex-flow: row wrap; align-items: stretch; align-content: stretch;
+  display: flex; flex-direction: column;
 }
-.md-wrap .editor-toolbar { width: 100%; flex: none; }
-/* side-by-side: editor and preview share the row instead of EasyMDE's
-   fixed positioning, which breaks inside this flex layout */
-.EasyMDEContainer .CodeMirror-sided { flex: none !important; width: 50% !important; }
+.md-wrap .editor-toolbar { flex: none; }
+/* the editor and the side-by-side preview live in a row of their own
+   (built in JS after init), so the toolbar keeps its natural height */
+.mde-row { flex: 1; min-height: 0; display: flex; align-items: stretch; }
+.mde-row .CodeMirror { flex: 1; min-width: 0; }
+.mde-row .CodeMirror-sided { flex: none !important; width: 50% !important; }
 .editor-preview-side {
   position: static !important; flex: none; width: 50%; height: auto;
   min-height: 0; overflow: auto;
@@ -258,6 +260,19 @@ int main(void) { return 0; }
 Use the toolbar or standard shortcuts (Ctrl+B, Ctrl+I…). ¶ previews, ◫ splits the view. Ctrl+S saves.
 `
 });
+
+/* move the editor + side preview into their own flex row so the
+   toolbar above them keeps a fixed height */
+{
+  const container = mde.codemirror.getWrapperElement().parentElement;
+  const row = document.createElement('div');
+  row.className = 'mde-row';
+  container.appendChild(row);
+  row.appendChild(mde.codemirror.getWrapperElement());
+  const side = container.querySelector('.editor-preview-side');
+  if (side) row.appendChild(side);
+  mde.codemirror.refresh();
+}
 
 const show = () => {
   status.textContent = fileName + (dirty ? ' — unsaved changes' : '') +
