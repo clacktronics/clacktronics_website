@@ -62,20 +62,39 @@ body div > canvas { mix-blend-mode: multiply; }
 .gwt-MenuBarPopup .menuPopupBottomRight {
   background: transparent !important;
 }
+/* the decorator cells are invisible 5-8px spacers that hold submenus
+   away from their parent menu — collapse them so menus touch */
+.gwt-MenuBarPopup .menuPopupTopLeft, .gwt-MenuBarPopup .menuPopupTopLeftInner,
+.gwt-MenuBarPopup .menuPopupTopRight, .gwt-MenuBarPopup .menuPopupTopRightInner,
+.gwt-MenuBarPopup .menuPopupBottomLeft, .gwt-MenuBarPopup .menuPopupBottomLeftInner,
+.gwt-MenuBarPopup .menuPopupBottomRight, .gwt-MenuBarPopup .menuPopupBottomRightInner {
+  width: 0 !important; height: 0 !important; padding: 0 !important; overflow: hidden;
+}
+.gwt-MenuBarPopup .menuPopupTopCenter, .gwt-MenuBarPopup .menuPopupTopCenterInner,
+.gwt-MenuBarPopup .menuPopupBottomCenter, .gwt-MenuBarPopup .menuPopupBottomCenterInner {
+  height: 0 !important; padding: 0 !important; overflow: hidden;
+}
+.gwt-MenuBarPopup .menuPopupMiddleLeft, .gwt-MenuBarPopup .menuPopupMiddleLeftInner,
+.gwt-MenuBarPopup .menuPopupMiddleRight, .gwt-MenuBarPopup .menuPopupMiddleRightInner {
+  width: 0 !important; padding: 0 !important; overflow: hidden;
+}
 .gwt-MenuBarPopup .gwt-MenuBar-vertical,
 .gwt-PopupPanel .gwt-MenuBar-vertical {
   background: var(--paper) !important;
   border: 2px solid var(--ink) !important;
   border-radius: 0 0 8px 8px;
   box-shadow: 6px 6px 0 rgba(9, 20, 13, 0.35);
-  padding: 5px 2px !important;
+  padding: 5px 6px !important;
   font-family: 'IBM Plex Mono', monospace !important;
   font-size: 12px !important;
 }
 .gwt-MenuBar-vertical .gwt-MenuItem {
   color: var(--ink) !important;
-  padding: 6px 14px !important;
+  /* the keyboard shortcut is absolutely positioned in the right 30px,
+     so reserve room for it */
+  padding: 6px 36px 6px 14px !important;
   border-radius: 0 !important;
+  position: relative;
 }
 .gwt-MenuBar-vertical .gwt-MenuItem-selected {
   background: var(--ink) !important;
