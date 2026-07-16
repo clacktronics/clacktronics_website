@@ -1,4 +1,6 @@
 {
   "menus": ["file", "edit", "view", "desktop", "applications"],
-  "boot": ["file/home.md"]
+  "boot": ["file/home.md"],
+  "repo": "clacktronics/clacktronics_website",
+  "branch": "claude/website-markdown-template-split-2p1o84"
 }

@@ -177,9 +177,16 @@ fresh instance every time it's picked from the menu. Current apps:
   saving); elsewhere saving downloads the file. Drag-and-drop works,
   Ctrl+S saves. File → Open from website… lists every markdown file the
   site serves (discovered from site.json, the menu.json files and the
-  blog index) and opens it in the editor — note the site itself is
-  read-only, so publishing an edit means saving the file and pushing it
-  to the repo. The toolbar icons are plain text glyphs, so nothing is
+  blog index) and opens it in the editor. File → Commit to website…
+  publishes an edit straight to the repo through GitHub's contents API:
+  it needs a fine-grained personal access token (GitHub → Settings →
+  Developer settings → Fine-grained tokens; scope it to this repo only
+  with Contents read & write and an expiry). The token is pasted once
+  per session and held only in memory. The target repo/branch comes
+  from `repo`/`branch` in content/site.json — update `branch` if the
+  site moves to main. New blog posts committed this way are indexed
+  automatically by the GitHub Action in
+  .github/workflows/blog-index.yml, which regenerates blog.md on push. The toolbar icons are plain text glyphs, so nothing is
   fetched from icon CDNs.
 - `applications/python.html` (Applications → Python…) — a Thonny-style
   Python IDE running entirely in the browser on Pyodide (vendored under

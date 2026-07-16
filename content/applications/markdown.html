@@ -152,6 +152,12 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 .site-list button:hover { background: var(--ink); color: var(--menu-text); }
 .site-list button .path { color: var(--sage); font-size: 11px; margin-left: 8px; }
 .site-list button:hover .path { color: var(--menu-dim, #8fcaa8); }
+.commit-form { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.commit-form label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--ink); font-weight: 500; }
+.commit-form .hint { font-weight: 400; font-size: 11px; color: var(--sage); }
+.commit-form input { width: 100%; }
+.commit-actions { display: flex; align-items: center; gap: 14px; }
+.rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
 </style>
 </head>
 <body>
@@ -163,12 +169,35 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <button data-cmd="site">Open from website&hellip;</button>
       <button data-cmd="save">Save</button>
       <button data-cmd="saveas">Save As&hellip;</button>
+      <div class="sep"></div>
+      <button data-cmd="commit">Commit to website&hellip;</button>
     </div></div>
   </div>
   <div class="md-wrap">
     <textarea id="ed"></textarea>
   </div>
   <p class="app-status md-status" id="status">untitled.md</p>
+</div>
+
+<div class="site-modal" id="commitModal">
+  <div class="site-box">
+    <header><span>Commit to website</span><button id="commitClose" aria-label="Close">&#10005;</button></header>
+    <div class="commit-form">
+      <label>Repo path
+        <input type="text" id="commitPath" spellcheck="false">
+      </label>
+      <label>Commit message
+        <input type="text" id="commitMsg" spellcheck="false">
+      </label>
+      <label id="tokenRow">Fine-grained access token <span class="hint">(Contents read/write on this repo only — kept in memory, forgotten when the tab closes)</span>
+        <input type="password" id="commitToken" autocomplete="off">
+      </label>
+      <div class="commit-actions">
+        <button class="btn primary" id="commitGo">Commit</button>
+        <span class="app-status" id="commitStatus"></span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="site-modal" id="siteModal">
@@ -186,6 +215,9 @@ const status = document.getElementById('status');
 let fileName = 'untitled.md';
 let handle = null;      /* FileSystemFileHandle when the browser supports it */
 let dirty = false;
+let sitePath = null;    /* repo path when opened via "Open from website" */
+let ghToken = null;     /* fine-grained PAT, memory only, per session */
+let repoCfg = null;     /* { repo, branch } from content/site.json */
 
 const mde = new EasyMDE({
   element: document.getElementById('ed'),
@@ -244,6 +276,7 @@ async function openFile() {
       const f = await h.getFile();
       mde.value(await f.text());
       handle = h;
+      sitePath = null;
       fileName = f.name;
       dirty = false;
       show();
@@ -303,6 +336,7 @@ async function saveFile(as) {
 function newFile() {
   mde.value('');
   handle = null;
+  sitePath = null;
   fileName = 'untitled.md';
   dirty = false;
   show();
@@ -387,14 +421,98 @@ async function openSiteFile(path) {
     mde.value(await res.text());
     handle = null;
     fileName = path.split('/').pop();
+    sitePath = 'content/' + path;
     dirty = false;
     siteModal.classList.remove('open');
     show();
-    status.textContent = `${path} — opened from the website; Save downloads a copy (push it to the repo to publish)`;
+    status.textContent = `${path} — opened from the website; File → Commit to website… publishes your edit`;
   } catch (e) {
     status.textContent = `Could not open ${path} (${e.message}).`;
   }
 }
+
+/* ---- commit to the repo via GitHub's contents API ---- */
+const commitModal = document.getElementById('commitModal');
+const commitPath = document.getElementById('commitPath');
+const commitMsg = document.getElementById('commitMsg');
+const commitToken = document.getElementById('commitToken');
+const commitStatus = document.getElementById('commitStatus');
+
+async function getRepoCfg() {
+  if (repoCfg) return repoCfg;
+  const site = await (await fetch(contentBase + 'site.json')).json();
+  if (!site.repo) throw new Error('no "repo" configured in content/site.json');
+  repoCfg = { repo: site.repo, branch: site.branch || 'main' };
+  return repoCfg;
+}
+
+async function openCommitDialog() {
+  try { await getRepoCfg(); } catch (e) { status.textContent = e.message; return; }
+  commitPath.value = sitePath || ('content/file/blog/' + fileName);
+  commitMsg.value = (sitePath ? 'Update ' : 'Add ') + fileName;
+  document.getElementById('tokenRow').style.display = ghToken ? 'none' : 'flex';
+  commitStatus.textContent = `to ${repoCfg.repo} (${repoCfg.branch})`;
+  commitModal.classList.add('open');
+  (ghToken ? commitMsg : commitToken).focus();
+}
+
+const b64utf8 = s => {
+  const bytes = new TextEncoder().encode(s);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+
+async function doCommit() {
+  const path = commitPath.value.trim().replace(/^\/+/, '');
+  const msg = commitMsg.value.trim() || 'Update ' + fileName;
+  const token = ghToken || commitToken.value.trim();
+  if (!path) { commitStatus.textContent = 'A repo path is needed.'; return; }
+  if (!token) { commitStatus.textContent = 'A token is needed.'; return; }
+  const api = `https://api.github.com/repos/${repoCfg.repo}/contents/${path}`;
+  const headers = {
+    'Authorization': 'Bearer ' + token,
+    'Accept': 'application/vnd.github+json'
+  };
+  commitStatus.textContent = 'Committing…';
+  try {
+    /* current sha (absent for a new file); also our conflict check */
+    let sha = null;
+    const cur = await fetch(`${api}?ref=${encodeURIComponent(repoCfg.branch)}`, { headers });
+    if (cur.status === 200) sha = (await cur.json()).sha;
+    else if (cur.status === 401) throw new Error('token was rejected (401)');
+    else if (cur.status !== 404) throw new Error(`could not check current file (${cur.status})`);
+
+    const res = await fetch(api, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        message: msg,
+        content: b64utf8(mde.value()),
+        branch: repoCfg.branch,
+        ...(sha ? { sha } : {})
+      })
+    });
+    if (res.status === 409) throw new Error('conflict — the file changed on GitHub since you opened it');
+    if (!res.ok) throw new Error(`GitHub said ${res.status}: ${(await res.json()).message || ''}`);
+    const out = await res.json();
+    ghToken = token;             /* keep for the rest of the session */
+    commitToken.value = '';
+    sitePath = path;
+    dirty = false;
+    commitModal.classList.remove('open');
+    show();
+    status.textContent = `Committed ${out.commit.sha.slice(0, 7)} — the site rebuilds in about a minute.`;
+  } catch (e) {
+    commitStatus.textContent = e.message;
+  }
+}
+
+document.getElementById('commitGo').addEventListener('click', doCommit);
+document.getElementById('commitClose').addEventListener('click', () => commitModal.classList.remove('open'));
+commitModal.addEventListener('click', e => { if (e.target === commitModal) commitModal.classList.remove('open'); });
+commitModal.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') doCommit(); });
 
 siteFilter.addEventListener('input', () => {
   if (siteFiles) renderSiteList(siteFiles, siteFilter.value);
@@ -402,7 +520,7 @@ siteFilter.addEventListener('input', () => {
 document.getElementById('siteClose').addEventListener('click', () => siteModal.classList.remove('open'));
 siteModal.addEventListener('click', e => { if (e.target === siteModal) siteModal.classList.remove('open'); });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') siteModal.classList.remove('open');
+  if (e.key === 'Escape') { siteModal.classList.remove('open'); commitModal.classList.remove('open'); }
 });
 
 /* menu */
@@ -420,7 +538,7 @@ document.querySelector('.rm-bar').addEventListener('click', e => {
   const cmd = e.target.closest('[data-cmd]');
   if (!cmd) return;
   closeRm();
-  ({ new: newFile, open: openFile, site: openSiteBrowser,
+  ({ new: newFile, open: openFile, site: openSiteBrowser, commit: openCommitDialog,
      save: () => saveFile(false), saveas: () => saveFile(true) })[cmd.dataset.cmd]();
 });
 document.addEventListener('click', closeRm);
