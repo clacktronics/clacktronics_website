@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Python — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<link rel="stylesheet" href="../../vendor/codemirror5/codemirror.css">
+<style>
+.app { height: 100%; }
+.py-bar { display: flex; align-items: center; gap: 10px; }
+.py-bar .btn { padding: 6px 14px; font-size: 12px; }
+.py-run { color: var(--leaf-deep); }
+.py-stop { color: #a04a3a; }
+.py-main {
+  flex: 1; min-height: 0; display: grid; gap: 10px; padding: 10px 12px;
+  grid-template-columns: 1fr 230px;
+  grid-template-rows: 1fr 200px;
+}
+.py-editor { grid-column: 1; grid-row: 1; min-height: 0; display: flex; flex-direction: column; }
+.py-vars { grid-column: 2; grid-row: 1 / 3; min-height: 0; display: flex; flex-direction: column; }
+.py-shell { grid-column: 1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; }
+.py-pane-title {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--leaf-deep); padding: 0 2px 6px;
+}
+.py-editor .CodeMirror {
+  flex: 1; min-height: 0; height: auto;
+  border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--paper); color: var(--ink-soft);
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.6;
+}
+.CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
+.CodeMirror-selected { background: rgba(79, 174, 125, 0.25) !important; }
+.CodeMirror-gutters { background: var(--paper-deep) !important; border-right: 1px solid var(--paper-line) !important; }
+.CodeMirror-linenumber { color: var(--sage) !important; }
+.cm-s-default .cm-keyword { color: #276b47; font-weight: 600; }
+.cm-s-default .cm-def { color: #09140d; font-weight: 600; }
+.cm-s-default .cm-string { color: #8a3d2e; }
+.cm-s-default .cm-comment { color: #66755a; font-style: italic; }
+.cm-s-default .cm-number { color: #a8841f; }
+.cm-s-default .cm-builtin { color: #276b47; }
+.cm-s-default .cm-operator { color: #14231a; }
+
+.py-shell-out {
+  flex: 1; min-height: 0; overflow-y: auto;
+  border: 1px solid var(--ink); border-radius: 8px 8px 0 0;
+  background: var(--ink); color: var(--menu-text);
+  font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; line-height: 1.55;
+  padding: 10px 12px; white-space: pre-wrap; word-break: break-word;
+  user-select: text;
+}
+.py-shell-out .err { color: #e8927c; }
+.py-shell-out .sys { color: #8fcaa8; }
+.py-shell-out .echo { color: #8fcaa8; }
+.py-shell-in {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--ink); border-top: none; border-radius: 0 0 8px 8px;
+  background: var(--ink); padding: 6px 12px 8px;
+}
+.py-shell-in .prompt { color: var(--leaf); font-weight: 600; font-size: 12.5px; }
+.py-shell-in input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--menu-text); font-family: 'IBM Plex Mono', monospace; font-size: 12.5px;
+}
+.py-vars-table {
+  flex: 1; min-height: 0; overflow: auto;
+  border: 1px solid var(--ink); border-radius: 8px; background: var(--paper-deep);
+}
+.py-vars-table table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.py-vars-table th {
+  text-align: left; padding: 6px 8px; background: var(--ink); color: var(--menu-text);
+  position: sticky; top: 0; font-weight: 500;
+}
+.py-vars-table td { padding: 5px 8px; border-bottom: 1px solid var(--paper-line); vertical-align: top; }
+.py-vars-table td.n { color: var(--ink); font-weight: 600; white-space: nowrap; }
+.py-vars-table td.t { color: var(--leaf-deep); white-space: nowrap; }
+.py-vars-table td.v { color: var(--ink-soft); word-break: break-all; }
+.py-status { padding: 0 16px 10px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="rm-bar py-bar">
+    <div class="rm"><button>File</button><div class="rm-dd">
+      <button data-cmd="new">New</button>
+      <button data-cmd="open">Open&hellip;</button>
+      <button data-cmd="save">Save</button>
+      <button data-cmd="saveas">Save As&hellip;</button>
+    </div></div>
+    <button class="btn ghost py-run" data-cmd="run">&#9654; Run</button>
+    <button class="btn ghost py-stop" data-cmd="stop">&#9632; Stop / Restart</button>
+  </div>
+  <div class="py-main">
+    <div class="py-editor">
+      <div class="py-pane-title">script.py</div>
+      <textarea id="code"></textarea>
+    </div>
+    <div class="py-vars">
+      <div class="py-pane-title">Variables</div>
+      <div class="py-vars-table">
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>Value</th></tr></thead>
+          <tbody id="vars"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="py-shell">
+      <div class="py-pane-title">Shell</div>
+      <div class="py-shell-out" id="out"></div>
+      <div class="py-shell-in">
+        <span class="prompt">&gt;&gt;&gt;</span>
+        <input id="repl" autocomplete="off" spellcheck="false" aria-label="Python shell input" disabled>
+      </div>
+    </div>
+  </div>
+  <p class="app-status py-status" id="status">Starting Python&hellip;</p>
+</div>
+
+<script src="../../vendor/codemirror5/codemirror.js"></script>
+<script src="../../vendor/codemirror5/python.js"></script>
+<script>
+(() => {
+const out = document.getElementById('out');
+const varsBody = document.getElementById('vars');
+const repl = document.getElementById('repl');
+const status = document.getElementById('status');
+const paneTitle = document.querySelector('.py-editor .py-pane-title');
+
+let fileName = 'script.py';
+let handle = null;
+let busy = false;
+
+const cm = CodeMirror.fromTextArea(document.getElementById('code'), {
+  mode: 'python',
+  lineNumbers: true,
+  indentUnit: 4,
+  viewportMargin: Infinity
+});
+cm.setValue(`# blink.py — a small demo
+import math
+
+def blink(n):
+    for i in range(n):
+        print('LED', 'on ' if i % 2 == 0 else 'off', '*' * (i + 1))
+
+blink(5)
+
+voltage = 3.3
+current = voltage / 220
+power_mw = voltage * current * 1000
+print(f'LED current: {current * 1000:.1f} mA, power: {power_mw:.1f} mW')
+angle = math.degrees(math.atan2(1, 1))
+`);
+
+const print = (text, cls) => {
+  const s = document.createElement('span');
+  if (cls) s.className = cls;
+  s.textContent = text;
+  out.appendChild(s);
+  out.scrollTop = out.scrollHeight;
+};
+
+/* ---- pyodide worker (Stop = terminate + fresh interpreter, like
+   Thonny's "Stop/Restart backend") ---- */
+const pyodideURL = new URL('../../vendor/pyodide/pyodide.mjs', location.href).href;
+const indexURL = new URL('../../vendor/pyodide/', location.href).href;
+
+const HELPERS = `
+import builtins as __clack_b
+def __clack_no_input(prompt=''):
+    raise RuntimeError('input() is not available in this browser build')
+__clack_b.input = __clack_no_input
+
+def __clack_vars():
+    import json, types
+    rows = []
+    for k, v in list(globals().items()):
+        if k.startswith('_'):
+            continue
+        t = 'module' if isinstance(v, types.ModuleType) else type(v).__name__
+        try:
+            r = repr(v)
+        except Exception:
+            r = '<unrepresentable>'
+        if len(r) > 100:
+            r = r[:97] + '...'
+        rows.append([k, t, r])
+    return json.dumps(rows)
+
+def __clack_repl(code):
+    import ast
+    tree = ast.parse(code, mode='exec')
+    if tree.body and isinstance(tree.body[-1], ast.Expr):
+        last = ast.Expression(tree.body.pop().value)
+        exec(compile(tree, '<shell>', 'exec'), globals())
+        val = eval(compile(last, '<shell>', 'eval'), globals())
+        if val is not None:
+            print(repr(val))
+    else:
+        exec(compile(tree, '<shell>', 'exec'), globals())
+
+__clack_base = set(globals().keys()) | {'__clack_base'}
+def __clack_reset():
+    for k in list(globals().keys()):
+        if k not in __clack_base:
+            del globals()[k]
+`;
+
+const workerSrc = `
+const { loadPyodide } = await import(${JSON.stringify(pyodideURL)});
+let py;
+async function boot() {
+  py = await loadPyodide({
+    indexURL: ${JSON.stringify(indexURL)},
+    stdout: t => postMessage({ type: 'out', text: t + '\\n' }),
+    stderr: t => postMessage({ type: 'err', text: t + '\\n' })
+  });
+  py.runPython(${JSON.stringify(HELPERS)});
+  postMessage({ type: 'ready',
+    version: py.runPython('import sys; sys.version.split()[0]'),
+    pyodide: py.version });
+}
+self.onmessage = async e => {
+  const m = e.data;
+  try {
+    if (m.type === 'run') {
+      py.runPython('__clack_reset()');
+      await py.runPythonAsync(m.code);
+    } else if (m.type === 'repl') {
+      py.globals.get('__clack_repl')(m.code);
+    }
+  } catch (err) {
+    postMessage({ type: 'err', text: String(err.message || err) });
+  }
+  postMessage({ type: 'done', vars: py.runPython('__clack_vars()') });
+};
+boot().catch(err => postMessage({ type: 'fatal', text: String(err) }));
+`;
+
+let worker = null;
+function bootWorker(restart) {
+  if (worker) worker.terminate();
+  busy = true;
+  repl.disabled = true;
+  status.textContent = restart ? 'Restarting Python…' : 'Starting Python…';
+  worker = new Worker(URL.createObjectURL(new Blob([workerSrc], { type: 'text/javascript' })), { type: 'module' });
+  worker.onmessage = e => {
+    const m = e.data;
+    switch (m.type) {
+      case 'ready':
+        busy = false;
+        repl.disabled = false;
+        status.textContent = `Python ${m.version} (Pyodide ${m.pyodide}) — ready`;
+        print(`Python ${m.version} (Pyodide ${m.pyodide})\n`, 'sys');
+        renderVars([]);
+        break;
+      case 'out': print(m.text); break;
+      case 'err': print(m.text.endsWith('\n') ? m.text : m.text + '\n', 'err'); break;
+      case 'done':
+        busy = false;
+        repl.disabled = false;
+        repl.focus();
+        status.textContent = 'Ready';
+        try { renderVars(JSON.parse(m.vars)); } catch {}
+        break;
+      case 'fatal':
+        print('Python failed to start: ' + m.text + '\n', 'err');
+        status.textContent = 'Python failed to start';
+        break;
+    }
+  };
+}
+
+function renderVars(rows) {
+  varsBody.innerHTML = '';
+  for (const [n, t, v] of rows) {
+    const tr = document.createElement('tr');
+    for (const [cls, text] of [['n', n], ['t', t], ['v', v]]) {
+      const td = document.createElement('td');
+      td.className = cls;
+      td.textContent = text;
+      tr.appendChild(td);
+    }
+    varsBody.appendChild(tr);
+  }
+}
+
+function run() {
+  if (busy || !worker) return;
+  busy = true;
+  repl.disabled = true;
+  status.textContent = 'Running…';
+  print(`>>> %Run ${fileName}\n`, 'echo');
+  worker.postMessage({ type: 'run', code: cm.getValue() });
+}
+
+/* ---- shell ---- */
+const history = [];
+let histPos = -1;
+repl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && repl.value.trim()) {
+    const code = repl.value;
+    history.push(code);
+    histPos = history.length;
+    repl.value = '';
+    print('>>> ' + code + '\n', 'echo');
+    if (busy) return;
+    busy = true;
+    status.textContent = 'Running…';
+    worker.postMessage({ type: 'repl', code });
+  } else if (e.key === 'ArrowUp') {
+    if (histPos > 0) { histPos--; repl.value = history[histPos]; }
+    e.preventDefault();
+  } else if (e.key === 'ArrowDown') {
+    if (histPos < history.length - 1) { histPos++; repl.value = history[histPos]; }
+    else { histPos = history.length; repl.value = ''; }
+    e.preventDefault();
+  }
+});
+
+/* ---- files ---- */
+const fsAccess = 'showOpenFilePicker' in window;
+const pyTypes = [{ description: 'Python', accept: { 'text/x-python': ['.py'] } }];
+const setFile = (name, h) => {
+  fileName = name;
+  handle = h || null;
+  paneTitle.textContent = name;
+  document.title = name + ' — Python — ClackOS';
+};
+
+const picker = document.createElement('input');
+picker.type = 'file';
+picker.accept = '.py,text/x-python,text/plain';
+picker.addEventListener('change', async () => {
+  const f = picker.files[0];
+  picker.value = '';
+  if (!f) return;
+  cm.setValue(await f.text());
+  setFile(f.name);
+});
+
+async function openFile() {
+  if (!fsAccess) { picker.click(); return; }
+  try {
+    const [h] = await window.showOpenFilePicker({ types: pyTypes });
+    const f = await h.getFile();
+    cm.setValue(await f.text());
+    setFile(f.name, h);
+  } catch {}
+}
+
+async function saveFile(as) {
+  if (fsAccess) {
+    try {
+      if (as || !handle)
+        handle = await window.showSaveFilePicker({ types: pyTypes, suggestedName: fileName });
+      const w = await handle.createWritable();
+      await w.write(cm.getValue());
+      await w.close();
+      setFile((await handle.getFile()).name, handle);
+      status.textContent = `Saved ${fileName}`;
+    } catch {}
+    return;
+  }
+  if (as) {
+    const n = prompt('Save as:', fileName);
+    if (!n) return;
+    fileName = /\.py$/i.test(n) ? n : n + '.py';
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([cm.getValue()], { type: 'text/x-python' }));
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  status.textContent = `Saved ${fileName} (downloaded)`;
+}
+
+/* ---- menu / toolbar ---- */
+const rms = document.querySelectorAll('.rm');
+const closeRm = () => rms.forEach(m => m.classList.remove('open'));
+rms.forEach(m => {
+  m.querySelector(':scope > button').addEventListener('click', e => {
+    e.stopPropagation();
+    const was = m.classList.contains('open');
+    closeRm();
+    if (!was) m.classList.add('open');
+  });
+});
+document.addEventListener('click', closeRm);
+document.querySelector('.py-bar').addEventListener('click', e => {
+  const cmd = e.target.closest('[data-cmd]');
+  if (!cmd) return;
+  closeRm();
+  switch (cmd.dataset.cmd) {
+    case 'new': cm.setValue(''); setFile('script.py'); break;
+    case 'open': openFile(); break;
+    case 'save': saveFile(false); break;
+    case 'saveas': saveFile(true); break;
+    case 'run': run(); break;
+    case 'stop':
+      print('\n=== STOP / RESTART ===\n', 'sys');
+      bootWorker(true);
+      break;
+  }
+});
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveFile(e.shiftKey); }
+  if (e.key === 'F5') { e.preventDefault(); run(); }
+});
+
+setFile('script.py');
+bootWorker(false);
+})();
+</script>
+</body>
+</html>

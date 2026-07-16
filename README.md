@@ -177,6 +177,18 @@ fresh instance every time it's picked from the menu. Current apps:
   saving); elsewhere saving downloads the file. Drag-and-drop works,
   Ctrl+S saves. The toolbar icons are plain text glyphs, so nothing is
   fetched from icon CDNs.
+- `applications/python.html` (Applications → Python…) — a Thonny-style
+  Python IDE running entirely in the browser on Pyodide (vendored under
+  `vendor/pyodide/`, MPL-2.0 — the same WASM CPython that powers
+  PyScript), with a CodeMirror 5 editor (`vendor/codemirror5/`, MIT).
+  Editor with Python syntax highlighting, a shell with a REPL and
+  history, and Thonny's signature Variables pane showing every global's
+  name, type and value after each run. Run (F5) executes the script in
+  a worker; Stop/Restart terminates the worker and boots a fresh
+  interpreter, so runaway loops can always be killed. Open/save .py
+  files like the Markdown editor (File System Access API with download
+  fallback, Ctrl+S). Only the core interpreter is vendored — installing
+  packages with micropip fetches wheels from PyPI at runtime.
 - `applications/paint.html` (Applications → Paint…) — a Windows 95-style
   Paint: pencil, brush, eraser, airbrush, flood fill, colour picker, line,
   rectangle (outline/filled) and ellipse tools with a size slider; the
