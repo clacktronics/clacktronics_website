@@ -94,6 +94,8 @@ listing every post newest-first, grouped by year.
 - ` ``` ` fenced code blocks
 - `> quote` — blockquote
 - `[label](window:file/catalogue.md)` — link that opens another window
+- `[label](app:applications/video/index.html?src=content%2Fmedia%2Fdemo.mp4)`
+  — link that launches a registered application with startup options
 - `[label](action:tidy)` — link that runs a desktop action
 - `[label](https://…)` — normal external link
 - A paragraph containing **only** links becomes the button row (first button solid, rest ghost)
@@ -121,6 +123,12 @@ Built-in actions: `close-front`, `tidy`, `toggle-taskbar`, `copy`, `restart`.
 tiles defined in `assets/js/clackos.js`). `"app"` items open the given HTML
 page from the same menu folder in a desktop window; `multi: true` opens a
 fresh instance every time it's picked from the menu. Current apps:
+
+Application links may include a query string. Only pages already registered as
+`"type": "app"` in a menu can be launched, so Markdown cannot turn the desktop
+into an arbitrary iframe launcher. The Markdown Editor's Insert menu creates
+links for Video Lab files, Falstad exported data or saved circuit files, KiCad
+files, generic registered applications, Markdown windows, and desktop actions.
 
 - `desktop/patterns.html` (Desktop → Edit pattern…) — a Windows 3-style 8×8
   desktop pattern editor. Saved patterns live in the browser's localStorage,

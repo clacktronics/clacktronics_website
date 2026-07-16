@@ -42,6 +42,15 @@ application. The page is iframe-safe and follows the same standalone-app
 pattern as Paint, Sound Recorder, Markdown, and Python. Its CSS is
 self-contained, so no shared ClackOS stylesheet needs to change.
 
+It can also open a site-hosted or CORS-enabled video directly from Markdown:
+
+```markdown
+[Open in Video Lab](app:applications/video/index.html?src=content%2Fmedia%2Fdemo.mp4)
+```
+
+The Markdown Editor's Insert menu generates this link and URL-encodes the
+source automatically.
+
 ## Practical browser limits
 
 “Any format” means any unencrypted format and codec included in the pinned

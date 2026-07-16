@@ -174,6 +174,17 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <div class="sep"></div>
       <button data-cmd="commit">Commit to website&hellip;</button>
     </div></div>
+    <div class="rm"><button>Insert</button><div class="rm-dd">
+      <button data-cmd="insert-window">Markdown window link&hellip;</button>
+      <button data-cmd="insert-action">Desktop action link&hellip;</button>
+      <div class="sep"></div>
+      <button data-cmd="insert-video">Video Lab file link&hellip;</button>
+      <button data-cmd="insert-falstad">Falstad exported link&hellip;</button>
+      <button data-cmd="insert-circuit">Falstad circuit file link&hellip;</button>
+      <button data-cmd="insert-kicad">KiCad file link&hellip;</button>
+      <div class="sep"></div>
+      <button data-cmd="insert-app">Application link&hellip;</button>
+    </div></div>
   </div>
   <div class="md-wrap">
     <textarea id="ed"></textarea>
@@ -356,6 +367,89 @@ function newFile() {
   dirty = false;
   show();
 }
+
+/* ---- ClackOS links inserted into Markdown ---- */
+const cm = mde.codemirror;
+
+function linkLabel(fallback) {
+  const selected = cm.getSelection().trim();
+  if (selected) return selected.replace(/\]/g, '\\]');
+  const label = prompt('Link text:', fallback);
+  return label ? label.replace(/\]/g, '\\]') : null;
+}
+
+function insertClackLink(href, fallbackLabel) {
+  const label = linkLabel(fallbackLabel);
+  if (!label) return;
+  cm.replaceSelection(`[${label}](${href})`);
+  cm.focus();
+}
+
+function encodePart(value) {
+  return encodeURIComponent(value.trim());
+}
+
+function siteFileName(value, folder) {
+  const path = value.trim().replace(/\\/g, '/');
+  const marker = `/applications/${folder}/`;
+  const at = path.toLowerCase().lastIndexOf(marker);
+  return (at >= 0 ? path.slice(at + marker.length) : path.replace(/^\/+/, '')).replace(/^.*\//, '');
+}
+
+function insertWindowLink() {
+  const path = prompt('Markdown path under content/ (for example file/catalogue.md):', 'file/catalogue.md');
+  if (path) insertClackLink('window:' + encodeURI(path.trim()).replace(/[()]/g, c => '%' + c.charCodeAt(0).toString(16)), 'Open page');
+}
+
+function insertActionLink() {
+  const action = prompt('Desktop action: close-front, tidy, toggle-taskbar, copy, or restart', 'tidy');
+  if (action) insertClackLink('action:' + encodePart(action), action === 'tidy' ? 'Tidy windows' : 'Run action');
+}
+
+function insertVideoLink() {
+  const source = prompt('Video URL or path from the site root (for example content/media/demo.mp4):', 'content/media/demo.mp4');
+  if (source) insertClackLink(`app:applications/video/index.html?src=${encodePart(source)}`, 'Open in Video Lab');
+}
+
+function insertFalstadLink() {
+  const value = prompt('Paste a Falstad exported link, its ?ctz= value, or the compressed data:');
+  if (!value) return;
+  let ctz = value.trim();
+  try {
+    const parsed = new URL(ctz, location.href);
+    ctz = parsed.searchParams.get('ctz') || ctz;
+  } catch {}
+  if (/^\??ctz=/i.test(ctz)) ctz = ctz.replace(/^\??ctz=/i, '').split('&')[0];
+  insertClackLink(`app:applications/circuit.html?ctz=${encodePart(ctz)}`, 'Open circuit simulator');
+}
+
+function insertCircuitLink() {
+  const file = prompt('Circuit file under content/applications/circuits/:', 'example-lrc.txt');
+  if (file) insertClackLink(`app:applications/circuit.html?circuit=${encodePart(siteFileName(file, 'circuits'))}`, 'Open circuit simulator');
+}
+
+function insertKicadLink() {
+  const file = prompt('KiCad file under content/applications/kicad/:', 'example.kicad_sch');
+  if (file) insertClackLink(`app:applications/kicad.html?file=${encodePart(siteFileName(file, 'kicad'))}`, 'Open in KiCad Viewer');
+}
+
+function insertAppLink() {
+  const page = prompt('Registered application page under content/ (for example applications/video/index.html):', 'applications/video/index.html');
+  if (!page) return;
+  const options = prompt('Optional query string, without the leading ?:', '') || '';
+  const cleanPage = page.trim().replace(/^content\//, '').replace(/^\/+/, '');
+  insertClackLink(`app:${cleanPage}${options.trim() ? '?' + options.trim().replace(/^\?/, '') : ''}`, 'Open application');
+}
+
+const insertCommands = {
+  'insert-window': insertWindowLink,
+  'insert-action': insertActionLink,
+  'insert-video': insertVideoLink,
+  'insert-falstad': insertFalstadLink,
+  'insert-circuit': insertCircuitLink,
+  'insert-kicad': insertKicadLink,
+  'insert-app': insertAppLink
+};
 
 /* ---- open markdown straight from the website ----
  * a static site can't list directories, so files are discovered the same
@@ -553,8 +647,9 @@ document.querySelector('.rm-bar').addEventListener('click', e => {
   const cmd = e.target.closest('[data-cmd]');
   if (!cmd) return;
   closeRm();
-  ({ new: newFile, open: openFile, site: openSiteBrowser, commit: openCommitDialog,
-     save: () => saveFile(false), saveas: () => saveFile(true) })[cmd.dataset.cmd]();
+  const command = ({ new: newFile, open: openFile, site: openSiteBrowser, commit: openCommitDialog,
+    save: () => saveFile(false), saveas: () => saveFile(true), ...insertCommands })[cmd.dataset.cmd];
+  if (command) command();
 });
 document.addEventListener('click', closeRm);
 

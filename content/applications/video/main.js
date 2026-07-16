@@ -730,6 +730,21 @@ installDropTarget($('#drop-zone'), file => {
 });
 installDropTarget($('#audio-drop'), file => { if (file) installAudio(file, $('input[name="audio-mode"]:checked').value); });
 
+async function openLinkedVideo(source) {
+  const siteRoot = new URL('../../../', location.href);
+  const url = new URL(source, siteRoot);
+  if (!['http:', 'https:', 'data:'].includes(url.protocol)) {
+    throw new Error(`Linked videos cannot use the ${url.protocol} protocol.`);
+  }
+  setStatus(`Fetching linked video from ${url.hostname || 'the document'}…`, 'busy');
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Could not fetch linked video (${response.status}).`);
+  const blob = await response.blob();
+  let name = 'linked-video';
+  try { name = decodeURIComponent(url.pathname.split('/').filter(Boolean).pop()) || name; } catch {}
+  await openVideo(new File([blob], name, { type: blob.type }), 'open');
+}
+
 document.addEventListener('keydown', event => {
   if (event.target.matches('input, select, textarea') || $('#info-dialog').open) return;
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') {
@@ -759,3 +774,5 @@ window.addEventListener('beforeunload', () => {
 
 renderTimeline();
 updateUi();
+const linkedSource = new URLSearchParams(location.search).get('src');
+if (linkedSource) openLinkedVideo(linkedSource).catch(error => setStatus(error.message, 'error'));

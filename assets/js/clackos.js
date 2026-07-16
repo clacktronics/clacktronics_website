@@ -45,9 +45,9 @@ function esc(s) {
 }
 
 /* Inline markdown: `code` -> keyword span, **bold**, *italic*, ![alt](src),
- * [text](href). Links may use window:<md-path> to open a window or
- * action:<name> to run a desktop action; anything else is a normal
- * external link. */
+ * [text](href). Links may use window:<md-path> to open a content window,
+ * app:<registered-page>?<options> to launch an application, or action:<name>
+ * to run a desktop action; anything else is a normal external link. */
 function inline(s) {
   s = esc(s);
   /* images become placeholder tokens so the link pass can wrap them */
@@ -62,6 +62,8 @@ function inline(s) {
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, text, href) => {
     if (href.startsWith('window:'))
       return `<a href="#" data-action="open:${href.slice(7)}">${text.trim()}</a>`;
+    if (href.startsWith('app:'))
+      return `<a href="#" data-action="open:${href}">${text.trim()}</a>`;
     if (href.startsWith('action:'))
       return `<a href="#" data-action="${href.slice(7)}">${text.trim()}</a>`;
     return `<a href="${href}" target="_blank" rel="noopener">${text.trim()}</a>`;
@@ -279,17 +281,18 @@ async function openWindow(id) {
 
   let meta, contentHtml, mount = null;
   if (id.startsWith('app:')) {
-    const page = id.slice(4).split('#')[0];
+    const launchPage = id.slice(4);
+    const page = launchPage.split(/[?#]/)[0];
     const def = appDefs.get(page);
     if (!def) return;
     /* multi-instance apps get a fresh window id on every open */
-    if (def.multi && !id.includes('#')) id = `${id}#${++appInstances}`;
+    if (def.multi) id = `${id}#instance-${++appInstances}`;
     meta = { title: def.title || def.label || page, width: def.width, height: def.height };
     windowTitles.set(id, meta.title);
     mount = body => {
       const f = document.createElement('iframe');
       f.className = 'appframe';
-      f.src = 'content/' + page;
+      f.src = 'content/' + launchPage;
       f.title = meta.title;
       /* clicks inside the app should still raise its window */
       f.addEventListener('load', () => {
