@@ -1,8 +1,20 @@
 {
-  "menus": ["file", "edit", "view", "desktop", "applications"],
-  "boot": ["file/home.md"],
-  "theme": "clackos.css",
-  "themes": ["clackos.css", "midnight.css"],
+  "menus": [
+    "file",
+    "edit",
+    "view",
+    "desktop",
+    "applications"
+  ],
+  "boot": [
+    "file/home.md"
+  ],
+  "theme": "poolside.css",
+  "themes": [
+    "clackos.css",
+    "midnight.css",
+    "poolside.css"
+  ],
   "repo": "clacktronics/clacktronics_website",
   "branch": "main"
 }
