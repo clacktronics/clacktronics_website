@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Resistor Calculator — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+.res-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+}
+.res-title { display: flex; flex-direction: column; gap: 5px; }
+.res-title h1 {
+  color: var(--ink); font-size: 18px; line-height: 1.2; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.res-mode { display: flex; gap: 7px; }
+.mode-btn {
+  all: unset; cursor: pointer; min-width: 72px; padding: 7px 11px;
+  border: 1px solid var(--ink); border-radius: 6px; text-align: center;
+  color: var(--ink); background: var(--paper); font-weight: 500;
+}
+.mode-btn:hover { background: var(--paper-deep); }
+.mode-btn[aria-pressed="true"] { color: var(--menu-text); background: var(--ink); }
+.mode-btn:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+
+.res-visual-wrap {
+  padding: 24px 18px; border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--paper-deep);
+}
+.res-visual { display: flex; align-items: center; width: 100%; min-height: 88px; }
+.res-lead { height: 3px; flex: 1; min-width: 18px; background: #80877d; }
+.res-body {
+  position: relative; width: min(410px, 78vw); height: 78px; flex: none;
+  border: 2px solid var(--ink); border-radius: 30px;
+  background: #e4d09d;
+  box-shadow: inset 0 7px 0 rgba(255, 255, 255, 0.26), inset 0 -7px 0 rgba(87, 67, 30, 0.09);
+  overflow: hidden;
+}
+.res-body::before, .res-body::after {
+  content: ''; position: absolute; top: 10px; bottom: 10px; width: 30px;
+  background: rgba(116, 91, 43, 0.09);
+}
+.res-body::before { left: 0; border-radius: 0 12px 12px 0; }
+.res-body::after { right: 0; border-radius: 12px 0 0 12px; }
+.res-band {
+  position: absolute; top: 0; bottom: 0; width: 20px; transform: translateX(-50%);
+  border-left: 1px solid rgba(0, 0, 0, 0.25); border-right: 1px solid rgba(0, 0, 0, 0.25);
+  transition: left 140ms ease, background-color 140ms ease;
+}
+
+.res-controls {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
+  gap: 10px;
+}
+.band-control {
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  padding: 10px; border: 1px solid var(--paper-line); border-radius: 6px;
+  background: var(--paper-deep);
+}
+.band-control-row { display: flex; align-items: center; gap: 7px; }
+.band-control select { width: 100%; min-width: 0; }
+.band-chip {
+  width: 18px; height: 18px; flex: none; border: 1px solid var(--ink);
+  border-radius: 50%; background: #000;
+}
+
+.res-result {
+  display: grid; grid-template-columns: minmax(150px, 1fr) minmax(210px, 1.4fr);
+  gap: 18px; align-items: center;
+}
+.res-value {
+  color: var(--ink); font-size: clamp(24px, 5vw, 36px); font-weight: 600;
+  line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.res-details { display: grid; gap: 5px; }
+.res-detail { display: flex; justify-content: space-between; gap: 14px; }
+.res-detail span:last-child { color: var(--ink); font-weight: 500; text-align: right; }
+.res-formula { font-size: 11px; color: var(--sage); }
+
+@media (max-width: 560px) {
+  .app-main { padding: 16px; }
+  .res-result { grid-template-columns: 1fr; }
+  .res-body { width: min(360px, 72vw); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="app-main">
+    <header class="res-head">
+      <div class="res-title">
+        <p class="app-lbl">Component utility</p>
+        <h1>Resistor value calculator</h1>
+        <p class="app-status">Choose the colour of each band to read its resistance.</p>
+      </div>
+      <div class="res-mode" role="group" aria-label="Number of resistor bands">
+        <button class="mode-btn" type="button" data-mode="4" aria-pressed="true">4 band</button>
+        <button class="mode-btn" type="button" data-mode="5" aria-pressed="false">5 band</button>
+      </div>
+    </header>
+
+    <section class="res-visual-wrap" aria-label="Resistor preview">
+      <div class="res-visual" aria-hidden="true">
+        <span class="res-lead"></span>
+        <div class="res-body" id="resistor"></div>
+        <span class="res-lead"></span>
+      </div>
+    </section>
+
+    <section class="res-controls" id="controls" aria-label="Colour bands"></section>
+
+    <section class="app-panel res-result" id="result" aria-live="polite" aria-atomic="true">
+      <div>
+        <p class="app-lbl">Resistance</p>
+        <p class="res-value" id="value">1 kΩ</p>
+      </div>
+      <div class="res-details">
+        <p class="res-detail"><span>Tolerance</span><span id="tolerance">±5%</span></p>
+        <p class="res-detail"><span>Minimum</span><span id="minimum">950 Ω</span></p>
+        <p class="res-detail"><span>Maximum</span><span id="maximum">1.05 kΩ</span></p>
+        <p class="res-formula" id="formula">10 × 100 = 1,000 Ω</p>
+      </div>
+    </section>
+
+    <p class="app-status">Four-band resistors use two significant digits; five-band resistors use three. The final band is the tolerance.</p>
+  </main>
+</div>
+
+<script>
+(() => {
+const colours = {
+  black:  { hex: '#171917', digit: 0, multiplier: 1 },
+  brown:  { hex: '#724327', digit: 1, multiplier: 10, tolerance: 1 },
+  red:    { hex: '#c53e32', digit: 2, multiplier: 100, tolerance: 2 },
+  orange: { hex: '#e47d24', digit: 3, multiplier: 1000 },
+  yellow: { hex: '#e6c82e', digit: 4, multiplier: 10000 },
+  green:  { hex: '#3e8752', digit: 5, multiplier: 100000, tolerance: 0.5 },
+  blue:   { hex: '#3b68a7', digit: 6, multiplier: 1000000, tolerance: 0.25 },
+  violet: { hex: '#74518c', digit: 7, multiplier: 10000000, tolerance: 0.1 },
+  grey:   { hex: '#858980', digit: 8, multiplier: 100000000, tolerance: 0.05 },
+  white:  { hex: '#f4f0df', digit: 9, multiplier: 1000000000 },
+  gold:   { hex: '#bd922d', multiplier: 0.1, tolerance: 5 },
+  silver: { hex: '#a7aaa6', multiplier: 0.01, tolerance: 10 }
+};
+
+const digitColours = ['black', 'brown', 'red', 'orange', 'yellow', 'green', 'blue', 'violet', 'grey', 'white'];
+const firstDigitColours = digitColours.slice(1);
+const multiplierColours = ['silver', 'gold', ...digitColours];
+const toleranceColours = ['grey', 'violet', 'blue', 'green', 'brown', 'red', 'gold', 'silver'];
+const positions = {
+  4: [17, 34, 61, 83],
+  5: [13, 27, 41, 65, 84]
+};
+const state = {
+  4: ['brown', 'black', 'red', 'gold'],
+  5: ['brown', 'black', 'black', 'red', 'brown']
+};
+
+let mode = 4;
+const resistor = document.getElementById('resistor');
+const controls = document.getElementById('controls');
+const valueEl = document.getElementById('value');
+const toleranceEl = document.getElementById('tolerance');
+const minimumEl = document.getElementById('minimum');
+const maximumEl = document.getElementById('maximum');
+const formulaEl = document.getElementById('formula');
+
+const titleCase = value => value[0].toUpperCase() + value.slice(1);
+const trimNumber = value => Number(value.toPrecision(4)).toLocaleString('en-GB', { maximumFractionDigits: 4 });
+
+function formatOhms(value) {
+  const units = [
+    { limit: 1e9, divisor: 1e9, suffix: 'GΩ' },
+    { limit: 1e6, divisor: 1e6, suffix: 'MΩ' },
+    { limit: 1e3, divisor: 1e3, suffix: 'kΩ' }
+  ];
+  const unit = units.find(item => value >= item.limit);
+  return unit ? `${trimNumber(value / unit.divisor)} ${unit.suffix}` : `${trimNumber(value)} Ω`;
+}
+
+function formatMultiplier(value) {
+  if (value >= 1e9) return '×1G';
+  if (value >= 1e6) return `×${value / 1e6}M`;
+  if (value >= 1e3) return `×${value / 1e3}k`;
+  return `×${value}`;
+}
+
+function bandDefinition(index) {
+  const significantCount = mode === 4 ? 2 : 3;
+  if (index < significantCount) {
+    return {
+      label: `${index + 1}${index === 0 ? 'st' : index === 1 ? 'nd' : 'rd'} digit`,
+      names: index === 0 ? firstDigitColours : digitColours,
+      optionText: name => `${titleCase(name)} — ${colours[name].digit}`
+    };
+  }
+  if (index === significantCount) {
+    return {
+      label: 'Multiplier',
+      names: multiplierColours,
+      optionText: name => `${titleCase(name)} — ${formatMultiplier(colours[name].multiplier)}`
+    };
+  }
+  return {
+    label: 'Tolerance',
+    names: toleranceColours,
+    optionText: name => `${titleCase(name)} — ±${colours[name].tolerance}%`
+  };
+}
+
+function render() {
+  resistor.replaceChildren();
+  controls.replaceChildren();
+
+  state[mode].forEach((selected, index) => {
+    const band = document.createElement('span');
+    band.className = 'res-band';
+    band.style.left = positions[mode][index] + '%';
+    band.style.backgroundColor = colours[selected].hex;
+    resistor.appendChild(band);
+
+    const def = bandDefinition(index);
+    const label = document.createElement('label');
+    label.className = 'band-control';
+
+    const heading = document.createElement('span');
+    heading.className = 'app-lbl';
+    heading.textContent = def.label;
+
+    const row = document.createElement('span');
+    row.className = 'band-control-row';
+    const chip = document.createElement('span');
+    chip.className = 'band-chip';
+    chip.style.backgroundColor = colours[selected].hex;
+    chip.setAttribute('aria-hidden', 'true');
+
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', def.label);
+    def.names.forEach(name => {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = def.optionText(name);
+      select.appendChild(option);
+    });
+    select.value = selected;
+    select.addEventListener('change', () => {
+      state[mode][index] = select.value;
+      update();
+    });
+
+    row.append(chip, select);
+    label.append(heading, row);
+    controls.appendChild(label);
+  });
+
+  update();
+}
+
+function update() {
+  const bands = state[mode];
+  const significantCount = mode === 4 ? 2 : 3;
+  const digits = bands.slice(0, significantCount).map(name => colours[name].digit);
+  const significant = Number(digits.join(''));
+  const multiplier = colours[bands[significantCount]].multiplier;
+  const tolerance = colours[bands[significantCount + 1]].tolerance;
+  const resistance = significant * multiplier;
+  const margin = resistance * tolerance / 100;
+
+  [...resistor.children].forEach((band, index) => {
+    band.style.backgroundColor = colours[bands[index]].hex;
+  });
+  [...controls.querySelectorAll('.band-control')].forEach((control, index) => {
+    control.querySelector('.band-chip').style.backgroundColor = colours[bands[index]].hex;
+  });
+
+  valueEl.textContent = formatOhms(resistance);
+  toleranceEl.textContent = `±${tolerance}%`;
+  minimumEl.textContent = formatOhms(resistance - margin);
+  maximumEl.textContent = formatOhms(resistance + margin);
+  formulaEl.textContent = `${significant} × ${multiplier.toLocaleString('en-GB')} = ${resistance.toLocaleString('en-GB')} Ω`;
+}
+
+document.querySelectorAll('.mode-btn').forEach(button => {
+  button.addEventListener('click', () => {
+    mode = Number(button.dataset.mode);
+    document.querySelectorAll('.mode-btn').forEach(item => {
+      item.setAttribute('aria-pressed', String(item === button));
+    });
+    render();
+  });
+});
+
+render();
+})();
+</script>
+</body>
+</html>

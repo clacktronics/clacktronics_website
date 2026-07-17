@@ -303,6 +303,7 @@ async function openWindow(id) {
       f.className = 'appframe';
       f.src = 'content/' + launchPage;
       f.title = meta.title;
+      if (page === 'applications/clackbase.html') f.allow = 'midi';
       /* clicks inside the app should still raise its window */
       f.addEventListener('load', () => {
         try {
@@ -642,6 +643,43 @@ function tick() {
 }
 tick();
 setInterval(tick, 15000);
+
+/* ---------------- Browser resource telemetry ---------------- */
+const cpuStat = document.getElementById('cpu-stat');
+const ramStat = document.getElementById('ram-stat');
+let cpuPressureObserver = null;
+
+function formatMemory(bytes) {
+  const mib = bytes / (1024 * 1024);
+  return mib >= 1024 ? `${(mib / 1024).toFixed(1)} GB` : `${Math.round(mib)} MB`;
+}
+
+function updatePageMemory() {
+  const memory = window.performance && window.performance.memory;
+  ramStat.textContent = memory && Number.isFinite(memory.usedJSHeapSize)
+    ? formatMemory(memory.usedJSHeapSize)
+    : 'N/A';
+}
+
+async function observeCpuPressure() {
+  if (!('PressureObserver' in window)) return;
+
+  try {
+    cpuPressureObserver = new PressureObserver(records => {
+      const reading = records[records.length - 1];
+      if (!reading) return;
+      cpuStat.textContent = reading.state.toUpperCase();
+      cpuStat.dataset.state = reading.state;
+    });
+    await cpuPressureObserver.observe('cpu', { sampleInterval: 2000 });
+  } catch {
+    cpuPressureObserver = null;
+  }
+}
+
+updatePageMemory();
+setInterval(updatePageMemory, 5000);
+observeCpuPressure();
 
 /* ---------------- Boot ---------------- */
 async function boot() {

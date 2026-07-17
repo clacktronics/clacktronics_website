@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Clackbase — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+:root {
+  --cb-ink: #09140d;
+  --cb-paper: #f8f2dd;
+  --cb-panel: #eee7ca;
+  --cb-line: #aaa486;
+  --cb-mid: #6f745f;
+  --cb-active: #276b47;
+  --track-width: 232px;
+  --bar-width: 72px;
+  --track-height: 50px;
+  --row-height: 16px;
+}
+* { box-sizing: border-box; }
+html, body, .cb-app { height: 100%; min-height: 0; }
+body { overflow: hidden; color: var(--cb-ink); background: var(--cb-paper); }
+button, input, select { font: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--cb-active); outline-offset: 1px;
+}
+.cb-app { display: flex; flex-direction: column; background: var(--cb-paper); }
+.cb-menu {
+  display: flex; align-items: center; min-height: 29px; padding: 0 6px;
+  border-bottom: 2px solid var(--cb-ink); background: var(--cb-panel);
+}
+.cb-menu .rm-bar { padding: 0; border: 0; background: transparent; }
+.cb-menu .rm > button { padding: 6px 9px; font-weight: 600; letter-spacing: .03em; }
+.cb-midi-light {
+  width: 9px; height: 9px; margin-left: auto; border: 1px solid var(--cb-ink);
+  border-radius: 50%; background: transparent;
+}
+.cb-midi-light.on { background: var(--cb-active); box-shadow: 0 0 0 2px rgba(39,107,71,.18); }
+.cb-midi-label { margin-left: 6px; color: var(--cb-mid); font-size: 10px; }
+.cb-head {
+  display: grid; grid-template-columns: minmax(190px, 1fr) repeat(4, minmax(92px, auto));
+  gap: 3px; min-height: 53px; padding: 3px; border-bottom: 1px solid var(--cb-ink);
+  background: var(--cb-ink);
+}
+.cb-brand, .cb-readout {
+  min-width: 0; padding: 6px 9px; color: var(--cb-ink); background: var(--cb-paper);
+}
+.cb-brand { display: flex; align-items: center; gap: 12px; }
+.cb-brand strong { font-size: 17px; letter-spacing: .11em; white-space: nowrap; }
+.cb-brand span { color: var(--cb-mid); font-size: 9px; line-height: 1.35; }
+.cb-readout { display: flex; flex-direction: column; justify-content: center; }
+.cb-readout label { color: var(--cb-mid); font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase; }
+.cb-readout output, .cb-readout input, .cb-readout select {
+  min-width: 0; border: 0; border-radius: 0; padding: 1px 0; color: var(--cb-ink);
+  background: transparent; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.cb-readout input { width: 78px; }
+.cb-readout select { width: 110px; font-size: 10px; }
+.cb-tools {
+  display: flex; align-items: center; gap: 5px; min-height: 40px; padding: 5px 8px;
+  border-bottom: 1px solid var(--cb-ink); background: var(--cb-panel); overflow-x: auto;
+}
+.cb-tool, .cb-mini, .cb-transport button {
+  all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center;
+  justify-content: center; min-width: 32px; min-height: 27px; padding: 4px 8px;
+  border: 1px solid var(--cb-ink); color: var(--cb-ink); background: var(--cb-paper);
+  font-size: 10.5px; white-space: nowrap;
+}
+.cb-tool:hover, .cb-mini:hover, .cb-transport button:hover { background: #ddd5b7; }
+.cb-tool.active, .cb-tool[aria-pressed="true"], .cb-mini[aria-pressed="true"] {
+  color: var(--cb-paper); background: var(--cb-ink);
+}
+.cb-tool.view { min-width: 70px; font-weight: 600; }
+.cb-rule { width: 1px; height: 24px; margin: 0 2px; background: var(--cb-ink); flex: none; }
+.cb-tools label { display: flex; align-items: center; gap: 5px; color: var(--cb-mid); font-size: 9px; }
+.cb-tools select {
+  min-width: 72px; padding: 4px 5px; border: 1px solid var(--cb-ink); border-radius: 0;
+  color: var(--cb-ink); background: var(--cb-paper); font-size: 10px;
+}
+.cb-editor { position: relative; display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.cb-view { display: none; flex: 1; min-width: 0; min-height: 0; }
+.cb-view.active { display: flex; }
+.cb-track-panel {
+  width: var(--track-width); flex: none; display: flex; flex-direction: column;
+  border-right: 2px solid var(--cb-ink); background: var(--cb-panel); z-index: 4;
+}
+.cb-track-head {
+  height: 25px; flex: none; display: flex; align-items: center; gap: 5px; padding: 3px 5px;
+  border-bottom: 1px solid var(--cb-ink); color: var(--cb-mid); font-size: 9px;
+}
+.cb-track-head .cb-mini { min-height: 19px; min-width: 22px; padding: 1px 5px; }
+.cb-track-rows { flex: 1; min-height: 0; overflow: hidden; }
+.cb-track-row {
+  height: var(--track-height); display: grid; grid-template-columns: 22px minmax(0,1fr) 27px 27px 27px;
+  align-items: center; gap: 3px; padding: 4px 5px; border-bottom: 1px solid var(--cb-line);
+  cursor: pointer; background: var(--cb-panel);
+}
+.cb-track-row.selected { background: var(--cb-paper); box-shadow: inset 4px 0 var(--cb-active); }
+.cb-track-number { text-align: center; color: var(--cb-mid); font-size: 9px; }
+.cb-track-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.cb-track-row .cb-mini { min-width: 25px; min-height: 24px; padding: 2px; font-size: 9px; }
+.cb-track-row .armed { color: var(--cb-paper); background: var(--cb-active); }
+.cb-arrange-scroll { position: relative; flex: 1; min-width: 0; min-height: 0; overflow: auto; background: var(--cb-paper); }
+.cb-arrange-content { position: relative; width: calc(32 * var(--bar-width)); min-height: 100%; }
+.cb-ruler {
+  position: sticky; top: 0; z-index: 3; height: 25px; display: flex; border-bottom: 1px solid var(--cb-ink);
+  background: var(--cb-panel);
+}
+.cb-bar-mark {
+  width: var(--bar-width); flex: none; padding: 4px 5px; border-left: 1px solid var(--cb-ink);
+  color: var(--cb-ink); font-size: 9px; font-variant-numeric: tabular-nums;
+}
+.cb-lanes { position: relative; min-height: calc(100% - 25px); }
+.cb-lane {
+  position: relative; height: var(--track-height); border-bottom: 1px solid var(--cb-line);
+  background:
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) / 4 - 1px), rgba(9,20,13,.13) calc(var(--bar-width) / 4), transparent calc(var(--bar-width) / 4 + 1px)),
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) - 1px), var(--cb-ink) var(--bar-width));
+}
+.cb-lane.selected { background-color: rgba(39,107,71,.055); }
+.cb-part {
+  position: absolute; top: 7px; height: 36px; overflow: hidden; cursor: grab;
+  border: 2px solid var(--cb-ink); color: var(--cb-ink); background:
+    radial-gradient(circle at 1px 1px, rgba(9,20,13,.25) 1px, transparent 1.2px) 0 0/4px 4px,
+    var(--cb-panel);
+  text-align: left; padding: 3px 6px; font-size: 9px; font-weight: 600;
+}
+.cb-part:active { cursor: grabbing; }
+.cb-part.selected { color: var(--cb-paper); background: var(--cb-ink); }
+.cb-part small { display: block; margin-top: 2px; opacity: .75; font-size: 8px; font-weight: 400; }
+.cb-playhead { position: absolute; top: 0; bottom: 0; z-index: 8; width: 2px; pointer-events: none; background: var(--cb-active); }
+.cb-playhead::before { content: ''; position: absolute; top: 0; left: -4px; border: 5px solid transparent; border-top-color: var(--cb-active); }
+.cb-key-view { flex-direction: column; background: var(--cb-paper); }
+.cb-key-head {
+  min-height: 27px; display: flex; align-items: center; gap: 8px; padding: 4px 8px;
+  border-bottom: 1px solid var(--cb-ink); background: var(--cb-panel); color: var(--cb-mid); font-size: 9px;
+}
+.cb-key-head strong { color: var(--cb-ink); }
+.cb-key-scroll { position: relative; flex: 1; min-height: 150px; overflow: auto; }
+.cb-key-content { position: relative; min-width: 100%; }
+.cb-key-ruler { position: sticky; top: 0; left: 0; z-index: 5; height: 24px; margin-left: 58px; background: var(--cb-panel); border-bottom: 1px solid var(--cb-ink); }
+.cb-key-ruler .cb-bar-mark { display: inline-block; height: 24px; vertical-align: top; }
+.cb-piano { position: sticky; left: 0; z-index: 4; width: 58px; float: left; background: var(--cb-paper); }
+.cb-piano-key {
+  height: var(--row-height); padding: 1px 4px; border-right: 2px solid var(--cb-ink); border-bottom: 1px solid var(--cb-line);
+  color: var(--cb-mid); background: var(--cb-paper); font-size: 8px; text-align: right; cursor: pointer;
+}
+.cb-piano-key.black { width: 72%; color: var(--cb-paper); background: var(--cb-ink); }
+.cb-note-area {
+  position: relative; margin-left: 58px; cursor: crosshair;
+  background:
+    repeating-linear-gradient(0deg, transparent 0, transparent calc(var(--row-height) - 1px), rgba(9,20,13,.22) var(--row-height)),
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) / 4 - 1px), rgba(9,20,13,.16) calc(var(--bar-width) / 4), transparent calc(var(--bar-width) / 4 + 1px)),
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) - 1px), var(--cb-ink) var(--bar-width));
+}
+.cb-note {
+  position: absolute; height: calc(var(--row-height) - 2px); min-width: 4px; padding: 0 3px;
+  border: 1px solid var(--cb-ink); color: var(--cb-ink); background: var(--cb-paper);
+  cursor: grab; font-size: 8px; line-height: calc(var(--row-height) - 3px); overflow: hidden;
+}
+.cb-note.selected { color: var(--cb-paper); background: var(--cb-ink); }
+.cb-note::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 5px; border-left: 1px solid currentColor; }
+.cb-velocity {
+  position: relative; height: 88px; flex: none; margin-left: 58px; border-top: 2px solid var(--cb-ink);
+  background:
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) / 4 - 1px), rgba(9,20,13,.16) calc(var(--bar-width) / 4), transparent calc(var(--bar-width) / 4 + 1px)),
+    var(--cb-panel);
+}
+.cb-velocity::before {
+  content: 'VELO'; position: sticky; left: 5px; top: 3px; z-index: 2; color: var(--cb-mid); font-size: 8px;
+}
+.cb-vel-bar { position: absolute; bottom: 0; min-width: 3px; border: 1px solid var(--cb-ink); border-bottom: 0; background: var(--cb-ink); }
+.cb-empty {
+  display: flex; flex: 1; align-items: center; justify-content: center; padding: 20px;
+  color: var(--cb-mid); text-align: center; line-height: 1.7;
+}
+.cb-transport {
+  display: grid; grid-template-columns: auto auto minmax(260px,1fr) auto; align-items: stretch;
+  gap: 3px; min-height: 72px; padding: 3px; border-top: 2px solid var(--cb-ink); background: var(--cb-ink);
+}
+.cb-transport-group { display: flex; align-items: center; gap: 4px; padding: 6px; background: var(--cb-panel); }
+.cb-transport button { min-width: 42px; min-height: 37px; font-size: 14px; font-weight: 600; }
+.cb-transport button.active { color: var(--cb-paper); background: var(--cb-active); }
+.cb-transport .record.active { background: var(--cb-ink); }
+.cb-locator-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; min-width: 150px; font-size: 9px; }
+.cb-locator-grid label { color: var(--cb-mid); }
+.cb-locator-grid input {
+  width: 68px; padding: 1px 3px; border: 0; border-bottom: 1px solid var(--cb-ink); border-radius: 0;
+  color: var(--cb-ink); background: transparent; font-weight: 600;
+}
+.cb-position { display: flex; flex-direction: column; justify-content: center; min-width: 180px; }
+.cb-position output { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.cb-position span { color: var(--cb-mid); font-size: 9px; }
+.cb-status { flex: 1; min-width: 160px; color: var(--cb-mid); font-size: 9px; line-height: 1.5; }
+.cb-status strong { color: var(--cb-ink); }
+.cb-midi-controls { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.cb-midi-controls select {
+  max-width: 135px; padding: 3px 4px; border: 1px solid var(--cb-ink); border-radius: 0;
+  color: var(--cb-ink); background: var(--cb-paper); font-size: 9px;
+}
+.cb-midi-controls label { display: flex; align-items: center; gap: 3px; font-size: 9px; }
+.cb-file { display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+@media (max-width: 900px) {
+  :root { --track-width: 198px; --bar-width: 64px; }
+  .cb-brand span { display: none; }
+  .cb-head { grid-template-columns: minmax(150px, 1fr) repeat(3, minmax(82px, auto)); }
+  .cb-readout.midi-head { display: none; }
+  .cb-track-row { grid-template-columns: 20px minmax(0,1fr) 25px 25px 25px; }
+  .cb-transport { grid-template-columns: auto minmax(220px, 1fr) auto; }
+  .cb-locators { display: none; }
+}
+@media (max-width: 650px) {
+  :root { --track-width: 158px; --bar-width: 56px; }
+  .cb-menu .rm:nth-child(n+5) { display: none; }
+  .cb-head { grid-template-columns: 1fr repeat(2, 88px); }
+  .cb-readout.snap-head, .cb-brand span { display: none; }
+  .cb-tool span.long { display: none; }
+  .cb-track-row { grid-template-columns: 18px minmax(0,1fr) 24px 24px; }
+  .cb-track-row .solo { display: none; }
+  .cb-transport { grid-template-columns: 1fr; }
+  .cb-status-group { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="cb-app">
+  <header class="cb-menu">
+    <nav class="rm-bar" aria-label="Clackbase menus">
+      <div class="rm"><button type="button">File</button><div class="rm-dd">
+        <button type="button" data-action="new">New song</button>
+        <button type="button" data-action="save">Save in browser</button>
+        <button type="button" data-action="export-project">Export project…</button>
+        <button type="button" data-action="open-project">Open project…</button>
+        <div class="sep"></div>
+        <button type="button" data-action="import-midi">Import MIDI file…</button>
+        <button type="button" data-action="export-midi">Export MIDI file…</button>
+      </div></div>
+      <div class="rm"><button type="button">Edit</button><div class="rm-dd">
+        <button type="button" data-action="undo">Undo</button>
+        <button type="button" data-action="redo">Redo</button>
+        <div class="sep"></div>
+        <button type="button" data-action="copy">Copy</button>
+        <button type="button" data-action="paste">Paste</button>
+        <button type="button" data-action="delete">Delete</button>
+      </div></div>
+      <div class="rm"><button type="button">Structure</button><div class="rm-dd">
+        <button type="button" data-action="add-track">Add MIDI track</button>
+        <button type="button" data-action="duplicate">Duplicate selection</button>
+        <button type="button" data-action="split">Split at song position</button>
+      </div></div>
+      <div class="rm"><button type="button">Functions</button><div class="rm-dd">
+        <button type="button" data-action="quantize">Quantise</button>
+        <button type="button" data-action="transpose-up">Transpose +1</button>
+        <button type="button" data-action="transpose-down">Transpose −1</button>
+        <button type="button" data-action="humanize">Humanise velocity</button>
+      </div></div>
+      <div class="rm"><button type="button">Options</button><div class="rm-dd">
+        <button type="button" data-action="toggle-cycle">Cycle on/off</button>
+        <button type="button" data-action="toggle-click">Metronome on/off</button>
+        <button type="button" data-action="panic">MIDI panic</button>
+      </div></div>
+      <div class="rm"><button type="button">MIDI</button><div class="rm-dd">
+        <button type="button" data-action="connect-midi">Connect devices…</button>
+        <button type="button" data-action="panic">All notes off</button>
+      </div></div>
+    </nav>
+    <span class="cb-midi-light" id="midi-light" aria-hidden="true"></span>
+    <span class="cb-midi-label" id="midi-label">MIDI OFFLINE</span>
+  </header>
+
+  <section class="cb-head" aria-label="Song setup">
+    <div class="cb-brand"><strong>CLACKBASE 1.0</strong><span>MONOCHROME<br>MIDI SEQUENCER</span></div>
+    <div class="cb-readout"><label for="tempo">Tempo</label><input id="tempo" type="number" min="30" max="300" step="0.1" value="112"></div>
+    <div class="cb-readout snap-head"><label for="signature">Signature</label><select id="signature"><option>4/4</option><option>3/4</option><option>6/8</option></select></div>
+    <div class="cb-readout"><label>Song position</label><output id="head-position">001.01.000</output></div>
+    <div class="cb-readout midi-head"><label>Selected track</label><output id="head-track">01 · POLY</output></div>
+  </section>
+
+  <div class="cb-tools" aria-label="Editor tools">
+    <button class="cb-tool view active" type="button" data-view="arrange" aria-pressed="true">ARRANGE</button>
+    <button class="cb-tool view" type="button" data-view="key" aria-pressed="false">KEY EDIT</button>
+    <span class="cb-rule"></span>
+    <button class="cb-tool active" type="button" data-tool="select" aria-pressed="true" aria-label="Select tool">↖ <span class="long">SELECT</span></button>
+    <button class="cb-tool" type="button" data-tool="draw" aria-pressed="false" aria-label="Draw tool">✎ <span class="long">DRAW</span></button>
+    <button class="cb-tool" type="button" data-tool="erase" aria-pressed="false" aria-label="Erase tool">◇ <span class="long">ERASE</span></button>
+    <button class="cb-tool" type="button" data-tool="split" aria-pressed="false" aria-label="Split tool">✂ <span class="long">SPLIT</span></button>
+    <span class="cb-rule"></span>
+    <label>SNAP <select id="snap"><option value="96">1/4</option><option value="48" selected>1/8</option><option value="24">1/16</option><option value="12">1/32</option></select></label>
+    <button class="cb-tool" type="button" data-action="quantize">QUANTISE</button>
+    <button class="cb-tool" type="button" data-action="duplicate">DUPLICATE</button>
+    <button class="cb-tool" type="button" data-action="delete">DELETE</button>
+  </div>
+
+  <main class="cb-editor">
+    <section class="cb-view active" id="arrange-view" aria-label="Arrange window">
+      <aside class="cb-track-panel">
+        <div class="cb-track-head"><button class="cb-mini" type="button" data-action="add-track">+</button><span>TRACK / MUTE / SOLO / REC</span></div>
+        <div class="cb-track-rows" id="track-rows"></div>
+      </aside>
+      <div class="cb-arrange-scroll" id="arrange-scroll">
+        <div class="cb-arrange-content" id="arrange-content">
+          <div class="cb-ruler" id="arrange-ruler"></div>
+          <div class="cb-lanes" id="lanes"></div>
+          <div class="cb-playhead" id="arrange-playhead"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cb-view cb-key-view" id="key-view" aria-label="Key editor">
+      <div class="cb-key-head"><strong id="key-part-name">NO PART</strong><span id="key-part-meta">Select a part in Arrange</span></div>
+      <div class="cb-key-scroll" id="key-scroll">
+        <div class="cb-key-content" id="key-content">
+          <div class="cb-key-ruler" id="key-ruler"></div>
+          <div class="cb-piano" id="piano"></div>
+          <div class="cb-note-area" id="note-area"></div>
+          <div class="cb-playhead" id="key-playhead"></div>
+        </div>
+      </div>
+      <div class="cb-velocity" id="velocity-lane"></div>
+      <div class="cb-empty" id="key-empty">Create or select a MIDI part in Arrange, then open Key Edit.</div>
+    </section>
+  </main>
+
+  <footer class="cb-transport" aria-label="Transport">
+    <div class="cb-transport-group cb-locators">
+      <div class="cb-locator-grid">
+        <label for="left-locator">LEFT LOCATOR</label><input id="left-locator" value="1.1">
+        <label for="right-locator">RIGHT LOCATOR</label><input id="right-locator" value="9.1">
+        <label>CYCLE</label><button class="cb-mini" id="cycle" type="button" aria-pressed="false">OFF</button>
+      </div>
+    </div>
+    <div class="cb-transport-group">
+      <button type="button" id="rewind" aria-label="Rewind">◀◀</button>
+      <button type="button" id="stop" aria-label="Stop">■</button>
+      <button type="button" id="play" aria-label="Play">▶</button>
+      <button class="record" type="button" id="record" aria-label="Record">●</button>
+      <button type="button" id="forward" aria-label="Fast forward">▶▶</button>
+    </div>
+    <div class="cb-transport-group">
+      <div class="cb-position"><output id="transport-position">001.01.000</output><span>BAR · BEAT · TICK</span></div>
+      <div class="cb-status" id="status" role="status" aria-live="polite"><strong>READY.</strong> Double-click a lane to create a part.</div>
+    </div>
+    <div class="cb-transport-group cb-status-group">
+      <div class="cb-midi-controls">
+        <button class="cb-mini" type="button" id="connect-midi">MIDI</button>
+        <select id="midi-input" aria-label="MIDI input" disabled><option>NO INPUT</option></select>
+        <select id="midi-output" aria-label="MIDI output" disabled><option>NO OUTPUT</option></select>
+        <label><input id="monitor" type="checkbox" checked> MON</label>
+        <label><input id="thru" type="checkbox"> THRU</label>
+        <button class="cb-mini" type="button" id="click" aria-pressed="false">CLICK</button>
+      </div>
+    </div>
+  </footer>
+
+  <input class="cb-file" id="project-file" type="file" accept=".clackbase,.json,application/json">
+  <input class="cb-file" id="midi-file" type="file" accept=".mid,.midi,audio/midi,audio/x-midi">
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const PPQ = 96;
+  const BEATS = 4;
+  const BAR = PPQ * BEATS;
+  const BARS = 32;
+  const LOW_PITCH = 48;
+  const HIGH_PITCH = 83;
+  const ROW_HEIGHT = 16;
+  const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+  const keyMap = { a:60, w:61, s:62, e:63, d:64, f:65, t:66, g:67, y:68, h:69, u:70, j:71, k:72 };
+  const $ = selector => document.querySelector(selector);
+  const $$ = selector => [...document.querySelectorAll(selector)];
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const uid = prefix => prefix + Math.random().toString(36).slice(2, 9);
+
+  const demoProject = () => ({
+    name: 'Clackbase Demo', tempo: 112, signature: '4/4', left: 0, right: BAR * 8,
+    tracks: [
+      { id: uid('t'), name: 'POLY SEQUENCE', channel: 1, mute: false, solo: false, armed: true, parts: [
+        { id: uid('p'), name: 'GLASS ARP', start: 0, length: BAR * 4, notes: [
+          [0,60,48,98],[48,64,48,88],[96,67,48,92],[144,72,48,82],[192,67,48,95],[240,64,48,84],[288,60,48,90],[336,64,48,86],
+          [384,62,48,96],[432,65,48,86],[480,69,48,92],[528,74,48,82],[576,69,48,95],[624,65,48,84],[672,62,48,90],[720,65,48,86],
+          [768,60,96,98],[864,67,96,88],[960,65,96,92],[1056,64,96,86],[1152,57,192,96],[1344,60,192,90]
+        ].map(([tick,pitch,duration,velocity]) => ({ id:uid('n'), tick,pitch,duration,velocity })) }
+      ]},
+      { id: uid('t'), name: 'BASS GRID', channel: 2, mute: false, solo: false, armed: false, parts: [
+        { id: uid('p'), name: 'BASS 01', start: 0, length: BAR * 4, notes: [0,192,384,576,768,960,1152,1344].map((tick,i) => ({ id:uid('n'), tick, pitch:[36,36,43,41,36,43,41,35][i], duration:84, velocity:104 })) }
+      ]},
+      { id: uid('t'), name: 'CHORDS', channel: 3, mute: false, solo: false, armed: false, parts: [
+        { id: uid('p'), name: 'CREAM PAD', start: BAR * 4, length: BAR * 4, notes: [
+          [0,60],[0,64],[0,67],[384,62],[384,65],[384,69],[768,60],[768,65],[768,69],[1152,59],[1152,62],[1152,67]
+        ].map(([tick,pitch]) => ({ id:uid('n'), tick,pitch,duration:336,velocity:74 })) }
+      ]},
+      { id: uid('t'), name: 'MIDI DRUMS', channel: 10, mute: false, solo: false, armed: false, parts: [
+        { id: uid('p'), name: 'MACHINE', start: 0, length: BAR * 8, notes: Array.from({length:32},(_,i) => ({ id:uid('n'), tick:i*96, pitch:i%4===0?36:(i%4===2?38:42), duration:24, velocity:i%4===0?112:82 })) }
+      ]}
+    ]
+  });
+
+  let project = loadStored() || demoProject();
+  let selectedTrackId = project.tracks[0]?.id || null;
+  let selectedPartId = project.tracks[0]?.parts[0]?.id || null;
+  let selectedNoteId = null;
+  let currentView = 'arrange';
+  let currentTool = 'select';
+  let songTick = 0;
+  let playing = false;
+  let recording = false;
+  let cycle = false;
+  let metronome = false;
+  let playStartTime = 0;
+  let playStartTick = 0;
+  let lastProcessTick = -1;
+  let timer = null;
+  let audioContext = null;
+  let midiAccess = null;
+  let midiInput = null;
+  let midiOutput = null;
+  let midiFlashTimer = null;
+  let clipboard = null;
+  let undoStack = [];
+  let redoStack = [];
+  let keyboardNotes = new Map();
+  let recordingNotes = new Map();
+  let dragState = null;
+  let keyBarWidth = 72;
+
+  const els = {
+    trackRows: $('#track-rows'), lanes: $('#lanes'), ruler: $('#arrange-ruler'), arrangeScroll: $('#arrange-scroll'),
+    arrangePlayhead: $('#arrange-playhead'), keyPlayhead: $('#key-playhead'), keyScroll: $('#key-scroll'),
+    keyContent: $('#key-content'), keyRuler: $('#key-ruler'), piano: $('#piano'), noteArea: $('#note-area'),
+    velocity: $('#velocity-lane'), keyEmpty: $('#key-empty'), keyName: $('#key-part-name'), keyMeta: $('#key-part-meta'),
+    tempo: $('#tempo'), signature: $('#signature'), headPosition: $('#head-position'), transportPosition: $('#transport-position'),
+    headTrack: $('#head-track'), status: $('#status'), left: $('#left-locator'), right: $('#right-locator'), cycle: $('#cycle'),
+    play: $('#play'), record: $('#record'), click: $('#click'), midiLight: $('#midi-light'), midiLabel: $('#midi-label'),
+    midiInput: $('#midi-input'), midiOutput: $('#midi-output'), monitor: $('#monitor'), thru: $('#thru')
+  };
+
+  function loadStored() {
+    try {
+      const value = localStorage.getItem('clackbase-project');
+      return value ? JSON.parse(value) : null;
+    } catch { return null; }
+  }
+
+  function persist() {
+    try { localStorage.setItem('clackbase-project', JSON.stringify(project)); } catch {}
+  }
+
+  function snapshot() { return JSON.stringify(project); }
+  function remember() {
+    undoStack.push(snapshot());
+    if (undoStack.length > 40) undoStack.shift();
+    redoStack.length = 0;
+  }
+
+  function restore(serialized) {
+    project = JSON.parse(serialized);
+    selectedTrackId = project.tracks.some(t => t.id === selectedTrackId) ? selectedTrackId : project.tracks[0]?.id || null;
+    selectedPartId = findPart(selectedPartId) ? selectedPartId : null;
+    selectedNoteId = null;
+    syncControls(); renderAll();
+  }
+
+  function undo() {
+    if (!undoStack.length) return message('NOTHING TO UNDO.');
+    redoStack.push(snapshot()); restore(undoStack.pop()); message('UNDO.');
+  }
+
+  function redo() {
+    if (!redoStack.length) return message('NOTHING TO REDO.');
+    undoStack.push(snapshot()); restore(redoStack.pop()); message('REDO.');
+  }
+
+  function selectedTrack() { return project.tracks.find(track => track.id === selectedTrackId) || project.tracks[0]; }
+  function findPart(id) {
+    for (const track of project.tracks) {
+      const part = track.parts.find(item => item.id === id);
+      if (part) return { track, part };
+    }
+    return null;
+  }
+  function selectedPart() { return findPart(selectedPartId); }
+  function selectedNote() { return selectedPart()?.part.notes.find(note => note.id === selectedNoteId) || null; }
+
+  function barWidth() { return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar-width')) || 72; }
+  function snapTicks() { return Number($('#snap').value) || 48; }
+  function quantizeTick(tick, unit = snapTicks()) { return Math.round(tick / unit) * unit; }
+  function tickToX(tick) { return tick / BAR * barWidth(); }
+  function xToTick(x) { return x / barWidth() * BAR; }
+  function keyTickToX(tick) { return tick / BAR * keyBarWidth; }
+  function keyXToTick(x) { return x / keyBarWidth * BAR; }
+  function pitchName(pitch) { return NOTE_NAMES[pitch % 12] + (Math.floor(pitch / 12) - 1); }
+  function formatPosition(tick) {
+    tick = Math.max(0, Math.round(tick));
+    const bar = Math.floor(tick / BAR) + 1;
+    const within = tick % BAR;
+    const beat = Math.floor(within / PPQ) + 1;
+    const sub = within % PPQ;
+    return `${String(bar).padStart(3,'0')}.${String(beat).padStart(2,'0')}.${String(sub).padStart(3,'0')}`;
+  }
+  function parseLocator(value) {
+    const [barValue, beatValue] = String(value).split('.').map(Number);
+    return clamp(((barValue || 1) - 1) * BAR + ((beatValue || 1) - 1) * PPQ, 0, BARS * BAR);
+  }
+  function locatorText(tick) { return `${Math.floor(tick / BAR) + 1}.${Math.floor((tick % BAR) / PPQ) + 1}`; }
+  function message(text, strong = '') { els.status.innerHTML = strong ? `<strong>${strong}</strong> ${text}` : text; }
+
+  function renderRulers() {
+    const marks = Array.from({length:BARS},(_,i) => `<span class="cb-bar-mark">${i + 1}</span>`).join('');
+    els.ruler.innerHTML = marks;
+    els.keyRuler.innerHTML = marks;
+  }
+
+  function renderTracks() {
+    els.trackRows.innerHTML = '';
+    els.lanes.innerHTML = '';
+    project.tracks.forEach((track, index) => {
+      const row = document.createElement('div');
+      row.className = 'cb-track-row' + (track.id === selectedTrackId ? ' selected' : '');
+      row.dataset.trackId = track.id;
+      row.innerHTML = `<span class="cb-track-number">${String(index + 1).padStart(2,'0')}</span><span class="cb-track-name">${escapeHtml(track.name)}</span>` +
+        `<button class="cb-mini mute ${track.mute?'active':''}" type="button" aria-label="Mute ${escapeHtml(track.name)}" aria-pressed="${track.mute}">M</button>` +
+        `<button class="cb-mini solo ${track.solo?'active':''}" type="button" aria-label="Solo ${escapeHtml(track.name)}" aria-pressed="${track.solo}">S</button>` +
+        `<button class="cb-mini rec ${track.armed?'armed':''}" type="button" aria-label="Record arm ${escapeHtml(track.name)}" aria-pressed="${track.armed}">R</button>`;
+      row.addEventListener('click', event => {
+        selectedTrackId = track.id;
+        if (event.target.closest('.mute')) { remember(); track.mute = !track.mute; }
+        else if (event.target.closest('.solo')) { remember(); track.solo = !track.solo; }
+        else if (event.target.closest('.rec')) { remember(); project.tracks.forEach(t => t.armed = t.id === track.id ? !t.armed : false); }
+        renderTracks(); updateHead(); persist();
+      });
+      row.addEventListener('dblclick', () => renameTrack(track));
+      els.trackRows.appendChild(row);
+
+      const lane = document.createElement('div');
+      lane.className = 'cb-lane' + (track.id === selectedTrackId ? ' selected' : '');
+      lane.dataset.trackId = track.id;
+      lane.addEventListener('pointerdown', event => onLanePointerDown(event, track));
+      lane.addEventListener('dblclick', event => {
+        if (event.target !== lane) return;
+        createPartAt(track, quantizeTick(xToTick(event.offsetX), BAR));
+      });
+      track.parts.forEach(part => lane.appendChild(partElement(track, part)));
+      els.lanes.appendChild(lane);
+    });
+    els.trackRows.style.height = `${project.tracks.length * 50}px`;
+    els.lanes.style.height = `${project.tracks.length * 50}px`;
+  }
+
+  function partElement(track, part) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'cb-part' + (part.id === selectedPartId ? ' selected' : '');
+    button.style.left = `${tickToX(part.start)}px`;
+    button.style.width = `${Math.max(20, tickToX(part.length))}px`;
+    button.innerHTML = `${escapeHtml(part.name)}<small>${part.notes.length} NOTES</small>`;
+    button.setAttribute('aria-label', `${part.name}, bar ${Math.floor(part.start / BAR) + 1}, ${part.notes.length} notes`);
+    button.addEventListener('pointerdown', event => onPartPointerDown(event, track, part));
+    button.addEventListener('dblclick', event => { event.stopPropagation(); selectPart(track, part); setView('key'); });
+    return button;
+  }
+
+  function onLanePointerDown(event, track) {
+    if (event.target !== event.currentTarget) return;
+    selectedTrackId = track.id;
+    if (currentTool === 'draw') createPartAt(track, quantizeTick(xToTick(event.offsetX), BAR));
+    else { selectedPartId = null; selectedNoteId = null; renderTracks(); renderKey(); }
+  }
+
+  function onPartPointerDown(event, track, part) {
+    event.stopPropagation();
+    if (currentTool === 'erase') { remember(); track.parts = track.parts.filter(item => item.id !== part.id); selectedPartId = null; renderAll(); return; }
+    if (currentTool === 'split') { splitPart(track, part, quantizeTick(xToTick(event.currentTarget.offsetLeft + event.offsetX))); return; }
+    selectPart(track, part);
+    if (currentTool !== 'select') return;
+    remember();
+    dragState = { type:'part', part, originX:event.clientX, start:part.start };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function createPartAt(track, start) {
+    remember();
+    const part = { id:uid('p'), name:`PART ${track.parts.length + 1}`, start:clamp(start,0,BARS*BAR-BAR), length:BAR*2, notes:[] };
+    track.parts.push(part); selectPart(track, part); renderAll(); message('NEW MIDI PART. Double-click it to edit notes.', 'PART CREATED.');
+  }
+
+  function selectPart(track, part) {
+    selectedTrackId = track.id; selectedPartId = part.id; selectedNoteId = null; renderTracks(); renderKey(); updateHead();
+  }
+
+  function splitPart(track, part, absoluteTick) {
+    const offset = quantizeTick(absoluteTick - part.start);
+    if (offset <= 0 || offset >= part.length) return message('SPLIT POINT MUST BE INSIDE THE PART.');
+    remember();
+    const rightNotes = [];
+    const leftNotes = [];
+    part.notes.forEach(note => {
+      if (note.tick >= offset) rightNotes.push({...note, id:uid('n'), tick:note.tick-offset});
+      else leftNotes.push({...note, duration:Math.min(note.duration, offset-note.tick)});
+    });
+    const right = { id:uid('p'), name:part.name+' B', start:part.start+offset, length:part.length-offset, notes:rightNotes };
+    part.name += ' A'; part.length = offset; part.notes = leftNotes; track.parts.push(right); selectedPartId = right.id; renderAll(); message('PART SPLIT.');
+  }
+
+  function renderKey() {
+    const found = selectedPart();
+    const hasPart = Boolean(found);
+    els.keyEmpty.style.display = hasPart ? 'none' : 'flex';
+    els.keyScroll.style.display = hasPart ? 'block' : 'none';
+    els.velocity.style.display = hasPart ? 'block' : 'none';
+    if (!found) { els.keyName.textContent = 'NO PART'; els.keyMeta.textContent = 'Select a part in Arrange'; return; }
+    const {track, part} = found;
+    const partBars = Math.max(1, Math.ceil(part.length / BAR));
+    const availableWidth = Math.max(280, els.keyScroll.clientWidth - 58);
+    keyBarWidth = Math.max(barWidth(), availableWidth / partBars);
+    const width = keyBarWidth * partBars;
+    const rows = HIGH_PITCH - LOW_PITCH + 1;
+    const height = rows * ROW_HEIGHT;
+    els.keyName.textContent = part.name;
+    els.keyMeta.textContent = `${track.name} · CH ${track.channel} · ${part.notes.length} NOTES · ${part.length/BAR} BARS`;
+    els.keyContent.style.width = `${width + 58}px`;
+    els.keyContent.style.height = `${height + 24}px`;
+    els.noteArea.style.width = `${width}px`;
+    els.noteArea.style.height = `${height}px`;
+    els.piano.style.height = `${height}px`;
+    els.velocity.style.width = `calc(100% - 58px)`;
+    els.keyRuler.innerHTML = Array.from({length:partBars},(_,index) => `<span class="cb-bar-mark" style="width:${keyBarWidth}px">${Math.floor(part.start / BAR) + index + 1}</span>`).join('');
+    els.piano.innerHTML = '';
+    for (let pitch = HIGH_PITCH; pitch >= LOW_PITCH; pitch--) {
+      const key = document.createElement('button');
+      key.type = 'button'; key.className = 'cb-piano-key' + ([1,3,6,8,10].includes(pitch%12)?' black':'');
+      key.textContent = pitch%12===0 ? pitchName(pitch) : '';
+      key.setAttribute('aria-label', `Play ${pitchName(pitch)}`);
+      key.addEventListener('pointerdown', () => audition(pitch, 100, 350));
+      els.piano.appendChild(key);
+    }
+    els.noteArea.innerHTML = '';
+    part.notes.forEach(note => els.noteArea.appendChild(noteElement(part, note)));
+    els.velocity.innerHTML = '';
+    part.notes.forEach(note => {
+      const bar = document.createElement('button');
+      bar.type = 'button'; bar.className = 'cb-vel-bar';
+      bar.style.left = `${keyTickToX(note.tick)}px`; bar.style.width = `${Math.max(3,keyTickToX(note.duration)-1)}px`; bar.style.height = `${Math.max(4,note.velocity/127*82)}px`;
+      bar.setAttribute('aria-label', `${pitchName(note.pitch)} velocity ${note.velocity}`);
+      bar.addEventListener('pointerdown', event => { event.preventDefault(); remember(); selectedNoteId=note.id; setVelocityFromEvent(note,event); });
+      els.velocity.appendChild(bar);
+    });
+    updatePlayheads();
+  }
+
+  function noteElement(part, note) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'cb-note' + (note.id===selectedNoteId?' selected':'');
+    button.style.left = `${keyTickToX(note.tick)}px`;
+    button.style.width = `${Math.max(5,keyTickToX(note.duration))}px`;
+    button.style.top = `${(HIGH_PITCH-note.pitch)*ROW_HEIGHT+1}px`;
+    button.textContent = pitchName(note.pitch);
+    button.setAttribute('aria-label', `${pitchName(note.pitch)}, velocity ${note.velocity}`);
+    button.addEventListener('pointerdown', event => onNotePointerDown(event, part, note));
+    return button;
+  }
+
+  function onNotePointerDown(event, part, note) {
+    event.stopPropagation();
+    if (currentTool === 'erase') { remember(); part.notes = part.notes.filter(item => item.id!==note.id); selectedNoteId=null; renderKey(); persist(); return; }
+    selectedNoteId = note.id; renderKey(); audition(note.pitch,note.velocity,180);
+    if (currentTool !== 'select') return;
+    remember();
+    const rect = event.currentTarget.getBoundingClientRect();
+    dragState = { type:event.clientX>rect.right-7?'note-resize':'note', note, originX:event.clientX, originY:event.clientY, tick:note.tick, pitch:note.pitch, duration:note.duration };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onNoteAreaPointerDown(event) {
+    if (event.target !== els.noteArea) return;
+    const found = selectedPart(); if (!found) return;
+    if (currentTool !== 'draw') { selectedNoteId=null; renderKey(); return; }
+    const rect = els.noteArea.getBoundingClientRect();
+    const tick = clamp(quantizeTick(keyXToTick(event.clientX-rect.left)),0,found.part.length-snapTicks());
+    const pitch = clamp(HIGH_PITCH-Math.floor((event.clientY-rect.top)/ROW_HEIGHT),LOW_PITCH,HIGH_PITCH);
+    remember();
+    const note = { id:uid('n'), tick, pitch, duration:snapTicks(), velocity:96 };
+    found.part.notes.push(note); selectedNoteId=note.id; renderKey(); persist(); audition(pitch,96,220);
+  }
+
+  function setVelocityFromEvent(note, event) {
+    const rect = els.velocity.getBoundingClientRect();
+    note.velocity = clamp(Math.round((rect.bottom-event.clientY)/rect.height*127),1,127); renderKey(); persist();
+  }
+
+  function renderAll() { renderTracks(); renderKey(); updateHead(); persist(); }
+
+  function updateHead() {
+    const pos = formatPosition(songTick);
+    els.headPosition.value = pos; els.transportPosition.value = pos;
+    const track = selectedTrack();
+    els.headTrack.value = track ? `${String(project.tracks.indexOf(track)+1).padStart(2,'0')} · CH ${String(track.channel).padStart(2,'0')}` : '--';
+    els.play.classList.toggle('active',playing); els.record.classList.toggle('active',recording);
+    els.cycle.classList.toggle('active',cycle); els.cycle.setAttribute('aria-pressed',String(cycle)); els.cycle.textContent=cycle?'ON':'OFF';
+    els.click.classList.toggle('active',metronome); els.click.setAttribute('aria-pressed',String(metronome));
+    updatePlayheads();
+  }
+
+  function updatePlayheads() {
+    const x = tickToX(songTick);
+    els.arrangePlayhead.style.left = `${x}px`;
+    const found = selectedPart();
+    const local = found ? songTick-found.part.start : -1;
+    els.keyPlayhead.style.display = local>=0 && local<=found?.part.length ? 'block' : 'none';
+    els.keyPlayhead.style.left = `${58+keyTickToX(Math.max(0,local))}px`;
+  }
+
+  function syncControls() {
+    els.tempo.value = project.tempo; els.signature.value = project.signature || '4/4';
+    els.left.value = locatorText(project.left); els.right.value = locatorText(project.right);
+  }
+
+  function setView(view) {
+    currentView=view;
+    $$('.cb-view').forEach(el => el.classList.toggle('active',el.id===`${view}-view`));
+    $$('[data-view]').forEach(button => { const active=button.dataset.view===view; button.classList.toggle('active',active); button.setAttribute('aria-pressed',String(active)); });
+    if (view==='key') renderKey();
+  }
+
+  function setTool(tool) {
+    currentTool=tool;
+    $$('[data-tool]').forEach(button => { const active=button.dataset.tool===tool; button.classList.toggle('active',active); button.setAttribute('aria-pressed',String(active)); });
+    message(`${tool.toUpperCase()} TOOL.`);
+  }
+
+  function addTrack() {
+    if (project.tracks.length>=16) return message('MAXIMUM 16 TRACKS.');
+    remember();
+    const track={id:uid('t'),name:`MIDI TRACK ${project.tracks.length+1}`,channel:clamp(project.tracks.length+1,1,16),mute:false,solo:false,armed:false,parts:[]};
+    project.tracks.push(track); selectedTrackId=track.id; selectedPartId=null; renderAll(); message('MIDI TRACK ADDED.');
+  }
+
+  function renameTrack(track) {
+    const value = prompt('Track name',track.name);
+    if (!value?.trim()) return; remember(); track.name=value.trim().slice(0,28); renderAll();
+  }
+
+  function deleteSelection() {
+    const found=selectedPart();
+    if (currentView==='key' && found && selectedNoteId) {
+      remember(); found.part.notes=found.part.notes.filter(note=>note.id!==selectedNoteId); selectedNoteId=null; renderKey(); persist(); return message('NOTE DELETED.');
+    }
+    if (found) { remember(); found.track.parts=found.track.parts.filter(part=>part.id!==found.part.id); selectedPartId=null; renderAll(); message('PART DELETED.'); }
+  }
+
+  function copySelection() {
+    const found=selectedPart(); const note=selectedNote();
+    if (currentView==='key' && note) clipboard={type:'note',data:structuredClone(note)};
+    else if (found) clipboard={type:'part',data:structuredClone(found.part)};
+    message(clipboard?'COPIED.':'NOTHING SELECTED.');
+  }
+
+  function pasteSelection() {
+    if (!clipboard) return message('CLIPBOARD EMPTY.');
+    const found=selectedPart(); remember();
+    if (clipboard.type==='note' && found) {
+      const note={...structuredClone(clipboard.data),id:uid('n'),tick:clamp(clipboard.data.tick+snapTicks(),0,found.part.length-snapTicks())};
+      found.part.notes.push(note); selectedNoteId=note.id; renderKey();
+    } else if (clipboard.type==='part') {
+      const track=selectedTrack(); if (!track) return;
+      const part=structuredClone(clipboard.data); part.id=uid('p'); part.start=clamp(part.start+BAR,0,BARS*BAR-part.length); part.notes.forEach(note=>note.id=uid('n'));
+      track.parts.push(part); selectedPartId=part.id; renderAll();
+    }
+    persist(); message('PASTED.');
+  }
+
+  function duplicateSelection() { copySelection(); pasteSelection(); }
+
+  function quantizeSelection() {
+    const found=selectedPart(); if (!found) return message('SELECT A PART FIRST.');
+    remember(); const note=selectedNote(); const notes=note?[note]:found.part.notes;
+    notes.forEach(item=>item.tick=clamp(quantizeTick(item.tick),0,found.part.length-snapTicks()));
+    renderKey(); persist(); message(`${notes.length} NOTE${notes.length===1?'':'S'} QUANTISED.`);
+  }
+
+  function transpose(amount) {
+    const found=selectedPart(); if(!found) return message('SELECT A PART FIRST.');
+    remember(); const note=selectedNote(); (note?[note]:found.part.notes).forEach(item=>item.pitch=clamp(item.pitch+amount,0,127));
+    renderKey(); persist(); message(`TRANSPOSE ${amount>0?'+':''}${amount}.`);
+  }
+
+  function humanize() {
+    const found=selectedPart(); if(!found) return message('SELECT A PART FIRST.');
+    remember(); found.part.notes.forEach(note=>note.velocity=clamp(note.velocity+Math.round((Math.random()-.5)*14),1,127));
+    renderKey(); persist(); message('VELOCITIES HUMANISED.');
+  }
+
+  function splitAtSong() {
+    const found=selectedPart(); if(found) splitPart(found.track,found.part,songTick);
+  }
+
+  async function ensureAudio() {
+    if (!audioContext) audioContext=new (window.AudioContext||window.webkitAudioContext)();
+    if (audioContext.state==='suspended') await audioContext.resume();
+  }
+
+  function synthNote(pitch,velocity,durationMs) {
+    if (!els.monitor.checked || !audioContext) return;
+    const now=audioContext.currentTime; const osc=audioContext.createOscillator(); const gain=audioContext.createGain();
+    osc.type='square'; osc.frequency.value=440*Math.pow(2,(pitch-69)/12);
+    gain.gain.setValueAtTime(.0001,now); gain.gain.exponentialRampToValueAtTime(Math.max(.006,velocity/127*.055),now+.008);
+    gain.gain.exponentialRampToValueAtTime(.0001,now+Math.max(.04,durationMs/1000));
+    osc.connect(gain).connect(audioContext.destination); osc.start(now); osc.stop(now+Math.max(.05,durationMs/1000)+.02);
+  }
+
+  function sendMidi(pitch,velocity,durationMs,channel=1) {
+    if (!midiOutput) return;
+    const status=0x90+clamp(channel-1,0,15); const off=0x80+clamp(channel-1,0,15);
+    try { midiOutput.send([status,pitch,velocity]); midiOutput.send([off,pitch,0],performance.now()+durationMs); } catch {}
+  }
+
+  async function audition(pitch,velocity=96,durationMs=220,channel=selectedTrack()?.channel||1) {
+    await ensureAudio(); synthNote(pitch,velocity,durationMs); sendMidi(pitch,velocity,durationMs,channel);
+  }
+
+  function activeTracks() {
+    const soloed=project.tracks.filter(track=>track.solo);
+    return (soloed.length?soloed:project.tracks.filter(track=>!track.mute));
+  }
+
+  function processRange(from,to) {
+    if (to<=from) return;
+    const msPerTick=60000/project.tempo/PPQ;
+    activeTracks().forEach(track=>track.parts.forEach(part=>part.notes.forEach(note=>{
+      const absolute=part.start+note.tick;
+      if (absolute>=from && absolute<to) {
+        const duration=Math.max(30,note.duration*msPerTick); synthNote(note.pitch,note.velocity,duration); sendMidi(note.pitch,note.velocity,duration,track.channel);
+      }
+    })));
+    if (metronome) {
+      const first=Math.ceil(from/PPQ)*PPQ;
+      for(let tick=first;tick<to;tick+=PPQ) clickSound(tick%BAR===0);
+    }
+  }
+
+  function clickSound(accent) {
+    if(!audioContext) return;
+    const now=audioContext.currentTime,osc=audioContext.createOscillator(),gain=audioContext.createGain();
+    osc.frequency.value=accent?1400:900; gain.gain.setValueAtTime(.035,now); gain.gain.exponentialRampToValueAtTime(.0001,now+.035);
+    osc.connect(gain).connect(audioContext.destination); osc.start(now); osc.stop(now+.04);
+  }
+
+  async function startPlay(fromRecord=false) {
+    await ensureAudio(); if(playing){ recording=fromRecord||recording; updateHead(); return; }
+    playing=true; recording=fromRecord; playStartTime=performance.now(); playStartTick=songTick; lastProcessTick=songTick-1;
+    timer=setInterval(playStep,20); updateHead(); message(fromRecord?'RECORDING MIDI INPUT.':'PLAYING.',fromRecord?'REC':'PLAY');
+  }
+
+  function playStep() {
+    const elapsed=performance.now()-playStartTime;
+    let next=playStartTick+elapsed*project.tempo*PPQ/60000;
+    if(cycle && project.right>project.left && next>=project.right){
+      processRange(lastProcessTick,project.right); panic();
+      next=project.left+(next-project.right)%(project.right-project.left); playStartTick=next; playStartTime=performance.now(); lastProcessTick=project.left-1;
+    }
+    processRange(lastProcessTick,next); lastProcessTick=next; songTick=next;
+    if(songTick>=BARS*BAR){ stopPlayback(); songTick=0; }
+    updateHead();
+  }
+
+  function stopPlayback() {
+    playing=false; recording=false; clearInterval(timer); timer=null; recordingNotes.clear(); panic(); updateHead(); message('STOPPED.','READY.');
+  }
+
+  function panic() {
+    if(midiOutput){
+      for(let channel=0;channel<16;channel++) try{ midiOutput.send([0xB0+channel,123,0]); }catch{}
+    }
+  }
+
+  async function connectMidi() {
+    closeMenus();
+    if(!navigator.requestMIDIAccess) return message('WEB MIDI IS NOT AVAILABLE IN THIS BROWSER.','MIDI OFFLINE.');
+    if(!window.isSecureContext) return message('WEB MIDI NEEDS HTTPS OR LOCALHOST.','SECURE CONTEXT REQUIRED.');
+    message('WAITING FOR MIDI PERMISSION…','MIDI.');
+    try {
+      midiAccess=await navigator.requestMIDIAccess({sysex:false}); midiAccess.addEventListener('statechange',refreshMidiPorts); refreshMidiPorts();
+      els.midiLight.classList.add('on'); els.midiLabel.textContent='MIDI READY'; message('SELECT AN INPUT OR OUTPUT PORT.','MIDI READY.');
+    } catch(error) { els.midiLabel.textContent='MIDI DENIED'; message(error.message||'MIDI PERMISSION WAS NOT GRANTED.','MIDI ERROR.'); }
+  }
+
+  function refreshMidiPorts() {
+    if(!midiAccess) return;
+    const inputs=[...midiAccess.inputs.values()],outputs=[...midiAccess.outputs.values()];
+    const currentIn=els.midiInput.value,currentOut=els.midiOutput.value;
+    els.midiInput.innerHTML='<option value="">NO INPUT</option>'+inputs.map(port=>`<option value="${escapeHtml(port.id)}">${escapeHtml(port.name||'MIDI INPUT')}</option>`).join('');
+    els.midiOutput.innerHTML='<option value="">NO OUTPUT</option>'+outputs.map(port=>`<option value="${escapeHtml(port.id)}">${escapeHtml(port.name||'MIDI OUTPUT')}</option>`).join('');
+    els.midiInput.disabled=false; els.midiOutput.disabled=false;
+    if(inputs.some(port=>port.id===currentIn)) els.midiInput.value=currentIn;
+    if(outputs.some(port=>port.id===currentOut)) els.midiOutput.value=currentOut;
+    bindMidiInput(); bindMidiOutput();
+  }
+
+  function bindMidiInput() {
+    if(midiInput) midiInput.onmidimessage=null;
+    midiInput=midiAccess?.inputs.get(els.midiInput.value)||null;
+    if(midiInput) midiInput.onmidimessage=onMidiMessage;
+  }
+  function bindMidiOutput() { midiOutput=midiAccess?.outputs.get(els.midiOutput.value)||null; }
+
+  function flashMidi() {
+    els.midiLight.classList.add('on'); clearTimeout(midiFlashTimer); midiFlashTimer=setTimeout(()=>{if(!midiAccess)els.midiLight.classList.remove('on');},90);
+  }
+
+  function onMidiMessage(event) {
+    const [status,data1=0,data2=0]=event.data; const type=status&0xF0; const channel=(status&0x0F)+1; flashMidi();
+    if(els.thru.checked && midiOutput) try{midiOutput.send([...event.data]);}catch{}
+    if(type===0x90 && data2>0) {
+      if(els.monitor.checked){ ensureAudio().then(()=>synthNote(data1,data2,400)); }
+      if(recording) beginRecordedNote(channel,data1,data2);
+      message(`${pitchName(data1)} · VELOCITY ${data2} · CHANNEL ${channel}`,'MIDI IN');
+    } else if(type===0x80 || (type===0x90 && data2===0)) {
+      if(recording) finishRecordedNote(channel,data1);
+    }
+  }
+
+  function recordingPart(track) {
+    let part=track.parts.find(item=>songTick>=item.start && songTick<item.start+item.length);
+    if(!part){
+      const start=Math.floor(songTick/BAR)*BAR; part={id:uid('p'),name:'RECORDED',start,length:BAR*2,notes:[]}; track.parts.push(part); selectedPartId=part.id;
+    }
+    return part;
+  }
+
+  function beginRecordedNote(channel,pitch,velocity) {
+    const track=project.tracks.find(item=>item.armed)||selectedTrack(); if(!track) return;
+    const part=recordingPart(track); recordingNotes.set(`${channel}:${pitch}`,{track,part,pitch,velocity,start:songTick});
+  }
+  function finishRecordedNote(channel,pitch) {
+    const key=`${channel}:${pitch}`,entry=recordingNotes.get(key); if(!entry)return;
+    remember(); entry.part.notes.push({id:uid('n'),tick:clamp(quantizeTick(entry.start-entry.part.start),0,entry.part.length-snapTicks()),pitch,velocity:entry.velocity,duration:Math.max(snapTicks(),quantizeTick(songTick-entry.start))});
+    recordingNotes.delete(key); renderAll();
+  }
+
+  function newSong() {
+    if(!confirm('Create a new song? The current browser copy will be replaced.')) return;
+    remember(); project={name:'Untitled',tempo:120,signature:'4/4',left:0,right:BAR*8,tracks:[{id:uid('t'),name:'MIDI TRACK 1',channel:1,mute:false,solo:false,armed:true,parts:[]}]};
+    selectedTrackId=project.tracks[0].id; selectedPartId=null; selectedNoteId=null; songTick=0; syncControls(); renderAll(); message('NEW SONG.');
+  }
+
+  function download(name,type,data) {
+    const url=URL.createObjectURL(new Blob([data],{type})); const link=document.createElement('a'); link.href=url; link.download=name; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  function exportProject() { download((project.name||'song').replace(/[^a-z0-9_-]+/gi,'_')+'.clackbase','application/json',JSON.stringify(project,null,2)); message('PROJECT EXPORTED.'); }
+  function saveProject() { persist(); message('PROJECT SAVED IN THIS BROWSER.','SAVED.'); }
+
+  async function openProjectFile(file) {
+    try { const value=JSON.parse(await file.text()); if(!Array.isArray(value.tracks))throw new Error('No tracks found'); remember(); project=value; selectedTrackId=project.tracks[0]?.id||null; selectedPartId=null; songTick=0; syncControls(); renderAll(); message(`${file.name} LOADED.`,'PROJECT.'); }
+    catch(error){message(error.message||'PROJECT COULD NOT BE READ.','OPEN ERROR.');}
+  }
+
+  function readVar(bytes,state) { let value=0,byte; do{byte=bytes[state.i++];value=(value<<7)+(byte&0x7F);}while(byte&0x80);return value; }
+  function readText(bytes,start,length){return new TextDecoder().decode(bytes.slice(start,start+length));}
+
+  async function importMidiFile(file) {
+    try {
+      const bytes=new Uint8Array(await file.arrayBuffer()); if(readText(bytes,0,4)!=='MThd')throw new Error('Not a Standard MIDI File');
+      const view=new DataView(bytes.buffer); const format=view.getUint16(8),trackCount=view.getUint16(10),division=view.getUint16(12); if(division&0x8000)throw new Error('SMPTE MIDI timing is not supported');
+      let offset=14; const channels=Array.from({length:16},()=>[]); const names=Array.from({length:16},(_,i)=>`MIDI CH ${i+1}`); let importedTempo=null;
+      for(let trackIndex=0;trackIndex<trackCount;trackIndex++){
+        if(readText(bytes,offset,4)!=='MTrk')throw new Error('Invalid track chunk'); const length=view.getUint32(offset+4); const end=offset+8+length; const state={i:offset+8}; let tick=0,running=0,trackName=''; const active=new Map();
+        while(state.i<end){ tick+=readVar(bytes,state); let status=bytes[state.i++]; if(status<0x80){state.i--;status=running;}else if(status<0xF0)running=status;
+          if(status===0xFF){const type=bytes[state.i++],len=readVar(bytes,state); if(type===0x03)trackName=readText(bytes,state.i,len); if(type===0x51&&len===3)importedTempo=Math.round(60000000/((bytes[state.i]<<16)|(bytes[state.i+1]<<8)|bytes[state.i+2])); state.i+=len; continue;}
+          if(status===0xF0||status===0xF7){state.i+=readVar(bytes,state);continue;}
+          const type=status&0xF0,channel=status&0x0F,data1=bytes[state.i++],data2=(type===0xC0||type===0xD0)?0:bytes[state.i++]; const scaled=Math.round(tick*PPQ/division); const key=`${channel}:${data1}`;
+          if(type===0x90&&data2>0)active.set(key,{tick:scaled,velocity:data2});
+          else if(type===0x80||(type===0x90&&data2===0)){const start=active.get(key);if(start){channels[channel].push({id:uid('n'),tick:start.tick,pitch:data1,duration:Math.max(1,scaled-start.tick),velocity:start.velocity});active.delete(key);}}
+        }
+        if(trackName) channels.forEach((notes,i)=>{if(notes.length&&!names[i].startsWith(trackName))names[i]=trackName+` CH ${i+1}`;}); offset=end;
+      }
+      const tracks=channels.map((notes,channel)=>({notes,channel})).filter(item=>item.notes.length).map((item,index)=>{
+        const min=Math.min(...item.notes.map(n=>n.tick)),start=Math.floor(min/BAR)*BAR,max=Math.max(...item.notes.map(n=>n.tick+n.duration)),length=Math.max(BAR,Math.ceil((max-start)/BAR)*BAR);
+        return {id:uid('t'),name:names[item.channel],channel:item.channel+1,mute:false,solo:false,armed:index===0,parts:[{id:uid('p'),name:file.name.replace(/\.(mid|midi)$/i,''),start,length,notes:item.notes.map(note=>({...note,tick:note.tick-start}))}]};
+      });
+      if(!tracks.length)throw new Error('The file contains no note events'); remember(); project={name:file.name.replace(/\.(mid|midi)$/i,''),tempo:importedTempo||120,signature:'4/4',left:0,right:Math.max(...tracks.flatMap(t=>t.parts.map(p=>p.start+p.length))),tracks}; selectedTrackId=tracks[0].id; selectedPartId=tracks[0].parts[0].id; songTick=0; syncControls(); renderAll(); message(`${file.name} · FORMAT ${format} · ${tracks.length} TRACKS.`,'MIDI IMPORTED.');
+    } catch(error){message(error.message||'MIDI FILE COULD NOT BE READ.','IMPORT ERROR.');}
+  }
+
+  function varBytes(value){let buffer=value&0x7F,result=[];while((value>>=7)){buffer<<=8;buffer|=(value&0x7F)|0x80;}for(;;){result.push(buffer&0xFF);if(buffer&0x80)buffer>>=8;else break;}return result;}
+  function chunk(type,data){const out=[...new TextEncoder().encode(type),(data.length>>>24)&255,(data.length>>>16)&255,(data.length>>>8)&255,data.length&255,...data];return out;}
+  function exportMidi() {
+    const tempo=Math.round(60000000/project.tempo); const tempoTrack=[0,0xFF,0x51,3,(tempo>>16)&255,(tempo>>8)&255,tempo&255,0,0xFF,0x58,4,4,2,24,8,0,0xFF,0x2F,0];
+    const trackChunks=project.tracks.map(track=>{
+      const events=[]; const name=[...new TextEncoder().encode(track.name.slice(0,40))]; events.push({tick:0,order:0,data:[0xFF,0x03,...varBytes(name.length),...name]});
+      track.parts.forEach(part=>part.notes.forEach(note=>{const start=Math.max(0,Math.round(part.start+note.tick)),end=start+Math.max(1,Math.round(note.duration)),ch=clamp(track.channel-1,0,15);events.push({tick:start,order:1,data:[0x90+ch,note.pitch,note.velocity]},{tick:end,order:0,data:[0x80+ch,note.pitch,0]});}));
+      events.sort((a,b)=>a.tick-b.tick||a.order-b.order); let previous=0,data=[]; events.forEach(event=>{data.push(...varBytes(event.tick-previous),...event.data);previous=event.tick;}); data.push(0,0xFF,0x2F,0); return chunk('MTrk',data);
+    });
+    const count=trackChunks.length+1,header=[...new TextEncoder().encode('MThd'),0,0,0,6,0,1,(count>>8)&255,count&255,(PPQ>>8)&255,PPQ&255]; const bytes=new Uint8Array([...header,...chunk('MTrk',tempoTrack),...trackChunks.flat()]);
+    download((project.name||'clackbase').replace(/[^a-z0-9_-]+/gi,'_')+'.mid','audio/midi',bytes); message(`${project.tracks.length} TRACKS WRITTEN.`,'MIDI EXPORTED.');
+  }
+
+  function escapeHtml(value){return String(value).replace(/[&<>"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[char]));}
+  function closeMenus(){ $$('.rm.open').forEach(menu=>menu.classList.remove('open')); }
+
+  function handleAction(action) {
+    closeMenus();
+    ({
+      new:newSong,save:saveProject,'export-project':exportProject,'open-project':()=>$('#project-file').click(),
+      'import-midi':()=>$('#midi-file').click(),'export-midi':exportMidi,undo,redo,copy:copySelection,paste:pasteSelection,
+      delete:deleteSelection,'add-track':addTrack,duplicate:duplicateSelection,split:splitAtSong,quantize:quantizeSelection,
+      'transpose-up':()=>transpose(1),'transpose-down':()=>transpose(-1),humanize,'toggle-cycle':()=>toggleCycle(),
+      'toggle-click':()=>toggleClick(),panic,'connect-midi':connectMidi
+    }[action]||(()=>{}))();
+  }
+
+  function toggleCycle(){cycle=!cycle;updateHead();message(`CYCLE ${cycle?'ON':'OFF'}.`);}
+  function toggleClick(){metronome=!metronome;updateHead();message(`METRONOME ${metronome?'ON':'OFF'}.`);}
+
+  function bindEvents() {
+    $$('.rm > button').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();const menu=button.parentElement,was=menu.classList.contains('open');closeMenus();menu.classList.toggle('open',!was);}));
+    document.addEventListener('click',closeMenus);
+    $$('[data-action]').forEach(button=>button.addEventListener('click',()=>handleAction(button.dataset.action)));
+    $$('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));
+    $$('[data-tool]').forEach(button=>button.addEventListener('click',()=>setTool(button.dataset.tool)));
+    els.arrangeScroll.addEventListener('scroll',()=>{els.trackRows.scrollTop=els.arrangeScroll.scrollTop;});
+    els.ruler.addEventListener('pointerdown',event=>{songTick=clamp(quantizeTick(xToTick(event.offsetX)),0,BARS*BAR);if(playing){playStartTick=songTick;playStartTime=performance.now();lastProcessTick=songTick-1;}updateHead();});
+    els.noteArea.addEventListener('pointerdown',onNoteAreaPointerDown);
+    window.addEventListener('pointermove',event=>{
+      if(!dragState)return;
+      if(dragState.type==='part'){dragState.part.start=clamp(quantizeTick(dragState.start+xToTick(event.clientX-dragState.originX)),0,BARS*BAR-dragState.part.length);renderTracks();}
+      else if(dragState.type==='note'){dragState.note.tick=clamp(quantizeTick(dragState.tick+keyXToTick(event.clientX-dragState.originX)),0,selectedPart().part.length-dragState.note.duration);dragState.note.pitch=clamp(dragState.pitch-Math.round((event.clientY-dragState.originY)/ROW_HEIGHT),LOW_PITCH,HIGH_PITCH);renderKey();}
+      else if(dragState.type==='note-resize'){dragState.note.duration=Math.max(snapTicks(),quantizeTick(dragState.duration+keyXToTick(event.clientX-dragState.originX)));renderKey();}
+    });
+    window.addEventListener('pointerup',()=>{if(dragState){dragState=null;persist();}});
+    els.tempo.addEventListener('change',()=>{remember();project.tempo=clamp(Number(els.tempo.value)||120,30,300);els.tempo.value=project.tempo;persist();});
+    els.signature.addEventListener('change',()=>{remember();project.signature=els.signature.value;persist();message('DISPLAY SIGNATURE UPDATED. Playback grid remains quarter-note based.');});
+    els.left.addEventListener('change',()=>{project.left=parseLocator(els.left.value);els.left.value=locatorText(project.left);persist();});
+    els.right.addEventListener('change',()=>{project.right=parseLocator(els.right.value);els.right.value=locatorText(project.right);persist();});
+    els.cycle.addEventListener('click',toggleCycle); els.click.addEventListener('click',toggleClick);
+    $('#connect-midi').addEventListener('click',connectMidi); els.midiInput.addEventListener('change',bindMidiInput); els.midiOutput.addEventListener('change',bindMidiOutput);
+    $('#rewind').addEventListener('click',()=>{songTick=Math.max(0,songTick-BAR);updateHead();});
+    $('#forward').addEventListener('click',()=>{songTick=Math.min(BARS*BAR,songTick+BAR);updateHead();});
+    $('#stop').addEventListener('click',stopPlayback); els.play.addEventListener('click',()=>playing?stopPlayback():startPlay(false)); els.record.addEventListener('click',()=>recording?stopPlayback():startPlay(true));
+    $('#project-file').addEventListener('change',event=>{const file=event.target.files[0];if(file)openProjectFile(file);event.target.value='';});
+    $('#midi-file').addEventListener('change',event=>{const file=event.target.files[0];if(file)importMidiFile(file);event.target.value='';});
+    window.addEventListener('keydown',event=>{
+      if(/INPUT|SELECT|TEXTAREA/.test(event.target.tagName))return;
+      if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){event.preventDefault();event.shiftKey?redo():undo();return;}
+      if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='c'){event.preventDefault();copySelection();return;}
+      if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='v'){event.preventDefault();pasteSelection();return;}
+      if(event.code==='Space'){event.preventDefault();playing?stopPlayback():startPlay(false);return;}
+      if(event.key==='Delete'||event.key==='Backspace'){event.preventDefault();deleteSelection();return;}
+      if(event.key==='1')setView('arrange'); if(event.key==='2')setView('key');
+      if(event.key.toLowerCase()==='v')setTool('select'); if(event.key.toLowerCase()==='b')setTool('draw'); if(event.key.toLowerCase()==='e')setTool('erase');
+      const pitch=keyMap[event.key.toLowerCase()]; if(pitch&&!event.repeat){keyboardNotes.set(event.key,pitch);audition(pitch,96,350);if(recording)beginRecordedNote(selectedTrack()?.channel||1,pitch,96);}
+    });
+    window.addEventListener('keyup',event=>{const pitch=keyboardNotes.get(event.key);if(pitch){keyboardNotes.delete(event.key);if(recording)finishRecordedNote(selectedTrack()?.channel||1,pitch);}});
+    window.addEventListener('beforeunload',()=>{persist();panic();});
+  }
+
+  renderRulers(); syncControls(); bindEvents(); renderAll();
+  requestAnimationFrame(()=>{renderKey();updateHead();});
+})();
+</script>
+</body>
+</html>

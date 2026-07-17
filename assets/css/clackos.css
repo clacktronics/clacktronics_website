@@ -248,6 +248,18 @@ body.win-drag iframe { pointer-events: none; }
   flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none;
 }
 #tasks::-webkit-scrollbar { display: none; }
+#resource-stats {
+  display: flex; align-items: center; gap: 12px; flex: none;
+  height: 28px; margin-left: auto; padding-left: 12px;
+  border-left: 1px solid rgba(245, 239, 219, 0.28);
+  color: rgba(245, 239, 219, 0.68); white-space: nowrap;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  letter-spacing: 0.04em;
+}
+#resource-stats strong { color: var(--menu-text); font-weight: 500; }
+#cpu-stat[data-state="fair"] { color: #f0c66a; }
+#cpu-stat[data-state="serious"] { color: #ef9862; }
+#cpu-stat[data-state="critical"] { color: #f06f65; }
 button.task {
   all: unset; box-sizing: border-box; cursor: pointer; flex: none;
   display: flex; align-items: center; gap: 9px;
@@ -272,4 +284,5 @@ body.no-taskbar #desktop { bottom: 0; }
   .page { padding: 24px 20px; }
   #menubar { gap: 0; font-size: 12px; }
   .menu > button { padding: 0 8px; }
+  #resource-stats { gap: 7px; padding-left: 8px; font-size: 9px; }
 }
