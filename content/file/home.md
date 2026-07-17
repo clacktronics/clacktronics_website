@@ -22,7 +22,4 @@ Because constraints are clarifying. A 1-bit screen forces every pixel to justify
 [Browse the catalogue](window:file/catalogue.md)
 [Read the docs](window:file/readme.md)
 
----
-
-© 1984–2026 Clacktronics
-Made in Rochdale · 512K required
+[Open in Video Lab](app:applications/video/index.html?src=https%3A%2F%2Fclacktronics.co.uk%2Fassets%2Fflipdots.mp4)
