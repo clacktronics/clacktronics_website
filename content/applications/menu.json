@@ -1,6 +1,10 @@
 {
   "label": "Applications",
   "items": [
+    { "type": "app", "page": "resistor.html", "label": "Resistor Calculator…", "title": "Resistor Calculator", "width": 760, "height": 620 },
+    { "type": "app", "page": "model-viewer.html", "label": "3D Model Viewer…", "title": "3D Model Viewer", "width": 900, "height": 660, "multi": true },
+    { "type": "app", "page": "graphing-calculator.html", "label": "Graphing Calculator…", "title": "Graphing Calculator", "width": 960, "height": 660, "multi": true },
+    { "type": "app", "page": "clackbase.html", "label": "Clackbase MIDI Sequencer…", "title": "Clackbase 1.0", "width": 1120, "height": 760, "multi": true },
     { "type": "app", "page": "markdown.html", "label": "Markdown Editor…", "title": "Markdown Editor", "multi": true },
     { "type": "app", "page": "python.html", "label": "Python…", "title": "Python", "multi": true },
     { "type": "app", "page": "paint.html", "label": "Paint…", "title": "Paint", "width": 820, "height": 620, "multi": true },

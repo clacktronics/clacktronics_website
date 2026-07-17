@@ -25,6 +25,12 @@
 <div id="taskbar" aria-label="Taskbar">
   <span class="tb-logo" aria-hidden="true"></span>
   <div id="tasks"></div>
+  <div id="resource-stats"
+       title="Browser telemetry: CPU is a pressure state, not a percentage. RAM is this page's JavaScript heap, not total system memory."
+       aria-label="Browser resource telemetry">
+    <span>CPU <strong id="cpu-stat">N/A</strong></span>
+    <span>RAM <strong id="ram-stat">N/A</strong></span>
+  </div>
 </div>
 
 <script src="assets/js/clackos.js"></script>
