@@ -9,6 +9,8 @@
       { "type": "window", "md": "blog.md", "label": "Open Blog" }
     ] },
     { "type": "sep" },
+    { "type": "action", "action": "edit-front", "label": "Edit…", "shortcut": "⌘E" },
+    { "type": "sep" },
     { "type": "action", "action": "close-front", "label": "Close front window", "shortcut": "⌘W" }
   ]
 }

@@ -581,6 +581,22 @@ function frontWindow() {
   return best;
 }
 
+/* A markdown content window uses its content path as the window id
+ * (e.g. "file/readme.md"); application windows start with "app:". Only the
+ * former can be handed to the Markdown Editor, so this returns the editable
+ * path or null. */
+function markdownPathOf(rec) {
+  return rec && !rec.id.startsWith('app:') ? rec.id : null;
+}
+
+/* File → Edit…: open the front markdown page in the Markdown Editor app,
+ * with that file loaded via its ?open= query. */
+function editFrontWindow() {
+  const path = markdownPathOf(frontWindow());
+  if (!path) return;
+  openWindow(`app:applications/markdown.html?open=${encodeURIComponent(path)}`);
+}
+
 /* window arrangement (the View › Tidy windows submenu) --------------- */
 const GAP = 8;
 function openWindowList() {
@@ -681,6 +697,17 @@ function closeMenus() {
   menuOpen = false;
 }
 
+/* Menu items whose availability depends on the current front window are
+ * refreshed each time a menu is opened. Edit… only applies to a rendered
+ * markdown page, so it is disabled when the front window is an app or when
+ * no window is open. */
+function refreshDynamicItems() {
+  const editable = !!markdownPathOf(frontWindow());
+  menubar.querySelectorAll('[data-action="edit-front"]').forEach(b => {
+    b.disabled = !editable;
+  });
+}
+
 /* fill a dropdown from a list of items; recurses for nested submenus so the
  * same item vocabulary (window/app/action/sep/wallpapers) works at any depth */
 function buildMenuItems(container, items, folder) {
@@ -750,11 +777,12 @@ function buildMenu(folder, def) {
     e.stopPropagation();
     const wasOpen = m.classList.contains('open');
     closeMenus();
-    if (!wasOpen) { m.classList.add('open'); menuOpen = true; }
+    if (!wasOpen) { refreshDynamicItems(); m.classList.add('open'); menuOpen = true; }
   });
   btn.addEventListener('pointerenter', () => {
     if (menuOpen && !m.classList.contains('open')) {
       closeMenus();
+      refreshDynamicItems();
       m.classList.add('open');
       menuOpen = true;
     }
@@ -771,6 +799,7 @@ function runAction(action) {
   if (action.startsWith('open:')) { openWindow(action.slice(5)); return; }
   switch (action) {
     case 'close-front': { const f = frontWindow(); if (f) closeWindow(f.id); break; }
+    case 'edit-front': editFrontWindow(); break;
     case 'tidy': case 'arrange-cascade': arrangeCascade(); break;
     case 'arrange-grid': arrangeGrid(); break;
     case 'arrange-rows': arrangeRows(); break;

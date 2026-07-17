@@ -682,6 +682,20 @@ document.addEventListener('drop', async e => {
 });
 
 show();
+
+/* ---- open a file passed in the query string ----
+ * The desktop's File → Edit… launches this app as
+ * markdown.html?open=<content-relative path> so the front markdown page
+ * arrives already loaded. Only same-origin, relative content paths are
+ * accepted. */
+{
+  const requested = new URLSearchParams(location.search).get('open');
+  if (requested) {
+    const rel = requested.replace(/^content\//, '').replace(/^\/+/, '');
+    if (rel && /^[\w./-]+$/.test(rel) && !rel.includes('..')) openSiteFile(rel);
+    else status.textContent = 'Refused to open an unexpected path.';
+  }
+}
 })();
 </script>
 </body>
