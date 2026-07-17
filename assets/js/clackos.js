@@ -11,15 +11,24 @@ let zTop = 10;
 const contentCache = new Map();   // md path -> { meta, html }
 const windowTitles = new Map();   // md path -> title (for the taskbar)
 
+/* GitHub Pages and other static hosts may cache JSON and Markdown longer than
+ * the HTML shell. A unique query plus no-store prevents a new shell from being
+ * paired with an older menu or document after a deployment. */
+function fetchFresh(path) {
+  const url = new URL(path, location.href);
+  url.searchParams.set('_clack', Date.now());
+  return fetch(url, { cache: 'no-store' });
+}
+
 async function loadJSON(path) {
-  const res = await fetch(path);
+  const res = await fetchFresh(path);
   if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
   return res.json();
 }
 
 async function loadContent(id) {
   if (contentCache.has(id)) return contentCache.get(id);
-  const res = await fetch('content/' + id);
+  const res = await fetchFresh('content/' + id);
   if (!res.ok) throw new Error(`Failed to load content/${id}: ${res.status}`);
   const { meta, body } = parseFrontmatter(await res.text());
   const rec = { meta, html: mdToHtml(body, meta) };
