@@ -1,6 +1,8 @@
 {
   "menus": ["file", "edit", "view", "desktop", "applications"],
   "boot": ["file/home.md"],
+  "theme": "clackos.css",
+  "themes": ["clackos.css", "midnight.css"],
   "repo": "clacktronics/clacktronics_website",
   "branch": "claude/website-markdown-template-split-2p1o84"
 }

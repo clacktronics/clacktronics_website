@@ -7,6 +7,80 @@ const tasksEl = document.getElementById('tasks');
 const menubar = document.getElementById('menubar');
 let zTop = 10;
 
+/* ---------------- Themes ----------------
+ * A theme is a small CSS file in assets/themes/. The base styles contain
+ * resilient defaults; the selected file only overrides colour variables. */
+const THEME_VARS = [
+  '--ink', '--heading', '--ink-soft', '--control-text', '--strong-text', '--shadow',
+  '--paper', '--paper-deep', '--paper-line', '--sage',
+  '--leaf', '--leaf-deep', '--menu-text', '--menu-dim', '--desktop',
+  '--window-inactive', '--title-text', '--accent-hover', '--button-text',
+  '--disabled-text'
+];
+let activeTheme = 'clackos.css';
+let themePreview = null;
+
+function safeThemeName(name) {
+  name = String(name || '');
+  return /^[a-z0-9][a-z0-9._-]*\.css$/i.test(name) ? name : 'clackos.css';
+}
+
+function themeHref(name) {
+  return new URL(`assets/themes/${encodeURIComponent(safeThemeName(name))}`, location.href).href;
+}
+
+function setPreviewOnDocument(doc, variables) {
+  if (!doc?.documentElement) return;
+  for (const name of THEME_VARS) {
+    if (variables && /^#[0-9a-f]{6}$/i.test(variables[name] || ''))
+      doc.documentElement.style.setProperty(name, variables[name]);
+    else
+      doc.documentElement.style.removeProperty(name);
+  }
+}
+
+function applyThemeToFrame(frame) {
+  try {
+    const doc = frame.contentDocument;
+    if (!doc?.head) return;
+    let link = doc.getElementById('clackos-theme');
+    if (!link) {
+      link = doc.createElement('link');
+      link.id = 'clackos-theme';
+      link.rel = 'stylesheet';
+      doc.head.appendChild(link);
+    }
+    link.href = themeHref(activeTheme);
+    setPreviewOnDocument(doc, themePreview);
+  } catch {}
+}
+
+function applyTheme(name) {
+  activeTheme = safeThemeName(name);
+  const link = document.getElementById('clackos-theme');
+  if (link) {
+    link.addEventListener('load', syncBrowserThemeColor, { once: true });
+    link.href = themeHref(activeTheme);
+  }
+  document.documentElement.dataset.theme = activeTheme.replace(/\.css$/i, '');
+  document.querySelectorAll('iframe.appframe').forEach(applyThemeToFrame);
+}
+
+function applyThemePreview(variables) {
+  themePreview = variables && typeof variables === 'object' ? variables : null;
+  setPreviewOnDocument(document, themePreview);
+  document.querySelectorAll('iframe.appframe').forEach(frame => {
+    try { setPreviewOnDocument(frame.contentDocument, themePreview); } catch {}
+  });
+  syncBrowserThemeColor();
+}
+
+function syncBrowserThemeColor() {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const ink = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim();
+  if (meta && ink) meta.content = ink;
+}
+
 /* ---------------- Content loading ---------------- */
 const contentCache = new Map();   // md path -> { meta, html }
 const windowTitles = new Map();   // md path -> title (for the taskbar)
@@ -255,7 +329,10 @@ function applyWallpaper(name) {
   if (!wp) return;
   currentWallpaper = name;
   try { localStorage.setItem('clackos-wallpaper', name); } catch {}
-  desktop.style.backgroundColor = wp.color;
+  /* The colour belongs to the active theme. Wallpapers contribute only the
+   * transparent pattern layer, otherwise this inline colour would override
+   * --desktop and make Theme Editor changes appear not to work. */
+  desktop.style.removeProperty('background-color');
   desktop.style.backgroundImage = wp.image;
   wallpaperDropdowns.forEach(buildWallpaperMenu);
 }
@@ -307,6 +384,7 @@ async function openWindow(id) {
       /* clicks inside the app should still raise its window */
       f.addEventListener('load', () => {
         try {
+          applyThemeToFrame(f);
           f.contentDocument.addEventListener('pointerdown', () => focusWindow(el));
         } catch {}
       });
@@ -689,6 +767,7 @@ async function boot() {
   updateTaskbar();
 
   const site = await loadJSON('content/site.json');
+  applyTheme(site.theme);
   const defs = await Promise.all(
     site.menus.map(folder => loadJSON(`content/${folder}/menu.json`))
   );
@@ -702,6 +781,14 @@ async function boot() {
 }
 
 boot().catch(err => console.error('ClackOS failed to boot:', err));
+
+/* The Theme Editor sends palette previews to the desktop. Only same-origin
+ * application windows can change these variables, and only known hex colours
+ * are accepted by applyThemePreview. */
+window.addEventListener('message', e => {
+  if (e.origin !== location.origin || e.data?.type !== 'clackos-theme-preview') return;
+  applyThemePreview(e.data.variables);
+});
 
 /* app pages (pattern editor) talk to the desktop through localStorage;
  * same-origin iframes and other tabs raise storage events here */

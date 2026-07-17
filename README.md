@@ -8,6 +8,9 @@ A retro desktop-style website. The **visuals live in a single template**
 index.html                  ← page shell (menu bar, desktop, taskbar)
 assets/
   css/clackos.css           ← all styling (the "template")
+  themes/                   ← one editable colour theme per CSS file
+    clackos.css             ← default palette
+    midnight.css            ← example dark palette
   js/clackos.js             ← window manager, menu builder, markdown renderer
 content/
   site.json                 ← menu order + which windows open at boot
@@ -41,6 +44,30 @@ share `assets/css/app.css` for the look.
 There is **no build step**: the browser fetches `site.json`, each folder's
 `menu.json`, and the markdown files at runtime. Edit a `.md` file, refresh,
 done. Hosted on GitHub Pages (or any static host).
+
+## Colour themes
+
+Colour templates live as standalone CSS files in `assets/themes/`. Each file
+only sets the shared ClackOS colour variables, so one palette applies to the
+desktop, Markdown windows and same-origin application windows. The active file
+and the list shown in the editor are configured in `content/site.json`:
+
+```json
+"theme": "clackos.css",
+"themes": ["clackos.css", "midnight.css"]
+```
+
+Open **Applications → Theme Editor…** to change the palette with colour
+pickers and preview it live across the website. The File menu can open a theme
+already on the website, open/save a local `.css` file, or commit the current
+theme to GitHub. Committing always creates or updates one file under
+`assets/themes/`, registers it in `content/site.json`, and can make it the
+active website theme. It uses the same fine-grained GitHub token approach as
+the Markdown editor; the token is kept only in memory for that editor window.
+
+Theme filenames are restricted to letters, numbers, dots, underscores and
+hyphens and must end in `.css`. This keeps every template self-contained in the
+theme folder and prevents the editor from writing elsewhere in the repository.
 
 ## Adding or editing content
 
@@ -205,6 +232,12 @@ files, generic registered applications, Markdown windows, and desktop actions.
   automatically by the GitHub Action in
   .github/workflows/blog-index.yml, which regenerates blog.md on push. The toolbar icons are plain text glyphs, so nothing is
   fetched from icon CDNs.
+- `applications/theme.html` (Applications → Theme Editor…) — edits the shared
+  colour variables with a live desktop preview, propagates temporary colours to
+  open ClackOS app windows, opens and saves standalone CSS theme files, and
+  commits new or updated files to `assets/themes/` through GitHub's contents
+  API. A commit also registers the filename in `content/site.json` and can set
+  it as the active site theme.
 - `applications/python.html` (Applications → Python…) — a Thonny-style
   Python IDE running entirely in the browser on Pyodide (vendored under
   `vendor/pyodide/`, MPL-2.0 — the same WASM CPython that powers

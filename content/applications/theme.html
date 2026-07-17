@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Theme Editor — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<link rel="stylesheet" id="clackos-theme" href="../../assets/themes/clackos.css">
+<style>
+.app { height: 100%; min-height: 0; }
+.theme-main { min-height: 0; display: grid; grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.1fr); gap: 18px; }
+.theme-controls, .theme-preview-wrap { min-height: 0; }
+.theme-controls { overflow: auto; padding-right: 4px; }
+.theme-head { display: flex; gap: 12px; align-items: end; margin-bottom: 16px; }
+.theme-head label { display: flex; flex: 1; flex-direction: column; gap: 5px; }
+.theme-head input { width: 100%; }
+.palette { display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr)); gap: 8px; }
+.colour-row {
+  display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto;
+  gap: 2px 9px; align-items: center; padding: 8px;
+  border: 1px solid var(--paper-line); border-radius: 6px; background: var(--paper-deep);
+}
+.colour-row input[type="color"] {
+  grid-row: 1 / span 2; width: 34px; height: 34px; padding: 0;
+  border: 1px solid var(--ink); border-radius: 5px; background: none; cursor: pointer;
+}
+.colour-row label { color: var(--control-text); font-size: 11.5px; font-weight: 500; }
+.colour-row code { color: var(--sage); font-size: 10px; }
+.theme-preview-wrap { display: flex; flex-direction: column; gap: 8px; }
+.mock-desktop {
+  position: relative; flex: 1; min-height: 380px; overflow: hidden;
+  border: 2px solid var(--ink); border-radius: 8px; background: var(--desktop);
+}
+.mock-menu, .mock-taskbar {
+  position: absolute; left: 0; right: 0; display: flex; align-items: center;
+  background: var(--ink); color: var(--menu-text); font-size: 10px;
+}
+.mock-menu { top: 0; height: 28px; gap: 12px; padding: 0 10px; }
+.mock-menu .brand { width: 11px; height: 11px; border-radius: 3px; background: var(--leaf); }
+.mock-menu .clock { margin-left: auto; color: var(--menu-dim); }
+.mock-taskbar { bottom: 0; height: 34px; gap: 8px; padding: 0 9px; border-top: 2px solid var(--leaf-deep); }
+.mock-task { padding: 5px 9px; border: 1px solid var(--leaf); border-radius: 5px; background: var(--leaf-deep); }
+.mock-window {
+  position: absolute; inset: 54px 36px 58px; display: flex; flex-direction: column;
+  border: 2px solid var(--ink); border-radius: 9px; background: var(--paper);
+  box-shadow: 7px 7px 0 color-mix(in srgb, var(--shadow) 35%, transparent);
+}
+.mock-title { padding: 8px 11px; border-radius: 6px 6px 0 0; background: var(--ink); color: var(--title-text); text-align: center; font-size: 11px; }
+.mock-body { padding: 22px; color: var(--ink-soft); overflow: auto; }
+.mock-body h1 { margin-bottom: 8px; color: var(--heading); font-family: 'Dosis', sans-serif; font-size: 28px; text-transform: uppercase; letter-spacing: .06em; }
+.mock-body .tagline { margin-bottom: 14px; color: var(--sage); font-size: 10px; }
+.mock-body p { margin-bottom: 14px; line-height: 1.7; }
+.mock-body .eyebrow { margin-bottom: 8px; color: var(--leaf-deep); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
+.mock-actions { display: flex; gap: 8px; }
+.mock-button { padding: 7px 10px; border: 1px solid var(--ink); border-radius: 5px; background: var(--ink); color: var(--button-text); }
+.mock-button.alt { background: var(--paper-deep); color: var(--control-text); }
+.status-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.status-row .app-status { flex: 1; }
+.modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: color-mix(in srgb, var(--ink) 38%, transparent); }
+.modal.open { display: flex; }
+.modal-box { width: min(560px, 92vw); max-height: 82vh; display: flex; flex-direction: column; border: 2px solid var(--ink); border-radius: 9px; background: var(--paper); box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 35%, transparent); }
+.modal-box header { display: flex; justify-content: space-between; padding: 9px 13px; border-radius: 6px 6px 0 0; background: var(--ink); color: var(--menu-text); }
+.modal-box header button { all: unset; cursor: pointer; }
+.theme-list { overflow: auto; padding: 8px; }
+.theme-list button { all: unset; box-sizing: border-box; width: 100%; padding: 8px 10px; border-radius: 5px; color: var(--control-text); cursor: pointer; }
+.theme-list button:hover { background: var(--ink); color: var(--menu-text); }
+.commit-form { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.commit-form label { display: flex; flex-direction: column; gap: 5px; color: var(--control-text); font-size: 12px; }
+.commit-form input[type="text"], .commit-form input[type="password"] { width: 100%; }
+.commit-form .checkline { flex-direction: row; align-items: center; }
+.commit-actions { display: flex; gap: 12px; align-items: center; }
+@media (max-width: 760px) {
+  .theme-main { grid-template-columns: 1fr; overflow: auto; }
+  .theme-controls { overflow: visible; }
+  .mock-desktop { min-height: 390px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="rm-bar">
+    <div class="rm"><button>File</button><div class="rm-dd">
+      <button data-cmd="new">New theme</button>
+      <button data-cmd="site">Open from website…</button>
+      <button data-cmd="open">Open CSS file…</button>
+      <button data-cmd="save">Save CSS file…</button>
+      <div class="sep"></div>
+      <button data-cmd="commit">Commit to website…</button>
+    </div></div>
+    <div class="rm"><button>Preview</button><div class="rm-dd">
+      <button data-cmd="apply">Apply preview</button>
+      <button data-cmd="reset">Reset preview</button>
+    </div></div>
+  </div>
+  <main class="app-main theme-main">
+    <section class="theme-controls">
+      <div class="theme-head">
+        <label><span class="app-lbl">Template file</span><input id="themeName" type="text" value="clackos.css" spellcheck="false"></label>
+        <button class="btn" id="resetButton">Defaults</button>
+      </div>
+      <div class="palette" id="palette"></div>
+    </section>
+    <section class="theme-preview-wrap">
+      <span class="app-lbl">Live preview</span>
+      <div class="mock-desktop">
+        <div class="mock-menu"><span class="brand"></span><span>File</span><span>Edit</span><span>Applications</span><span class="clock">12:34</span></div>
+        <div class="mock-window">
+          <div class="mock-title">Theme preview</div>
+          <div class="mock-body">
+            <h1>Clacktronics</h1>
+            <p class="tagline">Hardware, sound and useful experiments.</p>
+            <p class="eyebrow">// Palette in context</p>
+            <p>Change a colour and the desktop, open applications and this sample update immediately.</p>
+            <div class="mock-actions"><span class="mock-button">Primary</span><span class="mock-button alt">Secondary</span></div>
+          </div>
+        </div>
+        <div class="mock-taskbar"><span class="mock-task">Theme Editor</span></div>
+      </div>
+      <div class="status-row"><p class="app-status" id="status">Loading the active website theme…</p><button class="btn primary" id="commitButton">Commit</button></div>
+    </section>
+  </main>
+</div>
+
+<input id="filePicker" type="file" accept=".css,text/css" hidden>
+
+<div class="modal" id="siteModal">
+  <div class="modal-box">
+    <header><span>Open theme from website</span><button data-close="siteModal" aria-label="Close">&#10005;</button></header>
+    <div class="theme-list" id="themeList"></div>
+  </div>
+</div>
+
+<div class="modal" id="commitModal">
+  <div class="modal-box">
+    <header><span>Commit theme to website</span><button data-close="commitModal" aria-label="Close">&#10005;</button></header>
+    <div class="commit-form">
+      <label>Repo path<input type="text" id="commitPath" readonly></label>
+      <label>Commit message<input type="text" id="commitMessage" value="Add website theme" spellcheck="false"></label>
+      <label class="checkline"><input type="checkbox" id="makeActive" checked> Make this the website’s active theme</label>
+      <label>Fine-grained access token <span class="app-status">Contents read/write for this repo; kept only until this window closes.</span><input type="password" id="commitToken" autocomplete="off"></label>
+      <div class="commit-actions"><button class="btn primary" id="commitGo">Commit</button><span class="app-status" id="commitStatus"></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+const FIELDS = [
+  ['--ink', 'Chrome'], ['--heading', 'Headings'], ['--ink-soft', 'Body text'],
+  ['--control-text', 'Controls / labels'], ['--strong-text', 'Strong text'],
+  ['--shadow', 'Drop shadow'],
+  ['--paper', 'Window surface'], ['--paper-deep', 'Raised surface'],
+  ['--paper-line', 'Dividers'], ['--sage', 'Muted text'],
+  ['--leaf', 'Accent'], ['--leaf-deep', 'Deep accent'],
+  ['--menu-text', 'Menu text'], ['--menu-dim', 'Dim menu text'],
+  ['--desktop', 'Desktop'], ['--window-inactive', 'Inactive titlebar'],
+  ['--title-text', 'Title text'], ['--accent-hover', 'Accent hover'],
+  ['--button-text', 'Button text'], ['--disabled-text', 'Disabled text']
+];
+const DEFAULTS = {
+  '--ink':'#09140d', '--heading':'#09140d', '--ink-soft':'#14231a',
+  '--control-text':'#09140d', '--strong-text':'#09140d', '--paper':'#f8f2dd',
+  '--shadow':'#09140d',
+  '--paper-deep':'#f3ecd1', '--paper-line':'#d8cfa9', '--sage':'#66755a',
+  '--leaf':'#4fae7d', '--leaf-deep':'#276b47', '--menu-text':'#f5efdb',
+  '--menu-dim':'#8fcaa8', '--desktop':'#e3ddc6', '--window-inactive':'#2a3b2f',
+  '--title-text':'#c8e3d2', '--accent-hover':'#6fcf9a', '--button-text':'#f2ecd6',
+  '--disabled-text':'#b3ab8d'
+};
+const palette = document.getElementById('palette');
+const themeName = document.getElementById('themeName');
+const status = document.getElementById('status');
+const siteModal = document.getElementById('siteModal');
+const commitModal = document.getElementById('commitModal');
+let values = { ...DEFAULTS };
+let siteConfig = null;
+let ghToken = '';
+
+function safeName(value) {
+  let name = String(value || '').trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^[^a-z0-9]+/, '');
+  if (!name) name = 'custom-theme.css';
+  if (!name.endsWith('.css')) name += '.css';
+  return name;
+}
+
+function renderPalette() {
+  palette.textContent = '';
+  for (const [variable, label] of FIELDS) {
+    const row = document.createElement('div');
+    row.className = 'colour-row';
+    const input = document.createElement('input');
+    input.type = 'color'; input.value = values[variable]; input.dataset.variable = variable;
+    const title = document.createElement('label'); title.textContent = label;
+    const code = document.createElement('code'); code.textContent = `${variable} · ${values[variable]}`;
+    input.addEventListener('input', () => {
+      values[variable] = input.value;
+      code.textContent = `${variable} · ${input.value}`;
+      applyPreview();
+    });
+    row.append(input, title, code); palette.appendChild(row);
+  }
+}
+
+function applyPreview() {
+  for (const [name, value] of Object.entries(values)) document.documentElement.style.setProperty(name, value);
+  if (window.parent !== window) window.parent.postMessage({ type: 'clackos-theme-preview', variables: values }, location.origin);
+  status.textContent = `${safeName(themeName.value)} — previewing unsaved colours`;
+}
+
+function resetPreview() {
+  for (const [name] of FIELDS) document.documentElement.style.removeProperty(name);
+  if (window.parent !== window) window.parent.postMessage({ type: 'clackos-theme-preview', variables: null }, location.origin);
+  status.textContent = 'Preview reset to the active website theme.';
+}
+
+function makeCss() {
+  const lines = FIELDS.map(([name]) => `  ${name}: ${values[name]};`);
+  return `/* ${safeName(themeName.value)} — generated by the ClackOS Theme Editor */\n:root {\n${lines.join('\n')}\n}\n`;
+}
+
+function loadCss(css, name) {
+  const next = { ...DEFAULTS };
+  const seen = new Set();
+  for (const match of css.matchAll(/(--[a-z0-9-]+)\s*:\s*(#[0-9a-f]{6})/gi)) {
+    if (Object.hasOwn(next, match[1])) {
+      next[match[1]] = match[2].toLowerCase();
+      seen.add(match[1]);
+    }
+  }
+  /* Themes made before these roles existed remain readable on both light and
+     dark surfaces by inheriting their body-text colour. */
+  for (const name of ['--heading', '--control-text', '--strong-text'])
+    if (!seen.has(name)) next[name] = next['--ink-soft'];
+  if (!seen.has('--shadow')) next['--shadow'] = next['--ink'];
+  values = next; themeName.value = safeName(name); renderPalette(); applyPreview();
+  status.textContent = `${themeName.value} — loaded`;
+}
+
+async function getSiteConfig(fresh = false) {
+  if (siteConfig && !fresh) return siteConfig;
+  const res = await fetch(`../site.json?_clack=${Date.now()}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Could not load content/site.json (${res.status}).`);
+  siteConfig = await res.json(); return siteConfig;
+}
+
+async function loadWebsiteTheme(name) {
+  name = safeName(name);
+  const res = await fetch(`../../assets/themes/${encodeURIComponent(name)}?_clack=${Date.now()}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Could not load ${name} (${res.status}).`);
+  loadCss(await res.text(), name);
+}
+
+async function showWebsiteThemes() {
+  try {
+    const site = await getSiteConfig(true);
+    const names = [...new Set([site.theme, ...(site.themes || [])].filter(Boolean))];
+    const list = document.getElementById('themeList'); list.textContent = '';
+    for (const name of names) {
+      const button = document.createElement('button');
+      button.textContent = name + (name === site.theme ? '  — active' : '');
+      button.addEventListener('click', async () => {
+        siteModal.classList.remove('open');
+        try { await loadWebsiteTheme(name); } catch (error) { status.textContent = error.message; }
+      });
+      list.appendChild(button);
+    }
+    siteModal.classList.add('open');
+  } catch (error) { status.textContent = error.message; }
+}
+
+function newTheme() {
+  values = { ...DEFAULTS }; themeName.value = 'custom-theme.css'; renderPalette(); applyPreview();
+  status.textContent = 'New theme — choose colours, then save or commit it.';
+}
+
+function saveTheme() {
+  themeName.value = safeName(themeName.value);
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([makeCss()], { type: 'text/css' }));
+  link.download = themeName.value; link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  status.textContent = `${themeName.value} — saved locally`;
+}
+
+const b64utf8 = text => {
+  const bytes = new TextEncoder().encode(text); let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+};
+const fromB64 = value => new TextDecoder().decode(Uint8Array.from(atob(value.replace(/\n/g, '')), c => c.charCodeAt(0)));
+
+async function githubFile(path, cfg, token) {
+  const api = `https://api.github.com/repos/${cfg.repo}/contents/${path}`;
+  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+  const res = await fetch(`${api}?ref=${encodeURIComponent(cfg.branch)}`, { headers });
+  if (res.status === 404) return { api, headers, file: null };
+  if (res.status === 401) throw new Error('Token was rejected (401).');
+  if (!res.ok) throw new Error(`Could not read ${path} (${res.status}).`);
+  return { api, headers, file: await res.json() };
+}
+
+async function putGithubFile(path, text, message, cfg, token) {
+  const current = await githubFile(path, cfg, token);
+  const res = await fetch(current.api, {
+    method: 'PUT', headers: current.headers,
+    body: JSON.stringify({ message, content: b64utf8(text), branch: cfg.branch, ...(current.file ? { sha: current.file.sha } : {}) })
+  });
+  if (res.status === 409) throw new Error(`${path} changed on GitHub; reopen it and try again.`);
+  if (!res.ok) throw new Error(`GitHub could not write ${path} (${res.status}): ${(await res.json()).message || ''}`);
+  return res.json();
+}
+
+async function openCommit() {
+  try {
+    const cfg = await getSiteConfig();
+    themeName.value = safeName(themeName.value);
+    document.getElementById('commitPath').value = `assets/themes/${themeName.value}`;
+    document.getElementById('commitMessage').value = `${(cfg.themes || []).includes(themeName.value) ? 'Update' : 'Add'} ${themeName.value} website theme`;
+    document.getElementById('commitToken').value = '';
+    document.getElementById('commitToken').closest('label').style.display = ghToken ? 'none' : 'flex';
+    document.getElementById('commitStatus').textContent = `to ${cfg.repo} (${cfg.branch})`;
+    commitModal.classList.add('open');
+    (ghToken ? document.getElementById('commitMessage') : document.getElementById('commitToken')).focus();
+  } catch (error) { status.textContent = error.message; }
+}
+
+async function commitTheme() {
+  const cfg = await getSiteConfig();
+  const token = ghToken || document.getElementById('commitToken').value.trim();
+  const filename = safeName(themeName.value);
+  const message = document.getElementById('commitMessage').value.trim() || `Update ${filename}`;
+  const commitStatus = document.getElementById('commitStatus');
+  if (!token) { commitStatus.textContent = 'A token is needed.'; return; }
+  commitStatus.textContent = 'Committing theme…';
+  try {
+    const themeCommit = await putGithubFile(`assets/themes/${filename}`, makeCss(), message, cfg, token);
+    commitStatus.textContent = 'Updating theme list…';
+    const configFile = await githubFile('content/site.json', cfg, token);
+    if (!configFile.file) throw new Error('content/site.json was not found.');
+    const remoteConfig = JSON.parse(fromB64(configFile.file.content));
+    remoteConfig.themes = [...new Set([...(remoteConfig.themes || []), filename])];
+    if (document.getElementById('makeActive').checked) remoteConfig.theme = filename;
+    await putGithubFile('content/site.json', JSON.stringify(remoteConfig, null, 2) + '\n', `Register ${filename} website theme`, cfg, token);
+    ghToken = token; themeName.value = filename; siteConfig = remoteConfig;
+    commitModal.classList.remove('open');
+    status.textContent = `Committed ${themeCommit.commit.sha.slice(0, 7)} — ${filename}${remoteConfig.theme === filename ? ' is now active' : ' was added to the theme list'}.`;
+  } catch (error) { commitStatus.textContent = error.message; }
+}
+
+palette.addEventListener('change', applyPreview);
+themeName.addEventListener('change', () => { themeName.value = safeName(themeName.value); });
+document.getElementById('resetButton').addEventListener('click', () => { values = { ...DEFAULTS }; renderPalette(); applyPreview(); });
+document.getElementById('commitButton').addEventListener('click', openCommit);
+document.getElementById('commitGo').addEventListener('click', commitTheme);
+document.getElementById('filePicker').addEventListener('change', async event => {
+  const file = event.target.files[0]; if (!file) return;
+  loadCss(await file.text(), file.name); event.target.value = '';
+});
+
+const menus = document.querySelectorAll('.rm');
+const closeMenus = () => menus.forEach(menu => menu.classList.remove('open'));
+menus.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
+  event.stopPropagation(); const open = menu.classList.contains('open'); closeMenus(); if (!open) menu.classList.add('open');
+}));
+document.querySelector('.rm-bar').addEventListener('click', event => {
+  const command = event.target.closest('[data-cmd]')?.dataset.cmd; if (!command) return; closeMenus();
+  ({ new: newTheme, site: showWebsiteThemes, open: () => document.getElementById('filePicker').click(), save: saveTheme,
+     commit: openCommit, apply: applyPreview, reset: resetPreview })[command]?.();
+});
+document.addEventListener('click', closeMenus);
+document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.close).classList.remove('open')));
+document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); }));
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') document.querySelectorAll('.modal.open').forEach(modal => modal.classList.remove('open'));
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); saveTheme(); }
+});
+window.addEventListener('beforeunload', resetPreview);
+
+renderPalette();
+(async () => {
+  try { const site = await getSiteConfig(); await loadWebsiteTheme(site.theme || 'clackos.css'); }
+  catch (error) { applyPreview(); status.textContent = error.message; }
+})();
+})();
+</script>
+</body>
+</html>

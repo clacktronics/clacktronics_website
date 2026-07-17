@@ -9,6 +9,7 @@
   --leaf: #4fae7d;
   --leaf-deep: #276b47;
   --menu-text: #f5efdb;
+  --shadow: var(--ink);
   --danger: #a04a3a;
 }
 
@@ -47,7 +48,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   position: absolute; top: 100%; left: 0; min-width: 260px; z-index: 50;
   background: var(--paper); border: 2px solid var(--ink); border-radius: 0 0 8px 8px;
   display: none; padding: 6px 2px;
-  box-shadow: 6px 6px 0 rgba(9, 20, 13, 0.2);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--shadow) 20%, transparent);
 }
 .rm.open .rm-dd { display: block; }
 .rm-dd button {
@@ -196,7 +197,7 @@ input[type="text"], select {
 
 dialog { width: min(540px, calc(100% - 28px)); border: 0; padding: 0; background: transparent; color: var(--ink-soft); }
 dialog::backdrop { background: rgba(9, 20, 13, .55); }
-.dialog-card { border: 2px solid var(--ink); border-radius: 8px; padding: 16px; background: var(--paper); box-shadow: 8px 8px 0 rgba(9,20,13,.25); }
+.dialog-card { border: 2px solid var(--ink); border-radius: 8px; padding: 16px; background: var(--paper); box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 25%, transparent); }
 .dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
 .dialog-close { all: unset; cursor: pointer; color: var(--ink); font-size: 24px; line-height: 1; }
 #dialog-content { margin-bottom: 15px; font-size: 11.5px; line-height: 1.7; }

@@ -1,0 +1,24 @@
+/* ClackOS default palette. Theme files contain only colour variables, so they
+   can be created and published without rebuilding the site. */
+:root {
+  --ink: #09140d;
+  --heading: #09140d;
+  --ink-soft: #14231a;
+  --control-text: #09140d;
+  --strong-text: #09140d;
+  --shadow: #09140d;
+  --paper: #f8f2dd;
+  --paper-deep: #f3ecd1;
+  --paper-line: #d8cfa9;
+  --sage: #66755a;
+  --leaf: #4fae7d;
+  --leaf-deep: #276b47;
+  --menu-text: #f5efdb;
+  --menu-dim: #8fcaa8;
+  --desktop: #e3ddc6;
+  --window-inactive: #2a3b2f;
+  --title-text: #c8e3d2;
+  --accent-hover: #6fcf9a;
+  --button-text: #f2ecd6;
+  --disabled-text: #b3ab8d;
+}

@@ -1,0 +1,24 @@
+/* A dark example palette. Duplicate this file or create a new one in the
+   Theme Editor; every theme remains a standalone CSS file. */
+:root {
+  --ink: #0b1020;
+  --heading: #f2f6ff;
+  --ink-soft: #d5ddf2;
+  --control-text: #d5ddf2;
+  --strong-text: #f2f6ff;
+  --shadow: #050812;
+  --paper: #171d30;
+  --paper-deep: #202841;
+  --paper-line: #3b4868;
+  --sage: #9aa8c7;
+  --leaf: #65d6ad;
+  --leaf-deep: #2f9f82;
+  --menu-text: #f2f6ff;
+  --menu-dim: #8ddfc2;
+  --desktop: #101626;
+  --window-inactive: #283149;
+  --title-text: #bcebd9;
+  --accent-hover: #82e8c4;
+  --button-text: #f2f6ff;
+  --disabled-text: #6e7892;
+}
