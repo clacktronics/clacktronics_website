@@ -284,7 +284,7 @@ async function openWindow(id) {
     if (!def) return;
     /* multi-instance apps get a fresh window id on every open */
     if (def.multi && !id.includes('#')) id = `${id}#${++appInstances}`;
-    meta = { title: def.title || def.label || page, width: def.width, height: def.height };
+    meta = { title: def.title || def.label || page, width: def.width, height: def.height, fixed: def.fixed };
     windowTitles.set(id, meta.title);
     mount = body => {
       const f = document.createElement('iframe');
@@ -334,18 +334,22 @@ async function openWindow(id) {
   el.style.top = Math.max(12, (dh - h) / 2 - 20 + spawnOffset) + 'px';
   spawnOffset = (spawnOffset + 28) % 112;
 
+  /* fixed windows keep their exact size: no resize handles, no maximise */
+  const isFixed = meta.fixed === true || String(meta.fixed) === 'true';
+  if (isFixed) el.classList.add('fixed');
   el.innerHTML = `
     <div class="titlebar">
       <button class="dot close" aria-label="Close ${title}"></button>
       <button class="dot min" aria-label="Minimise ${title}"></button>
-      <button class="dot max" aria-label="Maximise ${title}"></button>
+      ${isFixed ? '' : `<button class="dot max" aria-label="Maximise ${title}"></button>`}
       <span class="title">${title}</span>
     </div>
     <div class="winbody"></div>
+    ${isFixed ? '' : `
     <div class="rs n" data-dir="n"></div><div class="rs s" data-dir="s"></div>
     <div class="rs e" data-dir="e"></div><div class="rs w" data-dir="w"></div>
     <div class="rs ne" data-dir="ne"></div><div class="rs nw" data-dir="nw"></div>
-    <div class="rs se" data-dir="se"></div><div class="rs sw" data-dir="sw"></div>
+    <div class="rs se" data-dir="se"></div><div class="rs sw" data-dir="sw"></div>`}
     <div class="frame" aria-hidden="true"></div>`;
 
   desktop.appendChild(el);
@@ -362,7 +366,7 @@ async function openWindow(id) {
 
   el.querySelector('.dot.close').addEventListener('click', e => { e.stopPropagation(); closeWindow(id); });
   el.querySelector('.dot.min').addEventListener('click', e => { e.stopPropagation(); minimiseWindow(id); });
-  el.querySelector('.dot.max').addEventListener('click', e => { e.stopPropagation(); toggleMax(id); });
+  el.querySelector('.dot.max')?.addEventListener('click', e => { e.stopPropagation(); toggleMax(id); });
 
   /* drag */
   titlebar.addEventListener('pointerdown', e => {

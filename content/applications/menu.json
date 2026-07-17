@@ -4,7 +4,7 @@
     { "type": "app", "page": "markdown.html", "label": "Markdown Editor…", "title": "Markdown Editor", "multi": true },
     { "type": "app", "page": "python.html", "label": "Python…", "title": "Python", "multi": true },
     { "type": "app", "page": "paint.html", "label": "Paint…", "title": "Paint", "width": 820, "height": 620, "multi": true },
-    { "type": "app", "page": "recorder.html", "label": "Sound Recorder…", "title": "Sound Recorder", "width": 560, "height": 470, "multi": true },
+    { "type": "app", "page": "recorder.html", "label": "Sound Recorder…", "title": "Sound Recorder", "width": 400, "height": 245, "fixed": true, "multi": true },
     { "type": "app", "page": "circuit.html", "label": "Circuit Simulator…", "title": "Circuit Simulator", "multi": true },
     { "type": "app", "page": "kicad.html", "label": "KiCAD Viewer…", "title": "KiCAD Viewer", "multi": true },
     { "type": "app", "page": "eecircuit.html", "label": "EEcircuit (SPICE)…", "title": "EEcircuit", "multi": true },

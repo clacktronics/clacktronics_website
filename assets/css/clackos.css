@@ -95,6 +95,7 @@ body {
   border: 2px solid var(--ink); border-radius: 10px;
 }
 @media (prefers-reduced-motion: reduce) { .window { transition: none; } }
+.window.fixed { min-width: 0; min-height: 0; }
 .window.closing { opacity: 0; transform: scale(0.97); }
 .window.inactive .titlebar { background: #2a3b2f; }
 .titlebar {

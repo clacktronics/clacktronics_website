@@ -9,6 +9,20 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+/* compact, fixed-size layout */
+.app-main { padding: 12px 14px 10px; gap: 10px; }
+.rm-bar { padding: 0 6px; }
+.rm > button { padding: 6px 10px; font-size: 11.5px; }
+.rec-top { gap: 10px; }
+.rec-counter { min-width: 72px; gap: 4px; }
+.app-lbl { font-size: 9.5px; letter-spacing: 0.12em; }
+.rec-pos, .rec-len { font-size: 11px; padding: 5px 7px; }
+.rec-btns { gap: 6px; }
+.rec-btns .btn { padding: 5px 8px; font-size: 11px; }
+.rec-status { font-size: 10.5px; line-height: 1.4; min-height: 15px; margin-top: -2px; }
+.app-panel { font-size: 10.5px; padding: 8px 10px; }
+</style>
 </head>
 <body>
 <div class="app">
@@ -50,7 +64,7 @@
         <span class="app-lbl">Position:</span>
         <span class="rec-pos">0.00 sec.</span>
       </div>
-      <canvas class="rec-scope" width="220" height="84" aria-label="Waveform display"></canvas>
+      <canvas class="rec-scope" width="190" height="62" aria-label="Waveform display"></canvas>
       <div class="rec-counter">
         <span class="app-lbl">Length:</span>
         <span class="rec-len">0.00 sec.</span>
@@ -64,7 +78,7 @@
       <button class="btn ghost" data-rec="stop" aria-label="Stop">&#9632;</button>
       <button class="btn ghost rec-record" data-rec="rec" aria-label="Record">&#9679;</button>
     </div>
-    <p class="app-status rec-status">No sound. Press &#9679; to record from the microphone.</p>
+    <p class="app-status rec-status"></p>
     <div class="app-panel rec-props" hidden></div>
   </div>
 </div>
