@@ -468,8 +468,14 @@ async function listSiteFiles() {
   for (const menu of site.menus) {
     try {
       const m = await (await fetch(`${contentBase}${menu}/menu.json`)).json();
-      for (const it of m.items || [])
-        if (it.md) files.push(`${menu}/${it.md}`);
+      /* walk nested submenus so items grouped under Open/categories still count */
+      const walk = items => {
+        for (const it of items || []) {
+          if (it.md) files.push(`${menu}/${it.md}`);
+          if (it.items) walk(it.items);
+        }
+      };
+      walk(m.items);
     } catch {}
   }
   try {

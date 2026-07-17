@@ -581,15 +581,70 @@ function frontWindow() {
   return best;
 }
 
-function tidyWindows() {
-  let x = 16, y = 16;
-  windows.forEach(rec => {
-    if (rec.minimised) return;
-    rec.el.style.left = x + 'px';
-    rec.el.style.top = y + 'px';
-    rec.maxed = null;
-    x += 36; y += 36;
+/* window arrangement (the View › Tidy windows submenu) --------------- */
+const GAP = 8;
+function openWindowList() {
+  return [...windows.values()].filter(rec => !rec.minimised);
+}
+function placeWindow(rec, left, top, width, height) {
+  rec.maxed = null;
+  const s = rec.el.style;
+  s.left = Math.round(left) + 'px';
+  s.top = Math.round(top) + 'px';
+  if (width != null) s.width = Math.round(width) + 'px';
+  if (height != null) s.height = Math.round(height) + 'px';
+}
+
+/* Cascade: uniform size, stepped down from the top-left, front-to-back */
+function arrangeCascade() {
+  const wins = openWindowList();
+  const dw = desktop.clientWidth, dh = desktop.clientHeight;
+  const w = Math.round(dw * 0.6), h = Math.round(dh * 0.62);
+  const step = 30, span = Math.max(step, Math.min(dw - w, dh - h));
+  wins.forEach((rec, i) => {
+    const off = (i * step) % span;
+    placeWindow(rec, 16 + off, 16 + off, w, h);
+    focusWindow(rec.el);
   });
+}
+
+/* Tile: even grid filling the desktop */
+function arrangeGrid() {
+  const wins = openWindowList(); const n = wins.length; if (!n) return;
+  const dw = desktop.clientWidth, dh = desktop.clientHeight;
+  const cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols);
+  const cw = (dw - GAP * (cols + 1)) / cols;
+  const ch = (dh - GAP * (rows + 1)) / rows;
+  wins.forEach((rec, i) => {
+    const c = i % cols, r = Math.floor(i / cols);
+    placeWindow(rec, GAP + c * (cw + GAP), GAP + r * (ch + GAP), cw, ch);
+  });
+}
+
+/* Tile horizontally: full-width windows stacked in rows */
+function arrangeRows() {
+  const wins = openWindowList(); const n = wins.length; if (!n) return;
+  const dw = desktop.clientWidth, dh = desktop.clientHeight;
+  const h = (dh - GAP * (n + 1)) / n;
+  wins.forEach((rec, i) => placeWindow(rec, GAP, GAP + i * (h + GAP), dw - GAP * 2, h));
+}
+
+/* Tile vertically: full-height windows side by side in columns */
+function arrangeColumns() {
+  const wins = openWindowList(); const n = wins.length; if (!n) return;
+  const dw = desktop.clientWidth, dh = desktop.clientHeight;
+  const w = (dw - GAP * (n + 1)) / n;
+  wins.forEach((rec, i) => placeWindow(rec, GAP + i * (w + GAP), GAP, w, dh - GAP * 2));
+}
+
+function minimiseAll() {
+  [...windows.keys()].forEach(id => { if (!windows.get(id).minimised) minimiseWindow(id); });
+}
+function restoreAll() {
+  windows.forEach(rec => {
+    if (rec.minimised) { rec.el.style.display = 'flex'; rec.minimised = false; }
+  });
+  updateTaskbar();
 }
 
 /* ---------------- Taskbar ---------------- */
@@ -622,7 +677,58 @@ let menuOpen = false;
 
 function closeMenus() {
   menubar.querySelectorAll('.menu').forEach(m => m.classList.remove('open'));
+  menubar.querySelectorAll('.submenu').forEach(s => s.classList.remove('open'));
   menuOpen = false;
+}
+
+/* fill a dropdown from a list of items; recurses for nested submenus so the
+ * same item vocabulary (window/app/action/sep/wallpapers) works at any depth */
+function buildMenuItems(container, items, folder) {
+  for (const item of items || []) {
+    if (item.type === 'sep') {
+      const sep = document.createElement('div');
+      sep.className = 'sep';
+      container.appendChild(sep);
+    } else if (item.type === 'wallpapers') {
+      const holder = document.createElement('div');
+      container.appendChild(holder);
+      wallpaperDropdowns.push(holder);
+      buildWallpaperMenu(holder);
+    } else if (item.type === 'submenu') {
+      const wrap = document.createElement('div');
+      wrap.className = 'submenu';
+      const sb = document.createElement('button');
+      sb.className = 'submenu-btn';
+      sb.setAttribute('aria-haspopup', 'true');
+      sb.innerHTML = `${esc(item.label || '')} <span class="arrow" aria-hidden="true">▸</span>`;
+      wrap.appendChild(sb);
+      const sub = document.createElement('div');
+      sub.className = 'dropdown sub';
+      wrap.appendChild(sub);
+      buildMenuItems(sub, item.items, folder);
+      /* CSS opens it on hover; a click toggles it so it works by tap too */
+      sb.addEventListener('click', e => {
+        e.stopPropagation();
+        const wasOpen = wrap.classList.contains('open');
+        container.querySelectorAll('.submenu.open').forEach(s => s.classList.remove('open'));
+        if (!wasOpen) wrap.classList.add('open');
+      });
+      container.appendChild(wrap);
+    } else {
+      const b = document.createElement('button');
+      const shortcut = item.shortcut ? `<span>${esc(item.shortcut)}</span>` : '';
+      b.innerHTML = `${esc(item.label || '')} ${shortcut}`;
+      if (item.disabled) b.disabled = true;
+      if (item.type === 'window') b.dataset.action = `open:${folder}/${item.md}`;
+      else if (item.type === 'app') {
+        const page = `${folder}/${item.page}`;
+        appDefs.set(page, item);
+        b.dataset.action = `open:app:${page}`;
+      }
+      else if (item.action) b.dataset.action = item.action;
+      container.appendChild(b);
+    }
+  }
 }
 
 function buildMenu(folder, def) {
@@ -638,31 +744,7 @@ function buildMenu(folder, def) {
   dd.className = 'dropdown';
   m.appendChild(dd);
 
-  for (const item of def.items || []) {
-    if (item.type === 'sep') {
-      const sep = document.createElement('div');
-      sep.className = 'sep';
-      dd.appendChild(sep);
-    } else if (item.type === 'wallpapers') {
-      const holder = document.createElement('div');
-      dd.appendChild(holder);
-      wallpaperDropdowns.push(holder);
-      buildWallpaperMenu(holder);
-    } else {
-      const b = document.createElement('button');
-      const shortcut = item.shortcut ? `<span>${esc(item.shortcut)}</span>` : '';
-      b.innerHTML = `${esc(item.label || '')} ${shortcut}`;
-      if (item.disabled) b.disabled = true;
-      if (item.type === 'window') b.dataset.action = `open:${folder}/${item.md}`;
-      else if (item.type === 'app') {
-        const page = `${folder}/${item.page}`;
-        appDefs.set(page, item);
-        b.dataset.action = `open:app:${page}`;
-      }
-      else if (item.action) b.dataset.action = item.action;
-      dd.appendChild(b);
-    }
-  }
+  buildMenuItems(dd, def.items, folder);
 
   btn.addEventListener('click', e => {
     e.stopPropagation();
@@ -689,7 +771,12 @@ function runAction(action) {
   if (action.startsWith('open:')) { openWindow(action.slice(5)); return; }
   switch (action) {
     case 'close-front': { const f = frontWindow(); if (f) closeWindow(f.id); break; }
-    case 'tidy': tidyWindows(); break;
+    case 'tidy': case 'arrange-cascade': arrangeCascade(); break;
+    case 'arrange-grid': arrangeGrid(); break;
+    case 'arrange-rows': arrangeRows(); break;
+    case 'arrange-columns': arrangeColumns(); break;
+    case 'minimise-all': minimiseAll(); break;
+    case 'restore-all': restoreAll(); break;
     case 'toggle-taskbar': document.body.classList.toggle('no-taskbar'); break;
     case 'copy': {
       const sel = String(document.getSelection() || '');

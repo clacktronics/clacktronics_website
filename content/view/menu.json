@@ -1,7 +1,15 @@
 {
   "label": "View",
   "items": [
-    { "type": "action", "action": "tidy", "label": "Tidy windows" },
+    { "type": "submenu", "label": "Tidy windows", "items": [
+      { "type": "action", "action": "arrange-cascade", "label": "Cascade" },
+      { "type": "action", "action": "arrange-grid", "label": "Tile" },
+      { "type": "action", "action": "arrange-rows", "label": "Tile horizontally" },
+      { "type": "action", "action": "arrange-columns", "label": "Tile vertically" },
+      { "type": "sep" },
+      { "type": "action", "action": "minimise-all", "label": "Minimise all" },
+      { "type": "action", "action": "restore-all", "label": "Restore all" }
+    ] },
     { "type": "action", "action": "toggle-taskbar", "label": "Toggle taskbar" }
   ]
 }
