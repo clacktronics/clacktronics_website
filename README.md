@@ -123,6 +123,8 @@ listing every post newest-first, grouped by year.
 - `[label](window:file/catalogue.md)` — link that opens another window
 - `[label](app:applications/video/index.html?src=content%2Fmedia%2Fdemo.mp4)`
   — link that launches a registered application with startup options
+- `[label](app:applications/pdf-reader/index.html?file=content%2Ffiles%2Fmanual.pdf)`
+  — opens a site-relative or CORS-enabled remote PDF in the PDF Reader
 - `[label](action:tidy)` — link that runs a desktop action
 - `[label](https://…)` — normal external link
 - A paragraph containing **only** links becomes the button row (first button solid, rest ghost)
@@ -154,8 +156,9 @@ fresh instance every time it's picked from the menu. Current apps:
 Application links may include a query string. Only pages already registered as
 `"type": "app"` in a menu can be launched, so Markdown cannot turn the desktop
 into an arbitrary iframe launcher. The Markdown Editor's Insert menu creates
-links for Video Lab files, Falstad exported data or saved circuit files, KiCad
-files, generic registered applications, Markdown windows, and desktop actions.
+links for Video Lab and PDF Reader files, Falstad exported data or saved
+circuit files, KiCad files, generic registered applications, Markdown windows,
+and desktop actions.
 
 - `desktop/patterns.html` (Desktop → Edit pattern…) — a Windows 3-style 8×8
   desktop pattern editor. Saved patterns live in the browser's localStorage,
@@ -180,6 +183,15 @@ files, generic registered applications, Markdown windows, and desktop actions.
   Exports MP4, WebM, MOV, MKV, AVI, GIF, MP3, WAV, Ogg, and custom containers;
   no media is uploaded. The app and codec core live in their own folder so the
   rest of ClackOS requires only the menu entry above.
+- `applications/pdf-reader/index.html` (Applications → Internet → PDF Reader) — a
+  MuPDF.js/WebAssembly reader with lazy page rendering, page and zoom
+  navigation, fit-to-width, full-document text search, and password support.
+  Open local files with the picker or drag-and-drop; File → Open from website…
+  lists PDFs in the configured repository. Every opened PDF can also be
+  downloaded or opened in the browser's external PDF viewer. `?file=` accepts
+  paths relative to the site root as well as remote HTTP(S) URLs whose servers
+  allow cross-origin browser requests. MuPDF.js 1.28.0 is vendored under
+  `vendor/mupdf/` (AGPL-3.0; see its LICENSE and PROVENANCE files).
 - `applications/circuit.html` (Applications → Circuit Simulator…) — Paul
   Falstad's CircuitJS1, vendored unmodified under `vendor/circuitjs1/`
   (GPLv2 — see the COPYING.txt and PROVENANCE.md there). The wrapper

@@ -179,6 +179,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <button data-cmd="insert-action">Desktop action link&hellip;</button>
       <div class="sep"></div>
       <button data-cmd="insert-video">Video Lab file link&hellip;</button>
+      <button data-cmd="insert-pdf">PDF Reader file link&hellip;</button>
       <button data-cmd="insert-falstad">Falstad exported link&hellip;</button>
       <button data-cmd="insert-circuit">Falstad circuit file link&hellip;</button>
       <button data-cmd="insert-kicad">KiCad file link&hellip;</button>
@@ -411,6 +412,11 @@ function insertVideoLink() {
   if (source) insertClackLink(`app:applications/video/index.html?src=${encodePart(source)}`, 'Open in Video Lab');
 }
 
+function insertPDFLink() {
+  const source = prompt('PDF URL or path from the site root (for example content/files/manual.pdf):', 'content/files/manual.pdf');
+  if (source) insertClackLink(`app:applications/pdf-reader/index.html?file=${encodePart(source)}`, 'Open in PDF Reader');
+}
+
 function insertFalstadLink() {
   const value = prompt('Paste a Falstad exported link, its ?ctz= value, or the compressed data:');
   if (!value) return;
@@ -445,6 +451,7 @@ const insertCommands = {
   'insert-window': insertWindowLink,
   'insert-action': insertActionLink,
   'insert-video': insertVideoLink,
+  'insert-pdf': insertPDFLink,
   'insert-falstad': insertFalstadLink,
   'insert-circuit': insertCircuitLink,
   'insert-kicad': insertKicadLink,
