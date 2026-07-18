@@ -5,6 +5,8 @@ tagline: Hardware for people who fail to read the datasheet twice.
 ---
 # Clacktronics
 
+[Open in PDF Reader](app:applications/pdf-reader/index.html?file=https%3A%2F%2Fmedia.digikey.com%2Fpdf%2FData%2520Sheets%2FTexas%2520Instruments%2520PDFs%2FLM194%2C394.pdf)
+
 Clacktronics designs and builds open, hackable electronics from a small workshop in the north of England. We make Eurorack modules, development boards and firmware libraries built around the RP2350 — machines that do one thing well and tell you exactly how they do it.
 
 Every board ships with schematics, source code and a written explanation of the design decisions. No black boxes. No cloud accounts. If it stops working, you can fix it — and we'll show you how.
