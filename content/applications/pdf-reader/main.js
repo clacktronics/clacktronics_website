@@ -14,6 +14,9 @@ const findInput = document.getElementById("findInput")
 const statusNode = document.getElementById("status")
 const documentInfoNode = document.getElementById("documentInfo")
 const aboutDialog = document.getElementById("aboutDialog")
+const siteModal = document.getElementById("siteModal")
+const siteList = document.getElementById("siteList")
+const siteFilter = document.getElementById("siteFilter")
 
 let documentHandle = null
 
@@ -145,6 +148,10 @@ let lastSearchQuery = ""
 let fetchController = null
 let scrollFrame = 0
 let dragDepth = 0
+let retainedFile = null
+let retainedFileURL = ""
+let retainedFileName = ""
+let websitePDFs = null
 const pageViews = []
 
 const observer = new IntersectionObserver(entries => {
@@ -165,6 +172,7 @@ function setDocumentControls(enabled) {
   pageInput.disabled = !enabled
   findInput.disabled = !enabled
   findForm.querySelectorAll("button").forEach(button => { button.disabled = !enabled })
+  document.querySelectorAll("[data-requires-document]").forEach(control => { control.disabled = !enabled })
 }
 
 function closeMenus(except = null) {
@@ -381,11 +389,49 @@ async function unlockDocument(result) {
   throw new Error("The PDF could not be unlocked")
 }
 
-async function openBuffer(buffer, label, byteLength) {
+function releaseRetainedFile() {
+  if (retainedFileURL) URL.revokeObjectURL(retainedFileURL)
+  retainedFile = null
+  retainedFileURL = ""
+  retainedFileName = ""
+}
+
+function retainFile(blob, label) {
+  releaseRetainedFile()
+  retainedFile = blob
+  const cleanName = label.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_") || "document.pdf"
+  retainedFileName = /\.pdf$/i.test(cleanName) ? cleanName : cleanName + ".pdf"
+}
+
+function retainedURL() {
+  if (!retainedFile) return ""
+  if (!retainedFileURL) retainedFileURL = URL.createObjectURL(retainedFile)
+  return retainedFileURL
+}
+
+function openExternalWindow() {
+  const url = retainedURL()
+  if (url) window.open(url, "_blank", "noopener")
+}
+
+function downloadDocument() {
+  const url = retainedURL()
+  if (!url) return
+  const link = document.createElement("a")
+  link.href = url
+  link.download = retainedFileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  setStatus("Downloading " + retainedFileName)
+}
+
+async function openBuffer(buffer, label, byteLength, originalBlob = null) {
   fetchController?.abort()
   setStatus("Opening " + label + "…")
   documentOpen = false
   clearPageViews()
+  retainFile(originalBlob || new Blob([buffer], { type: "application/pdf" }), label)
   try {
     const result = await callMuPDF("openDocument", [buffer, "application/pdf"])
     const info = await unlockDocument(result)
@@ -416,6 +462,7 @@ function resetDocumentUI() {
   documentName = ""
   pageCount = 0
   currentPage = 0
+  releaseRetainedFile()
   clearPageViews()
   pagesRoot.classList.remove("open")
   emptyState.classList.remove("hidden")
@@ -473,7 +520,7 @@ async function openURL(value, updateHistory = true) {
       history.replaceState(null, "", appURL)
     }
     const name = decodeURIComponent(url.pathname.split("/").pop() || "remote.pdf")
-    await openBuffer(buffer, name, buffer.byteLength)
+    await openBuffer(buffer, name, buffer.byteLength, new Blob([buffer], { type: "application/pdf" }))
   } catch (error) {
     if (error.name === "AbortError") return
     const isRemote = url.origin !== location.origin
@@ -494,7 +541,81 @@ async function openFile(file) {
   const appURL = new URL(location.href)
   appURL.search = ""
   history.replaceState(null, "", appURL)
-  await openBuffer(await file.arrayBuffer(), file.name, file.size)
+  await openBuffer(await file.arrayBuffer(), file.name, file.size, file)
+}
+
+async function listWebsitePDFs() {
+  if (websitePDFs) return websitePDFs
+  const siteResponse = await fetch(new URL("content/site.json", siteRootURL()))
+  if (!siteResponse.ok) throw new Error("Could not read content/site.json")
+  const site = await siteResponse.json()
+  if (!site.repo) throw new Error("No repository is configured in content/site.json")
+  const branch = site.branch || "main"
+  const api = "https://api.github.com/repos/" + site.repo + "/git/trees/" +
+    encodeURIComponent(branch) + "?recursive=1"
+  const response = await fetch(api, { headers: { Accept: "application/vnd.github+json" } })
+  if (!response.ok) throw new Error("GitHub returned HTTP " + response.status)
+  const tree = await response.json()
+  websitePDFs = (tree.tree || [])
+    .filter(item => item.type === "blob" && /\.pdf$/i.test(item.path))
+    .map(item => item.path)
+    .sort((a, b) => a.localeCompare(b))
+  return websitePDFs
+}
+
+function renderWebsitePDFs(files, filter = "") {
+  siteList.replaceChildren()
+  const groups = new Map()
+  const wanted = filter.trim().toLowerCase()
+  for (const path of files) {
+    if (wanted && !path.toLowerCase().includes(wanted)) continue
+    const group = path.split("/").slice(0, -1).join("/") || "repository root"
+    if (!groups.has(group)) groups.set(group, [])
+    groups.get(group).push(path)
+  }
+  for (const [group, paths] of groups) {
+    const heading = document.createElement("div")
+    heading.className = "grp"
+    heading.textContent = group
+    siteList.appendChild(heading)
+    for (const path of paths) {
+      const button = document.createElement("button")
+      button.type = "button"
+      const name = document.createElement("span")
+      name.textContent = path.split("/").pop()
+      const detail = document.createElement("span")
+      detail.className = "path"
+      detail.textContent = path
+      button.append(name, detail)
+      button.addEventListener("click", () => {
+        closeWebsiteBrowser()
+        openURL(path)
+      })
+      siteList.appendChild(button)
+    }
+  }
+  if (!siteList.children.length) {
+    const empty = document.createElement("div")
+    empty.className = "grp"
+    empty.textContent = files.length ? "no matches" : "no PDF files found in the configured repository"
+    siteList.appendChild(empty)
+  }
+}
+
+async function openWebsiteBrowser() {
+  siteModal.classList.add("open")
+  siteFilter.value = ""
+  siteList.textContent = "Loading PDF files…"
+  try {
+    renderWebsitePDFs(await listWebsitePDFs())
+    siteFilter.focus()
+  } catch (error) {
+    siteList.textContent = "Could not list website PDFs: " + error.message
+  }
+}
+
+function closeWebsiteBrowser() {
+  siteModal.classList.remove("open")
 }
 
 function clearSearchHits() {
@@ -540,7 +661,10 @@ async function findInDocument(direction) {
 
 const actions = {
   "open-file": () => fileInput.click(),
+  "open-website": openWebsiteBrowser,
   "focus-url": () => urlInput.focus(),
+  "open-external": openExternalWindow,
+  "download": downloadDocument,
   "close-document": closeDocument,
   "previous-page": () => goToPage(currentPage - 1),
   "next-page": () => goToPage(currentPage + 1),
@@ -565,6 +689,14 @@ fileInput.addEventListener("change", () => {
   fileInput.value = ""
 })
 
+siteFilter.addEventListener("input", () => {
+  if (websitePDFs) renderWebsitePDFs(websitePDFs, siteFilter.value)
+})
+document.getElementById("siteClose").addEventListener("click", closeWebsiteBrowser)
+siteModal.addEventListener("click", event => {
+  if (event.target === siteModal) closeWebsiteBrowser()
+})
+
 urlForm.addEventListener("submit", event => {
   event.preventDefault()
   openURL(urlInput.value)
@@ -579,6 +711,10 @@ pageInput.addEventListener("change", () => goToPage(Number(pageInput.value) - 1)
 zoomInput.addEventListener("change", () => setZoom(Number(zoomInput.value)))
 
 window.addEventListener("keydown", event => {
+  if (event.key === "Escape" && siteModal.classList.contains("open")) {
+    closeWebsiteBrowser()
+    return
+  }
   if (!(event.ctrlKey || event.metaKey)) return
   if (event.key.toLowerCase() === "o") {
     event.preventDefault()
@@ -624,6 +760,7 @@ window.addEventListener("drop", event => {
 
 window.addEventListener("beforeunload", () => {
   fetchController?.abort()
+  releaseRetainedFile()
   destroyDocument()
 })
 

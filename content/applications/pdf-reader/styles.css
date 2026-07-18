@@ -93,17 +93,62 @@ kbd { float: right; margin-left: 24px; color: var(--sage); font: inherit; font-s
 }
 body.dragging .drop-target { display: grid; }
 
+.pdf-footer { flex: none; background: var(--paper-deep); }
 .pdf-statusbar {
-  min-height: 28px; padding: 5px 10px; display: grid; grid-template-columns: 1fr auto 1fr;
-  gap: 16px; align-items: center; flex: none; border-top: 1px solid var(--ink);
+  min-height: 26px; padding: 4px 10px; display: grid; grid-template-columns: 1fr auto;
+  gap: 16px; align-items: center; border-top: 1px solid var(--ink);
   background: var(--paper-deep); color: var(--sage); font-size: 10.5px;
 }
 .pdf-statusbar > :nth-child(2) { color: var(--control-text); text-align: center; }
-.mupdf-credit { text-align: right; }
-.mupdf-credit a { color: var(--leaf-deep); }
+.pdf-credit {
+  padding: 5px 10px 6px; border-top: 1px solid var(--paper-line);
+  color: var(--sage); font-size: 10px; line-height: 1.45;
+}
+.pdf-credit a { color: var(--leaf-deep); text-decoration: underline; }
+.pdf-credit a:hover { color: var(--leaf); }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+.site-modal {
+  position: fixed; inset: 0; z-index: 50; display: none;
+  background: rgba(9,20,13,.42); align-items: center; justify-content: center;
+}
+.site-modal.open { display: flex; }
+.site-box {
+  width: min(620px, 92vw); max-height: 82vh; display: flex; flex-direction: column;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 10px;
+  box-shadow: 8px 8px 0 rgba(9,20,13,.38);
+}
+.site-box header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 14px; background: var(--ink); color: var(--menu-text);
+  border-radius: 8px 8px 0 0; font-size: 12.5px;
+}
+.site-box header button { all: unset; cursor: pointer; padding: 0 4px; font-size: 18px; }
+.site-filter { padding: 12px 14px 4px; }
+.site-filter input {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--ink); border-radius: 6px;
+  background: var(--paper-deep); color: var(--control-text); font: inherit;
+}
+.site-filter input:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.site-list { overflow-y: auto; padding: 8px 6px 10px; min-height: 100px; }
+.site-list .grp {
+  padding: 9px 10px 4px; color: var(--leaf-deep); font-size: 10px;
+  font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+}
+.site-list button {
+  all: unset; box-sizing: border-box; display: flex; width: 100%; cursor: pointer;
+  justify-content: space-between; gap: 18px; padding: 7px 10px; color: var(--control-text);
+  font-size: 11.5px;
+}
+.site-list button:hover { background: var(--ink); color: var(--menu-text); }
+.site-list .path { color: var(--sage); font-size: 10px; overflow: hidden; text-overflow: ellipsis; }
+.site-list button:hover .path { color: var(--menu-dim); }
+.site-hint {
+  padding: 8px 14px 11px; border-top: 1px solid var(--paper-line);
+  color: var(--sage); font-size: 10px; line-height: 1.45;
 }
 
 dialog {
@@ -124,8 +169,7 @@ dialog p { line-height: 1.6; }
   .url-form { order: 10; flex-basis: 100%; }
   .pdf-toolbar { flex-wrap: wrap; }
   .find-form { flex-basis: 180px; }
-  .mupdf-credit { display: none; }
-  .pdf-statusbar { grid-template-columns: 1fr auto; }
+  .pdf-credit { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }

@@ -183,12 +183,14 @@ and desktop actions.
   Exports MP4, WebM, MOV, MKV, AVI, GIF, MP3, WAV, Ogg, and custom containers;
   no media is uploaded. The app and codec core live in their own folder so the
   rest of ClackOS requires only the menu entry above.
-- `applications/pdf-reader/index.html` (Applications → PDF Reader) — a
+- `applications/pdf-reader/index.html` (Applications → Internet → PDF Reader) — a
   MuPDF.js/WebAssembly reader with lazy page rendering, page and zoom
   navigation, fit-to-width, full-document text search, and password support.
-  Open local files with the picker or drag-and-drop. `?file=` accepts paths
-  relative to the site root as well as remote HTTP(S) URLs whose servers allow
-  cross-origin browser requests. MuPDF.js 1.28.0 is vendored under
+  Open local files with the picker or drag-and-drop; File → Open from website…
+  lists PDFs in the configured repository. Every opened PDF can also be
+  downloaded or opened in the browser's external PDF viewer. `?file=` accepts
+  paths relative to the site root as well as remote HTTP(S) URLs whose servers
+  allow cross-origin browser requests. MuPDF.js 1.28.0 is vendored under
   `vendor/mupdf/` (AGPL-3.0; see its LICENSE and PROVENANCE files).
 - `applications/circuit.html` (Applications → Circuit Simulator…) — Paul
   Falstad's CircuitJS1, vendored unmodified under `vendor/circuitjs1/`

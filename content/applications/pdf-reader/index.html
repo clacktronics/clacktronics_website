@@ -19,7 +19,11 @@
       <button type="button">File</button>
       <div class="rm-dd">
         <button type="button" data-action="open-file">Open file… <kbd>Ctrl+O</kbd></button>
+        <button type="button" data-action="open-website">Open from website…</button>
         <button type="button" data-action="focus-url">Open URL…</button>
+        <div class="sep"></div>
+        <button type="button" data-action="open-external" data-requires-document>Open in external window</button>
+        <button type="button" data-action="download" data-requires-document>Download a copy</button>
         <div class="sep"></div>
         <button type="button" data-action="close-document">Close document</button>
       </div>
@@ -44,6 +48,8 @@
 
   <div class="pdf-toolbar" aria-label="Document controls">
     <button class="tool primary-tool" type="button" data-action="open-file">Open PDF</button>
+    <button class="tool" type="button" data-action="open-website">Website</button>
+    <button class="tool" type="button" data-action="download" data-requires-document>Download</button>
     <form class="url-form" id="urlForm">
       <label class="sr-only" for="urlInput">PDF URL</label>
       <input id="urlInput" type="text" inputmode="url" autocomplete="url"
@@ -88,14 +94,34 @@
     </div>
   </main>
 
-  <footer class="pdf-statusbar">
-    <span id="status" role="status">MuPDF is ready</span>
-    <span id="documentInfo">No document</span>
-    <span class="mupdf-credit">Rendered locally with <a href="https://mupdf.com/mupdf-js" target="_blank" rel="noopener">MuPDF.js</a></span>
+  <footer class="pdf-footer">
+    <div class="pdf-statusbar">
+      <span id="status" role="status">MuPDF is ready</span>
+      <span id="documentInfo">No document</span>
+    </div>
+    <p class="pdf-credit">Viewer:
+      <a href="https://mupdf.com/mupdf-js" target="_blank" rel="noopener">MuPDF.js</a>
+      by Artifex Software, Inc. · free software,
+      <a href="../../../vendor/mupdf/LICENSE-AGPL-3.0.txt" target="_blank">AGPL v3</a> ·
+      <a href="https://github.com/ArtifexSoftware/mupdf.js" target="_blank" rel="noopener">source</a>
+    </p>
   </footer>
 </div>
 
 <input id="fileInput" type="file" accept=".pdf,application/pdf" hidden>
+<div class="site-modal" id="siteModal" role="dialog" aria-modal="true" aria-labelledby="siteTitle">
+  <div class="site-box">
+    <header>
+      <span id="siteTitle">Open PDF from website</span>
+      <button id="siteClose" type="button" aria-label="Close">×</button>
+    </header>
+    <div class="site-filter">
+      <input type="search" id="siteFilter" placeholder="Filter PDF files…" aria-label="Filter website PDF files">
+    </div>
+    <div class="site-list" id="siteList"></div>
+    <p class="site-hint">Files are discovered from the repository configured in content/site.json.</p>
+  </div>
+</div>
 <dialog id="aboutDialog">
   <form method="dialog">
     <button class="dialog-close" aria-label="Close">×</button>
