@@ -2,30 +2,30 @@
   "label": "Applications",
   "items": [
     { "type": "submenu", "label": "Multimedia", "items": [
-      { "type": "app", "page": "clackbase.html", "label": "Clackbase MIDI Sequencer…", "title": "Clackbase 1.0", "width": 1120, "height": 760, "multi": true },
-      { "type": "app", "page": "video/index.html", "label": "Video Lab…", "title": "Video Lab", "width": 1180, "height": 780, "multi": true },
-      { "type": "app", "page": "recorder.html", "label": "Sound Recorder…", "title": "Sound Recorder", "width": 400, "height": 245, "fixed": true, "multi": true },
+      { "type": "app", "page": "clackbase.html", "label": "Clackbase MIDI Sequencer", "title": "Clackbase 1.0", "width": 1120, "height": 760, "multi": true },
+      { "type": "app", "page": "video/index.html", "label": "Video Lab", "title": "Video Lab", "width": 1180, "height": 780, "multi": true },
+      { "type": "app", "page": "recorder.html", "label": "Sound Recorder", "title": "Sound Recorder", "width": 400, "height": 245, "fixed": true, "multi": true },
       { "type": "app", "page": "paint.html", "label": "Paint…", "title": "Paint", "width": 820, "height": 620, "multi": true },
-      { "type": "app", "page": "model-viewer.html", "label": "3D Model Viewer…", "title": "3D Model Viewer", "width": 900, "height": 660, "multi": true }
+      { "type": "app", "page": "model-viewer.html", "label": "3D Model Viewer", "title": "3D Model Viewer", "width": 900, "height": 660, "multi": true }
     ] },
     { "type": "submenu", "label": "Maths & Programming", "items": [
-      { "type": "app", "page": "graphing-calculator.html", "label": "Graphing Calculator…", "title": "Graphing Calculator", "width": 960, "height": 660, "multi": true },
-      { "type": "app", "page": "python.html", "label": "Python…", "title": "Python", "multi": true }
+      { "type": "app", "page": "graphing-calculator.html", "label": "Graphing Calculator", "title": "Graphing Calculator", "width": 960, "height": 660, "multi": true },
+      { "type": "app", "page": "python.html", "label": "Python", "title": "Python", "multi": true }
     ] },
     { "type": "submenu", "label": "Electronics", "items": [
-      { "type": "app", "page": "circuit.html", "label": "Circuit Simulator…", "title": "Circuit Simulator", "multi": true },
-      { "type": "app", "page": "eecircuit.html", "label": "EEcircuit (SPICE)…", "title": "EEcircuit", "multi": true },
-      { "type": "app", "page": "kicad.html", "label": "KiCAD Viewer…", "title": "KiCAD Viewer", "multi": true },
-      { "type": "app", "page": "resistor.html", "label": "Resistor Calculator…", "title": "Resistor Calculator", "width": 760, "height": 620 }
+      { "type": "app", "page": "circuit.html", "label": "Circuit Simulator", "title": "Circuit Simulator", "multi": true },
+      { "type": "app", "page": "eecircuit.html", "label": "EEcircuit (SPICE)", "title": "EEcircuit", "multi": true },
+      { "type": "app", "page": "kicad.html", "label": "KiCAD Viewer", "title": "KiCAD Viewer", "multi": true },
+      { "type": "app", "page": "resistor.html", "label": "Resistor Calculator", "title": "Resistor Calculator", "width": 760, "height": 620 }
     ] },
     { "type": "submenu", "label": "Internet", "items": [
-      { "type": "app", "page": "markdown.html", "label": "Markdown Editor…", "title": "Markdown Editor", "multi": true }
+      { "type": "app", "page": "markdown.html", "label": "Markdown Editor", "title": "Markdown Editor", "multi": true }
     ] },
     { "type": "submenu", "label": "System", "items": [
-      { "type": "app", "page": "theme.html", "label": "Theme Editor…", "title": "Theme Editor", "width": 960, "height": 700, "multi": true }
+      { "type": "app", "page": "theme.html", "label": "Theme Editor", "title": "Theme Editor", "width": 960, "height": 700, "multi": true }
     ] },
     { "type": "sep" },
-    { "type": "window", "md": "about.md", "label": "About ClackOS…" },
+    { "type": "window", "md": "about.md", "label": "About ClackOS" },
     { "type": "action", "action": "restart", "label": "Restart" }
   ]
 }
