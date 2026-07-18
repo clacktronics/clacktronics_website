@@ -1,5 +1,11 @@
 # todo
 
+### To make it functioally complete for information
+
+* Desktop icons for EuroClack and blog
+* A way to show the BYOM and Euroclack information cleanly
+* Play video from youtube in video player
+
 ### Aesthetic Tweaks and experience improvements
 
 * Need icons set
