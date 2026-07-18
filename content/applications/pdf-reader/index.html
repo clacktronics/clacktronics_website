@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<meta name="theme-color" content="#09140d">
+<title>PDF Reader — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/css/app.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app pdf-app" id="pdfApp">
+  <nav class="rm-bar" aria-label="PDF Reader menu">
+    <div class="rm">
+      <button type="button">File</button>
+      <div class="rm-dd">
+        <button type="button" data-action="open-file">Open file… <kbd>Ctrl+O</kbd></button>
+        <button type="button" data-action="focus-url">Open URL…</button>
+        <div class="sep"></div>
+        <button type="button" data-action="close-document">Close document</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">View</button>
+      <div class="rm-dd">
+        <button type="button" data-action="zoom-in">Zoom in <kbd>Ctrl++</kbd></button>
+        <button type="button" data-action="zoom-out">Zoom out <kbd>Ctrl+−</kbd></button>
+        <button type="button" data-action="actual-size">Actual size <kbd>Ctrl+0</kbd></button>
+        <button type="button" data-action="fit-width">Fit width</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Help</button>
+      <div class="rm-dd">
+        <button type="button" data-action="about">About PDF Reader</button>
+        <a class="menu-link" href="../../../vendor/mupdf/LICENSE-AGPL-3.0.txt" target="_blank">MuPDF licence</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="pdf-toolbar" aria-label="Document controls">
+    <button class="tool primary-tool" type="button" data-action="open-file">Open PDF</button>
+    <form class="url-form" id="urlForm">
+      <label class="sr-only" for="urlInput">PDF URL</label>
+      <input id="urlInput" type="text" inputmode="url" autocomplete="url"
+             placeholder="content/files/manual.pdf or https://example.com/file.pdf">
+      <button class="tool" type="submit">Open URL</button>
+    </form>
+    <span class="tool-sep" aria-hidden="true"></span>
+    <button class="icon-tool" type="button" data-action="previous-page" aria-label="Previous page">◀</button>
+    <label class="page-control"><span class="sr-only">Page</span>
+      <input id="pageInput" type="number" min="1" value="1" disabled>
+      <span id="pageTotal">/ 0</span>
+    </label>
+    <button class="icon-tool" type="button" data-action="next-page" aria-label="Next page">▶</button>
+    <span class="tool-sep" aria-hidden="true"></span>
+    <button class="icon-tool" type="button" data-action="zoom-out" aria-label="Zoom out">−</button>
+    <label class="zoom-control"><span class="sr-only">Zoom percentage</span>
+      <input id="zoomInput" type="number" min="25" max="400" step="10" value="100">
+      <span>%</span>
+    </label>
+    <button class="icon-tool" type="button" data-action="zoom-in" aria-label="Zoom in">+</button>
+    <button class="tool" type="button" data-action="fit-width">Fit width</button>
+    <span class="tool-sep" aria-hidden="true"></span>
+    <form class="find-form" id="findForm">
+      <label class="sr-only" for="findInput">Find in document</label>
+      <input id="findInput" type="search" placeholder="Find in PDF" disabled>
+      <button class="icon-tool" type="button" data-action="find-previous" aria-label="Previous search result" disabled>▲</button>
+      <button class="icon-tool" type="submit" aria-label="Next search result" disabled>▼</button>
+    </form>
+  </div>
+
+  <main class="pdf-stage" id="stage">
+    <div class="empty-state" id="emptyState">
+      <div class="pdf-mark" aria-hidden="true">PDF</div>
+      <h1>PDF Reader</h1>
+      <p>Open a PDF from this computer, drop one here, or enter a web address above.</p>
+      <button class="btn primary" type="button" data-action="open-file">Choose a PDF</button>
+      <p class="cors-note">Remote servers must allow browser access (CORS). Documents stay in your browser.</p>
+    </div>
+    <div class="pages" id="pages" aria-live="polite"></div>
+    <div class="drop-target" id="dropTarget" aria-hidden="true">
+      <strong>Drop PDF to open</strong>
+    </div>
+  </main>
+
+  <footer class="pdf-statusbar">
+    <span id="status" role="status">MuPDF is ready</span>
+    <span id="documentInfo">No document</span>
+    <span class="mupdf-credit">Rendered locally with <a href="https://mupdf.com/mupdf-js" target="_blank" rel="noopener">MuPDF.js</a></span>
+  </footer>
+</div>
+
+<input id="fileInput" type="file" accept=".pdf,application/pdf" hidden>
+<dialog id="aboutDialog">
+  <form method="dialog">
+    <button class="dialog-close" aria-label="Close">×</button>
+    <div class="pdf-mark" aria-hidden="true">PDF</div>
+    <h2>PDF Reader</h2>
+    <p>A ClackOS document viewer powered by MuPDF.js 1.28.0 and WebAssembly.</p>
+    <p>Files are rendered on this device and are not uploaded by the reader.</p>
+    <button class="btn primary" value="close">OK</button>
+  </form>
+</dialog>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
