@@ -8,8 +8,6 @@
 
 ### Aesthetic Tweaks and experience improvements
 
-* Need icons set
-* Making sure 
 * sub-menus look odd and need a tweak
 * Access all of the website github from the website
 * Need links that are not like buttons and are inline
