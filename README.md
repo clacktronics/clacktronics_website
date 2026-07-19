@@ -185,6 +185,10 @@ and desktop actions.
   BroadcastChannel), Insert/Mix with File, Delete Before/After Current
   Position. Effects: Increase/Decrease Volume, Increase/Decrease Speed
   (pitch shifts, like the original), Add Echo, Reverse. Multi-instance.
+- `applications/clacksweeper.html` (Applications → Games → Clacksweeper) — a
+  fixed-size, classic minesweeper game with Beginner, Intermediate, Expert and
+  custom boards; safe first reveal; flags and question marks; number chording;
+  mouse and keyboard play; optional sound; and browser-saved best times.
 - `applications/video/index.html` (Applications → Video Lab…) — a
   browser-only video player and editor with native preview plus a version-pinned
   FFmpeg WebAssembly compatibility/export engine. Supports forward and
