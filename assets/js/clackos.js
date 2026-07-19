@@ -216,6 +216,27 @@ function safeWebUrl(value, allowFragment = true) {
   return '';
 }
 
+function webViewerAppId(value) {
+  const safe = safeWebUrl(value, false);
+  if (!/^https?:/i.test(safe)) return '';
+  let pathname;
+  try { pathname = new URL(safe).pathname; } catch { return ''; }
+  const isPdf = /\.pdf$/i.test(pathname);
+  const page = isPdf ? 'pdf-reader/index.html?file=' : 'browser.html?url=';
+  return `app:applications/${page}${encodeURIComponent(safe)}`;
+}
+
+function bindWebLinkRouting(root) {
+  root.addEventListener('click', event => {
+    const anchor = event.target.closest?.('a[href]');
+    if (!anchor || anchor.dataset.action || anchor.hasAttribute('download')) return;
+    const appId = webViewerAppId(anchor.href);
+    if (!appId) return;
+    event.preventDefault();
+    openWindow(appId);
+  }, true);
+}
+
 function safeIconName(name) {
   name = String(name || '');
   return /^[a-z0-9][a-z0-9-]*$/.test(name) ? name : '';
@@ -257,6 +278,8 @@ function inline(s) {
     if (href.startsWith('#'))
       return `<a href="${escInlineAttr(href)}" data-anchor="${escInlineAttr(href.slice(1))}">${text.trim()}</a>`;
     const safeHref = safeWebUrl(href, false);
+    const appId = webViewerAppId(safeHref);
+    if (appId) return `<a href="#" data-action="open:${escInlineAttr(appId)}">${text.trim()}</a>`;
     return safeHref
       ? `<a href="${escInlineAttr(safeHref)}" target="_blank" rel="noopener noreferrer">${text.trim()}</a>`
       : text.trim();
@@ -342,6 +365,11 @@ function sanitizeHtmlBlock(html) {
         else if (href.startsWith('#')) {
           node.removeAttribute('target');
           node.setAttribute('data-anchor', href.slice(1));
+        } else if (webViewerAppId(href)) {
+          node.setAttribute('href', '#');
+          node.setAttribute('data-action', `open:${webViewerAppId(href)}`);
+          node.removeAttribute('target');
+          node.removeAttribute('rel');
         } else {
           node.setAttribute('target', '_blank');
           node.setAttribute('rel', 'noopener noreferrer');
@@ -561,6 +589,7 @@ async function mountIntegratedApp(body, launchPage, title, onClose) {
       script.remove();
       delete window.ClackOSMountRoot;
     }
+    bindWebLinkRouting(root);
   } catch (error) {
     console.error(error);
     root.textContent = `Could not load ${title}.`;
@@ -608,6 +637,7 @@ async function openWindow(id) {
       f.addEventListener('load', () => {
         try {
           applyThemeToFrame(f);
+          bindWebLinkRouting(f.contentDocument);
           f.contentDocument.addEventListener('pointerdown', () => focusWindow(el));
         } catch {}
       });
@@ -1068,6 +1098,7 @@ document.addEventListener('click', e => {
   runAction(btn.dataset.action);
   closeMenus();
 });
+bindWebLinkRouting(document);
 
 /* ---------------- Clock ---------------- */
 function tick() {
@@ -1171,6 +1202,9 @@ function handleAppMessage(data) {
       localStorage.setItem(CUSTOM_BG_KEY, JSON.stringify({ name: String(data.name || 'paint-tile.png'), dataUrl }));
       applyWallpaper(CUSTOM_BG_NAME);
     } catch {}
+  } else if (data?.type === 'clackos-open-app') {
+    const id = String(data.id || '');
+    if (/^app:applications\/[a-z0-9][a-z0-9._/-]*(?:[?#].*)?$/i.test(id)) openWindow(id);
   }
 }
 
