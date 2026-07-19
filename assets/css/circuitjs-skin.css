@@ -3,18 +3,6 @@
    the vendor tree itself stays unmodified. Canvas colours are set separately
    via CircuitJS1's startup URL parameters. */
 
-:root {
-  --ink: #09140d;
-  --ink-soft: #14231a;
-  --paper: #f8f2dd;
-  --paper-deep: #f3ecd1;
-  --paper-line: #d8cfa9;
-  --sage: #66755a;
-  --leaf: #4fae7d;
-  --leaf-deep: #276b47;
-  --menu-text: #f5efdb;
-}
-
 body {
   font-family: 'IBM Plex Mono', monospace !important;
   background: var(--paper) !important;
@@ -29,6 +17,10 @@ body {
  * into ClackOS cream while leaving the wire colours saturated. */
 body div:has(> canvas) { background: var(--paper) !important; }
 body div > canvas { mix-blend-mode: multiply; }
+:root[data-theme-tone="dark"] body div > canvas {
+  filter: invert(1) hue-rotate(180deg);
+  mix-blend-mode: screen;
+}
 
 /* ---- top menu bar ---- */
 .gwt-MenuBar-horizontal {
@@ -83,7 +75,7 @@ body div > canvas { mix-blend-mode: multiply; }
   background: var(--paper) !important;
   border: 2px solid var(--ink) !important;
   border-radius: 0 0 8px 8px;
-  box-shadow: 6px 6px 0 rgba(9, 20, 13, 0.35);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--shadow) 35%, transparent);
   padding: 5px 6px !important;
   font-family: 'IBM Plex Mono', monospace !important;
   font-size: 12px !important;
@@ -100,7 +92,7 @@ body div > canvas { mix-blend-mode: multiply; }
   background: var(--ink) !important;
   color: var(--menu-text) !important;
 }
-.gwt-MenuItem-disabled, .disabled { color: #b3ab8d !important; }
+.gwt-MenuItem-disabled, .disabled { color: var(--disabled-text) !important; }
 .gwt-MenuBar .subMenuIcon-selected { background: var(--ink) !important; }
 .menuSeparatorInner {
   background: var(--paper-line) !important;
@@ -154,18 +146,18 @@ body div > canvas { mix-blend-mode: multiply; }
   color: var(--ink) !important;
 }
 .gwt-Label-1off { color: var(--sage) !important; }
-.gwt-Label-2off { color: #b3ab8d !important; }
+.gwt-Label-2off { color: var(--disabled-text) !important; }
 input[type="range"] { accent-color: var(--leaf-deep); }
 /* the sidebar sliders are canvas-drawn with a hardcoded red fill;
  * rotate that red to ClackOS green (greys and black are unaffected) */
-.verticalPanel canvas { filter: hue-rotate(130deg) saturate(0.55) brightness(0.85); }
+.verticalPanel canvas { filter: hue-rotate(130deg) saturate(0.55) brightness(0.85) !important; }
 
 /* ---- dialogs ---- */
 .gwt-DialogBox {
   background: var(--paper) !important;
   border: 2px solid var(--ink) !important;
   border-radius: 10px;
-  box-shadow: 8px 8px 0 rgba(9, 20, 13, 0.35) !important;
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 35%, transparent) !important;
   font-family: 'IBM Plex Mono', monospace !important;
 }
 .gwt-DialogBox .Caption {

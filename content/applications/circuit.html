@@ -4,12 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Circuit Simulator — ClackOS</title>
+<link rel="stylesheet" href="../../assets/css/app.css">
 <style>
 html, body { height: 100%; margin: 0; }
 iframe { display: block; width: 100%; height: 100%; border: 0; }
-.err {
-  font-family: monospace; padding: 24px; color: #14231a; background: #f8f2dd;
-}
+.err { font-family: monospace; padding: 24px; color: var(--ink-soft); background: var(--paper); }
 </style>
 <script src="../../vendor/circuitjs1/lz-string.min.js"></script>
 </head>
@@ -62,6 +61,7 @@ iframe { display: block; width: 100%; height: 100%; border: 0; }
         return l;
       };
       add('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+      add(new URL('../../assets/themes/clackos.css', location.href).href);
       const skin = add(new URL('../../assets/css/circuitjs-skin.css', location.href).href);
       setTimeout(() => doc.head.appendChild(skin), 2000);
       /* credit + licence for the (unmodified) vendored simulator */

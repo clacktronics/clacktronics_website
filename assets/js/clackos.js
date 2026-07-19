@@ -20,6 +20,7 @@ const THEME_VARS = [
 let activeTheme = 'clackos.css';
 let themePreview = null;
 let availableThemes = new Set(['clackos.css']);
+const observedThemeFrames = new WeakSet();
 const THEME_KEY = 'clackos-theme';
 const THEME_COOKIE = 'clackos-theme-default';
 
@@ -58,10 +59,38 @@ function revealThemedFrame(frame, link) {
   }
 }
 
+function themeVariablesForDocument(doc) {
+  const styles = doc.defaultView.getComputedStyle(doc.documentElement);
+  return Object.fromEntries(THEME_VARS.map(name => [name, styles.getPropertyValue(name).trim()]));
+}
+
+function dispatchThemeChange(doc) {
+  try {
+    const variables = themeVariablesForDocument(doc);
+    const paper = variables['--paper'];
+    const rgb = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(paper);
+    const luminance = rgb
+      ? (0.2126 * parseInt(rgb[1], 16) + 0.7152 * parseInt(rgb[2], 16) + 0.0722 * parseInt(rgb[3], 16)) / 255
+      : 1;
+    doc.documentElement.dataset.theme = activeTheme.replace(/\.css$/i, '');
+    doc.documentElement.dataset.themeTone = luminance < 0.45 ? 'dark' : 'light';
+    doc.defaultView?.dispatchEvent(new doc.defaultView.CustomEvent('clackos-themechange', {
+      detail: { theme: activeTheme, variables }
+    }));
+  } catch {}
+}
+
+function observeThemeFrame(frame) {
+  if (observedThemeFrames.has(frame)) return;
+  observedThemeFrames.add(frame);
+  frame.addEventListener('load', () => applyThemeToFrame(frame));
+}
+
 function applyThemeToFrame(frame) {
   try {
     const doc = frame.contentDocument;
     if (!doc?.head) return;
+    observeThemeFrame(frame);
     let link = doc.getElementById('clackos-theme');
     if (!link) {
       link = doc.createElement('link');
@@ -70,9 +99,21 @@ function applyThemeToFrame(frame) {
       doc.head.appendChild(link);
     }
     const href = themeHref(activeTheme);
-    if (link.href !== href) link.href = href;
-    setPreviewOnDocument(doc, themePreview);
-    revealThemedFrame(frame, link);
+    const finish = () => {
+      setPreviewOnDocument(doc, themePreview);
+      dispatchThemeChange(doc);
+      doc.querySelectorAll('iframe').forEach(nestedFrame => {
+        observeThemeFrame(nestedFrame);
+        applyThemeToFrame(nestedFrame);
+      });
+      revealThemedFrame(frame, link);
+    };
+    if (link.href === href && link.sheet) finish();
+    else {
+      link.addEventListener('load', finish, { once: true });
+      link.addEventListener('error', finish, { once: true });
+      if (link.href !== href) link.href = href;
+    }
   } catch {}
 }
 
@@ -83,6 +124,7 @@ function applyTheme(name) {
     const href = themeHref(activeTheme);
     const finish = () => {
       syncBrowserThemeColor();
+      dispatchThemeChange(document);
       document.documentElement.classList.remove('theme-pending');
     };
     if (link.href === href && link.sheet) finish();
@@ -99,9 +141,8 @@ function applyTheme(name) {
 function applyThemePreview(variables) {
   themePreview = variables && typeof variables === 'object' ? variables : null;
   setPreviewOnDocument(document, themePreview);
-  document.querySelectorAll('iframe.appframe').forEach(frame => {
-    try { setPreviewOnDocument(frame.contentDocument, themePreview); } catch {}
-  });
+  dispatchThemeChange(document);
+  document.querySelectorAll('iframe.appframe').forEach(applyThemeToFrame);
   syncBrowserThemeColor();
 }
 

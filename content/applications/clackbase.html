@@ -11,12 +11,12 @@
 <link rel="stylesheet" href="../../assets/css/app.css">
 <style>
 :root {
-  --cb-ink: #09140d;
-  --cb-paper: #f8f2dd;
-  --cb-panel: #eee7ca;
-  --cb-line: #aaa486;
-  --cb-mid: #6f745f;
-  --cb-active: #276b47;
+  --cb-ink: var(--control-text);
+  --cb-paper: var(--paper);
+  --cb-panel: var(--paper-deep);
+  --cb-line: var(--paper-line);
+  --cb-mid: var(--sage);
+  --cb-active: var(--leaf-deep);
   --track-width: 232px;
   --bar-width: 72px;
   --track-height: 50px;
@@ -40,7 +40,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   width: 9px; height: 9px; margin-left: auto; border: 1px solid var(--cb-ink);
   border-radius: 50%; background: transparent;
 }
-.cb-midi-light.on { background: var(--cb-active); box-shadow: 0 0 0 2px rgba(39,107,71,.18); }
+.cb-midi-light.on { background: var(--cb-active); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cb-active) 18%, transparent); }
 .cb-midi-label { margin-left: 6px; color: var(--cb-mid); font-size: 10px; }
 .cb-head {
   display: grid; grid-template-columns: minmax(190px, 1fr) repeat(4, minmax(92px, auto));
@@ -71,7 +71,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   border: 1px solid var(--cb-ink); color: var(--cb-ink); background: var(--cb-paper);
   font-size: 10.5px; white-space: nowrap;
 }
-.cb-tool:hover, .cb-mini:hover, .cb-transport button:hover { background: #ddd5b7; }
+.cb-tool:hover, .cb-mini:hover, .cb-transport button:hover { background: var(--paper-line); }
 .cb-tool.active, .cb-tool[aria-pressed="true"], .cb-mini[aria-pressed="true"] {
   color: var(--cb-paper); background: var(--cb-ink);
 }
@@ -119,14 +119,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .cb-lane {
   position: relative; height: var(--track-height); border-bottom: 1px solid var(--cb-line);
   background:
-    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) / 4 - 1px), rgba(9,20,13,.13) calc(var(--bar-width) / 4), transparent calc(var(--bar-width) / 4 + 1px)),
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) / 4 - 1px), color-mix(in srgb, var(--cb-ink) 13%, transparent) calc(var(--bar-width) / 4), transparent calc(var(--bar-width) / 4 + 1px)),
     repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) - 1px), var(--cb-ink) var(--bar-width));
 }
-.cb-lane.selected { background-color: rgba(39,107,71,.055); }
+.cb-lane.selected { background-color: color-mix(in srgb, var(--cb-active) 5.5%, transparent); }
 .cb-part {
   position: absolute; top: 7px; height: 36px; overflow: hidden; cursor: grab;
   border: 2px solid var(--cb-ink); color: var(--cb-ink); background:
-    radial-gradient(circle at 1px 1px, rgba(9,20,13,.25) 1px, transparent 1.2px) 0 0/4px 4px,
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--cb-ink) 25%, transparent) 1px, transparent 1.2px) 0 0/4px 4px,
     var(--cb-panel);
   text-align: left; padding: 3px 6px; font-size: 9px; font-weight: 600;
 }
@@ -154,8 +154,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .cb-note-area {
   position: relative; margin-left: 58px; cursor: crosshair;
   background:
-    repeating-linear-gradient(0deg, transparent 0, transparent calc(var(--row-height) - 1px), rgba(9,20,13,.22) var(--row-height)),
-    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) / 4 - 1px), rgba(9,20,13,.16) calc(var(--bar-width) / 4), transparent calc(var(--bar-width) / 4 + 1px)),
+    repeating-linear-gradient(0deg, transparent 0, transparent calc(var(--row-height) - 1px), color-mix(in srgb, var(--cb-ink) 22%, transparent) var(--row-height)),
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) / 4 - 1px), color-mix(in srgb, var(--cb-ink) 16%, transparent) calc(var(--bar-width) / 4), transparent calc(var(--bar-width) / 4 + 1px)),
     repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) - 1px), var(--cb-ink) var(--bar-width));
 }
 .cb-note {
@@ -168,7 +168,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .cb-velocity {
   position: relative; height: 88px; flex: none; margin-left: 58px; border-top: 2px solid var(--cb-ink);
   background:
-    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) / 4 - 1px), rgba(9,20,13,.16) calc(var(--bar-width) / 4), transparent calc(var(--bar-width) / 4 + 1px)),
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(var(--bar-width) / 4 - 1px), color-mix(in srgb, var(--cb-ink) 16%, transparent) calc(var(--bar-width) / 4), transparent calc(var(--bar-width) / 4 + 1px)),
     var(--cb-panel);
 }
 .cb-velocity::before {

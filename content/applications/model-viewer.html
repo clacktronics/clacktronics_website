@@ -35,24 +35,24 @@ body { overflow: hidden; }
 .viewer-prompt {
   position: absolute; top: 14px; left: 14px; z-index: 2; pointer-events: none;
   max-width: min(330px, calc(100% - 28px)); padding: 9px 12px;
-  border: 1px solid var(--ink); border-radius: 6px;
-  color: var(--ink); background: rgba(248, 242, 221, 0.92);
+  border: 1px solid var(--paper-line); border-radius: 6px;
+  color: var(--control-text); background: color-mix(in srgb, var(--paper) 92%, transparent);
   font-size: 11px; line-height: 1.55;
 }
 .viewer-prompt strong { display: block; margin-bottom: 2px; font-weight: 600; }
 .viewer-busy {
   position: absolute; inset: 0; z-index: 4; display: none;
   align-items: center; justify-content: center;
-  color: var(--menu-text); background: rgba(9, 20, 13, 0.78);
+  color: var(--menu-text); background: color-mix(in srgb, var(--ink) 78%, transparent);
   font-size: 12px; letter-spacing: 0.04em;
 }
 .viewer-busy.visible { display: flex; }
 .viewer-status {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  min-height: 34px; padding: 7px 14px; border-top: 1px solid var(--ink);
+  min-height: 34px; padding: 7px 14px; border-top: 1px solid var(--paper-line);
   color: var(--sage); background: var(--paper); font-size: 10.5px;
 }
-.viewer-status strong { color: var(--ink); font-weight: 500; }
+.viewer-status strong { color: var(--control-text); font-weight: 500; }
 .viewer-message { flex: 1; min-width: 180px; }
 .viewer-message.error { color: #9a3f35; }
 .viewer-credit { margin-left: auto; white-space: nowrap; }
@@ -122,8 +122,11 @@ const fitButton = document.getElementById('fit-view');
 const resetButton = document.getElementById('reset-view');
 const wireButton = document.getElementById('wireframe');
 
+const themeColor = (name, fallback) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf3ecd1);
+scene.background = new THREE.Color(themeColor('--paper-deep', '#f3ecd1'));
 
 const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 1000);
 camera.position.set(95, 70, 105);
@@ -143,12 +146,15 @@ controls.minDistance = 8;
 controls.maxDistance = 500;
 controls.addEventListener('change', render);
 
-scene.add(new THREE.HemisphereLight(0xf8f2dd, 0x66755a, 2.2));
+const hemisphereLight = new THREE.HemisphereLight(
+  themeColor('--paper', '#f8f2dd'), themeColor('--sage', '#66755a'), 2.2
+);
+scene.add(hemisphereLight);
 const keyLight = new THREE.DirectionalLight(0xffffff, 3.1);
 keyLight.position.set(70, 110, 80);
 keyLight.castShadow = true;
 scene.add(keyLight);
-const fillLight = new THREE.DirectionalLight(0x8fcaa8, 1.2);
+const fillLight = new THREE.DirectionalLight(themeColor('--menu-dim', '#8fcaa8'), 1.2);
 fillLight.position.set(-80, 40, -60);
 scene.add(fillLight);
 
@@ -158,6 +164,19 @@ scene.add(grid);
 
 let modelRoot = null;
 let occtPromise = null;
+
+function applyViewerTheme() {
+  scene.background.set(themeColor('--paper-deep', '#f3ecd1'));
+  hemisphereLight.color.set(themeColor('--paper', '#f8f2dd'));
+  hemisphereLight.groundColor.set(themeColor('--sage', '#66755a'));
+  fillLight.color.set(themeColor('--menu-dim', '#8fcaa8'));
+  const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material];
+  gridMaterials[0]?.color.set(themeColor('--leaf-deep', '#276b47'));
+  gridMaterials[1]?.color.set(themeColor('--paper-line', '#d8cfa9'));
+  render();
+}
+
+window.addEventListener('clackos-themechange', applyViewerTheme);
 
 function render() {
   renderer.render(scene, camera);
