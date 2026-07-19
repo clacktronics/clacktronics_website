@@ -8,21 +8,17 @@
 
 ### Aesthetic Tweaks and experience improvements
 
-* sub-menus look odd and need a tweak
 * Access all of the website github from the website
 * Need links that are not like buttons and are inline
 * links seem to be showing as buttons in mardown?
 * Make entire site downloadable
 * Make escapable HTML1 version of site.
-* Unify the desktop background experience, pixel backdrops only but of different tile sizes acceptable.
-* Consistent themin in apps
+* Consistent theme in in apps
 
 ### Non working features and bugs
 
 * Open app to video is not working
 * If click outside of "commit to website" in the markdown editor it seems to close the window which is awk
-* Theme flickers to original one occasionally
-* How to select default theme
 
 ### New Features and featurettes
 
