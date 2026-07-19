@@ -198,6 +198,24 @@ function esc(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function escAttr(s) {
+  return esc(String(s)).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/* inline() escapes the full source before parsing it, so only quote characters
+ * still need attribute escaping at that stage. */
+function escInlineAttr(s) {
+  return String(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function safeWebUrl(value, allowFragment = true) {
+  const url = String(value || '').trim();
+  if (allowFragment && url.startsWith('#')) return url;
+  if (/^(?:https?:|mailto:|tel:)/i.test(url)) return url;
+  if (/^(?:\.\.?\/|\/)?[a-z0-9][^\s:]*$/i.test(url)) return url;
+  return '';
+}
+
 function safeIconName(name) {
   name = String(name || '');
   return /^[a-z0-9][a-z0-9-]*$/.test(name) ? name : '';
@@ -219,7 +237,8 @@ function inline(s) {
   /* images become placeholder tokens so the link pass can wrap them */
   const imgs = [];
   s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_, alt, src) => {
-    imgs.push(`<img src="${src}" alt="${alt}" loading="lazy">`);
+    src = safeWebUrl(src, false);
+    imgs.push(src ? `<img src="${escInlineAttr(src)}" alt="${escInlineAttr(alt)}" loading="lazy">` : '');
     return `\x00${imgs.length - 1}\x00`;
   });
   s = s.replace(/`([^`]+)`/g, '<span class="k">$1</span>');
@@ -227,18 +246,112 @@ function inline(s) {
   s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>');
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, text, href) => {
     if (href.startsWith('window:'))
-      return `<a href="#" data-action="open:${href.slice(7)}">${text.trim()}</a>`;
+      return `<a href="#" data-action="open:${escInlineAttr(href.slice(7))}">${text.trim()}</a>`;
     if (href.startsWith('app:')) {
       const page = href.slice(4).split(/[?#]/)[0];
       const icon = appDefs.get(page)?.icon || 'app-windows';
-      return `<a href="#" class="app-link" data-action="open:${href}">${iconHTML(icon)}<span>${text.trim()}</span></a>`;
+      return `<a href="#" class="app-link" data-action="open:${escInlineAttr(href)}">${iconHTML(icon)}<span>${text.trim()}</span></a>`;
     }
     if (href.startsWith('action:'))
-      return `<a href="#" data-action="${href.slice(7)}">${text.trim()}</a>`;
-    return `<a href="${href}" target="_blank" rel="noopener">${text.trim()}</a>`;
+      return `<a href="#" data-action="${escInlineAttr(href.slice(7))}">${text.trim()}</a>`;
+    if (href.startsWith('#'))
+      return `<a href="${escInlineAttr(href)}" data-anchor="${escInlineAttr(href.slice(1))}">${text.trim()}</a>`;
+    const safeHref = safeWebUrl(href, false);
+    return safeHref
+      ? `<a href="${escInlineAttr(safeHref)}" target="_blank" rel="noopener noreferrer">${text.trim()}</a>`
+      : text.trim();
   });
   s = s.replace(/\x00(\d+)\x00/g, (_, i) => imgs[i]);
   return s;
+}
+
+function headingSlug(text) {
+  const slug = String(text).replace(/[`*_~\[\]]/g, '').normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return slug || 'section';
+}
+
+function youtubeEmbed(markdown) {
+  const match = /^@\[youtube\]\((\S+?)(?:\s+["']([^"']+)["'])?\)$/i.exec(markdown.trim());
+  if (!match) return '';
+  let url;
+  try { url = new URL(match[1]); } catch { return ''; }
+  const host = url.hostname.toLowerCase().replace(/^www\./, '');
+  let id = '';
+  if (host === 'youtu.be') id = url.pathname.split('/')[1] || '';
+  else if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+    if (url.pathname === '/watch') id = url.searchParams.get('v') || '';
+    else id = url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1] || '';
+  }
+  if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return '';
+  const title = match[2] || 'YouTube video';
+  return `<div class="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/${id}" title="${escAttr(title)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
+}
+
+function videoEmbed(markdown) {
+  const match = /^@\[video\]\((\S+?)(?:\s+["']([^"']+)["'])?\)(?:\{([^}]*)\})?$/i.exec(markdown.trim());
+  if (!match) return '';
+  const src = safeWebUrl(match[1], false);
+  if (!src) return '';
+  const options = new Set(String(match[3] || '').toLowerCase().split(/[\s,]+/).filter(Boolean));
+  if ([...options].some(option => !['noloop', 'controls'].includes(option))) return '';
+  const title = match[2] || 'Video';
+  return `<div class="video-embed"><video src="${escAttr(src)}" aria-label="${escAttr(title)}" preload="metadata" playsinline${options.has('controls') ? ' controls' : ''}${options.has('noloop') ? '' : ' loop'}></video></div>`;
+}
+
+/* Raw HTML is useful in hand-authored site content, but it must not turn a
+ * Markdown file into a script injection point. Keep structural/content tags,
+ * discard active elements, event handlers and unsafe URLs. YouTube iframes are
+ * available through the dedicated directive above, not arbitrary raw HTML. */
+function sanitizeHtmlBlock(html) {
+  const allowed = new Set(('a abbr article aside b blockquote br caption code col colgroup details div em figcaption figure h1 h2 h3 h4 h5 h6 hr i img kbd li mark ol p pre q s samp section small span strong sub summary sup table tbody td tfoot th thead tr u ul var').split(' '));
+  const removeEntirely = new Set(('script style iframe object embed link meta base form input button textarea select option svg math').split(' '));
+  const template = document.createElement('template');
+  template.innerHTML = html;
+
+  function clean(parent) {
+    [...parent.childNodes].forEach(node => {
+      if (node.nodeType === Node.COMMENT_NODE) { node.remove(); return; }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const tag = node.tagName.toLowerCase();
+      if (removeEntirely.has(tag)) { node.remove(); return; }
+      if (!allowed.has(tag)) {
+        clean(node);
+        while (node.firstChild) parent.insertBefore(node.firstChild, node);
+        node.remove();
+        return;
+      }
+      [...node.attributes].forEach(attribute => {
+        const name = attribute.name.toLowerCase();
+        const generallySafe = name === 'id' || name === 'class' || name === 'title' || name === 'role' ||
+          name === 'width' || name === 'height' || name === 'colspan' || name === 'rowspan' ||
+          name.startsWith('aria-') || name.startsWith('data-') && name !== 'data-action' && name !== 'data-anchor';
+        const tagSafe = tag === 'img' && ['src', 'alt', 'loading'].includes(name) ||
+          tag === 'a' && ['href', 'target', 'rel'].includes(name);
+        if (name.startsWith('on') || (!generallySafe && !tagSafe)) node.removeAttribute(attribute.name);
+      });
+      if (tag === 'img') {
+        const src = safeWebUrl(node.getAttribute('src'), false);
+        if (!src) { node.remove(); return; }
+        node.setAttribute('src', src);
+        node.setAttribute('loading', 'lazy');
+      }
+      if (tag === 'a') {
+        const href = safeWebUrl(node.getAttribute('href'));
+        if (!href) node.removeAttribute('href');
+        else if (href.startsWith('#')) {
+          node.removeAttribute('target');
+          node.setAttribute('data-anchor', href.slice(1));
+        } else {
+          node.setAttribute('target', '_blank');
+          node.setAttribute('rel', 'noopener noreferrer');
+        }
+      }
+      clean(node);
+    });
+  }
+  clean(template.content);
+  return template.innerHTML;
 }
 
 function mdToHtml(body, meta) {
@@ -252,6 +365,13 @@ function mdToHtml(body, meta) {
   const blocks = body.split(/\r?\n[ \t]*\r?\n/).map(b => b.trim()).filter(Boolean);
   const out = [];
   let footerNext = false;
+  const headingIds = new Map();
+  const uniqueHeadingId = text => {
+    const base = headingSlug(text);
+    const count = (headingIds.get(base) || 0) + 1;
+    headingIds.set(base, count);
+    return count === 1 ? base : `${base}-${count}`;
+  };
 
   blocks.forEach((block, idx) => {
     const isLast = idx === blocks.length - 1;
@@ -264,14 +384,24 @@ function mdToHtml(body, meta) {
     footerNext = false;
 
     const fence = /^\x00fence(\d+)\x00$/.exec(block);
+    const youtube = youtubeEmbed(block);
+    const video = videoEmbed(block);
     if (fence) {
       out.push(fences[+fence[1]]);
+    } else if (youtube) {
+      out.push(youtube);
+    } else if (video) {
+      out.push(video);
+    } else if (/^<[/!A-Za-z][\s\S]*>$/m.test(block)) {
+      out.push(`<div class="html-block">${sanitizeHtmlBlock(block)}</div>`);
     } else if (/^>\s?/.test(block)) {
       out.push(`<blockquote>${inline(block.replace(/^>\s?/gm, '')).replace(/\r?\n/g, '<br>')}</blockquote>`);
     } else if (/^##\s+/.test(block)) {
-      out.push(`<p class="eyebrow">${inline(block.replace(/^##\s+/, ''))}</p>`);
+      const heading = block.replace(/^##\s+/, '');
+      out.push(`<p class="eyebrow" id="${uniqueHeadingId(heading)}">${inline(heading)}</p>`);
     } else if (/^#\s+/.test(block)) {
-      out.push(`<h1>${inline(block.replace(/^#\s+/, ''))}</h1>`);
+      const heading = block.replace(/^#\s+/, '');
+      out.push(`<h1 id="${uniqueHeadingId(heading)}">${inline(heading)}</h1>`);
       if (meta.tagline) {
         out.push(`<p class="tagline">${esc(meta.tagline)}</p>`);
         out.push('<div class="rule"></div>');
@@ -923,6 +1053,15 @@ function runAction(action) {
 }
 
 document.addEventListener('click', e => {
+  const anchor = e.target.closest('a[data-anchor]');
+  if (anchor) {
+    e.preventDefault();
+    const winbody = anchor.closest('.winbody');
+    const target = [...(winbody || document).querySelectorAll('[id]')]
+      .find(element => element.id === anchor.dataset.anchor);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
   const btn = e.target.closest('[data-action]');
   if (!btn || btn.disabled) return;
   e.preventDefault();
