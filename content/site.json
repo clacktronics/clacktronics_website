@@ -8,13 +8,14 @@
   "boot": [
     "file/home.md"
   ],
-  "theme": "blood.css",
+  "theme": "monochrome.css",
   "themes": [
     "clackos.css",
     "midnight.css",
     "poolside.css",
     "brownstone.css",
-    "blood.css"
+    "blood.css",
+    "monochrome.css"
   ],
   "background": "sand-dots.png",
   "backgrounds": [
