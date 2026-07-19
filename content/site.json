@@ -15,6 +15,15 @@
     "midnight.css",
     "poolside.css"
   ],
+  "background": "sand-dots.png",
+  "backgrounds": [
+    { "name": "Sand dots", "file": "sand-dots.png" },
+    { "name": "Pebbles", "file": "pebbles.png" },
+    { "name": "Cracked earth", "file": "cracked-earth.png" },
+    { "name": "Fern weave", "file": "fern-weave.png" },
+    { "name": "Circuit trace", "file": "circuit-trace.png" },
+    { "name": "Terrazzo", "file": "terrazzo.png" }
+  ],
   "repo": "clacktronics/clacktronics_website",
   "branch": "main"
 }

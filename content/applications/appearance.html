@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Appearance — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+.appearance-main { gap: 14px; }
+.appearance-preview { height: 86px; border: 1px solid var(--ink); border-radius: 7px; background-color: var(--desktop); }
+.appearance-row { display: grid; grid-template-columns: 112px 1fr; align-items: center; gap: 12px; }
+.appearance-row label { color: var(--control-text); font-weight: 500; }
+.appearance-row select { width: 100%; }
+.appearance-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 4px; }
+.appearance-actions .app-status { flex: 1; }
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="app-main appearance-main">
+    <p class="app-lbl">Desktop appearance</p>
+    <div class="appearance-preview" id="preview" aria-label="Background tile preview"></div>
+    <div class="appearance-row"><label for="backgroundSelect">Background</label><select id="backgroundSelect"></select></div>
+    <div class="appearance-row"><label for="themeSelect">Theme</label><select id="themeSelect"></select></div>
+    <div class="appearance-actions"><p class="app-status" id="status">Loading website choices…</p><button class="btn primary" id="applyButton">Apply</button></div>
+  </main>
+</div>
+
+<script>
+(() => {
+const THEME_KEY = 'clackos-theme';
+const WALLPAPER_KEY = 'clackos-wallpaper';
+const CUSTOM_BG_KEY = 'clackos-custom-background';
+const CUSTOM_BG_NAME = 'Custom paint tile';
+const backgroundSelect = document.getElementById('backgroundSelect');
+const themeSelect = document.getElementById('themeSelect');
+const preview = document.getElementById('preview');
+const status = document.getElementById('status');
+let backgrounds = new Map();
+
+function addOption(select, value, label) {
+  const option = document.createElement('option');
+  option.value = value; option.textContent = label; select.appendChild(option);
+}
+
+function loadCustom() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CUSTOM_BG_KEY));
+    return value && /^data:image\/png;base64,/i.test(value.dataUrl || '') ? value : null;
+  } catch { return null; }
+}
+
+function updatePreview() {
+  const value = backgrounds.get(backgroundSelect.value);
+  preview.style.backgroundImage = value ? `url("${value}")` : 'none';
+}
+
+async function load() {
+  try {
+    const response = await fetch(`../site.json?_clack=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(response.status);
+    const site = await response.json();
+    for (const item of site.backgrounds || []) {
+      if (!/^[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|gif|webp|bmp)$/i.test(item.file || '')) continue;
+      const url = `../../assets/backgrounds/${encodeURIComponent(item.file)}`;
+      backgrounds.set(item.name, url); addOption(backgroundSelect, item.name, item.name);
+    }
+    const custom = loadCustom();
+    if (custom) {
+      backgrounds.set(CUSTOM_BG_NAME, custom.dataUrl);
+      addOption(backgroundSelect, CUSTOM_BG_NAME, `${CUSTOM_BG_NAME} (${custom.name || 'paint-tile.png'})`);
+    }
+    for (const theme of site.themes || []) addOption(themeSelect, theme, theme.replace(/\.css$/i, ''));
+    let selectedBackground = site.background ? [...backgrounds.keys()].find(name => (site.backgrounds || []).find(item => item.name === name)?.file === site.background) : '';
+    try {
+      const savedBackground = localStorage.getItem(WALLPAPER_KEY);
+      const savedTheme = localStorage.getItem(THEME_KEY);
+      if (backgrounds.has(savedBackground)) selectedBackground = savedBackground;
+      if ([...themeSelect.options].some(option => option.value === savedTheme)) themeSelect.value = savedTheme;
+      else themeSelect.value = site.theme || themeSelect.options[0]?.value || '';
+    } catch { themeSelect.value = site.theme || ''; }
+    backgroundSelect.value = backgrounds.has(selectedBackground) ? selectedBackground : backgrounds.keys().next().value || '';
+    updatePreview(); status.textContent = 'Choose a background and colour theme.';
+  } catch (error) { status.textContent = `Could not load appearance settings (${error.message}).`; }
+}
+
+backgroundSelect.addEventListener('change', updatePreview);
+document.getElementById('applyButton').addEventListener('click', () => {
+  const wallpaper = backgroundSelect.value, theme = themeSelect.value;
+  if (!backgrounds.has(wallpaper) || !theme) return;
+  try {
+    localStorage.setItem(WALLPAPER_KEY, wallpaper);
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {}
+  if (window.parent !== window) window.parent.postMessage({ type: 'clackos-appearance', wallpaper, theme }, location.origin);
+  status.textContent = 'Appearance applied and saved for this browser.';
+});
+
+load();
+})();
+</script>
+</body>
+</html>

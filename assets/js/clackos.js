@@ -19,6 +19,8 @@ const THEME_VARS = [
 ];
 let activeTheme = 'clackos.css';
 let themePreview = null;
+let availableThemes = new Set(['clackos.css']);
+const THEME_KEY = 'clackos-theme';
 
 function safeThemeName(name) {
   name = String(name || '');
@@ -232,111 +234,38 @@ function mdToHtml(body, meta) {
   return `<div class="${style}">${out.join('\n')}</div>`;
 }
 
-/* ---------------- Wallpapers ---------------- */
-const svgTile = (w, h, body) =>
-  `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${body}</svg>`)}")`;
-
-const wallpapers = {
-  'Sand dots': {
-    color: '#e3ddc6',
-    image: svgTile(16, 16, `<circle cx='1' cy='1' r='1' fill='#c2b998'/>`)
-  },
-  'Pebbles': {
-    color: '#ddd5ba',
-    image: svgTile(96, 96, `
-      <g fill='#cfc5a3' stroke='#b7ac87' stroke-width='1.5'>
-        <ellipse cx='22' cy='20' rx='15' ry='11' transform='rotate(-14 22 20)'/>
-        <ellipse cx='68' cy='30' rx='18' ry='12' transform='rotate(9 68 30)'/>
-        <ellipse cx='38' cy='62' rx='13' ry='16' transform='rotate(22 38 62)'/>
-        <ellipse cx='80' cy='76' rx='12' ry='9' transform='rotate(-8 80 76)'/>
-        <ellipse cx='10' cy='84' rx='9' ry='7' transform='rotate(15 10 84)'/>
-      </g>
-      <g fill='#e9e2c8'>
-        <ellipse cx='19' cy='17' rx='6' ry='4' transform='rotate(-14 19 17)'/>
-        <ellipse cx='63' cy='26' rx='7' ry='4' transform='rotate(9 63 26)'/>
-        <ellipse cx='35' cy='56' rx='4' ry='6' transform='rotate(22 35 56)'/>
-      </g>`)
-  },
-  'Cracked earth': {
-    color: '#d9cfae',
-    image: svgTile(90, 90, `
-      <g stroke='#a3986f' stroke-width='2' fill='none' stroke-linecap='round'>
-        <path d='M0,30 L26,36 L44,22 L66,34 L90,30'/>
-        <path d='M45,0 L40,22 L52,50 L42,72 L45,90'/>
-        <path d='M26,36 L14,60 L0,64'/>
-        <path d='M90,64 L70,60 L52,50'/>
-        <path d='M66,34 L74,14 L90,10'/>
-        <path d='M0,10 L16,14 L26,36' stroke-width='1.4'/>
-        <path d='M42,72 L20,80' stroke-width='1.4'/>
-      </g>`)
-  },
-  'Fern weave': {
-    color: '#dfd8bd',
-    image: svgTile(64, 64, `
-      <g stroke='#b9c4a0' stroke-width='2' fill='none'>
-        <path d='M0,16 Q16,8 32,16 T64,16'/>
-        <path d='M0,48 Q16,40 32,48 T64,48'/>
-      </g>
-      <g stroke='#9db388' stroke-width='2' fill='none'>
-        <path d='M16,0 Q8,16 16,32 T16,64'/>
-        <path d='M48,0 Q40,16 48,32 T48,64'/>
-      </g>`)
-  },
-  'Circuit trace': {
-    color: '#e0dac1',
-    image: svgTile(80, 80, `
-      <g stroke='#bcb28c' stroke-width='2' fill='none'>
-        <path d='M0,20 H28 V52 H60 V80'/>
-        <path d='M40,0 V16 H68 V44 H80'/>
-      </g>
-      <g fill='#a89d73'>
-        <circle cx='28' cy='20' r='3.5'/><circle cx='28' cy='52' r='3.5'/>
-        <circle cx='60' cy='52' r='3.5'/><circle cx='68' cy='16' r='3.5'/>
-        <circle cx='68' cy='44' r='3.5'/>
-      </g>`)
-  },
-  'Terrazzo': {
-    color: '#e6dfc7',
-    image: svgTile(72, 72, `
-      <g fill='#c9bd94'>
-        <path d='M12,10 l10,-4 l4,9 l-11,5 z'/>
-        <path d='M52,20 l9,3 l-4,10 l-9,-4 z'/>
-        <path d='M28,48 l8,-6 l7,7 l-9,6 z'/>
-        <path d='M60,58 l7,2 l-3,8 l-7,-3 z'/>
-      </g>
-      <g fill='#a9bb95'>
-        <path d='M40,6 l6,2 l-2,7 l-7,-2 z'/>
-        <path d='M8,40 l7,-3 l4,7 l-8,4 z'/>
-        <path d='M14,62 l8,1 l-1,7 l-8,-1 z'/>
-      </g>`)
-  }
-};
+/* ---------------- Wallpapers ----------------
+ * Website tiles are bitmap files registered in content/site.json. Paint can
+ * add one browser-local PNG tile without introducing an SVG code path. */
+const wallpapers = {};
+const CUSTOM_BG_KEY = 'clackos-custom-background';
+const CUSTOM_BG_NAME = 'Custom paint tile';
 let currentWallpaper = 'Sand dots';
 const wallpaperDropdowns = [];
 
-/* user-drawn 8x8 patterns (Desktop -> Edit pattern...), kept in localStorage */
-const PAT_KEY = 'clackos-patterns';
-const PAT_FG = '#7c7355', PAT_BG = '#e3ddc6';
+function loadWebsiteBackgrounds(site) {
+  for (const name of Object.keys(wallpapers)) delete wallpapers[name];
+  for (const item of site.backgrounds || []) {
+    const name = String(item?.name || '').trim();
+    const file = String(item?.file || '').trim();
+    if (!name || !/^[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|gif|webp|bmp)$/i.test(file)) continue;
+    const href = new URL(`assets/backgrounds/${encodeURIComponent(file)}`, location.href).href;
+    wallpapers[name] = { file, image: `url("${href}")` };
+  }
+}
 
-function loadPatterns() {
-  try { return JSON.parse(localStorage.getItem(PAT_KEY)) || {}; } catch { return {}; }
+function customWallpaper() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CUSTOM_BG_KEY));
+    if (saved && /^data:image\/(?:png|jpeg|gif|webp|bmp);base64,/i.test(saved.dataUrl || ''))
+      return { image: `url("${saved.dataUrl}")`, label: saved.name || CUSTOM_BG_NAME };
+  } catch {}
+  return null;
 }
-function savePatterns(map) {
-  try { localStorage.setItem(PAT_KEY, JSON.stringify(map)); } catch {}
-}
-function patternWallpaper(rows) {
-  let px = '';
-  rows.forEach((row, y) => {
-    for (let x = 0; x < 8; x++)
-      if ((row >> (7 - x)) & 1)
-        px += `<rect x='${x * 2}' y='${y * 2}' width='2' height='2' fill='${PAT_FG}'/>`;
-  });
-  return { color: PAT_BG, image: svgTile(16, 16, px) };
-}
+
 function getWallpaper(name) {
   if (wallpapers[name]) return wallpapers[name];
-  const rows = loadPatterns()[name];
-  return rows ? patternWallpaper(rows) : null;
+  return name === CUSTOM_BG_NAME ? customWallpaper() : null;
 }
 
 function applyWallpaper(name) {
@@ -354,9 +283,11 @@ function applyWallpaper(name) {
 
 function buildWallpaperMenu(container) {
   container.innerHTML = '';
-  for (const name of [...Object.keys(wallpapers), ...Object.keys(loadPatterns())]) {
+  const custom = customWallpaper();
+  for (const name of [...Object.keys(wallpapers), ...(custom ? [CUSTOM_BG_NAME] : [])]) {
     const b = document.createElement('button');
-    b.innerHTML = `<span class="menu-item-label">${iconHTML('image')}${esc(name)}</span><span class="check">${name === currentWallpaper ? '&#10003;' : ''}</span>`;
+    const label = name === CUSTOM_BG_NAME && custom?.label ? `${name} (${custom.label})` : name;
+    b.innerHTML = `<span class="menu-item-label">${iconHTML('image')}${esc(label)}</span><span class="check">${name === currentWallpaper ? '&#10003;' : ''}</span>`;
     b.addEventListener('click', () => { applyWallpaper(name); closeMenus(); });
     container.appendChild(b);
   }
@@ -906,13 +837,23 @@ observeCpuPressure();
 
 /* ---------------- Boot ---------------- */
 async function boot() {
-  let savedWp = null;
-  try { savedWp = localStorage.getItem('clackos-wallpaper'); } catch {}
-  applyWallpaper(savedWp && getWallpaper(savedWp) ? savedWp : 'Sand dots');
+  const site = await loadJSON('content/site.json');
+  loadWebsiteBackgrounds(site);
+  availableThemes = new Set((site.themes || []).map(safeThemeName));
+  availableThemes.add(safeThemeName(site.theme));
+
+  let savedWp = null, savedTheme = null;
+  try {
+    savedWp = localStorage.getItem('clackos-wallpaper');
+    savedTheme = localStorage.getItem(THEME_KEY);
+  } catch {}
+  const configuredBackground = Object.keys(wallpapers).find(name => wallpapers[name].file === site.background);
+  const fallbackBackground = configuredBackground || Object.keys(wallpapers)[0];
+  if (savedWp && getWallpaper(savedWp)) applyWallpaper(savedWp);
+  else if (fallbackBackground) applyWallpaper(fallbackBackground);
+  applyTheme(savedTheme && availableThemes.has(safeThemeName(savedTheme)) ? savedTheme : site.theme);
   updateTaskbar();
 
-  const site = await loadJSON('content/site.json');
-  applyTheme(site.theme);
   const defs = await Promise.all(
     site.menus.map(folder => loadJSON(`content/${folder}/menu.json`))
   );
@@ -927,23 +868,39 @@ async function boot() {
 
 boot().catch(err => console.error('ClackOS failed to boot:', err));
 
-/* The Theme Editor sends palette previews to the desktop. Only same-origin
- * application windows can change these variables, and only known hex colours
- * are accepted by applyThemePreview. */
+/* Same-origin system applications can preview palettes or select registered
+ * themes/backgrounds. Paint sends a PNG data URL for its custom tile slot. */
 window.addEventListener('message', e => {
-  if (e.origin !== location.origin || e.data?.type !== 'clackos-theme-preview') return;
-  applyThemePreview(e.data.variables);
+  if (e.origin !== location.origin) return;
+  if (e.data?.type === 'clackos-theme-preview') {
+    applyThemePreview(e.data.variables);
+  } else if (e.data?.type === 'clackos-appearance') {
+    const theme = safeThemeName(e.data.theme);
+    if (e.data.theme && availableThemes.has(theme)) {
+      try { localStorage.setItem(THEME_KEY, theme); } catch {}
+      applyTheme(theme);
+    }
+    if (e.data.wallpaper && getWallpaper(e.data.wallpaper)) applyWallpaper(e.data.wallpaper);
+  } else if (e.data?.type === 'clackos-set-background-tile') {
+    const dataUrl = String(e.data.dataUrl || '');
+    if (!/^data:image\/png;base64,/i.test(dataUrl)) return;
+    try {
+      localStorage.setItem(CUSTOM_BG_KEY, JSON.stringify({ name: String(e.data.name || 'paint-tile.png'), dataUrl }));
+      applyWallpaper(CUSTOM_BG_NAME);
+    } catch {}
+  }
 });
 
-/* app pages (pattern editor) talk to the desktop through localStorage;
- * same-origin iframes and other tabs raise storage events here */
+/* Same-origin app windows and other tabs also synchronise through storage. */
 window.addEventListener('storage', e => {
-  if (e.key === PAT_KEY) {
+  if (e.key === CUSTOM_BG_KEY) {
     wallpaperDropdowns.forEach(buildWallpaperMenu);
-    if (!wallpapers[currentWallpaper] && !getWallpaper(currentWallpaper)) applyWallpaper('Sand dots');
-    else if (!wallpapers[currentWallpaper]) applyWallpaper(currentWallpaper);
+    if (currentWallpaper === CUSTOM_BG_NAME && getWallpaper(CUSTOM_BG_NAME)) applyWallpaper(CUSTOM_BG_NAME);
+    else if (currentWallpaper === CUSTOM_BG_NAME) applyWallpaper(Object.keys(wallpapers)[0]);
   } else if (e.key === 'clackos-wallpaper' && e.newValue && e.newValue !== currentWallpaper) {
     applyWallpaper(e.newValue);
+  } else if (e.key === THEME_KEY && e.newValue && availableThemes.has(safeThemeName(e.newValue))) {
+    applyTheme(e.newValue);
   }
 });
 

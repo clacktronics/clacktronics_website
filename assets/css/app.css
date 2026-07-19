@@ -107,23 +107,8 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 .rec-btns .pixel-icon { width: 17px; height: 17px; }
 .rec-record { color: #a04a3a; }
 
-/* ---- pattern editor ---- */
-.pat-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-.pat-head label { display: flex; gap: 10px; align-items: center; color: var(--control-text); font-weight: 500; }
-.pat-name { width: 160px; }
-.pat-main { display: flex; flex-wrap: wrap; gap: 28px; }
-.pat-sample { width: 130px; height: 185px; border: 1px solid var(--ink); border-radius: 6px; }
-.pat-grid {
-  display: grid; grid-template-columns: repeat(8, 22px); grid-auto-rows: 22px;
-  gap: 1px; background: var(--paper-line); border: 1px solid var(--ink);
-  border-radius: 4px; overflow: hidden; width: max-content; touch-action: none;
-}
-.pat-cell { all: unset; background: var(--paper); cursor: crosshair; }
-.pat-cell.on { background: var(--ink); }
-.pat-cell:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
-.pat-btns { display: flex; flex-wrap: wrap; gap: 10px; }
-
 /* ---- paint ---- */
+.paint-app { height: 100%; min-height: 0; }
 .paint-main { display: flex; gap: 14px; padding: 14px; flex: 1; min-height: 0; }
 .paint-tools {
   display: grid; grid-template-columns: repeat(2, 36px); grid-auto-rows: 36px; gap: 6px;
@@ -140,13 +125,25 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 .paint-tool .pixel-icon { width: 21px; height: 21px; }
 .paint-size { grid-column: span 2; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .paint-size input { width: 100%; }
-.paint-canvas-wrap { flex: 1; overflow: auto; min-height: 0; }
+.paint-size .paint-offset-check {
+  display: flex; align-items: flex-start; gap: 6px; margin-top: 6px;
+  color: var(--control-text); font-size: 10.5px; line-height: 1.35; cursor: pointer;
+}
+.paint-size .paint-offset-check input { width: auto; margin-top: 1px; }
+.paint-size .paint-offset-check small { display: block; color: var(--sage); font-size: 9.5px; }
+.paint-canvas-wrap {
+  flex: 1; overflow: auto; min-width: 0; min-height: 0; padding: 8px;
+  background-color: var(--paper-deep);
+  background-image: linear-gradient(45deg, var(--paper-line) 25%, transparent 25%), linear-gradient(-45deg, var(--paper-line) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--paper-line) 75%), linear-gradient(-45deg, transparent 75%, var(--paper-line) 75%);
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0; background-size: 8px 8px;
+}
 .paint-stack {
   position: relative; width: 640px; height: 400px;
-  border: 1px solid var(--ink); cursor: crosshair; touch-action: none;
+  border: 1px solid var(--ink); background: #fff; cursor: crosshair; touch-action: none;
 }
 .paint-stack canvas { position: absolute; inset: 0; }
-.paint-stack .overlay { pointer-events: none; }
+.paint-stack .overlay, .paint-stack .offset-preview { pointer-events: none; }
+.paint-stack.checking-seams { cursor: not-allowed; }
 .paint-bottom { display: flex; align-items: center; gap: 14px; padding: 0 14px 14px; flex-wrap: wrap; }
 .paint-current { position: relative; width: 38px; height: 38px; flex: none; }
 .paint-current .fg, .paint-current .bg {
@@ -160,3 +157,52 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 }
 .paint-swatch:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
 .paint-status { padding: 0 16px 12px; font-size: 11.5px; color: var(--sage); }
+
+.paint-modal {
+  position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--ink) 38%, transparent);
+}
+.paint-modal.open { display: flex; }
+.paint-modal-box {
+  width: min(520px, 92vw); max-height: 82vh; display: flex; flex-direction: column;
+  border: 2px solid var(--ink); border-radius: 9px; background: var(--paper);
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 35%, transparent);
+}
+.paint-modal-box > header {
+  display: flex; justify-content: space-between; padding: 9px 13px;
+  border-radius: 6px 6px 0 0; background: var(--ink); color: var(--menu-text);
+}
+.paint-modal-box > header button { all: unset; cursor: pointer; padding: 0 3px; }
+.paint-site-list { overflow: auto; padding: 8px; color: var(--sage); }
+.paint-site-list button {
+  all: unset; box-sizing: border-box; width: 100%; display: flex; flex-direction: column; gap: 3px;
+  padding: 9px 11px; border-radius: 6px; color: var(--control-text); cursor: pointer;
+}
+.paint-site-list button span { color: var(--sage); font-size: 10.5px; }
+.paint-site-list button:hover { background: var(--ink); color: var(--menu-text); }
+.paint-site-list button:hover span { color: var(--menu-dim); }
+.paint-dialog { width: min(410px, 92vw); }
+.paint-dialog-body { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.paint-dialog-body > label:not(.paint-check) { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.paint-dialog-body input[type="number"] {
+  width: 112px; padding: 6px 8px; border: 1px solid var(--ink); border-radius: 6px;
+  background: var(--paper-deep); color: var(--control-text); font: inherit;
+}
+.paint-check { display: flex; align-items: center; gap: 8px; }
+.paint-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.paint-anchor {
+  align-self: center; display: grid; grid-template-columns: repeat(3, 26px); gap: 4px;
+  padding: 8px; border: 1px solid var(--paper-line); border-radius: 6px;
+}
+.paint-anchor legend { padding: 0 5px; color: var(--sage); font-size: 11px; }
+.paint-anchor label { width: 26px; height: 26px; cursor: pointer; }
+.paint-anchor input { position: absolute; opacity: 0; }
+.paint-anchor span { display: block; width: 100%; height: 100%; border: 1px solid var(--ink); border-radius: 3px; background: var(--paper); }
+.paint-anchor input:checked + span { background: var(--leaf-deep); box-shadow: inset 0 0 0 7px var(--paper); }
+.paint-anchor input:focus-visible + span { outline: 2px solid var(--leaf); outline-offset: 1px; }
+
+@media (max-width: 560px) {
+  .paint-main { gap: 8px; padding: 8px; }
+  .paint-tools { grid-template-columns: repeat(2, 32px); grid-auto-rows: 32px; gap: 4px; }
+  .paint-palette { grid-template-columns: repeat(7, 20px); }
+}

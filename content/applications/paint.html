@@ -4,367 +4,745 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="only light">
-<title>Paint — ClackOS</title>
+<title>ClackPaint — ClackOS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
 </head>
 <body>
-<div class="app">
+<div class="app paint-app">
   <div class="rm-bar">
     <div class="rm"><button>File</button><div class="rm-dd">
       <button data-cmd="new"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>New</button>
-      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open&hellip;</button>
+      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open…</button>
+      <button data-cmd="open-site"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>Open from website…</button>
       <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save</button>
-      <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As&hellip;</button>
+      <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As…</button>
+      <div class="sep"></div>
+      <button data-cmd="set-background"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>Set as background tile</button>
     </div></div>
     <div class="rm"><button>Edit</button><div class="rm-dd">
       <button data-cmd="undo"><span class="pixel-icon" data-icon="undo" aria-hidden="true"></span>Undo</button>
       <button data-cmd="redo"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Redo</button>
     </div></div>
     <div class="rm"><button>Image</button><div class="rm-dd">
+      <button data-cmd="image-size"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Image Size…</button>
+      <button data-cmd="canvas-size"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Canvas Size…</button>
+      <button data-cmd="crop" disabled><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Crop to Selection</button>
+      <div class="sep"></div>
       <button data-cmd="clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear Image</button>
       <button data-cmd="invert"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Invert Colours</button>
-      <div class="sep"></div>
       <button data-cmd="flip-h"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Flip Horizontal</button>
       <button data-cmd="flip-v"><span class="pixel-icon" data-icon="align-vertical-space-between" aria-hidden="true"></span>Flip Vertical</button>
+    </div></div>
+    <div class="rm"><button>Effects</button><div class="rm-dd">
+      <button data-cmd="gaussian-blur"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Gaussian Blur…</button>
+      <button data-cmd="noise"><span class="pixel-icon" data-icon="spray-can" aria-hidden="true"></span>Add Noise…</button>
     </div></div>
   </div>
 
   <div class="paint-main">
     <div class="paint-tools" role="toolbar" aria-label="Tools">
       <button class="paint-tool active" data-tool="pencil" title="Pencil" aria-label="Pencil"><span class="pixel-icon icon-only" data-icon="pencil" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="select" title="Rectangular selection" aria-label="Rectangular selection"><span class="pixel-icon icon-only" data-icon="lasso" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="brush" title="Brush" aria-label="Brush"><span class="pixel-icon icon-only" data-icon="brush" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="eraser" title="Eraser" aria-label="Eraser"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="spray" title="Airbrush" aria-label="Airbrush"><span class="pixel-icon icon-only" data-icon="spray-can" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="fill" title="Fill with colour" aria-label="Fill with colour"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="picker" title="Pick colour" aria-label="Pick colour"><span class="pixel-icon icon-only" data-icon="pipette" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="clone" title="Clone stamp — Alt-click to choose source" aria-label="Clone stamp"><span class="pixel-icon icon-only" data-icon="copy" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="blur" title="Blur" aria-label="Blur"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="line" title="Line" aria-label="Line"><span class="pixel-icon icon-only" data-icon="arrow-right" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="rect" title="Rectangle" aria-label="Rectangle"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="ellipse" title="Ellipse" aria-label="Ellipse"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="rect-fill" title="Filled rectangle" aria-label="Filled rectangle"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
       <div class="paint-size">
-        <span class="app-lbl">Size</span>
-        <input type="range" min="1" max="16" value="3" aria-label="Tool size">
+        <span class="app-lbl">Tool size</span>
+        <input type="range" min="1" max="32" value="3" aria-label="Tool size">
+        <label class="paint-offset-check" title="Preview the tile wrapped by half its width and height without changing the image"><input id="offsetPreview" type="checkbox"><span>Check seams<small>50% X/Y offset</small></span></label>
       </div>
     </div>
 
     <div class="paint-canvas-wrap">
       <div class="paint-stack">
         <canvas class="base" width="640" height="400"></canvas>
+        <canvas class="offset-preview" width="640" height="400" hidden></canvas>
         <canvas class="overlay" width="640" height="400"></canvas>
       </div>
     </div>
   </div>
 
   <div class="paint-bottom">
-    <div class="paint-current" title="Left click: foreground, right click: background">
-      <span class="fg"></span><span class="bg"></span>
-    </div>
+    <div class="paint-current" title="Left click: foreground, right click: background"><span class="fg"></span><span class="bg"></span></div>
     <div class="paint-palette" role="listbox" aria-label="Colours"></div>
   </div>
-  <p class="paint-status app-status">Left button draws with the foreground colour, right button with the background.</p>
+  <p class="paint-status app-status">Ready — 640 × 400 px</p>
+</div>
+
+<input id="paintFilePicker" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,image/png,image/jpeg,image/gif,image/webp,image/bmp" hidden>
+
+<div class="paint-modal" id="siteModal" role="dialog" aria-modal="true" aria-labelledby="siteTitle">
+  <div class="paint-modal-box">
+    <header><span id="siteTitle">Open image from website</span><button data-close="siteModal" aria-label="Close">×</button></header>
+    <div class="paint-site-list" id="siteList"></div>
+  </div>
+</div>
+
+<div class="paint-modal" id="imageSizeModal" role="dialog" aria-modal="true" aria-labelledby="imageSizeTitle">
+  <form class="paint-modal-box paint-dialog" id="imageSizeForm">
+    <header><span id="imageSizeTitle">Image Size</span><button type="button" data-close="imageSizeModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <label>Width <span><input id="imageWidth" type="number" min="1" max="8192" required> px</span></label>
+      <label>Height <span><input id="imageHeight" type="number" min="1" max="8192" required> px</span></label>
+      <label class="paint-check"><input id="keepAspect" type="checkbox" checked> Preserve aspect ratio</label>
+      <p class="app-status">Resamples the image to the new pixel dimensions.</p>
+      <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="imageSizeModal">Cancel</button><button class="btn primary">Resize</button></div>
+    </div>
+  </form>
+</div>
+
+<div class="paint-modal" id="canvasSizeModal" role="dialog" aria-modal="true" aria-labelledby="canvasSizeTitle">
+  <form class="paint-modal-box paint-dialog" id="canvasSizeForm">
+    <header><span id="canvasSizeTitle">Canvas Size</span><button type="button" data-close="canvasSizeModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <label>Width <span><input id="canvasWidth" type="number" min="1" max="8192" required> px</span></label>
+      <label>Height <span><input id="canvasHeight" type="number" min="1" max="8192" required> px</span></label>
+      <fieldset class="paint-anchor"><legend>Anchor</legend>
+        <label><input type="radio" name="anchor" value="tl" aria-label="Top left"><span></span></label><label><input type="radio" name="anchor" value="tc" aria-label="Top centre"><span></span></label><label><input type="radio" name="anchor" value="tr" aria-label="Top right"><span></span></label>
+        <label><input type="radio" name="anchor" value="ml" aria-label="Middle left"><span></span></label><label><input type="radio" name="anchor" value="mc" aria-label="Centre" checked><span></span></label><label><input type="radio" name="anchor" value="mr" aria-label="Middle right"><span></span></label>
+        <label><input type="radio" name="anchor" value="bl" aria-label="Bottom left"><span></span></label><label><input type="radio" name="anchor" value="bc" aria-label="Bottom centre"><span></span></label><label><input type="radio" name="anchor" value="br" aria-label="Bottom right"><span></span></label>
+      </fieldset>
+      <p class="app-status">Changes the canvas without scaling the image. New space uses the background colour.</p>
+      <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="canvasSizeModal">Cancel</button><button class="btn primary">Resize</button></div>
+    </div>
+  </form>
+</div>
+
+<div class="paint-modal" id="gaussianBlurModal" role="dialog" aria-modal="true" aria-labelledby="gaussianBlurTitle">
+  <form class="paint-modal-box paint-dialog" id="gaussianBlurForm">
+    <header><span id="gaussianBlurTitle">Gaussian Blur</span><button type="button" data-close="gaussianBlurModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <label>Radius <span><input id="gaussianRadius" type="number" min="0.1" max="50" step="0.1" value="2" required> px</span></label>
+      <p class="app-status">Softens the whole image. Tile edges are wrapped so the effect remains seamless.</p>
+      <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="gaussianBlurModal">Cancel</button><button class="btn primary">Apply</button></div>
+    </div>
+  </form>
+</div>
+
+<div class="paint-modal" id="noiseModal" role="dialog" aria-modal="true" aria-labelledby="noiseTitle">
+  <form class="paint-modal-box paint-dialog" id="noiseForm">
+    <header><span id="noiseTitle">Add Noise</span><button type="button" data-close="noiseModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <label>Amount <span><input id="noiseAmount" type="number" min="0.1" max="100" step="0.1" value="8" required> %</span></label>
+      <label class="paint-check"><input id="noiseMonochrome" type="checkbox" checked> Monochromatic</label>
+      <p class="app-status">Adds random grain while preserving transparency.</p>
+      <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="noiseModal">Cancel</button><button class="btn primary">Apply</button></div>
+    </div>
+  </form>
 </div>
 
 <script>
 (() => {
 const base = document.querySelector('canvas.base');
+const preview = document.querySelector('canvas.offset-preview');
 const overlay = document.querySelector('canvas.overlay');
 const stack = document.querySelector('.paint-stack');
 const bx = base.getContext('2d', { willReadFrequently: true });
+const px = preview.getContext('2d');
 const ox = overlay.getContext('2d');
 const status = document.querySelector('.paint-status');
 const sizeInput = document.querySelector('.paint-size input');
-const W = base.width, H = base.height;
+const offsetToggle = document.getElementById('offsetPreview');
+const cropButton = document.querySelector('[data-cmd="crop"]');
+const MAX_DIMENSION = 8192;
+const CUSTOM_BG_KEY = 'clackos-custom-background';
+const CUSTOM_BG_NAME = 'Custom paint tile';
+const width = () => base.width;
+const height = () => base.height;
 
-/* the classic 28-colour box */
 const COLORS = [
   '#000000', '#808080', '#800000', '#808000', '#008000', '#008080', '#000080',
   '#800080', '#808040', '#004040', '#0080FF', '#004080', '#8000FF', '#804000',
   '#FFFFFF', '#C0C0C0', '#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF',
   '#FF00FF', '#FFFF80', '#00FF80', '#80FFFF', '#8080FF', '#FF0080', '#FF8040'
 ];
-let fg = '#000000', bg = '#FFFFFF';
-let tool = 'pencil';
+let fg = '#000000', bg = '#FFFFFF', tool = 'pencil';
 let fileName = 'untitled.png';
+let selection = null;
+let cloneSource = null, cloneOffset = null, strokeBuffer = null;
 const undoStack = [], redoStack = [];
 const MAXUNDO = 25;
+const MAX_UNDO_BYTES = 96 * 1024 * 1024;
 
+const setStatus = message => {
+  if (offsetToggle.checked) updateOffsetPreview();
+  status.textContent = `${message} — ${width()} × ${height()} px`;
+};
 const fgEl = document.querySelector('.paint-current .fg');
 const bgEl = document.querySelector('.paint-current .bg');
 const showColors = () => { fgEl.style.background = fg; bgEl.style.background = bg; };
-
 const palette = document.querySelector('.paint-palette');
 COLORS.forEach(c => {
-  const b = document.createElement('button');
-  b.className = 'paint-swatch';
-  b.style.background = c;
-  b.setAttribute('aria-label', 'colour ' + c);
-  b.addEventListener('click', () => { fg = c; showColors(); });
-  b.addEventListener('contextmenu', e => { e.preventDefault(); bg = c; showColors(); });
-  palette.appendChild(b);
+  const button = document.createElement('button');
+  button.className = 'paint-swatch';
+  button.style.background = c;
+  button.setAttribute('aria-label', 'colour ' + c);
+  button.addEventListener('click', () => { fg = c; showColors(); });
+  button.addEventListener('contextmenu', event => { event.preventDefault(); bg = c; showColors(); });
+  palette.appendChild(button);
 });
 showColors();
 
-bx.fillStyle = '#FFFFFF';
-bx.fillRect(0, 0, W, H);
+function updateStackSize() {
+  stack.style.width = width() + 'px';
+  stack.style.height = height() + 'px';
+}
 
-/* ---- undo ---- */
-const pushUndo = () => {
-  undoStack.push(bx.getImageData(0, 0, W, H));
-  if (undoStack.length > MAXUNDO) undoStack.shift();
+function updateOffsetPreview() {
+  const enabled = offsetToggle.checked;
+  preview.hidden = !enabled;
+  base.hidden = enabled;
+  overlay.hidden = enabled;
+  stack.classList.toggle('checking-seams', enabled);
+  if (!enabled) return;
+  const dx = Math.floor(width() / 2), dy = Math.floor(height() / 2);
+  px.clearRect(0, 0, width(), height());
+  for (const x of [dx, dx - width()])
+    for (const y of [dy, dy - height()]) px.drawImage(base, x, y);
+}
+
+function clearSelection() {
+  selection = null;
+  cropButton.disabled = true;
+  ox.clearRect(0, 0, overlay.width, overlay.height);
+}
+
+function renderSelection(rect = selection) {
+  ox.clearRect(0, 0, overlay.width, overlay.height);
+  if (!rect || rect.w < 1 || rect.h < 1) return;
+  ox.save();
+  ox.setLineDash([4, 3]);
+  ox.lineWidth = 1;
+  ox.strokeStyle = '#ffffff';
+  ox.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w, rect.h);
+  ox.lineDashOffset = 3;
+  ox.strokeStyle = '#000000';
+  ox.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w, rect.h);
+  ox.restore();
+}
+
+function resizeSurfaces(w, h) {
+  w = Math.max(1, Math.min(MAX_DIMENSION, Math.round(w)));
+  h = Math.max(1, Math.min(MAX_DIMENSION, Math.round(h)));
+  base.width = overlay.width = w;
+  base.height = overlay.height = h;
+  preview.width = w; preview.height = h;
+  updateStackSize();
+  cloneSource = null; cloneOffset = null; strokeBuffer = null;
+  clearSelection();
+}
+
+function copyCanvas() {
+  const copy = document.createElement('canvas');
+  copy.width = width(); copy.height = height();
+  copy.getContext('2d').drawImage(base, 0, 0);
+  return copy;
+}
+
+function snapshot() {
+  return { width: width(), height: height(), pixels: bx.getImageData(0, 0, width(), height()) };
+}
+
+const snapshotBytes = () => width() * height() * 4;
+const stackBytes = items => items.reduce((total, item) => total + item.pixels.data.byteLength, 0);
+
+function restore(snap) {
+  resizeSurfaces(snap.width, snap.height);
+  bx.putImageData(snap.pixels, 0, 0);
+  setStatus('Restored image');
+}
+
+function pushUndo() {
+  if (snapshotBytes() > MAX_UNDO_BYTES) {
+    undoStack.length = 0; redoStack.length = 0;
+    return false;
+  }
+  undoStack.push(snapshot());
+  while (undoStack.length > 1 && (undoStack.length > MAXUNDO || stackBytes(undoStack) > MAX_UNDO_BYTES)) undoStack.shift();
   redoStack.length = 0;
-};
-const undo = () => {
-  if (!undoStack.length) return;
-  redoStack.push(bx.getImageData(0, 0, W, H));
-  bx.putImageData(undoStack.pop(), 0, 0);
-};
-const redo = () => {
-  if (!redoStack.length) return;
-  undoStack.push(bx.getImageData(0, 0, W, H));
-  bx.putImageData(redoStack.pop(), 0, 0);
-};
+  return true;
+}
 
-/* ---- tools ---- */
-document.querySelectorAll('.paint-tool').forEach(b => {
-  b.addEventListener('click', () => {
-    tool = b.dataset.tool;
-    document.querySelectorAll('.paint-tool').forEach(t => t.classList.toggle('active', t === b));
+function undo() {
+  if (!undoStack.length) return;
+  if (snapshotBytes() <= MAX_UNDO_BYTES) redoStack.push(snapshot());
+  else redoStack.length = 0;
+  restore(undoStack.pop());
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(snapshot());
+  restore(redoStack.pop());
+}
+
+bx.fillStyle = '#FFFFFF';
+bx.fillRect(0, 0, width(), height());
+updateStackSize();
+
+document.querySelectorAll('.paint-tool').forEach(button => {
+  button.addEventListener('click', () => {
+    tool = button.dataset.tool;
+    document.querySelectorAll('.paint-tool').forEach(item => item.classList.toggle('active', item === button));
+    if (tool === 'clone' && cloneSource) drawCloneSource();
+    else if (tool !== 'select' && selection) renderSelection();
+    if (tool === 'select') setStatus('Drag to select an area, then use Image → Crop to Selection');
+    else if (tool === 'clone') setStatus(cloneSource ? 'Clone source ready; drag to paint from it' : 'Alt-click the image to choose a clone source');
+    else if (tool === 'blur') setStatus('Blur brush selected; Tool Size controls the soft brush radius');
+    else setStatus(`${button.title} selected`);
   });
 });
 
-const evPos = e => {
-  const r = base.getBoundingClientRect();
+const evPos = event => {
+  const rect = base.getBoundingClientRect();
   return {
-    x: Math.round((e.clientX - r.left) * W / r.width),
-    y: Math.round((e.clientY - r.top) * H / r.height)
+    x: Math.max(0, Math.min(width() - 1, Math.floor((event.clientX - rect.left) * width() / rect.width))),
+    y: Math.max(0, Math.min(height() - 1, Math.floor((event.clientY - rect.top) * height() / rect.height)))
   };
 };
+const rectFrom = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) });
 
-let drawing = false, start = null, last = null, drawColor = '#000', sprayTimer = 0;
-const size = () => +sizeInput.value;
+let drawing = false, start = null, last = null, drawColor = '#000000', sprayTimer = 0;
+const toolSize = () => +sizeInput.value;
 
-function strokeSeg(a, b, color, width) {
-  bx.strokeStyle = color;
-  bx.lineWidth = width;
-  bx.lineCap = 'round';
-  bx.lineJoin = 'round';
-  bx.beginPath();
-  bx.moveTo(a.x, a.y);
-  bx.lineTo(b.x, b.y);
-  bx.stroke();
+function strokeSeg(a, b, color, lineWidth) {
+  bx.strokeStyle = color; bx.lineWidth = lineWidth; bx.lineCap = 'round'; bx.lineJoin = 'round';
+  bx.beginPath(); bx.moveTo(a.x, a.y); bx.lineTo(b.x, b.y); bx.stroke();
 }
-function spray(p, color) {
+
+function spray(point, color) {
   bx.fillStyle = color;
-  const r = size() * 2 + 4;
+  const radius = toolSize() * 2 + 4;
   for (let i = 0; i < 24; i++) {
-    const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * r;
-    bx.fillRect(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 1, 1);
+    const angle = Math.random() * Math.PI * 2, distance = Math.sqrt(Math.random()) * radius;
+    bx.fillRect(point.x + Math.cos(angle) * distance, point.y + Math.sin(angle) * distance, 1, 1);
   }
 }
-function shapePreview(p) {
-  ox.clearRect(0, 0, W, H);
-  ox.strokeStyle = drawColor;
-  ox.fillStyle = drawColor;
-  ox.lineWidth = size();
-  const x = Math.min(start.x, p.x), y = Math.min(start.y, p.y);
-  const w = Math.abs(p.x - start.x), h = Math.abs(p.y - start.y);
-  ox.beginPath();
-  if (tool === 'line') { ox.moveTo(start.x, start.y); ox.lineTo(p.x, p.y); ox.stroke(); }
-  else if (tool === 'rect') ox.strokeRect(x, y, w, h);
-  else if (tool === 'rect-fill') ox.fillRect(x, y, w, h);
-  else if (tool === 'ellipse') { ox.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); ox.stroke(); }
-}
-function commitShape(p) {
-  shapePreview(p);
-  bx.drawImage(overlay, 0, 0);
-  ox.clearRect(0, 0, W, H);
+
+function brushAlong(a, b, callback) {
+  const distance = Math.hypot(b.x - a.x, b.y - a.y);
+  const steps = Math.max(1, Math.ceil(distance / Math.max(1, toolSize())));
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    callback({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  }
 }
 
-function floodFill(p, colorHex) {
-  const img = bx.getImageData(0, 0, W, H);
-  const d = img.data;
-  const idx = (x, y) => (y * W + x) * 4;
-  const t = idx(p.x, p.y);
-  const tr = d[t], tg = d[t + 1], tb = d[t + 2];
-  const c = parseInt(colorHex.slice(1), 16);
-  const fr = c >> 16 & 255, fgn = c >> 8 & 255, fb = c & 255;
-  if (tr === fr && tg === fgn && tb === fb) return;
-  const match = i => d[i] === tr && d[i + 1] === tg && d[i + 2] === tb;
-  const set = i => { d[i] = fr; d[i + 1] = fgn; d[i + 2] = fb; d[i + 3] = 255; };
-  const stackPts = [[p.x, p.y]];
-  while (stackPts.length) {
-    const [x, y] = stackPts.pop();
-    let x0 = x;
-    while (x0 >= 0 && match(idx(x0, y))) x0--;
-    x0++;
+function drawCloneSource() {
+  ox.clearRect(0, 0, width(), height());
+  if (!cloneSource || tool !== 'clone') return;
+  const radius = Math.max(5, toolSize() * 1.5);
+  ox.save();
+  ox.strokeStyle = '#ffffff'; ox.lineWidth = 3;
+  ox.beginPath(); ox.arc(cloneSource.x, cloneSource.y, radius, 0, Math.PI * 2); ox.stroke();
+  ox.strokeStyle = '#000000'; ox.lineWidth = 1; ox.setLineDash([3, 2]);
+  ox.beginPath(); ox.arc(cloneSource.x, cloneSource.y, radius, 0, Math.PI * 2); ox.stroke();
+  ox.setLineDash([]);
+  ox.beginPath(); ox.moveTo(cloneSource.x - radius - 3, cloneSource.y); ox.lineTo(cloneSource.x + radius + 3, cloneSource.y);
+  ox.moveTo(cloneSource.x, cloneSource.y - radius - 3); ox.lineTo(cloneSource.x, cloneSource.y + radius + 3); ox.stroke();
+  ox.restore();
+}
+
+function cloneAt(point) {
+  if (!strokeBuffer || !cloneOffset) return;
+  const radius = Math.max(2, toolSize() * 1.5);
+  const sourceX = point.x + cloneOffset.x - radius;
+  const sourceY = point.y + cloneOffset.y - radius;
+  bx.save();
+  bx.beginPath(); bx.arc(point.x, point.y, radius, 0, Math.PI * 2); bx.clip();
+  bx.drawImage(strokeBuffer, sourceX, sourceY, radius * 2, radius * 2, point.x - radius, point.y - radius, radius * 2, radius * 2);
+  bx.restore();
+}
+
+function blurAt(point) {
+  if (!strokeBuffer) return;
+  const radius = Math.max(3, toolSize() * 2);
+  bx.save();
+  bx.beginPath(); bx.arc(point.x, point.y, radius, 0, Math.PI * 2); bx.clip();
+  bx.filter = `blur(${Math.max(0.5, toolSize() / 2)}px)`;
+  bx.drawImage(strokeBuffer, 0, 0);
+  bx.restore();
+}
+
+function shapePreview(point) {
+  ox.clearRect(0, 0, width(), height());
+  ox.strokeStyle = drawColor; ox.fillStyle = drawColor; ox.lineWidth = toolSize();
+  const rect = rectFrom(start, point);
+  ox.beginPath();
+  if (tool === 'line') { ox.moveTo(start.x, start.y); ox.lineTo(point.x, point.y); ox.stroke(); }
+  else if (tool === 'rect') ox.strokeRect(rect.x, rect.y, rect.w, rect.h);
+  else if (tool === 'rect-fill') ox.fillRect(rect.x, rect.y, rect.w, rect.h);
+  else if (tool === 'ellipse' && rect.w && rect.h) {
+    ox.ellipse(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, rect.h / 2, 0, 0, Math.PI * 2); ox.stroke();
+  }
+}
+
+function commitShape(point) {
+  shapePreview(point);
+  bx.drawImage(overlay, 0, 0);
+  ox.clearRect(0, 0, width(), height());
+}
+
+function floodFill(point, colorHex) {
+  const image = bx.getImageData(0, 0, width(), height());
+  const data = image.data;
+  const index = (x, y) => (y * width() + x) * 4;
+  const target = index(point.x, point.y);
+  const tr = data[target], tg = data[target + 1], tb = data[target + 2], ta = data[target + 3];
+  const color = parseInt(colorHex.slice(1), 16);
+  const fr = color >> 16 & 255, fgn = color >> 8 & 255, fb = color & 255;
+  if (tr === fr && tg === fgn && tb === fb && ta === 255) return;
+  const match = i => data[i] === tr && data[i + 1] === tg && data[i + 2] === tb && data[i + 3] === ta;
+  const set = i => { data[i] = fr; data[i + 1] = fgn; data[i + 2] = fb; data[i + 3] = 255; };
+  const points = [[point.x, point.y]];
+  while (points.length) {
+    const [x, y] = points.pop();
+    let left = x;
+    while (left >= 0 && match(index(left, y))) left--;
+    left++;
     let up = false, down = false;
-    for (let xi = x0; xi < W && match(idx(xi, y)); xi++) {
-      set(idx(xi, y));
+    for (let xi = left; xi < width() && match(index(xi, y)); xi++) {
+      set(index(xi, y));
       if (y > 0) {
-        if (match(idx(xi, y - 1))) { if (!up) { stackPts.push([xi, y - 1]); up = true; } }
+        if (match(index(xi, y - 1))) { if (!up) points.push([xi, y - 1]); up = true; }
         else up = false;
       }
-      if (y < H - 1) {
-        if (match(idx(xi, y + 1))) { if (!down) { stackPts.push([xi, y + 1]); down = true; } }
+      if (y < height() - 1) {
+        if (match(index(xi, y + 1))) { if (!down) points.push([xi, y + 1]); down = true; }
         else down = false;
       }
     }
   }
-  bx.putImageData(img, 0, 0);
+  bx.putImageData(image, 0, 0);
 }
 
-function pickColor(p, right) {
-  const d = bx.getImageData(p.x, p.y, 1, 1).data;
-  const hex = '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+function pickColor(point, right) {
+  const data = bx.getImageData(point.x, point.y, 1, 1).data;
+  const hex = '#' + [data[0], data[1], data[2]].map(value => value.toString(16).padStart(2, '0')).join('');
   if (right) bg = hex; else fg = hex;
-  showColors();
-  status.textContent = `Picked ${hex}.`;
+  showColors(); setStatus(`Picked ${hex}`);
 }
 
-stack.addEventListener('contextmenu', e => e.preventDefault());
-stack.addEventListener('pointerdown', e => {
-  if (e.button !== 0 && e.button !== 2) return;
-  e.preventDefault();
-  const right = e.button === 2;
-  const p = evPos(e);
+stack.addEventListener('contextmenu', event => event.preventDefault());
+stack.addEventListener('pointerdown', event => {
+  if (event.button !== 0 && event.button !== 2) return;
+  event.preventDefault();
+  if (offsetToggle.checked) { setStatus('Seam preview is on; uncheck Offset 50% X/Y to edit'); return; }
+  const right = event.button === 2;
+  const point = evPos(event);
   drawColor = right ? bg : fg;
-  if (tool === 'picker') { pickColor(p, right); return; }
-  pushUndo();
-  if (tool === 'fill') { floodFill(p, drawColor); return; }
-  drawing = true;
-  start = last = p;
-  stack.setPointerCapture(e.pointerId);
-  if (tool === 'pencil') strokeSeg(p, p, drawColor, 1);
-  else if (tool === 'brush') strokeSeg(p, p, drawColor, size());
-  else if (tool === 'eraser') strokeSeg(p, p, bg, size() * 3);
-  else if (tool === 'spray') {
-    spray(p, drawColor);
-    sprayTimer = setInterval(() => spray(last, drawColor), 40);
+  if (tool === 'picker') { pickColor(point, right); return; }
+  if (tool === 'clone' && event.altKey) {
+    clearSelection(); cloneSource = point; drawCloneSource();
+    setStatus(`Clone source set at ${point.x}, ${point.y}; drag elsewhere to paint`);
+    return;
   }
-  else shapePreview(p);
+  if (tool === 'clone' && !cloneSource) { setStatus('Alt-click the image first to choose a clone source'); return; }
+  if (tool !== 'select') pushUndo();
+  if (tool === 'fill') { clearSelection(); floodFill(point, drawColor); setStatus('Area filled'); return; }
+  drawing = true; start = last = point;
+  try { stack.setPointerCapture(event.pointerId); } catch {}
+  if (tool === 'select') { selection = null; cropButton.disabled = true; renderSelection(rectFrom(point, point)); }
+  else {
+    clearSelection();
+    if (tool === 'pencil') strokeSeg(point, point, drawColor, 1);
+    else if (tool === 'brush') strokeSeg(point, point, drawColor, toolSize());
+    else if (tool === 'eraser') strokeSeg(point, point, bg, toolSize() * 3);
+    else if (tool === 'spray') { spray(point, drawColor); sprayTimer = setInterval(() => spray(last, drawColor), 40); }
+    else if (tool === 'clone') {
+      cloneOffset = { x: cloneSource.x - point.x, y: cloneSource.y - point.y };
+      strokeBuffer = copyCanvas(); cloneAt(point);
+    }
+    else if (tool === 'blur') { strokeBuffer = copyCanvas(); blurAt(point); }
+    else shapePreview(point);
+  }
 });
-stack.addEventListener('pointermove', e => {
+
+stack.addEventListener('pointermove', event => {
   if (!drawing) return;
-  const p = evPos(e);
-  if (tool === 'pencil') strokeSeg(last, p, drawColor, 1);
-  else if (tool === 'brush') strokeSeg(last, p, drawColor, size());
-  else if (tool === 'eraser') strokeSeg(last, p, bg, size() * 3);
-  else if (tool === 'spray') { /* timer sprays at last */ }
-  else shapePreview(p);
-  last = p;
+  const point = evPos(event);
+  if (tool === 'select') renderSelection(rectFrom(start, point));
+  else if (tool === 'pencil') strokeSeg(last, point, drawColor, 1);
+  else if (tool === 'brush') strokeSeg(last, point, drawColor, toolSize());
+  else if (tool === 'eraser') strokeSeg(last, point, bg, toolSize() * 3);
+  else if (tool === 'clone') brushAlong(last, point, cloneAt);
+  else if (tool === 'blur') brushAlong(last, point, blurAt);
+  else if (tool !== 'spray') shapePreview(point);
+  last = point;
 });
-const endDraw = e => {
+
+function endDraw(event) {
   if (!drawing) return;
-  drawing = false;
-  clearInterval(sprayTimer);
-  if (['line', 'rect', 'rect-fill', 'ellipse'].includes(tool)) commitShape(evPos(e));
-};
+  drawing = false; clearInterval(sprayTimer);
+  const point = evPos(event);
+  if (tool === 'select') {
+    const rect = rectFrom(start, point);
+    selection = rect.w && rect.h ? rect : null;
+    cropButton.disabled = !selection;
+    renderSelection();
+    setStatus(selection ? `Selected ${selection.w} × ${selection.h} px` : 'Selection cleared');
+  } else if (['line', 'rect', 'rect-fill', 'ellipse'].includes(tool)) {
+    commitShape(point); setStatus('Shape drawn');
+  } else if (tool === 'clone') {
+    strokeBuffer = null; drawCloneSource(); setStatus('Clone stroke applied; Alt-click to choose a different source');
+  } else if (tool === 'blur') {
+    strokeBuffer = null; setStatus('Blur stroke applied');
+  }
+}
 stack.addEventListener('pointerup', endDraw);
 stack.addEventListener('pointercancel', endDraw);
 
-/* ---- file ---- */
-const filePick = document.createElement('input');
-filePick.type = 'file';
-filePick.accept = 'image/*';
+function validDimension(value) {
+  const number = Math.round(Number(value));
+  return Number.isFinite(number) && number >= 1 && number <= MAX_DIMENSION ? number : null;
+}
+
+function resizeImage(w, h) {
+  const copy = copyCanvas();
+  pushUndo(); resizeSurfaces(w, h);
+  bx.imageSmoothingEnabled = true; bx.imageSmoothingQuality = 'high';
+  bx.drawImage(copy, 0, 0, w, h);
+  setStatus('Image resized');
+}
+
+function resizeCanvas(w, h, anchor) {
+  const copy = copyCanvas();
+  const oldW = width(), oldH = height();
+  const horizontal = anchor[1] === 'l' ? 0 : anchor[1] === 'r' ? 1 : 0.5;
+  const vertical = anchor[0] === 't' ? 0 : anchor[0] === 'b' ? 1 : 0.5;
+  const x = Math.round((w - oldW) * horizontal), y = Math.round((h - oldH) * vertical);
+  pushUndo(); resizeSurfaces(w, h);
+  bx.fillStyle = bg; bx.fillRect(0, 0, w, h); bx.drawImage(copy, x, y);
+  setStatus('Canvas resized');
+}
+
+function cropSelection() {
+  if (!selection) return;
+  const rect = selection;
+  const pixels = bx.getImageData(rect.x, rect.y, rect.w, rect.h);
+  pushUndo(); resizeSurfaces(rect.w, rect.h); bx.putImageData(pixels, 0, 0);
+  setStatus('Cropped to selection');
+}
+
+function applyGaussianBlur(radius) {
+  const copy = copyCanvas();
+  pushUndo(); clearSelection(); bx.clearRect(0, 0, width(), height());
+  bx.save(); bx.filter = `blur(${radius}px)`;
+  for (const x of [-width(), 0, width()])
+    for (const y of [-height(), 0, height()]) bx.drawImage(copy, x, y);
+  bx.restore();
+  setStatus(`Gaussian Blur applied at ${radius}px radius`);
+}
+
+function addNoise(amount, monochrome) {
+  pushUndo(); clearSelection();
+  const image = bx.getImageData(0, 0, width(), height()), data = image.data;
+  const strength = 255 * amount / 100;
+  const randomDelta = () => (Math.random() * 2 - 1) * strength;
+  for (let i = 0; i < data.length; i += 4) {
+    if (!data[i + 3]) continue;
+    if (monochrome) {
+      const delta = randomDelta();
+      data[i] += delta; data[i + 1] += delta; data[i + 2] += delta;
+    } else {
+      data[i] += randomDelta(); data[i + 1] += randomDelta(); data[i + 2] += randomDelta();
+    }
+  }
+  bx.putImageData(image, 0, 0);
+  setStatus(`${monochrome ? 'Monochromatic' : 'Colour'} noise applied at ${amount}%`);
+}
+
+const filePick = document.getElementById('paintFilePicker');
 filePick.addEventListener('change', () => {
-  const f = filePick.files[0];
-  filePick.value = '';
-  if (!f) return;
-  const img = new Image();
-  img.onload = () => {
-    pushUndo();
-    bx.fillStyle = '#FFFFFF';
-    bx.fillRect(0, 0, W, H);
-    const s = Math.min(1, W / img.width, H / img.height);
-    bx.drawImage(img, 0, 0, img.width * s, img.height * s);
-    URL.revokeObjectURL(img.src);
-    fileName = f.name.replace(/\.[^.]+$/, '') + '.png';
-    status.textContent = `Opened ${f.name}.`;
-  };
-  img.src = URL.createObjectURL(f);
+  const file = filePick.files[0]; filePick.value = '';
+  if (!file || !/^image\/(?:png|jpeg|gif|webp|bmp)$/i.test(file.type)) { if (file) setStatus('Please choose a bitmap image'); return; }
+  const url = URL.createObjectURL(file);
+  loadImage(url, file.name, () => URL.revokeObjectURL(url));
 });
+
+function loadImage(src, name, done) {
+  const image = new Image();
+  image.onload = () => {
+    if (image.naturalWidth > MAX_DIMENSION || image.naturalHeight > MAX_DIMENSION) {
+      setStatus(`Image is larger than ${MAX_DIMENSION} px`); if (done) done(); return;
+    }
+    pushUndo(); resizeSurfaces(image.naturalWidth, image.naturalHeight);
+    bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); bx.drawImage(image, 0, 0);
+    fileName = String(name || 'image.png').replace(/\.[^.]+$/, '') + '.png';
+    setStatus(`Opened ${name}`); if (done) done();
+  };
+  image.onerror = () => { setStatus(`Could not open ${name}`); if (done) done(); };
+  image.src = src;
+}
 
 function savePng(as) {
   if (as) {
-    const n = prompt('Save as:', fileName);
-    if (!n) return;
-    fileName = /\.png$/i.test(n) ? n : n + '.png';
+    const name = prompt('Save as:', fileName);
+    if (!name) return;
+    fileName = /\.png$/i.test(name) ? name : name + '.png';
   }
   base.toBlob(blob => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fileName;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    status.textContent = `Saved ${fileName} (downloaded).`;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob); link.download = fileName; link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 5000); setStatus(`Saved ${fileName}`);
   }, 'image/png');
 }
 
+function setAsBackground() {
+  try {
+    const dataUrl = base.toDataURL('image/png');
+    const payload = { name: fileName, dataUrl };
+    localStorage.setItem(CUSTOM_BG_KEY, JSON.stringify(payload));
+    localStorage.setItem('clackos-wallpaper', CUSTOM_BG_NAME);
+    if (window.parent !== window) window.parent.postMessage({ type: 'clackos-set-background-tile', ...payload }, location.origin);
+    setStatus('Set as the repeating desktop background tile');
+  } catch (error) {
+    setStatus('Tile is too large for browser storage; reduce Image Size and try again');
+  }
+}
+
+const modals = new Map([...document.querySelectorAll('.paint-modal')].map(modal => [modal.id, modal]));
+const showModal = id => modals.get(id).classList.add('open');
+const hideModal = id => modals.get(id).classList.remove('open');
+document.addEventListener('click', event => {
+  const closer = event.target.closest('[data-close]');
+  if (closer) hideModal(closer.dataset.close);
+});
+modals.forEach(modal => modal.addEventListener('pointerdown', event => { if (event.target === modal) hideModal(modal.id); }));
+
+async function openWebsiteBrowser() {
+  const list = document.getElementById('siteList');
+  list.textContent = 'Loading…'; showModal('siteModal');
+  try {
+    const response = await fetch(`../site.json?_clack=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(response.status);
+    const site = await response.json(); list.textContent = '';
+    for (const item of site.backgrounds || []) {
+      if (!/^[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|gif|webp|bmp)$/i.test(item.file || '')) continue;
+      const button = document.createElement('button');
+      button.innerHTML = `<strong>${escapeHtml(item.name || item.file)}</strong><span>assets/backgrounds/${escapeHtml(item.file)}</span>`;
+      button.addEventListener('click', () => {
+        hideModal('siteModal');
+        loadImage(`../../assets/backgrounds/${encodeURIComponent(item.file)}?_clack=${Date.now()}`, item.file);
+      });
+      list.appendChild(button);
+    }
+    if (!list.children.length) list.textContent = 'No bitmap backgrounds are registered in content/site.json.';
+  } catch (error) { list.textContent = `Could not list website backgrounds (${error.message}).`; }
+}
+
+const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function openImageSize() {
+  document.getElementById('imageWidth').value = width();
+  document.getElementById('imageHeight').value = height();
+  document.getElementById('imageSizeForm').dataset.aspect = width() / height();
+  showModal('imageSizeModal'); document.getElementById('imageWidth').focus();
+}
+
+function openCanvasSize() {
+  document.getElementById('canvasWidth').value = width();
+  document.getElementById('canvasHeight').value = height();
+  showModal('canvasSizeModal'); document.getElementById('canvasWidth').focus();
+}
+
+const imageWidth = document.getElementById('imageWidth'), imageHeight = document.getElementById('imageHeight');
+imageWidth.addEventListener('input', () => {
+  if (!document.getElementById('keepAspect').checked) return;
+  const value = validDimension(imageWidth.value), aspect = +document.getElementById('imageSizeForm').dataset.aspect;
+  if (value) imageHeight.value = Math.max(1, Math.round(value / aspect));
+});
+imageHeight.addEventListener('input', () => {
+  if (!document.getElementById('keepAspect').checked) return;
+  const value = validDimension(imageHeight.value), aspect = +document.getElementById('imageSizeForm').dataset.aspect;
+  if (value) imageWidth.value = Math.max(1, Math.round(value * aspect));
+});
+document.getElementById('imageSizeForm').addEventListener('submit', event => {
+  event.preventDefault(); const w = validDimension(imageWidth.value), h = validDimension(imageHeight.value);
+  if (!w || !h) return; hideModal('imageSizeModal'); resizeImage(w, h);
+});
+document.getElementById('canvasSizeForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const w = validDimension(document.getElementById('canvasWidth').value), h = validDimension(document.getElementById('canvasHeight').value);
+  if (!w || !h) return;
+  hideModal('canvasSizeModal'); resizeCanvas(w, h, new FormData(event.currentTarget).get('anchor'));
+});
+document.getElementById('gaussianBlurForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const radius = Number(document.getElementById('gaussianRadius').value);
+  if (!Number.isFinite(radius) || radius < 0.1 || radius > 50) return;
+  hideModal('gaussianBlurModal'); applyGaussianBlur(radius);
+});
+document.getElementById('noiseForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const amount = Number(document.getElementById('noiseAmount').value);
+  if (!Number.isFinite(amount) || amount < 0.1 || amount > 100) return;
+  hideModal('noiseModal'); addNoise(amount, document.getElementById('noiseMonochrome').checked);
+});
+
+offsetToggle.addEventListener('change', () => {
+  updateOffsetPreview();
+  setStatus(offsetToggle.checked
+    ? 'Showing a non-destructive 50% offset for checking tile seams'
+    : 'Seam preview off; image returned to its original position');
+});
+
 function runCmd(cmd) {
   switch (cmd) {
-    case 'new':
-      pushUndo();
-      bx.fillStyle = '#FFFFFF';
-      bx.fillRect(0, 0, W, H);
-      fileName = 'untitled.png';
-      status.textContent = 'New image.';
-      break;
+    case 'new': pushUndo(); resizeSurfaces(640, 400); bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); fileName = 'untitled.png'; setStatus('New image'); break;
     case 'open': filePick.click(); break;
+    case 'open-site': openWebsiteBrowser(); break;
     case 'save': savePng(false); break;
     case 'saveas': savePng(true); break;
+    case 'set-background': setAsBackground(); break;
     case 'undo': undo(); break;
     case 'redo': redo(); break;
-    case 'clear':
-      pushUndo();
-      bx.fillStyle = bg;
-      bx.fillRect(0, 0, W, H);
-      status.textContent = 'Image cleared to the background colour.';
-      break;
+    case 'image-size': openImageSize(); break;
+    case 'canvas-size': openCanvasSize(); break;
+    case 'crop': cropSelection(); break;
+    case 'gaussian-blur': showModal('gaussianBlurModal'); document.getElementById('gaussianRadius').focus(); break;
+    case 'noise': showModal('noiseModal'); document.getElementById('noiseAmount').focus(); break;
+    case 'clear': pushUndo(); clearSelection(); bx.fillStyle = bg; bx.fillRect(0, 0, width(), height()); setStatus('Image cleared to the background colour'); break;
     case 'invert': {
-      pushUndo();
-      const img = bx.getImageData(0, 0, W, H);
-      const d = img.data;
-      for (let i = 0; i < d.length; i += 4) { d[i] = 255 - d[i]; d[i + 1] = 255 - d[i + 1]; d[i + 2] = 255 - d[i + 2]; }
-      bx.putImageData(img, 0, 0);
-      status.textContent = 'Colours inverted.';
-      break;
+      pushUndo(); clearSelection(); const image = bx.getImageData(0, 0, width(), height()), data = image.data;
+      for (let i = 0; i < data.length; i += 4) { data[i] = 255 - data[i]; data[i + 1] = 255 - data[i + 1]; data[i + 2] = 255 - data[i + 2]; }
+      bx.putImageData(image, 0, 0); setStatus('Colours inverted'); break;
     }
     case 'flip-h': case 'flip-v': {
-      pushUndo();
-      const copy = document.createElement('canvas');
-      copy.width = W; copy.height = H;
-      copy.getContext('2d').drawImage(base, 0, 0);
-      bx.save();
-      if (cmd === 'flip-h') { bx.scale(-1, 1); bx.drawImage(copy, -W, 0); }
-      else { bx.scale(1, -1); bx.drawImage(copy, 0, -H); }
-      bx.restore();
-      status.textContent = cmd === 'flip-h' ? 'Flipped horizontally.' : 'Flipped vertically.';
-      break;
+      const copy = copyCanvas(); pushUndo(); clearSelection(); bx.save(); bx.clearRect(0, 0, width(), height());
+      if (cmd === 'flip-h') { bx.scale(-1, 1); bx.drawImage(copy, -width(), 0); }
+      else { bx.scale(1, -1); bx.drawImage(copy, 0, -height()); }
+      bx.restore(); setStatus(cmd === 'flip-h' ? 'Flipped horizontally' : 'Flipped vertically'); break;
     }
   }
 }
 
-/* ---- menu bar ---- */
 const rms = document.querySelectorAll('.rm');
-const closeRm = () => rms.forEach(m => m.classList.remove('open'));
-rms.forEach(m => {
-  m.querySelector(':scope > button').addEventListener('click', e => {
-    e.stopPropagation();
-    const was = m.classList.contains('open');
-    closeRm();
-    if (!was) m.classList.add('open');
-  });
+const closeMenus = () => rms.forEach(menu => menu.classList.remove('open'));
+rms.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
+  event.stopPropagation(); const wasOpen = menu.classList.contains('open'); closeMenus(); if (!wasOpen) menu.classList.add('open');
+}));
+document.querySelector('.rm-bar').addEventListener('click', event => {
+  const command = event.target.closest('[data-cmd]');
+  if (!command || command.disabled) return; closeMenus(); runCmd(command.dataset.cmd);
 });
-document.querySelector('.rm-bar').addEventListener('click', e => {
-  const cmd = e.target.closest('[data-cmd]');
-  if (!cmd || cmd.disabled) return;
-  closeRm();
-  runCmd(cmd.dataset.cmd);
+document.addEventListener('click', event => { if (!event.target.closest('.rm')) closeMenus(); });
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') modals.forEach(modal => modal.classList.remove('open'));
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); }
 });
-document.addEventListener('click', closeRm);
 })();
 </script>
 </body>
