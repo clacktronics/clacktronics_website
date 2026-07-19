@@ -124,6 +124,18 @@ listing every post newest-first, grouped by year.
 - `` `text` `` — green keyword highlight (used for `$`, part numbers, hex colours)
 - `1. item` — numbered feature list, rendered as the bordered `01/02/03` box
 - `![alt](src)` — image (linked images `[![](thumb)](full)` work too)
+- `@[youtube](https://youtu.be/VIDEO_ID "Optional title")` — responsive inline
+  YouTube player (regular, Shorts, embed, and `youtu.be` URLs are accepted)
+- `@[video](content/media/demo.mp4 "Optional title")` — inline video file;
+  looping is on and controls are hidden by default. Add `{noloop}`, `{controls}`,
+  or `{noloop controls}` after it to change playback, for example:
+  `@[video](clips/demo.webm){noloop controls}`.
+- Raw HTML blocks are rendered when a block starts with an HTML tag. Safe
+  structural HTML is allowed; scripts, forms, styles, event handlers, SVG, and
+  arbitrary iframes are removed. Use the YouTube directive for video.
+- Headings automatically become anchor points: `# My Heading` gets
+  `id="my-heading"`, so `[jump there](#my-heading)` scrolls within the window.
+  Raw HTML can also define an explicit anchor such as `<a id="details"></a>`.
 - ` ``` ` fenced code blocks
 - `> quote` — blockquote
 - `[label](window:file/catalogue.md)` — link that opens another window

@@ -251,6 +251,18 @@ pre.code {
   color: var(--sage); font-style: italic; margin-bottom: 14px;
 }
 
+/* responsive video and sanitized raw-HTML blocks from markdown */
+.youtube-embed, .video-embed {
+  position: relative; width: 100%; aspect-ratio: 16 / 9;
+  margin: 18px 0; overflow: hidden; border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--ink);
+}
+.youtube-embed iframe { display: block; width: 100%; height: 100%; border: 0; }
+.video-embed video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.html-block { margin-bottom: 14px; }
+.html-block img { max-width: 100%; height: auto; }
+.page [id], .plain [id] { scroll-margin-top: 12px; }
+
 /* links produced from markdown */
 .page a:not(.btn), .plain a {
   color: var(--leaf-deep); text-decoration: underline; cursor: pointer;
