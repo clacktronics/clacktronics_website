@@ -158,6 +158,9 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <button data-cmd="insert-window"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Markdown window link&hellip;</button>
       <button data-cmd="insert-action"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Desktop action link&hellip;</button>
       <div class="sep"></div>
+      <button data-cmd="insert-youtube-embed"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Inline YouTube video&hellip;</button>
+      <button data-cmd="insert-video-embed"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Inline video file&hellip;</button>
+      <div class="sep"></div>
       <button data-cmd="insert-video"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Video Lab file link&hellip;</button>
       <button data-cmd="insert-pdf"><span class="pixel-icon" data-icon="file-text" aria-hidden="true"></span>PDF Reader file link&hellip;</button>
       <button data-cmd="insert-falstad"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>Falstad exported link&hellip;</button>
@@ -224,7 +227,12 @@ const mde = new EasyMDE({
   tabSize: 4,
   toolbar: ['bold', 'italic', 'strikethrough', '|', 'heading', 'quote', 'code', '|',
             'unordered-list', 'ordered-list', 'table', 'horizontal-rule', '|',
-            'link', 'image', '|', 'preview', 'side-by-side', 'fullscreen', '|',
+            'link', 'image', {
+              name: 'video-embed',
+              action: insertVideoEmbed,
+              className: 'video-embed',
+              title: 'Insert inline video'
+            }, '|', 'preview', 'side-by-side', 'fullscreen', '|',
             'undo', 'redo'],
   initialValue: `# New document
 
@@ -257,7 +265,7 @@ const toolbarIcons = {
   bold: 'letter-b', italic: 'letter-i', strikethrough: 'letter-s',
   heading: 'heading', quote: 'quote-text-inline', code: 'terminal',
   'unordered-list': 'bulletlist', 'ordered-list': 'list-box', table: 'grid-3x3',
-  'horizontal-rule': 'minus-box', link: 'link', image: 'image', preview: 'eye',
+  'horizontal-rule': 'minus-box', link: 'link', image: 'image', 'video-embed': 'video', preview: 'eye',
   'side-by-side': 'align-horizontal-distribute-center', fullscreen: 'expand',
   undo: 'undo', redo: 'reload'
 };
@@ -405,6 +413,44 @@ function insertActionLink() {
   if (action) insertClackLink('action:' + encodePart(action), action === 'tidy' ? 'Tidy windows' : 'Run action');
 }
 
+function markdownEmbedTarget(value) {
+  return value.trim().replace(/\s/g, '%20').replace(/[()]/g, character =>
+    '%' + character.charCodeAt(0).toString(16).toUpperCase());
+}
+
+function markdownEmbedTitle() {
+  const selected = cm.getSelection().trim();
+  const title = prompt('Optional video title:', selected);
+  return title === null ? null : title.trim().replace(/["']/g, '');
+}
+
+function insertMarkdownEmbed(kind, source, title, options = '') {
+  const label = title ? ` "${title}"` : '';
+  const flags = options ? `{${options}}` : '';
+  cm.replaceSelection(`@[${kind}](${markdownEmbedTarget(source)}${label})${flags}`);
+  cm.focus();
+}
+
+function insertYouTubeEmbed() {
+  const source = prompt('YouTube URL:', 'https://youtu.be/VIDEO_ID');
+  if (!source) return;
+  const title = markdownEmbedTitle();
+  if (title === null) return;
+  insertMarkdownEmbed('youtube', source, title);
+}
+
+function insertVideoEmbed() {
+  const source = prompt('Video URL or path from the site root:', 'content/media/demo.mp4');
+  if (!source) return;
+  const title = markdownEmbedTitle();
+  if (title === null) return;
+  const value = prompt('Optional playback settings: controls, noloop, or both:', '');
+  if (value === null) return;
+  const options = [...new Set(value.toLowerCase().split(/[\s,]+/).filter(option =>
+    ['controls', 'noloop'].includes(option)))].join(' ');
+  insertMarkdownEmbed('video', source, title, options);
+}
+
 function insertVideoLink() {
   const source = prompt('Video URL or path from the site root (for example content/media/demo.mp4):', 'content/media/demo.mp4');
   if (source) insertClackLink(`app:applications/video/index.html?src=${encodePart(source)}`, 'Open in Video Lab');
@@ -448,6 +494,8 @@ function insertAppLink() {
 const insertCommands = {
   'insert-window': insertWindowLink,
   'insert-action': insertActionLink,
+  'insert-youtube-embed': insertYouTubeEmbed,
+  'insert-video-embed': insertVideoEmbed,
   'insert-video': insertVideoLink,
   'insert-pdf': insertPDFLink,
   'insert-falstad': insertFalstadLink,
