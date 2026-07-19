@@ -49,6 +49,15 @@ function setPreviewOnDocument(doc, variables) {
   }
 }
 
+function revealThemedFrame(frame, link) {
+  const reveal = () => frame.classList.remove('theme-loading');
+  if (link.sheet) reveal();
+  else {
+    link.addEventListener('load', reveal, { once: true });
+    link.addEventListener('error', reveal, { once: true });
+  }
+}
+
 function applyThemeToFrame(frame) {
   try {
     const doc = frame.contentDocument;
@@ -60,8 +69,10 @@ function applyThemeToFrame(frame) {
       link.rel = 'stylesheet';
       doc.head.appendChild(link);
     }
-    link.href = themeHref(activeTheme);
+    const href = themeHref(activeTheme);
+    if (link.href !== href) link.href = href;
     setPreviewOnDocument(doc, themePreview);
+    revealThemedFrame(frame, link);
   } catch {}
 }
 
@@ -69,8 +80,17 @@ function applyTheme(name) {
   activeTheme = safeThemeName(name);
   const link = document.getElementById('clackos-theme');
   if (link) {
-    link.addEventListener('load', syncBrowserThemeColor, { once: true });
-    link.href = themeHref(activeTheme);
+    const href = themeHref(activeTheme);
+    const finish = () => {
+      syncBrowserThemeColor();
+      document.documentElement.classList.remove('theme-pending');
+    };
+    if (link.href === href && link.sheet) finish();
+    else {
+      link.addEventListener('load', finish, { once: true });
+      link.addEventListener('error', finish, { once: true });
+      link.href = href;
+    }
   }
   document.documentElement.dataset.theme = activeTheme.replace(/\.css$/i, '');
   document.querySelectorAll('iframe.appframe').forEach(applyThemeToFrame);
@@ -310,6 +330,72 @@ const windowIcons = new Map();
 let spawnOffset = 0;
 let appInstances = 0;
 
+/* A few small system utilities are part of the desktop itself. They still
+ * retain standalone HTML entry points, but inside ClackOS their markup runs in
+ * an isolated shadow root instead of a nested browsing context. All other apps
+ * continue through the iframe launcher below. */
+async function mountIntegratedApp(body, launchPage, title, onClose) {
+  body.classList.add('integrated-app-body');
+  const host = document.createElement('div');
+  host.className = 'integrated-app-host';
+  host.setAttribute('aria-label', title);
+  const root = host.attachShadow({ mode: 'open' });
+  body.appendChild(host);
+
+  onClose(() => host.dispatchEvent(new CustomEvent('clackos-disconnect')));
+
+  try {
+    const sourceUrl = new URL('content/' + launchPage, location.href);
+    const res = await fetchFresh(sourceUrl.href);
+    if (!res.ok) throw new Error(`Failed to load ${sourceUrl.pathname}: ${res.status}`);
+    const source = new DOMParser().parseFromString(await res.text(), 'text/html');
+
+    const styleLoads = [];
+    source.head.querySelectorAll('link[rel="stylesheet"], style').forEach(node => {
+      if (node.id === 'clackos-theme') return; // native apps inherit the live desktop palette
+      const copy = document.createElement(node.tagName.toLowerCase());
+      for (const attr of node.attributes) copy.setAttribute(attr.name, attr.value);
+      if (node.tagName === 'LINK') {
+        copy.href = new URL(node.getAttribute('href'), sourceUrl).href;
+        styleLoads.push(new Promise(resolve => {
+          copy.addEventListener('load', resolve, { once: true });
+          copy.addEventListener('error', resolve, { once: true });
+        }));
+      } else copy.textContent = node.textContent;
+      root.appendChild(copy);
+    });
+
+    const nativeStyle = document.createElement('style');
+    nativeStyle.textContent = `
+      :host { position: relative; display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; }
+      .app { height: 100%; min-height: 0; }
+      .modal, .paint-modal { position: absolute; }
+    `;
+    root.appendChild(nativeStyle);
+    await Promise.all(styleLoads);
+
+    [...source.body.childNodes].filter(node => node.nodeName !== 'SCRIPT').forEach(node => {
+      root.appendChild(document.importNode(node, true));
+    });
+    for (const oldScript of source.body.querySelectorAll('script')) {
+      const script = document.createElement('script');
+      for (const attr of oldScript.attributes) script.setAttribute(attr.name, attr.value);
+      if (oldScript.src) script.src = new URL(oldScript.getAttribute('src'), sourceUrl).href;
+      else script.textContent = oldScript.textContent;
+      /* Scripts do not execute when appended to a shadow root in all target
+       * browsers. Run them in the document while exposing the instance root
+       * for the duration of synchronous setup; their selectors stay scoped. */
+      window.ClackOSMountRoot = root;
+      document.head.appendChild(script);
+      script.remove();
+      delete window.ClackOSMountRoot;
+    }
+  } catch (error) {
+    console.error(error);
+    root.textContent = `Could not load ${title}.`;
+  }
+}
+
 async function openWindow(id) {
   const existing = windows.get(id);
   if (existing) {
@@ -333,12 +419,17 @@ async function openWindow(id) {
       icon: safeIconName(def.icon) || 'app-windows',
       width: def.width,
       height: def.height,
-      fixed: def.fixed
+      fixed: def.fixed,
+      integrated: def.integrated === true
     };
     windowTitles.set(id, meta.title);
-    mount = body => {
+    mount = (body, hooks) => {
+      if (meta.integrated) {
+        mountIntegratedApp(body, launchPage, meta.title, hooks.onClose);
+        return;
+      }
       const f = document.createElement('iframe');
-      f.className = 'appframe';
+      f.className = 'appframe theme-loading';
       f.src = 'content/' + launchPage;
       f.title = meta.title;
       if (page === 'applications/clackbase.html') f.allow = 'midi';
@@ -369,6 +460,7 @@ async function openWindow(id) {
 
   const el = document.createElement('section');
   el.className = 'window';
+  if (meta.integrated) el.classList.add('integrated-app-window');
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-label', title);
 
@@ -879,26 +971,33 @@ async function boot() {
 boot().catch(err => console.error('ClackOS failed to boot:', err));
 
 /* Same-origin system applications can preview palettes or select registered
- * themes/backgrounds. Paint sends a PNG data URL for its custom tile slot. */
-window.addEventListener('message', e => {
-  if (e.origin !== location.origin) return;
-  if (e.data?.type === 'clackos-theme-preview') {
-    applyThemePreview(e.data.variables);
-  } else if (e.data?.type === 'clackos-appearance') {
-    const theme = safeThemeName(e.data.theme);
-    if (e.data.theme && availableThemes.has(theme)) {
+ * themes/backgrounds. Integrated apps send the same payload as a DOM event;
+ * iframe apps retain postMessage. Paint sends a PNG data URL for its custom
+ * tile slot. */
+function handleAppMessage(data) {
+  if (data?.type === 'clackos-theme-preview') {
+    applyThemePreview(data.variables);
+  } else if (data?.type === 'clackos-appearance') {
+    const theme = safeThemeName(data.theme);
+    if (data.theme && availableThemes.has(theme)) {
       try { localStorage.setItem(THEME_KEY, theme); } catch {}
       applyTheme(theme);
     }
-    if (e.data.wallpaper && getWallpaper(e.data.wallpaper)) applyWallpaper(e.data.wallpaper);
-  } else if (e.data?.type === 'clackos-set-background-tile') {
-    const dataUrl = String(e.data.dataUrl || '');
+    if (data.wallpaper && getWallpaper(data.wallpaper)) applyWallpaper(data.wallpaper);
+  } else if (data?.type === 'clackos-set-background-tile') {
+    const dataUrl = String(data.dataUrl || '');
     if (!/^data:image\/png;base64,/i.test(dataUrl)) return;
     try {
-      localStorage.setItem(CUSTOM_BG_KEY, JSON.stringify({ name: String(e.data.name || 'paint-tile.png'), dataUrl }));
+      localStorage.setItem(CUSTOM_BG_KEY, JSON.stringify({ name: String(data.name || 'paint-tile.png'), dataUrl }));
       applyWallpaper(CUSTOM_BG_NAME);
     } catch {}
   }
+}
+
+document.addEventListener('clackos-message', e => handleAppMessage(e.detail));
+window.addEventListener('message', e => {
+  if (e.origin !== location.origin) return;
+  handleAppMessage(e.data);
 });
 
 /* Same-origin app windows and other tabs also synchronise through storage. */

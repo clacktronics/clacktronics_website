@@ -39,8 +39,10 @@ content/
 
 Apps (`*.html`) are complete standalone pages — open
 `content/applications/paint.html` directly and it works on its own — and
-ClackOS shows the very same page inside a desktop window (an iframe). They
-share `assets/css/app.css` for the look.
+ClackOS shows the same page inside a desktop window. Apps use an iframe by
+default; trusted system utilities marked `"integrated": true` in `menu.json`
+mount into an isolated shadow root instead. They share `assets/css/app.css`
+for the look and retain their standalone entry points.
 
 There is **no build step**: the browser fetches `site.json`, each folder's
 `menu.json`, and the markdown files at runtime. Edit a `.md` file, refresh,
@@ -157,7 +159,9 @@ bitmap files under `assets/backgrounds/`. Curated names and the default live in
 `content/site.json`; additional bitmap files in the public repository directory
 are discovered automatically and given a readable name. `"app"` items open the given HTML
 page from the same menu folder in a desktop window; `multi: true` opens a
-fresh instance every time it's picked from the menu. Current apps:
+fresh instance every time it's picked from the menu. `integrated: true` is
+reserved for in-desktop system utilities; all other app entries remain iframe
+loadable. Current apps:
 
 Application links may include a query string. Only pages already registered as
 `"type": "app"` in a menu can be launched, so Markdown cannot turn the desktop
@@ -251,8 +255,8 @@ and desktop actions.
   .github/workflows/blog-index.yml, which regenerates blog.md on push. The toolbar icons are plain text glyphs, so nothing is
   fetched from icon CDNs.
 - `applications/theme.html` (Applications → Theme Editor…) — edits the shared
-  colour variables with a live desktop preview, propagates temporary colours to
-  open ClackOS app windows, opens and saves standalone CSS theme files, and
+  colour variables in an isolated live preview, applies them to the desktop and
+  open ClackOS apps only when requested, opens and saves standalone CSS theme files, and
   commits new or updated files to `assets/themes/` through GitHub's contents
   API. A commit also registers the filename in `content/site.json` and can set
   it as the active site theme.

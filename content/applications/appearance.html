@@ -54,15 +54,23 @@
 
 <script>
 (() => {
+const appRoot = window.ClackOSMountRoot || document.currentScript?.getRootNode() || document;
+const appBaseUrl = appRoot !== document ? new URL('content/applications/', location.href) : new URL('.', location.href);
+const byId = id => appRoot.querySelector(`#${id}`);
+const sendToClackOS = data => {
+  if (appRoot !== document)
+    appRoot.host.dispatchEvent(new CustomEvent('clackos-message', { detail: data, bubbles: true, composed: true }));
+  else if (window.parent !== window) window.parent.postMessage(data, location.origin);
+};
 const THEME_KEY = 'clackos-theme';
 const THEME_COOKIE = 'clackos-theme-default';
 const WALLPAPER_KEY = 'clackos-wallpaper';
 const CUSTOM_BG_KEY = 'clackos-custom-background';
 const CUSTOM_BG_NAME = 'Custom paint tile';
-const backgroundSelect = document.getElementById('backgroundSelect');
-const themeSelect = document.getElementById('themeSelect');
-const preview = document.getElementById('preview');
-const status = document.getElementById('status');
+const backgroundSelect = byId('backgroundSelect');
+const themeSelect = byId('themeSelect');
+const preview = byId('preview');
+const status = byId('status');
 let backgrounds = new Map();
 let siteConfig = null;
 let ghToken = '';
@@ -97,14 +105,14 @@ function updatePreview() {
 
 async function load() {
   try {
-    const response = await fetch(`../site.json?_clack=${Date.now()}`, { cache: 'no-store' });
+    const response = await fetch(new URL(`../site.json?_clack=${Date.now()}`, appBaseUrl), { cache: 'no-store' });
     if (!response.ok) throw new Error(response.status);
     const site = await response.json();
     siteConfig = site;
     const websiteBackgrounds = await window.ClackOSBackgrounds.list(site);
     for (const item of websiteBackgrounds) {
       if (!/^[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|gif|webp|bmp)$/i.test(item.file || '')) continue;
-      const url = `../../assets/backgrounds/${encodeURIComponent(item.file)}`;
+      const url = new URL(`../../assets/backgrounds/${encodeURIComponent(item.file)}`, appBaseUrl).href;
       backgrounds.set(item.name, url); addOption(backgroundSelect, item.name, item.name);
     }
     const custom = loadCustom();
@@ -128,23 +136,23 @@ async function load() {
 }
 
 backgroundSelect.addEventListener('change', updatePreview);
-document.getElementById('applyButton').addEventListener('click', () => {
+byId('applyButton').addEventListener('click', () => {
   const wallpaper = backgroundSelect.value, theme = themeSelect.value;
   if (!backgrounds.has(wallpaper) || !theme) return;
   try {
     localStorage.setItem(WALLPAPER_KEY, wallpaper);
     localStorage.setItem(THEME_KEY, theme);
   } catch {}
-  if (window.parent !== window) window.parent.postMessage({ type: 'clackos-appearance', wallpaper, theme }, location.origin);
+  sendToClackOS({ type: 'clackos-appearance', wallpaper, theme });
   status.textContent = 'Appearance applied and saved for this browser.';
 });
 
-document.getElementById('cookieDefaultButton').addEventListener('click', () => {
+byId('cookieDefaultButton').addEventListener('click', () => {
   const theme = themeSelect.value;
   if (!theme) return;
   writeThemeCookie(theme);
   try { localStorage.setItem(THEME_KEY, theme); } catch {}
-  if (window.parent !== window) window.parent.postMessage({ type: 'clackos-appearance', theme }, location.origin);
+  sendToClackOS({ type: 'clackos-appearance', theme });
   status.textContent = `${theme} is now this browser’s cookie default.`;
 });
 
@@ -158,20 +166,20 @@ const fromB64 = value => new TextDecoder().decode(Uint8Array.from(atob(value.rep
 async function openSiteDefault() {
   if (!siteConfig?.repo) { status.textContent = 'This website has no GitHub repository configured.'; return; }
   const theme = themeSelect.value;
-  document.getElementById('siteDefaultSummary').textContent = `Set ${theme} as the default in ${siteConfig.repo} (${siteConfig.branch || 'main'}).`;
-  document.getElementById('siteDefaultStatus').textContent = '';
-  document.getElementById('siteDefaultToken').value = '';
-  document.getElementById('siteDefaultTokenRow').style.display = ghToken ? 'none' : 'flex';
-  document.getElementById('siteDefaultToken').required = !ghToken;
-  document.getElementById('siteDefaultModal').classList.add('open');
-  (ghToken ? document.querySelector('#siteDefaultForm button.primary') : document.getElementById('siteDefaultToken')).focus();
+  byId('siteDefaultSummary').textContent = `Set ${theme} as the default in ${siteConfig.repo} (${siteConfig.branch || 'main'}).`;
+  byId('siteDefaultStatus').textContent = '';
+  byId('siteDefaultToken').value = '';
+  byId('siteDefaultTokenRow').style.display = ghToken ? 'none' : 'flex';
+  byId('siteDefaultToken').required = !ghToken;
+  byId('siteDefaultModal').classList.add('open');
+  (ghToken ? appRoot.querySelector('#siteDefaultForm button.primary') : byId('siteDefaultToken')).focus();
 }
 
 async function commitSiteDefault(event) {
   event.preventDefault();
   const cfg = siteConfig, theme = themeSelect.value;
-  const token = ghToken || document.getElementById('siteDefaultToken').value.trim();
-  const commitStatus = document.getElementById('siteDefaultStatus');
+  const token = ghToken || byId('siteDefaultToken').value.trim();
+  const commitStatus = byId('siteDefaultStatus');
   if (!cfg?.repo || !theme || !token) { commitStatus.textContent = 'A theme and access token are required.'; return; }
   const api = `https://api.github.com/repos/${cfg.repo}/contents/content/site.json`;
   const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
@@ -201,15 +209,15 @@ async function commitSiteDefault(event) {
     if (!response.ok) throw new Error(`GitHub could not update the default (${response.status}): ${(await response.json()).message || ''}`);
     const result = await response.json();
     ghToken = token; siteConfig = remoteConfig;
-    document.getElementById('siteDefaultModal').classList.remove('open');
+    byId('siteDefaultModal').classList.remove('open');
     status.textContent = `Committed ${result.commit.sha.slice(0, 7)} — ${theme} is now the website default.`;
   } catch (error) { commitStatus.textContent = error.message; }
 }
 
-document.getElementById('siteDefaultButton').addEventListener('click', openSiteDefault);
-document.getElementById('siteDefaultForm').addEventListener('submit', commitSiteDefault);
-document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.close).classList.remove('open')));
-document.querySelectorAll('.paint-modal').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); }));
+byId('siteDefaultButton').addEventListener('click', openSiteDefault);
+byId('siteDefaultForm').addEventListener('submit', commitSiteDefault);
+appRoot.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => byId(button.dataset.close).classList.remove('open')));
+appRoot.querySelectorAll('.paint-modal').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); }));
 
 load();
 })();

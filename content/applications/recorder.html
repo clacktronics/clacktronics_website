@@ -22,6 +22,7 @@
 .rec-btns .btn { padding: 5px 8px; font-size: 11px; }
 .rec-status { font-size: 10.5px; line-height: 1.4; min-height: 15px; margin-top: -2px; }
 .app-panel { font-size: 10.5px; padding: 8px 10px; }
+.rec-props { margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -85,6 +86,7 @@
 
 <script>
 (() => {
+const appRoot = window.ClackOSMountRoot || document.currentScript?.getRootNode() || document;
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /* ---- audio helpers ---- */
@@ -145,11 +147,11 @@ const shareClip = () => {
 };
 
 /* ---- state ---- */
-const posEl = document.querySelector('.rec-pos');
-const lenEl = document.querySelector('.rec-len');
-const status = document.querySelector('.rec-status');
-const canvas = document.querySelector('.rec-scope');
-const seek = document.querySelector('.rec-seek');
+const posEl = appRoot.querySelector('.rec-pos');
+const lenEl = appRoot.querySelector('.rec-len');
+const status = appRoot.querySelector('.rec-status');
+const canvas = appRoot.querySelector('.rec-scope');
+const seek = appRoot.querySelector('.rec-seek');
 const cx = canvas.getContext('2d');
 
 let samples = null, rate = 48000, pos = 0;
@@ -306,7 +308,7 @@ function stopAll() {
   }
 }
 
-document.querySelector('.rec-btns').addEventListener('click', e => {
+appRoot.querySelector('.rec-btns').addEventListener('click', e => {
   const btn = e.target.closest('[data-rec]');
   if (!btn) return;
   switch (btn.dataset.rec) {
@@ -376,7 +378,7 @@ function saveWav(as) {
 }
 
 function showProps() {
-  const el = document.querySelector('.rec-props');
+  const el = appRoot.querySelector('.rec-props');
   el.hidden = !el.hidden;
   if (el.hidden) return;
   el.innerHTML = samples && samples.length
@@ -521,7 +523,7 @@ async function runCmd(cmd) {
 }
 
 /* ---- menu bar ---- */
-const rms = document.querySelectorAll('.rm');
+const rms = appRoot.querySelectorAll('.rm');
 const closeRm = () => rms.forEach(m => m.classList.remove('open'));
 rms.forEach(m => {
   m.querySelector(':scope > button').addEventListener('click', e => {
@@ -536,13 +538,24 @@ rms.forEach(m => {
     }
   });
 });
-document.querySelector('.rm-bar').addEventListener('click', e => {
+appRoot.querySelector('.rm-bar').addEventListener('click', e => {
   const cmd = e.target.closest('[data-cmd]');
   if (!cmd || cmd.disabled) return;
   closeRm();
   runCmd(cmd.dataset.cmd);
 });
-document.addEventListener('click', closeRm);
+appRoot.addEventListener('click', closeRm);
+
+if (appRoot !== document) appRoot.host.addEventListener('clackos-disconnect', () => {
+  clearInterval(recTimer);
+  clearInterval(playTimer);
+  cancelAnimationFrame(raf);
+  if (source) { source.onended = null; try { source.stop(); } catch {} }
+  if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; try { recorder.stop(); } catch {} }
+  if (stream) stream.getTracks().forEach(track => track.stop());
+  if (audioCtx) audioCtx.close().catch(() => {});
+  if (clipBus) clipBus.close();
+}, { once: true });
 
 drawScope(null);
 })();

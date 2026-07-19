@@ -12,7 +12,34 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2309140d'/%3E%3Crect x='3' y='3' width='10' height='10' rx='2' fill='%234fae7d'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/icons.css">
 <link rel="stylesheet" href="assets/css/clackos.css">
-<link rel="stylesheet" id="clackos-theme" href="assets/themes/clackos.css">
+<style>html.theme-pending body { visibility: hidden; }</style>
+<script>
+/* Select a browser-saved theme before first paint. If there is no browser
+   preference, keep the shell hidden until site.json supplies its default. */
+(() => {
+  const key = 'clackos-theme';
+  const cookieKey = 'clackos-theme-default';
+  const safe = value => /^[a-z0-9][a-z0-9._-]*\.css$/i.test(value || '') ? value : '';
+  let selected = '';
+  try { selected = safe(localStorage.getItem(key)); } catch {}
+  if (!selected) {
+    const prefix = encodeURIComponent(cookieKey) + '=';
+    const item = document.cookie.split(';').map(value => value.trim()).find(value => value.startsWith(prefix));
+    try { selected = safe(item ? decodeURIComponent(item.slice(prefix.length)) : ''); } catch {}
+  }
+  document.documentElement.classList.add('theme-pending');
+  const link = document.createElement('link');
+  link.id = 'clackos-theme';
+  link.rel = 'stylesheet';
+  link.href = `assets/themes/${encodeURIComponent(selected || 'clackos.css')}`;
+  if (selected) {
+    const reveal = () => document.documentElement.classList.remove('theme-pending');
+    link.addEventListener('load', reveal, { once: true });
+    link.addEventListener('error', reveal, { once: true });
+  }
+  document.head.appendChild(link);
+})();
+</script>
 </head>
 <body>
 

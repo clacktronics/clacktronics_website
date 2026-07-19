@@ -60,6 +60,7 @@
 .mock-button.alt { background: var(--paper-deep); color: var(--control-text); }
 .status-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
 .status-row .app-status { flex: 1; }
+.status-actions { display: flex; gap: 8px; flex: none; }
 .modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: color-mix(in srgb, var(--ink) 38%, transparent); }
 .modal.open { display: flex; }
 .modal-box { width: min(560px, 92vw); max-height: 82vh; display: flex; flex-direction: column; border: 2px solid var(--ink); border-radius: 9px; background: var(--paper); box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 35%, transparent); }
@@ -92,8 +93,8 @@
       <button data-cmd="commit">Commit to website…</button>
     </div></div>
     <div class="rm"><button>Preview</button><div class="rm-dd">
-      <button data-cmd="apply">Apply preview</button>
-      <button data-cmd="reset">Reset preview</button>
+      <button data-cmd="apply">Apply to desktop</button>
+      <button data-cmd="reset">Restore desktop theme</button>
     </div></div>
   </div>
   <main class="app-main theme-main">
@@ -115,13 +116,16 @@
             <h1>Clacktronics</h1>
             <p class="tagline">Hardware, sound and useful experiments.</p>
             <p class="eyebrow">// Palette in context</p>
-            <p>Change a colour and the desktop, open applications and this sample update immediately.</p>
+            <p>Change a colour to update this sample. Use Apply to send the palette to the desktop.</p>
             <div class="mock-actions"><span class="mock-button">Primary</span><span class="mock-button alt">Secondary</span></div>
           </div>
         </div>
         <div class="mock-taskbar"><span class="mock-task">Theme Editor</span></div>
       </div>
-      <div class="status-row"><p class="app-status" id="status">Loading the active website theme…</p><button class="btn primary" id="commitButton">Commit</button></div>
+      <div class="status-row">
+        <p class="app-status" id="status">Loading the active website theme…</p>
+        <div class="status-actions"><button class="btn primary" id="applyButton">Apply</button><button class="btn" id="commitButton">Commit</button></div>
+      </div>
     </section>
   </main>
 </div>
@@ -150,6 +154,14 @@
 
 <script>
 (() => {
+const appRoot = window.ClackOSMountRoot || document.currentScript?.getRootNode() || document;
+const appBaseUrl = appRoot !== document ? new URL('content/applications/', location.href) : new URL('.', location.href);
+const byId = id => appRoot.querySelector(`#${id}`);
+const sendToClackOS = data => {
+  if (appRoot !== document)
+    appRoot.host.dispatchEvent(new CustomEvent('clackos-message', { detail: data, bubbles: true, composed: true }));
+  else if (window.parent !== window) window.parent.postMessage(data, location.origin);
+};
 const FIELDS = [
   ['--ink', 'Chrome'], ['--heading', 'Headings'], ['--ink-soft', 'Body text'],
   ['--control-text', 'Controls / labels'], ['--strong-text', 'Strong text'],
@@ -172,12 +184,13 @@ const DEFAULTS = {
   '--title-text':'#c8e3d2', '--accent-hover':'#6fcf9a', '--button-text':'#f2ecd6',
   '--disabled-text':'#b3ab8d'
 };
-const palette = document.getElementById('palette');
-const themeTemplate = document.getElementById('themeTemplate');
-const themeName = document.getElementById('themeName');
-const status = document.getElementById('status');
-const siteModal = document.getElementById('siteModal');
-const commitModal = document.getElementById('commitModal');
+const palette = byId('palette');
+const themeTemplate = byId('themeTemplate');
+const themeName = byId('themeName');
+const status = byId('status');
+const siteModal = byId('siteModal');
+const commitModal = byId('commitModal');
+const mockDesktop = appRoot.querySelector('.mock-desktop');
 let values = { ...DEFAULTS };
 let siteConfig = null;
 let ghToken = '';
@@ -220,22 +233,29 @@ function renderPalette() {
     input.addEventListener('input', () => {
       values[variable] = input.value;
       code.textContent = `${variable} · ${input.value}`;
-      applyPreview();
+      updateLivePreview();
     });
     row.append(input, title, code); palette.appendChild(row);
   }
 }
 
-function applyPreview() {
-  for (const [name, value] of Object.entries(values)) document.documentElement.style.setProperty(name, value);
-  if (window.parent !== window) window.parent.postMessage({ type: 'clackos-theme-preview', variables: values }, location.origin);
-  status.textContent = `${safeName(themeName.value)} — previewing unsaved colours`;
+function updateLivePreview() {
+  for (const [name, value] of Object.entries(values)) mockDesktop.style.setProperty(name, value);
+  status.textContent = `${safeName(themeName.value)} — previewing locally`;
 }
 
-function resetPreview() {
-  for (const [name] of FIELDS) document.documentElement.style.removeProperty(name);
-  if (window.parent !== window) window.parent.postMessage({ type: 'clackos-theme-preview', variables: null }, location.origin);
-  status.textContent = 'Preview reset to the active website theme.';
+function applyToDesktop() {
+  if (appRoot === document && window.parent === window) {
+    for (const [name, value] of Object.entries(values)) document.documentElement.style.setProperty(name, value);
+  } else sendToClackOS({ type: 'clackos-theme-preview', variables: values });
+  status.textContent = `${safeName(themeName.value)} — applied to the desktop (not saved)`;
+}
+
+function restoreDesktopTheme() {
+  if (appRoot === document && window.parent === window) {
+    for (const [name] of FIELDS) document.documentElement.style.removeProperty(name);
+  } else sendToClackOS({ type: 'clackos-theme-preview', variables: null });
+  status.textContent = 'Desktop restored to its active theme.';
 }
 
 function makeCss() {
@@ -259,20 +279,20 @@ function loadCss(css, name) {
   if (!seen.has('--shadow')) next['--shadow'] = next['--ink'];
   values = next; themeName.value = safeName(name);
   themeTemplate.value = [...themeTemplate.options].some(option => option.value === themeName.value) ? themeName.value : '';
-  renderPalette(); applyPreview();
+  renderPalette(); updateLivePreview();
   status.textContent = `${themeName.value} — loaded`;
 }
 
 async function getSiteConfig(fresh = false) {
   if (siteConfig && !fresh) return siteConfig;
-  const res = await fetch(`../site.json?_clack=${Date.now()}`, { cache: 'no-store' });
+  const res = await fetch(new URL(`../site.json?_clack=${Date.now()}`, appBaseUrl), { cache: 'no-store' });
   if (!res.ok) throw new Error(`Could not load content/site.json (${res.status}).`);
   siteConfig = await res.json(); return siteConfig;
 }
 
 async function loadWebsiteTheme(name) {
   name = safeName(name);
-  const res = await fetch(`../../assets/themes/${encodeURIComponent(name)}?_clack=${Date.now()}`, { cache: 'no-store' });
+  const res = await fetch(new URL(`../../assets/themes/${encodeURIComponent(name)}?_clack=${Date.now()}`, appBaseUrl), { cache: 'no-store' });
   if (!res.ok) throw new Error(`Could not load ${name} (${res.status}).`);
   loadCss(await res.text(), name);
 }
@@ -282,7 +302,7 @@ async function showWebsiteThemes() {
     const site = await getSiteConfig(true);
     populateTemplateMenu(site, themeName.value);
     const names = websiteThemeNames(site);
-    const list = document.getElementById('themeList'); list.textContent = '';
+    const list = byId('themeList'); list.textContent = '';
     for (const name of names) {
       const button = document.createElement('button');
       button.textContent = name + (name === site.theme ? '  — active' : '');
@@ -297,7 +317,7 @@ async function showWebsiteThemes() {
 }
 
 function newTheme() {
-  values = { ...DEFAULTS }; themeTemplate.value = ''; themeName.value = 'custom-theme.css'; renderPalette(); applyPreview();
+  values = { ...DEFAULTS }; themeTemplate.value = ''; themeName.value = 'custom-theme.css'; renderPalette(); updateLivePreview();
   status.textContent = 'New theme — choose colours, then save or commit it.';
 }
 
@@ -342,22 +362,22 @@ async function openCommit() {
   try {
     const cfg = await getSiteConfig();
     themeName.value = safeName(themeName.value);
-    document.getElementById('commitPath').value = `assets/themes/${themeName.value}`;
-    document.getElementById('commitMessage').value = `${(cfg.themes || []).includes(themeName.value) ? 'Update' : 'Add'} ${themeName.value} website theme`;
-    document.getElementById('commitToken').value = '';
-    document.getElementById('commitToken').closest('label').style.display = ghToken ? 'none' : 'flex';
-    document.getElementById('commitStatus').textContent = `to ${cfg.repo} (${cfg.branch})`;
+    byId('commitPath').value = `assets/themes/${themeName.value}`;
+    byId('commitMessage').value = `${(cfg.themes || []).includes(themeName.value) ? 'Update' : 'Add'} ${themeName.value} website theme`;
+    byId('commitToken').value = '';
+    byId('commitToken').closest('label').style.display = ghToken ? 'none' : 'flex';
+    byId('commitStatus').textContent = `to ${cfg.repo} (${cfg.branch})`;
     commitModal.classList.add('open');
-    (ghToken ? document.getElementById('commitMessage') : document.getElementById('commitToken')).focus();
+    (ghToken ? byId('commitMessage') : byId('commitToken')).focus();
   } catch (error) { status.textContent = error.message; }
 }
 
 async function commitTheme() {
   const cfg = await getSiteConfig();
-  const token = ghToken || document.getElementById('commitToken').value.trim();
+  const token = ghToken || byId('commitToken').value.trim();
   const filename = safeName(themeName.value);
-  const message = document.getElementById('commitMessage').value.trim() || `Update ${filename}`;
-  const commitStatus = document.getElementById('commitStatus');
+  const message = byId('commitMessage').value.trim() || `Update ${filename}`;
+  const commitStatus = byId('commitStatus');
   if (!token) { commitStatus.textContent = 'A token is needed.'; return; }
   commitStatus.textContent = 'Committing theme…';
   try {
@@ -367,7 +387,7 @@ async function commitTheme() {
     if (!configFile.file) throw new Error('content/site.json was not found.');
     const remoteConfig = JSON.parse(fromB64(configFile.file.content));
     remoteConfig.themes = [...new Set([...(remoteConfig.themes || []), filename])];
-    if (document.getElementById('makeActive').checked) remoteConfig.theme = filename;
+    if (byId('makeActive').checked) remoteConfig.theme = filename;
     await putGithubFile('content/site.json', JSON.stringify(remoteConfig, null, 2) + '\n', `Register ${filename} website theme`, cfg, token);
     ghToken = token; themeName.value = filename; siteConfig = remoteConfig;
     populateTemplateMenu(remoteConfig, filename);
@@ -376,40 +396,39 @@ async function commitTheme() {
   } catch (error) { commitStatus.textContent = error.message; }
 }
 
-palette.addEventListener('change', applyPreview);
+palette.addEventListener('change', updateLivePreview);
 themeTemplate.addEventListener('change', async () => {
   if (!themeTemplate.value) return;
   try { await loadWebsiteTheme(themeTemplate.value); }
   catch (error) { status.textContent = error.message; }
 });
 themeName.addEventListener('change', () => { themeName.value = safeName(themeName.value); });
-document.getElementById('resetButton').addEventListener('click', () => { values = { ...DEFAULTS }; renderPalette(); applyPreview(); });
-document.getElementById('commitButton').addEventListener('click', openCommit);
-document.getElementById('commitGo').addEventListener('click', commitTheme);
-document.getElementById('filePicker').addEventListener('change', async event => {
+byId('resetButton').addEventListener('click', () => { values = { ...DEFAULTS }; renderPalette(); updateLivePreview(); });
+byId('applyButton').addEventListener('click', applyToDesktop);
+byId('commitButton').addEventListener('click', openCommit);
+byId('commitGo').addEventListener('click', commitTheme);
+byId('filePicker').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file) return;
   loadCss(await file.text(), file.name); event.target.value = '';
 });
 
-const menus = document.querySelectorAll('.rm');
+const menus = appRoot.querySelectorAll('.rm');
 const closeMenus = () => menus.forEach(menu => menu.classList.remove('open'));
 menus.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
   event.stopPropagation(); const open = menu.classList.contains('open'); closeMenus(); if (!open) menu.classList.add('open');
 }));
-document.querySelector('.rm-bar').addEventListener('click', event => {
+appRoot.querySelector('.rm-bar').addEventListener('click', event => {
   const command = event.target.closest('[data-cmd]')?.dataset.cmd; if (!command) return; closeMenus();
-  ({ new: newTheme, site: showWebsiteThemes, open: () => document.getElementById('filePicker').click(), save: saveTheme,
-     commit: openCommit, apply: applyPreview, reset: resetPreview })[command]?.();
+  ({ new: newTheme, site: showWebsiteThemes, open: () => byId('filePicker').click(), save: saveTheme,
+     commit: openCommit, apply: applyToDesktop, reset: restoreDesktopTheme })[command]?.();
 });
-document.addEventListener('click', closeMenus);
-document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.close).classList.remove('open')));
-document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); }));
-document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') document.querySelectorAll('.modal.open').forEach(modal => modal.classList.remove('open'));
+appRoot.addEventListener('click', closeMenus);
+appRoot.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => byId(button.dataset.close).classList.remove('open')));
+appRoot.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); }));
+appRoot.addEventListener('keydown', event => {
+  if (event.key === 'Escape') appRoot.querySelectorAll('.modal.open').forEach(modal => modal.classList.remove('open'));
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); saveTheme(); }
 });
-window.addEventListener('beforeunload', resetPreview);
-
 renderPalette();
 (async () => {
   try {
@@ -417,7 +436,7 @@ renderPalette();
     populateTemplateMenu(site, site.theme || 'clackos.css');
     await loadWebsiteTheme(site.theme || 'clackos.css');
   }
-  catch (error) { applyPreview(); status.textContent = error.message; }
+  catch (error) { updateLivePreview(); status.textContent = error.message; }
 })();
 })();
 </script>

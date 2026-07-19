@@ -4,7 +4,7 @@
     { "type": "submenu", "label": "Multimedia", "icon": "video", "items": [
       { "type": "app", "page": "clackbase.html", "label": "Clackbase MIDI Sequencer", "title": "Clackbase 1.0", "icon": "music", "width": 1120, "height": 760, "multi": true },
       { "type": "app", "page": "video/index.html", "label": "Video Lab", "title": "Video Lab", "icon": "video", "width": 1180, "height": 780, "multi": true },
-      { "type": "app", "page": "recorder.html", "label": "Sound Recorder", "title": "Sound Recorder", "icon": "mic", "width": 400, "height": 245, "fixed": true, "multi": true },
+      { "type": "app", "page": "recorder.html", "label": "Sound Recorder", "title": "Sound Recorder", "icon": "mic", "width": 400, "height": 245, "fixed": true, "multi": true, "integrated": true },
       { "type": "app", "page": "paint.html", "label": "ClackPaint", "title": "ClackPaint", "icon": "brush", "width": 900, "height": 680, "multi": true },
       { "type": "app", "page": "model-viewer.html", "label": "3D Model Viewer", "title": "3D Model Viewer", "icon": "box", "width": 900, "height": 660, "multi": true }
     ] },
@@ -23,8 +23,8 @@
       { "type": "app", "page": "markdown.html", "label": "Markdown Editor", "title": "Markdown Editor", "icon": "pencil", "multi": true }
     ] },
     { "type": "submenu", "label": "System", "icon": "cpu", "items": [
-      { "type": "app", "page": "appearance.html", "label": "Appearance", "title": "Appearance", "icon": "image", "width": 460, "height": 340, "fixed": true },
-      { "type": "app", "page": "theme.html", "label": "Theme Editor", "title": "Theme Editor", "icon": "colors-swatch", "width": 960, "height": 700, "multi": true }
+      { "type": "app", "page": "appearance.html", "label": "Appearance", "title": "Appearance", "icon": "image", "width": 460, "height": 420, "fixed": true, "integrated": true },
+      { "type": "app", "page": "theme.html", "label": "Theme Editor", "title": "Theme Editor", "icon": "colors-swatch", "width": 960, "height": 700, "fixed": true, "multi": true, "integrated": true }
     ] },
     { "type": "sep" },
     { "type": "window", "md": "about.md", "label": "About ClackOS", "icon": "info-box" },
