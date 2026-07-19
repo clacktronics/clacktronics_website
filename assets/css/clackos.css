@@ -221,7 +221,7 @@ body {
 }
 
 /* ---------- "plain" window style (rendered from markdown) ---------- */
-.plain { padding: 24px 28px; font-size: 12.5px; line-height: 1.9; }
+.plain { padding: 24px 28px 48px; max-width: 980px; margin: 0 auto; font-size: 12.5px; line-height: 1.9; }
 .plain h1 {
   font-family: 'Dosis', sans-serif; text-transform: uppercase; letter-spacing: 0.06em;
   font-size: 22px; color: var(--heading); margin-bottom: 12px;
@@ -233,6 +233,12 @@ body {
 
 .plain .tagline { font-size: 11.5px; color: var(--sage); margin-bottom: 12px; }
 .plain .rule { height: 1px; background: var(--paper-line); margin-bottom: 16px; }
+.plain .eyebrow {
+  clear: both; padding-top: 24px; margin: 0 0 14px;
+  border-bottom: 1px solid var(--paper-line);
+  font-family: 'Dosis', sans-serif; font-size: 16px; font-weight: 600;
+  letter-spacing: 0.1em; line-height: 1.6; text-transform: uppercase; color: var(--heading);
+}
 
 /* images, code and quotes produced from markdown */
 .page img, .plain img {
@@ -262,6 +268,55 @@ pre.code {
 .html-block { margin-bottom: 14px; }
 .html-block img { max-width: 100%; height: auto; }
 .page [id], .plain [id] { scroll-margin-top: 12px; }
+
+/* EuroClack / BYOM editorial layouts */
+.byom-hero { margin: 20px 0 26px; }
+.byom-hero img { display: block; width: 100%; margin: 0; }
+.byom-hero figcaption,
+.byom-module-portrait figcaption {
+  padding: 7px 10px; color: var(--sage); background: var(--paper-deep);
+  border: 1px solid var(--paper-line); border-top: 0; border-radius: 0 0 6px 6px;
+  font-size: 10.5px; line-height: 1.5;
+}
+.byom-hero img,
+.byom-module-portrait img { border-radius: 6px 6px 0 0; }
+.byom-module-portrait {
+  float: right; width: min(29%, 230px); margin: 0 0 20px 28px;
+}
+.byom-module-portrait img { display: block; width: 100%; margin: 0; }
+.byom-system-map {
+  position: relative; width: min(100%, 780px); aspect-ratio: 1025 / 1344;
+  margin: 20px auto 30px; overflow: hidden; border: 1px solid var(--ink);
+  border-radius: 8px; background: var(--ink);
+}
+.byom-system-map > div { position: absolute; }
+.byom-system-map img {
+  display: block; width: 100%; height: 100%; margin: 0; border: 0; border-radius: 0; object-fit: cover;
+}
+.byom-system-map a { display: block; width: 100%; height: 100%; }
+.byom-system-map a:hover { position: relative; z-index: 2; filter: brightness(1.12) saturate(1.08); }
+.byom-system-map a:focus-visible { position: relative; z-index: 3; outline: 3px solid var(--leaf); outline-offset: -3px; }
+.byom-system-map .map-row1 { top: 0; left: 0; width: 100%; height: 2.76%; }
+.byom-system-map .map-row2 { top: 2.76%; left: 0; width: 4%; height: 97.24%; }
+.byom-system-map .map-row3 { top: 2.76%; height: 44.57%; }
+.byom-system-map .map-row4 { top: 47.32%; left: 4%; width: 92.29%; height: 4.91%; }
+.byom-system-map .map-row5 { top: 52.23%; height: 44.64%; }
+.byom-system-map .map-row6 { top: 96.88%; left: 4%; width: 92.29%; height: 3.05%; }
+.byom-system-map .map-col1 { left: 4%; width: 13.66%; }
+.byom-system-map .map-col2 { left: 17.66%; width: 13.95%; }
+.byom-system-map .map-col3 { left: 31.61%; width: 13.85%; }
+.byom-system-map .map-col4 { left: 45.46%; width: 13.85%; }
+.byom-system-map .map-col5 { left: 59.32%; width: 13.85%; }
+.byom-system-map .map-col6 { left: 73.17%; width: 8.88%; }
+.byom-system-map .map-col7 { left: 82.05%; width: 14.24%; }
+.byom-system-map .map-col8 { left: 96.29%; width: 3.61%; }
+.byom-system-map .map-col9 { left: 45.17%; width: 14.15%; }
+.byom-system-map .map-col10 { left: 73.17%; width: 13.37%; }
+.byom-system-map .map-col11 { left: 86.54%; width: 9.76%; }
+@media (max-width: 620px) {
+  .plain { padding: 20px 18px 40px; }
+  .byom-module-portrait { float: none; width: min(72%, 250px); margin: 0 auto 18px; }
+}
 
 /* links produced from markdown */
 .page a:not(.btn), .plain a {

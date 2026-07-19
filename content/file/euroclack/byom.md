@@ -11,15 +11,33 @@ Start your modular synth journey with this easy-to-follow and inspiring book. In
 
 This is the webpage for the book. It contains an extended range of information to accompany the book, as well as a bit of information useful for those who want to find out more about what the book is about.
 
-![BYOM book, closed](https://clacktronics.co.uk/byom/images/BYOM_closed_flat_marble.webp)
+<figure class="byom-hero"><img src="https://clacktronics.co.uk/byom/images/BYOM_closed_flat_marble.webp" alt="The Build Your Own Modular binder and PCBs"><figcaption>The handmade BYOM binder contains the guide and circuit boards for a complete mini modular system.</figcaption></figure>
 
 ## The finished system
 
-Below is what the book creates: a mini modular Eurorack synthesizer that you can build on and use with other compatible Eurorack modules and systems. Every module is detailed further down this page.
+Below is what the book creates: a mini modular Eurorack synthesizer that you can build on and use with other compatible Eurorack modules and systems. Click any active module in the system to jump to its section.
 
-For the interactive module map (click a module to jump to its section), see the [original BYOM page](https://clacktronics.co.uk/byom/).
-
-![BYOM built, close-up](https://clacktronics.co.uk/byom/images/BYOM_built_closeup.jpg)
+<div class="byom-system-map" role="group" aria-label="Completed BYOM system; each module is linked to its details below">
+<div class="map-row1"><img src="https://clacktronics.co.uk/byom/images/Straight_on_01.webp" alt=""></div>
+<div class="map-row2"><img src="https://clacktronics.co.uk/byom/images/Straight_on_02.webp" alt=""></div>
+<div class="map-row3 map-col1"><a href="#low-frequency-oscillator" title="Low frequency oscillator"><img src="https://clacktronics.co.uk/byom/images/Straight_on_03.webp" alt="Low frequency oscillator module"></a></div>
+<div class="map-row3 map-col2"><a href="#envelope" title="Envelope"><img src="https://clacktronics.co.uk/byom/images/Straight_on_04.webp" alt="Envelope module"></a></div>
+<div class="map-row3 map-col3"><a href="#attenuverter" title="Attenuverter"><img src="https://clacktronics.co.uk/byom/images/Straight_on_05.webp" alt="Attenuverter module"></a></div>
+<div class="map-row3 map-col4"><a href="#mixer" title="Mixer"><img src="https://clacktronics.co.uk/byom/images/Straight_on_06.webp" alt="Mixer module"></a></div>
+<div class="map-row3 map-col5"><img src="https://clacktronics.co.uk/byom/images/Straight_on_07.webp" alt=""></div>
+<div class="map-row3 map-col6"><a href="#passive-mult" title="Passive mult"><img src="https://clacktronics.co.uk/byom/images/Straight_on_08.webp" alt="Passive mult module"></a></div>
+<div class="map-row3 map-col7"><a href="#microcontroller" title="Microcontroller"><img src="https://clacktronics.co.uk/byom/images/Straight_on_09.webp" alt="Microcontroller module"></a></div>
+<div class="map-row2 map-col8"><img src="https://clacktronics.co.uk/byom/images/Straight_on_10.webp" alt=""></div>
+<div class="map-row4"><img src="https://clacktronics.co.uk/byom/images/Straight_on_11.webp" alt=""></div>
+<div class="map-row5 map-col1"><a href="#power-supply" title="Power supply"><img src="https://clacktronics.co.uk/byom/images/Straight_on_12.webp" alt="Power supply module"></a></div>
+<div class="map-row5 map-col2"><a href="#voltage-controlled-oscillator" title="Voltage controlled oscillator"><img src="https://clacktronics.co.uk/byom/images/Straight_on_13.webp" alt="Voltage controlled oscillator module one"></a></div>
+<div class="map-row5 map-col3"><a href="#voltage-controlled-oscillator" title="Voltage controlled oscillator"><img src="https://clacktronics.co.uk/byom/images/Straight_on_14.webp" alt="Voltage controlled oscillator module two"></a></div>
+<div class="map-row5 map-col9"><a href="#voltage-controlled-filter" title="Voltage controlled filter"><img src="https://clacktronics.co.uk/byom/images/Straight_on_15.webp" alt="Voltage controlled filter module"></a></div>
+<div class="map-row5 map-col5"><a href="#voltage-controlled-amplifier" title="Voltage controlled amplifier"><img src="https://clacktronics.co.uk/byom/images/Straight_on_16.webp" alt="Voltage controlled amplifier module"></a></div>
+<div class="map-row5 map-col10"><img src="https://clacktronics.co.uk/byom/images/Straight_on_17.webp" alt=""></div>
+<div class="map-row5 map-col11"><a href="#passive-mult" title="Passive mult"><img src="https://clacktronics.co.uk/byom/images/Straight_on_18.webp" alt="Passive mult module"></a></div>
+<div class="map-row6"><img src="https://clacktronics.co.uk/byom/images/Straight_on_19.webp" alt=""></div>
+</div>
 
 ## Where to buy
 
@@ -51,13 +69,27 @@ Would you like to post or print about BYOM? Please do! Below is a link to some h
 
 - [Press images (hi-res)](https://drive.google.com/open?id=1gQZukslvqWD8rGGo88uvm-EmU22YyUik&usp=drive_fs)
 
+<figure class="byom-hero"><img src="https://clacktronics.co.uk/byom/images/BYOM_built_closeup.jpg" alt="The completed BYOM system patched and powered on"><figcaption>The finished system is Eurorack compatible, so it can grow alongside other modules.</figcaption></figure>
+
 ## The modules
 
 Below is a list of all the modules in the initial system. There are links to various helpers and details that did not make it into the book, plus items that are too dynamic for static pages, such as programming information and iBOMs — a handy interactive BOM generated by the [InteractiveHtmlBom](https://github.com/openscopeproject/InteractiveHtmlBom) plugin for KiCad.
 
+[Power supply](#power-supply)
+[Microcontroller](#microcontroller)
+[VCO](#voltage-controlled-oscillator)
+[Mixer](#mixer)
+[Envelope](#envelope)
+[LFO](#low-frequency-oscillator)
+[Attenuverter](#attenuverter)
+[Passive mult](#passive-mult)
+[VCA](#voltage-controlled-amplifier)
+[VCF](#voltage-controlled-filter)
+[Enclosure](#enclosure)
+
 ## Power supply
 
-![PSU module](https://clacktronics.co.uk/byom/images/PSU_module.webp)
+<figure class="byom-module-portrait"><img src="https://clacktronics.co.uk/byom/images/PSU_module.webp" alt="BYOM power supply module"><figcaption>Power supply</figcaption></figure>
 
 Creates a simple ±12V power supply from a single 12V DC input. Suitable for building the system without having to spend lots of money on a DC-DC converter part. Contains short-circuit protection in the form of polyfuses, and LED indicators to show the rail status.
 
@@ -68,7 +100,7 @@ Creates a simple ±12V power supply from a single 12V DC input. Suitable for bui
 
 ## Microcontroller
 
-![Microcontroller module](https://clacktronics.co.uk/byom/images/Microcontroller_module.webp)
+<figure class="byom-module-portrait"><img src="https://clacktronics.co.uk/byom/images/Microcontroller_module.webp" alt="BYOM microcontroller module"><figcaption>Microcontroller</figcaption></figure>
 
 A Raspberry Pi Pico-based module that lets you program all sorts of different functions and experiments. Supports simple-to-use languages such as [CircuitPython](https://circuitpython.org/) and [Arduino](https://www.arduino.cc/), but can also be programmed with more sophisticated [lower-level languages](https://www.raspberrypi.com/documentation/pico-sdk/). It has CV in, CV out, gate in and gate out connections, as well as two control knobs and two LEDs, all of which are user programmable.
 
@@ -80,7 +112,7 @@ A Raspberry Pi Pico-based module that lets you program all sorts of different fu
 
 ## Voltage controlled oscillator
 
-![VCO module](https://clacktronics.co.uk/byom/images/VCO_module.webp)
+<figure class="byom-module-portrait"><img src="https://clacktronics.co.uk/byom/images/VCO_module.webp" alt="BYOM voltage controlled oscillator module"><figcaption>VCO (two are included)</figcaption></figure>
 
 The main sound-generating part of the system; there are two of these, identical to each other. They generate a sawtooth wave and have a V/oct input, as well as sync in and out.
 
@@ -92,7 +124,7 @@ The main sound-generating part of the system; there are two of these, identical 
 
 ## Mixer
 
-![Mixer module](https://clacktronics.co.uk/byom/images/Mixer_module.webp)
+<figure class="byom-module-portrait"><img src="https://clacktronics.co.uk/byom/images/Mixer_module.webp" alt="BYOM mixer module"><figcaption>Mixer</figcaption></figure>
 
 This simple module mixes either audio or CV through 3 channels. The third channel, called "external", has 100× gain to bring up signals from line level or quieter.
 
@@ -103,7 +135,7 @@ This simple module mixes either audio or CV through 3 channels. The third channe
 
 ## Envelope
 
-![Envelope module](https://clacktronics.co.uk/byom/images/Envelope_module.webp)
+<figure class="byom-module-portrait"><img src="https://clacktronics.co.uk/byom/images/Envelope_module.webp" alt="BYOM envelope module"><figcaption>Envelope</figcaption></figure>
 
 Attack and release envelope generator, simple as that. Puts out 10V envelopes.
 
@@ -114,7 +146,7 @@ Attack and release envelope generator, simple as that. Puts out 10V envelopes.
 
 ## Low frequency oscillator
 
-![LFO module](https://clacktronics.co.uk/byom/images/LFO_module.webp)
+<figure class="byom-module-portrait"><img src="https://clacktronics.co.uk/byom/images/LFO_module.webp" alt="BYOM low frequency oscillator module"><figcaption>Low frequency oscillator</figcaption></figure>
 
 For basic vibrato and tremolo effects. Has a variable slope knob which is quite unique. Can output a pulse or a ramp simultaneously.
 
@@ -125,7 +157,7 @@ For basic vibrato and tremolo effects. Has a variable slope knob which is quite 
 
 ## Attenuverter
 
-![Attenuverter module](https://clacktronics.co.uk/byom/images/Attenuverter_module.webp)
+<figure class="byom-module-portrait"><img src="https://clacktronics.co.uk/byom/images/Attenuverter_module.webp" alt="BYOM attenuverter module"><figcaption>Attenuverter</figcaption></figure>
 
 For bringing the higher CV voltages down, inverting them, or both. There is also a knob-to-CV source if nothing is plugged into the input.
 
@@ -136,7 +168,7 @@ For bringing the higher CV voltages down, inverting them, or both. There is also
 
 ## Passive mult
 
-![Passive mult module](https://clacktronics.co.uk/byom/images/Mult_module.webp)
+<figure class="byom-module-portrait"><img src="https://clacktronics.co.uk/byom/images/Mult_module.webp" alt="BYOM passive mult module"><figcaption>Passive mult</figcaption></figure>
 
 Simple unpowered module that fills a gap in the case, providing a simple way to split signals to multiple destinations.
 
@@ -146,7 +178,7 @@ Simple unpowered module that fills a gap in the case, providing a simple way to 
 
 ## Voltage controlled amplifier
 
-![VCA module](https://clacktronics.co.uk/byom/images/VCA_module.webp)
+<figure class="byom-module-portrait"><img src="https://clacktronics.co.uk/byom/images/VCA_module.webp" alt="BYOM voltage controlled amplifier module"><figcaption>Voltage controlled amplifier</figcaption></figure>
 
 A dual VCA based upon an OTA.
 
@@ -157,7 +189,7 @@ A dual VCA based upon an OTA.
 
 ## Voltage controlled filter
 
-![VCF module](https://clacktronics.co.uk/byom/images/VCF_module.webp)
+<figure class="byom-module-portrait"><img src="https://clacktronics.co.uk/byom/images/VCF_module.webp" alt="BYOM voltage controlled filter module"><figcaption>Voltage controlled filter</figcaption></figure>
 
 The main sound of a subtractive synth. 12dB/oct filter with low-pass and band-pass outputs. Two audio inputs for easy mixing without an extra module. Lots of "character" (aka distortion) and a very interesting resonance sound.
 
@@ -172,4 +204,4 @@ A low-cost way to mount all your modules and test them out, constructed from alu
 
 - [Detailed build guide](https://clacktronics.co.uk/byom/build_guides/enclosure/index.html) — more detail than could fit in the book
 
-![Enclosure](https://clacktronics.co.uk/byom/images/enclosure.webp)
+<figure class="byom-hero"><img src="https://clacktronics.co.uk/byom/images/enclosure.webp" alt="BYOM aluminium PCB enclosure"><figcaption>The low-cost enclosure is assembled from aluminium PCBs.</figcaption></figure>

@@ -69,7 +69,9 @@ PCBs                     Black 1.6mm                 2 pcs                   mai
 
 ## Assembly Video
 
-[Watch the assembly video on YouTube](https://www.youtube.com/watch?v=9yssRi2fjQk)
+@[youtube](https://www.youtube.com/watch?v=9yssRi2fjQk "Proto-PSU kit assembly")
+
+[Open the assembly video on YouTube](https://www.youtube.com/watch?v=9yssRi2fjQk)
 
 ## Assembly
 
