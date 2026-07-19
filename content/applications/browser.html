@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<meta name="theme-color" content="#09140d">
+<title>Web Browser — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+html, body, .browser-app { height: 100%; min-height: 0; }
+.browser-app { overflow: hidden; }
+.browser-toolbar {
+  display: flex; align-items: center; gap: 7px; padding: 8px 10px;
+  border-bottom: 1px solid var(--paper-line); background: var(--paper-deep);
+}
+.browser-nav { display: flex; gap: 5px; flex: none; }
+.browser-button {
+  all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; height: 32px; padding: 0 9px; border: 1px solid var(--ink); border-radius: 6px;
+  color: var(--control-text); background: var(--paper); cursor: pointer;
+}
+.browser-button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
+.browser-button:disabled { color: var(--disabled-text); border-color: var(--paper-line); cursor: default; }
+.browser-button:focus-visible, .browser-address:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.browser-button .pixel-icon { width: 16px; height: 16px; }
+.browser-form { display: flex; gap: 7px; min-width: 0; flex: 1; }
+.browser-address { flex: 1; min-width: 80px; height: 32px; }
+.browser-status {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  min-height: 28px; padding: 5px 11px; border-bottom: 1px solid var(--paper-line);
+  color: var(--sage); background: var(--paper); font-size: 10.5px;
+}
+.browser-status strong { color: var(--control-text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.browser-view { position: relative; flex: 1; min-height: 0; background: #fff; }
+.browser-frame { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+.browser-empty {
+  position: absolute; inset: 0; display: grid; place-content: center; gap: 12px;
+  padding: 30px; text-align: center; color: var(--sage); background: var(--paper);
+}
+.browser-empty h1 { color: var(--heading); font-size: 22px; letter-spacing: .06em; text-transform: uppercase; }
+.browser-empty p { max-width: 560px; line-height: 1.7; }
+.browser-empty[hidden] { display: none; }
+@media (max-width: 620px) {
+  .browser-toolbar { align-items: stretch; flex-wrap: wrap; }
+  .browser-nav { width: 100%; }
+  .browser-form { width: 100%; }
+  .browser-external span:last-child { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app browser-app">
+  <div class="browser-toolbar">
+    <nav class="browser-nav" aria-label="Browser navigation">
+      <button class="browser-button" id="backButton" type="button" aria-label="Back" disabled><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span></button>
+      <button class="browser-button" id="forwardButton" type="button" aria-label="Forward" disabled><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span></button>
+      <button class="browser-button" id="reloadButton" type="button" aria-label="Reload"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span></button>
+      <button class="browser-button" id="homeButton" type="button" aria-label="Home"><span class="pixel-icon" data-icon="home" aria-hidden="true"></span></button>
+    </nav>
+    <form class="browser-form" id="addressForm">
+      <label class="sr-only" for="addressInput">Web address</label>
+      <input class="browser-address" id="addressInput" type="text" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://example.com">
+      <button class="browser-button" type="submit">Go</button>
+    </form>
+    <button class="browser-button browser-external" id="externalButton" type="button" title="Open in a normal browser tab"><span class="pixel-icon" data-icon="link" aria-hidden="true"></span><span>External</span></button>
+  </div>
+  <div class="browser-status" role="status" aria-live="polite">
+    <strong id="statusText">Ready</strong>
+    <span>Some websites prevent embedded viewing.</span>
+  </div>
+  <main class="browser-view">
+    <div class="browser-empty" id="emptyState">
+      <h1>Internet</h1>
+      <p>Enter a web address above. Links from ClackOS open here automatically; PDF links are sent to PDF Reader.</p>
+    </div>
+    <iframe class="browser-frame" id="browserFrame" title="Web page" referrerpolicy="strict-origin-when-cross-origin" hidden></iframe>
+  </main>
+</div>
+<script>
+(() => {
+const HOME = 'https://clacktronics.co.uk/';
+const frame = document.getElementById('browserFrame');
+const emptyState = document.getElementById('emptyState');
+const addressForm = document.getElementById('addressForm');
+const addressInput = document.getElementById('addressInput');
+const backButton = document.getElementById('backButton');
+const forwardButton = document.getElementById('forwardButton');
+const reloadButton = document.getElementById('reloadButton');
+const homeButton = document.getElementById('homeButton');
+const externalButton = document.getElementById('externalButton');
+const statusText = document.getElementById('statusText');
+const entries = [];
+let entryIndex = -1;
+let currentUrl = '';
+
+function normaliseUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const url = new URL(candidate);
+    return /^https?:$/.test(url.protocol) ? url.href : '';
+  } catch { return ''; }
+}
+
+function isPdf(url) {
+  try { return /\.pdf$/i.test(new URL(url).pathname); } catch { return false; }
+}
+
+function sendToClackOS(data) {
+  if (window.parent !== window) window.parent.postMessage(data, location.origin);
+}
+
+function updateButtons() {
+  backButton.disabled = entryIndex <= 0;
+  forwardButton.disabled = entryIndex < 0 || entryIndex >= entries.length - 1;
+  reloadButton.disabled = !currentUrl;
+  externalButton.disabled = !currentUrl;
+}
+
+function showUrl(url, addHistory = true) {
+  const safeUrl = normaliseUrl(url);
+  if (!safeUrl) {
+    statusText.textContent = 'Enter a valid HTTP or HTTPS address.';
+    addressInput.focus();
+    return;
+  }
+  if (isPdf(safeUrl)) {
+    sendToClackOS({ type: 'clackos-open-app', id: `app:applications/pdf-reader/index.html?file=${encodeURIComponent(safeUrl)}` });
+    statusText.textContent = 'Opened PDF Reader.';
+    return;
+  }
+  if (addHistory) {
+    entries.splice(entryIndex + 1);
+    entries.push(safeUrl);
+    entryIndex = entries.length - 1;
+  }
+  currentUrl = safeUrl;
+  addressInput.value = safeUrl;
+  emptyState.hidden = true;
+  frame.hidden = false;
+  statusText.textContent = `Loading ${new URL(safeUrl).hostname}…`;
+  frame.src = safeUrl;
+  updateButtons();
+}
+
+addressForm.addEventListener('submit', event => { event.preventDefault(); showUrl(addressInput.value); });
+backButton.addEventListener('click', () => { if (entryIndex > 0) showUrl(entries[--entryIndex], false); });
+forwardButton.addEventListener('click', () => { if (entryIndex < entries.length - 1) showUrl(entries[++entryIndex], false); });
+reloadButton.addEventListener('click', () => { if (currentUrl) frame.src = currentUrl; });
+homeButton.addEventListener('click', () => showUrl(HOME));
+externalButton.addEventListener('click', () => { if (currentUrl) window.open(currentUrl, '_blank', 'noopener,noreferrer'); });
+frame.addEventListener('load', () => {
+  if (!currentUrl) return;
+  statusText.textContent = new URL(currentUrl).hostname;
+});
+
+const startupUrl = new URLSearchParams(location.search).get('url');
+updateButtons();
+if (startupUrl) window.addEventListener('load', () => setTimeout(() => showUrl(startupUrl), 0), { once: true });
+})();
+</script>
+</body>
+</html>

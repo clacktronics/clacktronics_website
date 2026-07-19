@@ -144,7 +144,8 @@ listing every post newest-first, grouped by year.
 - `[label](app:applications/pdf-reader/index.html?file=content%2Ffiles%2Fmanual.pdf)`
   — opens a site-relative or CORS-enabled remote PDF in the PDF Reader
 - `[label](action:tidy)` — link that runs a desktop action
-- `[label](https://…)` — normal external link
+- `[label](https://…)` — opens an HTTP(S) page in the Web Browser, or a
+  `.pdf` URL in PDF Reader
 - A paragraph containing **only** links becomes the button row (first button solid, rest ghost)
 - `---` — horizontal rule; a `---` before the final paragraph turns that
   paragraph into the window footer (one `<span>` per line)
@@ -218,6 +219,12 @@ and desktop actions.
   paths relative to the site root as well as remote HTTP(S) URLs whose servers
   allow cross-origin browser requests. MuPDF.js 1.28.0 is vendored under
   `vendor/mupdf/` (AGPL-3.0; see its LICENSE and PROVENANCE files).
+- `applications/browser.html` (Applications → Internet → Web Browser) — a
+  lightweight iframe-based browser with an address bar, local navigation
+  history, reload, home, and external-tab fallback. HTTP(S) links across
+  Markdown pages, safe HTML blocks, and same-origin applications are routed
+  here automatically; `.pdf` URLs are routed to PDF Reader instead. Sites may
+  still decline embedded display through their own frame security policy.
 - `applications/circuit.html` (Applications → Circuit Simulator…) — Paul
   Falstad's CircuitJS1, vendored unmodified under `vendor/circuitjs1/`
   (GPLv2 — see the COPYING.txt and PROVENANCE.md there). The wrapper

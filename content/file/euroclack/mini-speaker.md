@@ -47,7 +47,9 @@ Thonkiconn jack          PJ398SM                       J1
 
 ## Assembly Video
 
-[Watch the assembly video on YouTube](https://www.youtube.com/watch?v=PFA5VV02D28)
+@[youtube](https://www.youtube.com/watch?v=PFA5VV02D28 "Mini-Speaker kit assembly")
+
+[Open the assembly video on YouTube](https://www.youtube.com/watch?v=PFA5VV02D28)
 
 ## Assembly
 
