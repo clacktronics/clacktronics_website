@@ -317,7 +317,7 @@ function pausePlayback() {
   cancelAnimationFrame(state.reverseFrame);
   state.reverseFrame = 0;
   state.reverseLast = 0;
-  $('#play-symbol').textContent = '▶';
+  $('#play-symbol').innerHTML = '<span class="pixel-icon" data-icon="play" aria-hidden="true"></span>';
 }
 
 async function startPlayback() {
@@ -326,7 +326,7 @@ async function startPlayback() {
   if (!state.reverse && state.currentTime >= bounds.end - 0.01) state.currentTime = bounds.start;
   if (state.reverse && state.currentTime <= bounds.start + 0.01) state.currentTime = bounds.end;
   state.playing = true;
-  $('#play-symbol').textContent = '❚❚';
+  $('#play-symbol').innerHTML = '<span class="pause-bars" aria-hidden="true"></span>';
   if (state.reverse) {
     player.pause();
     audioPreview.pause();

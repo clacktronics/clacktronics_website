@@ -101,9 +101,11 @@ body {
   border-bottom: 1px solid var(--calc-border); background: var(--calc-panel);
 }
 .graph-toolbar .btn {
+  display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 10px; color: var(--calc-text); background: var(--calc-bg);
   border-color: var(--calc-border); font-size: 11.5px;
 }
+.graph-toolbar .pixel-icon { width: 16px; height: 16px; }
 .graph-toolbar .btn.primary { color: var(--calc-bg); background: var(--calc-text); }
 .theme-label { display: flex; align-items: center; gap: 7px; margin-left: auto; color: var(--calc-muted); }
 .theme-label select {
@@ -131,6 +133,7 @@ body {
 .visibility-btn { background: var(--row-color); border-color: var(--row-color); }
 .visibility-btn[aria-pressed="false"] { background: transparent; opacity: 0.42; }
 .visibility-btn:focus-visible, .remove-btn:focus-visible { outline: 2px solid var(--calc-accent); outline-offset: 2px; }
+.visibility-btn .pixel-icon, .remove-btn .pixel-icon { width: 14px; height: 14px; }
 .y-label { color: var(--calc-muted); font-weight: 500; }
 math-field {
   width: 100%; min-width: 0; padding: 7px 8px;
@@ -182,11 +185,11 @@ math-field::part(virtual-keyboard-toggle) { display: none; }
 <body>
 <div class="graph-app">
   <header class="graph-toolbar">
-    <button class="btn primary" id="add-expression" type="button">Add expression</button>
-    <button class="btn ghost" id="home-view" type="button">Home</button>
-    <button class="btn ghost" id="show-keyboard" type="button" aria-pressed="false">Keyboard</button>
+    <button class="btn primary" id="add-expression" type="button"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Add expression</button>
+    <button class="btn ghost" id="home-view" type="button"><span class="pixel-icon" data-icon="home" aria-hidden="true"></span>Home</button>
+    <button class="btn ghost" id="show-keyboard" type="button" aria-pressed="false"><span class="pixel-icon" data-icon="keyboard-music" aria-hidden="true"></span>Keyboard</button>
     <label class="theme-label" for="theme-select">
-      Theme
+      <span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span>Theme
       <select id="theme-select">
         <option value="clack">Clack paper</option>
         <option value="scope">Oscilloscope</option>
@@ -447,6 +450,7 @@ function addExpression(latex = '') {
   visibility.type = 'button';
   visibility.className = 'visibility-btn';
   visibility.setAttribute('aria-pressed', 'true');
+  visibility.innerHTML = '<span class="pixel-icon" data-icon="eye" aria-hidden="true"></span>';
 
   const yLabel = document.createElement('span');
   yLabel.className = 'y-label';
@@ -461,7 +465,7 @@ function addExpression(latex = '') {
   const remove = document.createElement('button');
   remove.type = 'button';
   remove.className = 'remove-btn';
-  remove.textContent = '×';
+  remove.innerHTML = '<span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>';
   remove.setAttribute('aria-label', `Remove expression ${expressions.length + 1}`);
 
   row.append(visibility, yLabel, field, remove);

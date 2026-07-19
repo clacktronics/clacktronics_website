@@ -1,0 +1,97 @@
+/* Pixelarticons — free MIT-licensed set by Gerrit Halfmann.
+ * The SVGs are vendored under assets/icons/pixelarticons/ with their LICENSE. */
+.pixel-icon {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+  color: inherit;
+  background-color: currentColor;
+  -webkit-mask: var(--pixel-icon) center / contain no-repeat;
+  mask: var(--pixel-icon) center / contain no-repeat;
+  vertical-align: -0.2em;
+}
+
+.pixel-icon[data-icon="home"] { --pixel-icon: url('../icons/pixelarticons/home.svg'); }
+.pixel-icon[data-icon="file-text"] { --pixel-icon: url('../icons/pixelarticons/file-text.svg'); }
+.pixel-icon[data-icon="article"] { --pixel-icon: url('../icons/pixelarticons/article.svg'); }
+.pixel-icon[data-icon="rss"] { --pixel-icon: url('../icons/pixelarticons/rss.svg'); }
+.pixel-icon[data-icon="folder"] { --pixel-icon: url('../icons/pixelarticons/folder.svg'); }
+.pixel-icon[data-icon="file"] { --pixel-icon: url('../icons/pixelarticons/file.svg'); }
+.pixel-icon[data-icon="open"] { --pixel-icon: url('../icons/pixelarticons/open.svg'); }
+.pixel-icon[data-icon="save"] { --pixel-icon: url('../icons/pixelarticons/save.svg'); }
+.pixel-icon[data-icon="pencil"] { --pixel-icon: url('../icons/pixelarticons/pencil.svg'); }
+.pixel-icon[data-icon="close"] { --pixel-icon: url('../icons/pixelarticons/close.svg'); }
+.pixel-icon[data-icon="undo"] { --pixel-icon: url('../icons/pixelarticons/undo.svg'); }
+.pixel-icon[data-icon="scissors"] { --pixel-icon: url('../icons/pixelarticons/scissors.svg'); }
+.pixel-icon[data-icon="copy"] { --pixel-icon: url('../icons/pixelarticons/copy.svg'); }
+.pixel-icon[data-icon="clipboard"] { --pixel-icon: url('../icons/pixelarticons/clipboard.svg'); }
+.pixel-icon[data-icon="app-windows"] { --pixel-icon: url('../icons/pixelarticons/app-windows.svg'); }
+.pixel-icon[data-icon="align-horizontal-distribute-center"] { --pixel-icon: url('../icons/pixelarticons/align-horizontal-distribute-center.svg'); }
+.pixel-icon[data-icon="align-vertical-distribute-center"] { --pixel-icon: url('../icons/pixelarticons/align-vertical-distribute-center.svg'); }
+.pixel-icon[data-icon="align-horizontal-space-between"] { --pixel-icon: url('../icons/pixelarticons/align-horizontal-space-between.svg'); }
+.pixel-icon[data-icon="align-vertical-space-between"] { --pixel-icon: url('../icons/pixelarticons/align-vertical-space-between.svg'); }
+.pixel-icon[data-icon="eye"] { --pixel-icon: url('../icons/pixelarticons/eye.svg'); }
+.pixel-icon[data-icon="eye-off"] { --pixel-icon: url('../icons/pixelarticons/eye-off.svg'); }
+.pixel-icon[data-icon="image"] { --pixel-icon: url('../icons/pixelarticons/image.svg'); }
+.pixel-icon[data-icon="music"] { --pixel-icon: url('../icons/pixelarticons/music.svg'); }
+.pixel-icon[data-icon="video"] { --pixel-icon: url('../icons/pixelarticons/video.svg'); }
+.pixel-icon[data-icon="mic"] { --pixel-icon: url('../icons/pixelarticons/mic.svg'); }
+.pixel-icon[data-icon="brush"] { --pixel-icon: url('../icons/pixelarticons/brush.svg'); }
+.pixel-icon[data-icon="spray-can"] { --pixel-icon: url('../icons/pixelarticons/spray-can.svg'); }
+.pixel-icon[data-icon="pipette"] { --pixel-icon: url('../icons/pixelarticons/pipette.svg'); }
+.pixel-icon[data-icon="box"] { --pixel-icon: url('../icons/pixelarticons/box.svg'); }
+.pixel-icon[data-icon="analytics"] { --pixel-icon: url('../icons/pixelarticons/analytics.svg'); }
+.pixel-icon[data-icon="calculator"] { --pixel-icon: url('../icons/pixelarticons/calculator.svg'); }
+.pixel-icon[data-icon="terminal"] { --pixel-icon: url('../icons/pixelarticons/terminal.svg'); }
+.pixel-icon[data-icon="circuit-board"] { --pixel-icon: url('../icons/pixelarticons/circuit-board.svg'); }
+.pixel-icon[data-icon="zap"] { --pixel-icon: url('../icons/pixelarticons/zap.svg'); }
+.pixel-icon[data-icon="cpu"] { --pixel-icon: url('../icons/pixelarticons/cpu.svg'); }
+.pixel-icon[data-icon="colors-swatch"] { --pixel-icon: url('../icons/pixelarticons/colors-swatch.svg'); }
+.pixel-icon[data-icon="info-box"] { --pixel-icon: url('../icons/pixelarticons/info-box.svg'); }
+.pixel-icon[data-icon="reload"] { --pixel-icon: url('../icons/pixelarticons/reload.svg'); }
+.pixel-icon[data-icon="memory-stick"] { --pixel-icon: url('../icons/pixelarticons/memory-stick.svg'); }
+.pixel-icon[data-icon="play"] { --pixel-icon: url('../icons/pixelarticons/play.svg'); }
+.pixel-icon[data-icon="square"] { --pixel-icon: url('../icons/pixelarticons/square.svg'); }
+.pixel-icon[data-icon="circle"] { --pixel-icon: url('../icons/pixelarticons/circle.svg'); }
+.pixel-icon[data-icon="arrow-bar-left"] { --pixel-icon: url('../icons/pixelarticons/arrow-bar-left.svg'); }
+.pixel-icon[data-icon="arrow-bar-right"] { --pixel-icon: url('../icons/pixelarticons/arrow-bar-right.svg'); }
+.pixel-icon[data-icon="arrow-left"] { --pixel-icon: url('../icons/pixelarticons/arrow-left.svg'); }
+.pixel-icon[data-icon="arrow-right"] { --pixel-icon: url('../icons/pixelarticons/arrow-right.svg'); }
+.pixel-icon[data-icon="repeat"] { --pixel-icon: url('../icons/pixelarticons/repeat.svg'); }
+.pixel-icon[data-icon="download"] { --pixel-icon: url('../icons/pixelarticons/download.svg'); }
+.pixel-icon[data-icon="upload"] { --pixel-icon: url('../icons/pixelarticons/upload.svg'); }
+.pixel-icon[data-icon="trash"] { --pixel-icon: url('../icons/pixelarticons/trash.svg'); }
+.pixel-icon[data-icon="volume"] { --pixel-icon: url('../icons/pixelarticons/volume.svg'); }
+.pixel-icon[data-icon="invert"] { --pixel-icon: url('../icons/pixelarticons/invert.svg'); }
+.pixel-icon[data-icon="expand"] { --pixel-icon: url('../icons/pixelarticons/expand.svg'); }
+.pixel-icon[data-icon="target"] { --pixel-icon: url('../icons/pixelarticons/target.svg'); }
+.pixel-icon[data-icon="database"] { --pixel-icon: url('../icons/pixelarticons/database.svg'); }
+.pixel-icon[data-icon="brackets"] { --pixel-icon: url('../icons/pixelarticons/brackets.svg'); }
+.pixel-icon[data-icon="lasso"] { --pixel-icon: url('../icons/pixelarticons/lasso.svg'); }
+.pixel-icon[data-icon="plus-box"] { --pixel-icon: url('../icons/pixelarticons/plus-box.svg'); }
+.pixel-icon[data-icon="minus-box"] { --pixel-icon: url('../icons/pixelarticons/minus-box.svg'); }
+.pixel-icon[data-icon="power"] { --pixel-icon: url('../icons/pixelarticons/power.svg'); }
+.pixel-icon[data-icon="letter-b"] { --pixel-icon: url('../icons/pixelarticons/letter-b.svg'); }
+.pixel-icon[data-icon="letter-i"] { --pixel-icon: url('../icons/pixelarticons/letter-i.svg'); }
+.pixel-icon[data-icon="letter-s"] { --pixel-icon: url('../icons/pixelarticons/letter-s.svg'); }
+.pixel-icon[data-icon="heading"] { --pixel-icon: url('../icons/pixelarticons/heading.svg'); }
+.pixel-icon[data-icon="quote-text-inline"] { --pixel-icon: url('../icons/pixelarticons/quote-text-inline.svg'); }
+.pixel-icon[data-icon="bulletlist"] { --pixel-icon: url('../icons/pixelarticons/bulletlist.svg'); }
+.pixel-icon[data-icon="list-box"] { --pixel-icon: url('../icons/pixelarticons/list-box.svg'); }
+.pixel-icon[data-icon="grid-3x3"] { --pixel-icon: url('../icons/pixelarticons/grid-3x3.svg'); }
+.pixel-icon[data-icon="link"] { --pixel-icon: url('../icons/pixelarticons/link.svg'); }
+.pixel-icon[data-icon="keyboard-music"] { --pixel-icon: url('../icons/pixelarticons/keyboard-music.svg'); }
+
+.icon-label,
+.menu-item-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  min-width: 0;
+}
+
+.icon-only {
+  width: 1.5em;
+  height: 1.5em;
+}

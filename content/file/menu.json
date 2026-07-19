@@ -1,16 +1,16 @@
 {
   "label": "File",
   "items": [
-    { "type": "submenu", "label": "Open", "items": [
-      { "type": "window", "md": "home.md", "label": "Open Clacktronics", "shortcut": "⌘O" },
-      { "type": "window", "md": "readme.md", "label": "Open README.txt" },
-      { "type": "window", "md": "catalogue.md", "label": "Open Catalogue" },
-      { "type": "window", "md": "euroclack.md", "label": "Open EuroClack" },
-      { "type": "window", "md": "blog.md", "label": "Open Blog" }
+    { "type": "submenu", "label": "Open", "icon": "folder", "items": [
+      { "type": "window", "md": "home.md", "label": "Open Clacktronics", "icon": "home", "shortcut": "⌘O" },
+      { "type": "window", "md": "readme.md", "label": "Open README.txt", "icon": "file-text" },
+      { "type": "window", "md": "catalogue.md", "label": "Open Catalogue", "icon": "article" },
+      { "type": "window", "md": "euroclack.md", "label": "Open EuroClack", "icon": "circuit-board" },
+      { "type": "window", "md": "blog.md", "label": "Open Blog", "icon": "rss" }
     ] },
     { "type": "sep" },
-    { "type": "action", "action": "edit-front", "label": "Edit…", "shortcut": "⌘E" },
+    { "type": "action", "action": "edit-front", "label": "Edit…", "icon": "pencil", "shortcut": "⌘E" },
     { "type": "sep" },
-    { "type": "action", "action": "close-front", "label": "Close front window", "shortcut": "⌘W" }
+    { "type": "action", "action": "close-front", "label": "Close front window", "icon": "close", "shortcut": "⌘W" }
   ]
 }

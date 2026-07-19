@@ -69,9 +69,10 @@ body {
 .menu.open > .dropdown { display: block; }
 .dropdown button {
   all: unset; box-sizing: border-box; cursor: pointer;
-  display: flex; justify-content: space-between; gap: 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
   width: 100%; padding: 7px 16px; font: inherit; font-size: 12.5px; color: var(--control-text);
 }
+.dropdown .pixel-icon { width: 16px; height: 16px; }
 .dropdown button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
 .dropdown button:disabled { color: var(--disabled-text); cursor: default; }
 .dropdown .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
@@ -139,9 +140,12 @@ body {
 .titlebar .dot.max:hover { opacity: 1; background: color-mix(in srgb, var(--menu-text) 35%, transparent); }
 .titlebar .title {
   margin: 0 auto; transform: translateX(-24px);
+  display: inline-flex; align-items: center; gap: 7px; min-width: 0;
   font-size: 12.5px; font-weight: 500; letter-spacing: 0.03em; color: var(--title-text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.titlebar .title-label { overflow: hidden; text-overflow: ellipsis; }
+.titlebar .title-icon { width: 16px; height: 16px; color: var(--leaf); }
 .winbody {
   flex: 1; overflow: auto; user-select: text;
   border-radius: 0 0 8px 8px;
@@ -201,8 +205,6 @@ body {
   all: unset; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 500;
   padding: 9px 20px; border-radius: 6px; border: 1px solid var(--ink);
 }
-.btn::before { content: '[ '; }
-.btn::after { content: ' ]'; }
 .btn:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
 .btn.primary { background: var(--ink); color: var(--button-text); }
 .btn.primary:hover { background: var(--leaf-deep); border-color: var(--leaf-deep); }
@@ -250,6 +252,10 @@ pre.code {
   color: var(--leaf-deep); text-decoration: underline; cursor: pointer;
 }
 .page a:not(.btn):hover, .plain a:hover { color: var(--leaf); }
+.page a.app-link, .plain a.app-link, .btn.app-link {
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.app-link .pixel-icon { width: 16px; height: 16px; flex: none; }
 
 /* ---------- App windows (iframe pages from content/) ---------- */
 .appframe { display: block; width: 100%; height: 100%; border: 0; background: var(--paper); }
@@ -279,6 +285,8 @@ body.win-drag iframe { pointer-events: none; }
   font-family: 'IBM Plex Mono', monospace; font-size: 10px;
   letter-spacing: 0.04em;
 }
+#resource-stats > span { display: inline-flex; align-items: center; gap: 4px; }
+#resource-stats .pixel-icon { width: 12px; height: 12px; color: var(--leaf); }
 #resource-stats strong { color: var(--menu-text); font-weight: 500; }
 #cpu-stat[data-state="fair"] { color: #f0c66a; }
 #cpu-stat[data-state="serious"] { color: #ef9862; }
@@ -292,14 +300,11 @@ button.task {
 }
 button.task:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
 button.task:hover { background: color-mix(in srgb, var(--menu-text) 12%, transparent); }
-button.task .sq {
-  width: 9px; height: 9px; border-radius: 2px; flex: none;
-  background: var(--leaf);
-}
+button.task .task-icon { width: 17px; height: 17px; color: var(--leaf); }
 button.task .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 button.task.active { background: var(--leaf-deep); border-color: var(--leaf); }
 button.task.minimised { opacity: 0.55; }
-button.task.minimised .sq { background: transparent; border: 1.5px solid var(--menu-text); }
+button.task.minimised .task-icon { color: var(--menu-text); }
 body.no-taskbar #taskbar { display: none; }
 body.no-taskbar #desktop { bottom: 0; }
 

@@ -14,36 +14,36 @@
 <div class="app">
   <div class="rm-bar">
     <div class="rm"><button>File</button><div class="rm-dd">
-      <button data-cmd="new">New</button>
-      <button data-cmd="open">Open&hellip;</button>
-      <button data-cmd="save">Save</button>
-      <button data-cmd="saveas">Save As&hellip;</button>
+      <button data-cmd="new"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>New</button>
+      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open&hellip;</button>
+      <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save</button>
+      <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As&hellip;</button>
     </div></div>
     <div class="rm"><button>Edit</button><div class="rm-dd">
-      <button data-cmd="undo">Undo</button>
-      <button data-cmd="redo">Redo</button>
+      <button data-cmd="undo"><span class="pixel-icon" data-icon="undo" aria-hidden="true"></span>Undo</button>
+      <button data-cmd="redo"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Redo</button>
     </div></div>
     <div class="rm"><button>Image</button><div class="rm-dd">
-      <button data-cmd="clear">Clear Image</button>
-      <button data-cmd="invert">Invert Colours</button>
+      <button data-cmd="clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear Image</button>
+      <button data-cmd="invert"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Invert Colours</button>
       <div class="sep"></div>
-      <button data-cmd="flip-h">Flip Horizontal</button>
-      <button data-cmd="flip-v">Flip Vertical</button>
+      <button data-cmd="flip-h"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Flip Horizontal</button>
+      <button data-cmd="flip-v"><span class="pixel-icon" data-icon="align-vertical-space-between" aria-hidden="true"></span>Flip Vertical</button>
     </div></div>
   </div>
 
   <div class="paint-main">
     <div class="paint-tools" role="toolbar" aria-label="Tools">
-      <button class="paint-tool active" data-tool="pencil" title="Pencil">&#9998;</button>
-      <button class="paint-tool" data-tool="brush" title="Brush">&#128396;</button>
-      <button class="paint-tool" data-tool="eraser" title="Eraser">&#9633;</button>
-      <button class="paint-tool" data-tool="spray" title="Airbrush">&#10039;</button>
-      <button class="paint-tool" data-tool="fill" title="Fill with colour">&#9639;</button>
-      <button class="paint-tool" data-tool="picker" title="Pick colour">&#8981;</button>
-      <button class="paint-tool" data-tool="line" title="Line">&#9585;</button>
-      <button class="paint-tool" data-tool="rect" title="Rectangle">&#9645;</button>
-      <button class="paint-tool" data-tool="ellipse" title="Ellipse">&#9711;</button>
-      <button class="paint-tool" data-tool="rect-fill" title="Filled rectangle">&#9646;</button>
+      <button class="paint-tool active" data-tool="pencil" title="Pencil" aria-label="Pencil"><span class="pixel-icon icon-only" data-icon="pencil" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="brush" title="Brush" aria-label="Brush"><span class="pixel-icon icon-only" data-icon="brush" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="eraser" title="Eraser" aria-label="Eraser"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="spray" title="Airbrush" aria-label="Airbrush"><span class="pixel-icon icon-only" data-icon="spray-can" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="fill" title="Fill with colour" aria-label="Fill with colour"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="picker" title="Pick colour" aria-label="Pick colour"><span class="pixel-icon icon-only" data-icon="pipette" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="line" title="Line" aria-label="Line"><span class="pixel-icon icon-only" data-icon="arrow-right" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="rect" title="Rectangle" aria-label="Rectangle"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="ellipse" title="Ellipse" aria-label="Ellipse"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="rect-fill" title="Filled rectangle" aria-label="Filled rectangle"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
       <div class="paint-size">
         <span class="app-lbl">Size</span>
         <input type="range" min="1" max="16" value="3" aria-label="Tool size">

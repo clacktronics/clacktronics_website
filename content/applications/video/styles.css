@@ -1,3 +1,5 @@
+@import url("../../../assets/css/icons.css");
+
 :root {
   color-scheme: only light;
   --ink: #09140d;
@@ -57,6 +59,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   color: var(--ink); white-space: nowrap;
 }
 .rm-dd button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
+.rm-dd .pixel-icon { width: 16px; height: 16px; }
 .rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
 kbd { font: inherit; color: var(--sage); }
 .rm-dd button:hover kbd { color: var(--leaf); }
@@ -89,6 +92,7 @@ kbd { font: inherit; color: var(--sage); }
   display: grid; place-items: center; width: 54px; height: 54px; margin-bottom: 4px;
   border: 1px solid var(--leaf); border-radius: 8px; color: var(--leaf) !important; font-size: 22px;
 }
+.empty-icon .pixel-icon { width: 32px; height: 32px; }
 .viewer-badge, .drop-hint {
   position: absolute; z-index: 3; top: 10px; padding: 5px 8px; border: 1px solid var(--leaf);
   color: var(--leaf); background: rgba(9,20,13,.82); font-size: 10px; letter-spacing: .08em;
@@ -117,6 +121,13 @@ kbd { font: inherit; color: var(--sage); }
   background: var(--paper); color: var(--ink); font-weight: 600;
 }
 .icon-btn:hover, .toggle-btn:hover { background: #e9e1c3; }
+.icon-btn .pixel-icon { width: 18px; height: 18px; }
+.pause-bars { position: relative; display: inline-block; width: 15px; height: 17px; }
+.pause-bars::before, .pause-bars::after {
+  content: ''; position: absolute; top: 1px; bottom: 1px; width: 5px; background: currentColor;
+}
+.pause-bars::before { left: 1px; }
+.pause-bars::after { right: 1px; }
 .icon-btn.main-play { min-width: 42px; background: var(--ink); color: var(--menu-text); }
 .icon-btn.main-play:hover { background: var(--leaf-deep); border-color: var(--leaf-deep); }
 .toggle-btn[aria-pressed="true"] { background: var(--leaf-deep); color: var(--menu-text); border-color: var(--leaf-deep); }
@@ -158,7 +169,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--leaf-deep); }
 .range-field > span { display: flex; justify-content: space-between; }
 .range-field input { width: 100%; accent-color: var(--leaf-deep); }
 .note { margin: 10px 0 0; font-size: 10.5px; line-height: 1.6; }
-.text-btn { all: unset; cursor: pointer; color: var(--sage); font-size: 10px; font-weight: 600; }
+.text-btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; color: var(--sage); font-size: 10px; font-weight: 600; }
 .text-btn:hover { color: var(--ink); text-decoration: underline; }
 .local-badge { padding: 3px 6px; background: var(--leaf-deep); color: var(--menu-text); border-radius: 3px; font-size: 9px; letter-spacing: .08em; }
 .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; color: var(--ink); font-size: 11px; }
@@ -182,8 +193,6 @@ input[type="text"], select {
   border: 1px solid var(--ink); border-radius: 5px; background: var(--paper); color: var(--ink);
   font: inherit; font-size: 11.5px; font-weight: 500;
 }
-.btn::before { content: '[ '; }
-.btn::after { content: ' ]'; }
 .btn.primary { background: var(--ink); color: var(--menu-text); }
 .btn.primary:hover { background: var(--leaf-deep); border-color: var(--leaf-deep); }
 .btn.ghost:hover { background: #e9e1c3; }

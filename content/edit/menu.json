@@ -1,10 +1,10 @@
 {
   "label": "Edit",
   "items": [
-    { "type": "action", "label": "Undo", "shortcut": "⌘Z", "disabled": true },
+    { "type": "action", "label": "Undo", "icon": "undo", "shortcut": "⌘Z", "disabled": true },
     { "type": "sep" },
-    { "type": "action", "label": "Cut", "shortcut": "⌘X", "disabled": true },
-    { "type": "action", "action": "copy", "label": "Copy selection", "shortcut": "⌘C" },
-    { "type": "action", "label": "Paste", "shortcut": "⌘V", "disabled": true }
+    { "type": "action", "label": "Cut", "icon": "scissors", "shortcut": "⌘X", "disabled": true },
+    { "type": "action", "action": "copy", "label": "Copy selection", "icon": "copy", "shortcut": "⌘C" },
+    { "type": "action", "label": "Paste", "icon": "clipboard", "shortcut": "⌘V", "disabled": true }
   ]
 }

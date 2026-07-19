@@ -28,34 +28,34 @@
 <div class="app">
   <div class="rm-bar">
     <div class="rm"><button>File</button><div class="rm-dd">
-      <button data-cmd="new">New</button>
-      <button data-cmd="open">Open&hellip;</button>
-      <button data-cmd="save" data-need="sound">Save</button>
-      <button data-cmd="saveas" data-need="sound">Save As&hellip;</button>
-      <button data-cmd="revert">Revert</button>
+      <button data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New</button>
+      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open&hellip;</button>
+      <button data-cmd="save" data-need="sound"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save</button>
+      <button data-cmd="saveas" data-need="sound"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As&hellip;</button>
+      <button data-cmd="revert"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Revert</button>
       <div class="sep"></div>
-      <button data-cmd="props">Properties</button>
+      <button data-cmd="props"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>Properties</button>
     </div></div>
     <div class="rm"><button>Edit</button><div class="rm-dd">
-      <button data-cmd="copy" data-need="sound">Copy</button>
-      <button data-cmd="paste-insert" data-need="clip">Paste Insert</button>
-      <button data-cmd="paste-mix" data-need="clip">Paste Mix</button>
+      <button data-cmd="copy" data-need="sound"><span class="pixel-icon" data-icon="copy" aria-hidden="true"></span>Copy</button>
+      <button data-cmd="paste-insert" data-need="clip"><span class="pixel-icon" data-icon="clipboard" aria-hidden="true"></span>Paste Insert</button>
+      <button data-cmd="paste-mix" data-need="clip"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Paste Mix</button>
       <div class="sep"></div>
-      <button data-cmd="insert-file">Insert File&hellip;</button>
-      <button data-cmd="mix-file">Mix with File&hellip;</button>
+      <button data-cmd="insert-file"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Insert File&hellip;</button>
+      <button data-cmd="mix-file"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Mix with File&hellip;</button>
       <div class="sep"></div>
-      <button data-cmd="del-before" data-need="sound">Delete Before Current Position</button>
-      <button data-cmd="del-after" data-need="sound">Delete After Current Position</button>
+      <button data-cmd="del-before" data-need="sound"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Delete Before Current Position</button>
+      <button data-cmd="del-after" data-need="sound"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Delete After Current Position</button>
     </div></div>
     <div class="rm"><button>Effects</button><div class="rm-dd">
-      <button data-cmd="vol-up" data-need="sound">Increase Volume (by 25%)</button>
-      <button data-cmd="vol-down" data-need="sound">Decrease Volume</button>
+      <button data-cmd="vol-up" data-need="sound"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>Increase Volume (by 25%)</button>
+      <button data-cmd="vol-down" data-need="sound"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>Decrease Volume</button>
       <div class="sep"></div>
-      <button data-cmd="speed-up" data-need="sound">Increase Speed (by 100%)</button>
-      <button data-cmd="speed-down" data-need="sound">Decrease Speed</button>
+      <button data-cmd="speed-up" data-need="sound"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Increase Speed (by 100%)</button>
+      <button data-cmd="speed-down" data-need="sound"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Decrease Speed</button>
       <div class="sep"></div>
-      <button data-cmd="echo" data-need="sound">Add Echo</button>
-      <button data-cmd="reverse" data-need="sound">Reverse</button>
+      <button data-cmd="echo" data-need="sound"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Add Echo</button>
+      <button data-cmd="reverse" data-need="sound"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Reverse</button>
     </div></div>
   </div>
   <div class="app-main">
@@ -72,11 +72,11 @@
     </div>
     <input class="rec-seek" type="range" min="0" max="1000" value="0" aria-label="Seek position">
     <div class="rec-btns">
-      <button class="btn ghost" data-rec="rew" aria-label="Seek to start">&#9198;</button>
-      <button class="btn ghost" data-rec="fwd" aria-label="Seek to end">&#9197;</button>
-      <button class="btn ghost" data-rec="play" aria-label="Play">&#9654;</button>
-      <button class="btn ghost" data-rec="stop" aria-label="Stop">&#9632;</button>
-      <button class="btn ghost rec-record" data-rec="rec" aria-label="Record">&#9679;</button>
+      <button class="btn ghost" data-rec="rew" aria-label="Seek to start" title="Seek to start"><span class="pixel-icon icon-only" data-icon="arrow-bar-left" aria-hidden="true"></span></button>
+      <button class="btn ghost" data-rec="fwd" aria-label="Seek to end" title="Seek to end"><span class="pixel-icon icon-only" data-icon="arrow-bar-right" aria-hidden="true"></span></button>
+      <button class="btn ghost" data-rec="play" aria-label="Play" title="Play"><span class="pixel-icon icon-only" data-icon="play" aria-hidden="true"></span></button>
+      <button class="btn ghost" data-rec="stop" aria-label="Stop" title="Stop"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
+      <button class="btn ghost rec-record" data-rec="rec" aria-label="Record" title="Record"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
     </div>
     <p class="app-status rec-status"></p>
     <div class="app-panel rec-props" hidden></div>

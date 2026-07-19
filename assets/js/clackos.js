@@ -127,6 +127,18 @@ function esc(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function safeIconName(name) {
+  name = String(name || '');
+  return /^[a-z0-9][a-z0-9-]*$/.test(name) ? name : '';
+}
+
+function iconHTML(name, extraClass = '') {
+  name = safeIconName(name);
+  return name
+    ? `<span class="pixel-icon ${extraClass}" data-icon="${name}" aria-hidden="true"></span>`
+    : '';
+}
+
 /* Inline markdown: `code` -> keyword span, **bold**, *italic*, ![alt](src),
  * [text](href). Links may use window:<md-path> to open a content window,
  * app:<registered-page>?<options> to launch an application, or action:<name>
@@ -145,8 +157,11 @@ function inline(s) {
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, text, href) => {
     if (href.startsWith('window:'))
       return `<a href="#" data-action="open:${href.slice(7)}">${text.trim()}</a>`;
-    if (href.startsWith('app:'))
-      return `<a href="#" data-action="open:${href}">${text.trim()}</a>`;
+    if (href.startsWith('app:')) {
+      const page = href.slice(4).split(/[?#]/)[0];
+      const icon = appDefs.get(page)?.icon || 'app-windows';
+      return `<a href="#" class="app-link" data-action="open:${href}">${iconHTML(icon)}<span>${text.trim()}</span></a>`;
+    }
     if (href.startsWith('action:'))
       return `<a href="#" data-action="${href.slice(7)}">${text.trim()}</a>`;
     return `<a href="${href}" target="_blank" rel="noopener">${text.trim()}</a>`;
@@ -341,7 +356,7 @@ function buildWallpaperMenu(container) {
   container.innerHTML = '';
   for (const name of [...Object.keys(wallpapers), ...Object.keys(loadPatterns())]) {
     const b = document.createElement('button');
-    b.innerHTML = `<span>${name}</span><span class="check">${name === currentWallpaper ? '&#10003;' : ''}</span>`;
+    b.innerHTML = `<span class="menu-item-label">${iconHTML('image')}${esc(name)}</span><span class="check">${name === currentWallpaper ? '&#10003;' : ''}</span>`;
     b.addEventListener('click', () => { applyWallpaper(name); closeMenus(); });
     container.appendChild(b);
   }
@@ -352,6 +367,7 @@ const windows = new Map();
 /* apps are standalone pages under content/<menu>/ shown in an iframe;
  * defs are registered from menu.json entries at boot */
 const appDefs = new Map();
+const windowIcons = new Map();
 let spawnOffset = 0;
 let appInstances = 0;
 
@@ -373,7 +389,13 @@ async function openWindow(id) {
     if (!def) return;
     /* multi-instance apps get a fresh window id on every open */
     if (def.multi) id = `${id}#instance-${++appInstances}`;
-    meta = { title: def.title || def.label || page, width: def.width, height: def.height, fixed: def.fixed };
+    meta = {
+      title: def.title || def.label || page,
+      icon: safeIconName(def.icon) || 'app-windows',
+      width: def.width,
+      height: def.height,
+      fixed: def.fixed
+    };
     windowTitles.set(id, meta.title);
     mount = body => {
       const f = document.createElement('iframe');
@@ -398,7 +420,10 @@ async function openWindow(id) {
       console.error(err);
       return;
     }
-    meta = content.meta;
+    meta = {
+      ...content.meta,
+      icon: safeIconName(content.meta.icon) || windowIcons.get(id) || 'file-text'
+    };
     contentHtml = content.html;
   }
   const title = meta.title || id;
@@ -433,7 +458,7 @@ async function openWindow(id) {
       <button class="dot close" aria-label="Close ${title}"></button>
       <button class="dot min" aria-label="Minimise ${title}"></button>
       ${isFixed ? '' : `<button class="dot max" aria-label="Maximise ${title}"></button>`}
-      <span class="title">${title}</span>
+      <span class="title">${iconHTML(meta.icon, 'title-icon')}<span class="title-label">${esc(title)}</span></span>
     </div>
     <div class="winbody"></div>
     ${isFixed ? '' : `
@@ -444,7 +469,7 @@ async function openWindow(id) {
     <div class="frame" aria-hidden="true"></div>`;
 
   desktop.appendChild(el);
-  const rec = { id, el, minimised: false, maxed: null, cleanups: [] };
+  const rec = { id, el, icon: meta.icon, minimised: false, maxed: null, cleanups: [] };
   windows.set(id, rec);
 
   const winbody = el.querySelector('.winbody');
@@ -673,7 +698,7 @@ function updateTaskbar() {
     b.className = 'task';
     if (rec.minimised) b.classList.add('minimised');
     if (front && front.id === id && !rec.minimised) b.classList.add('active');
-    b.innerHTML = `<span class="sq" aria-hidden="true"></span><span class="lbl">${title}</span>`;
+    b.innerHTML = `${iconHTML(rec.icon || 'file-text', 'task-icon')}<span class="lbl">${esc(title)}</span>`;
     b.setAttribute('aria-label', title + (rec.minimised ? ' (minimised)' : ''));
     b.addEventListener('click', () => {
       if (rec.minimised) {
@@ -727,7 +752,7 @@ function buildMenuItems(container, items, folder) {
       const sb = document.createElement('button');
       sb.className = 'submenu-btn';
       sb.setAttribute('aria-haspopup', 'true');
-      sb.innerHTML = `${esc(item.label || '')} <span class="arrow" aria-hidden="true">▸</span>`;
+      sb.innerHTML = `<span class="menu-item-label">${iconHTML(item.icon)}${esc(item.label || '')}</span><span class="arrow" aria-hidden="true">▸</span>`;
       wrap.appendChild(sb);
       const sub = document.createElement('div');
       sub.className = 'dropdown sub';
@@ -744,9 +769,13 @@ function buildMenuItems(container, items, folder) {
     } else {
       const b = document.createElement('button');
       const shortcut = item.shortcut ? `<span>${esc(item.shortcut)}</span>` : '';
-      b.innerHTML = `${esc(item.label || '')} ${shortcut}`;
+      b.innerHTML = `<span class="menu-item-label">${iconHTML(item.icon)}${esc(item.label || '')}</span>${shortcut}`;
       if (item.disabled) b.disabled = true;
-      if (item.type === 'window') b.dataset.action = `open:${folder}/${item.md}`;
+      if (item.type === 'window') {
+        const id = `${folder}/${item.md}`;
+        windowIcons.set(id, safeIconName(item.icon) || 'file-text');
+        b.dataset.action = `open:${id}`;
+      }
       else if (item.type === 'app') {
         const page = `${folder}/${item.page}`;
         appDefs.set(page, item);

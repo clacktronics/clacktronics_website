@@ -19,18 +19,12 @@ body { overflow: hidden; }
   padding: 10px 14px; border-bottom: 1px solid var(--paper-line);
   background: var(--paper);
 }
-.viewer-file {
-  min-width: 225px; max-width: 310px; color: var(--sage); font: inherit;
-  font-size: 11.5px;
-}
-.viewer-file::file-selector-button {
-  cursor: pointer; margin-right: 10px; padding: 7px 11px;
-  border: 1px solid var(--ink); border-radius: 6px;
-  color: var(--menu-text); background: var(--ink); font: inherit; font-weight: 500;
-}
-.viewer-file::file-selector-button:hover { background: var(--leaf-deep); }
+.viewer-open { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; }
+.viewer-open .pixel-icon { width: 17px; height: 17px; }
+.viewer-file-name { min-width: 120px; max-width: 240px; overflow: hidden; color: var(--sage); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
 .viewer-tools { display: flex; align-items: center; gap: 7px; margin-left: auto; }
 .viewer-tools .btn { padding: 7px 10px; font-size: 11.5px; }
+.viewer-tools .pixel-icon { width: 16px; height: 16px; }
 .viewer-tools .btn.active { color: var(--menu-text); background: var(--leaf-deep); }
 .viewer-stage {
   position: relative; flex: 1; min-height: 260px; overflow: hidden;
@@ -65,7 +59,7 @@ body { overflow: hidden; }
 .viewer-credit a { color: var(--leaf-deep); }
 @media (max-width: 620px) {
   .viewer-head { align-items: stretch; }
-  .viewer-file { min-width: 100%; max-width: 100%; }
+  .viewer-file-name { max-width: none; }
   .viewer-tools { margin-left: 0; }
   .viewer-credit { width: 100%; margin-left: 0; }
 }
@@ -82,17 +76,18 @@ body { overflow: hidden; }
 <body>
 <div class="viewer-app">
   <header class="viewer-head">
-    <input class="viewer-file" id="model-file" type="file" accept=".stl,.step,.stp" aria-label="Open an STL or STEP model">
+    <label class="btn primary viewer-open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open model<input id="model-file" type="file" accept=".stl,.step,.stp" aria-label="Open an STL or STEP model" hidden></label>
+    <span class="viewer-file-name" id="viewer-file-name">Demo assembly</span>
     <div class="viewer-tools" aria-label="Viewer controls">
-      <button class="btn ghost" id="fit-view" type="button">Fit</button>
-      <button class="btn ghost" id="reset-view" type="button">Reset</button>
-      <button class="btn ghost" id="wireframe" type="button" aria-pressed="false">Wire</button>
+      <button class="btn ghost" id="fit-view" type="button"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span> Fit</button>
+      <button class="btn ghost" id="reset-view" type="button"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span> Reset</button>
+      <button class="btn ghost" id="wireframe" type="button" aria-pressed="false"><span class="pixel-icon" data-icon="eye" aria-hidden="true"></span> Wire</button>
     </div>
   </header>
 
   <main class="viewer-stage" id="viewer-stage" aria-label="Interactive 3D model viewport">
     <div class="viewer-prompt" id="viewer-prompt">
-      <strong>Drop an STL or STEP file here</strong>
+      <strong><span class="pixel-icon" data-icon="box" aria-hidden="true"></span> Drop an STL or STEP file here</strong>
       Drag to orbit · right-drag to pan · wheel to zoom
     </div>
     <div class="viewer-busy" id="viewer-busy" role="status">Loading model…</div>
@@ -117,6 +112,7 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 
 const stage = document.getElementById('viewer-stage');
 const fileInput = document.getElementById('model-file');
+const fileNameEl = document.getElementById('viewer-file-name');
 const prompt = document.getElementById('viewer-prompt');
 const busy = document.getElementById('viewer-busy');
 const nameEl = document.getElementById('model-name');
@@ -385,6 +381,7 @@ async function openFile(file) {
     setModel(parsed.root);
     prompt.hidden = true;
     nameEl.textContent = file.name;
+    fileNameEl.textContent = file.name;
     const format = extension === 'stl' ? 'STL' : 'STEP';
     const parts = parsed.parts ? ` · ${parsed.parts.toLocaleString()} parts` : '';
     statsEl.textContent = `${format} · ${parsed.triangles.toLocaleString()} triangles${parts}`;

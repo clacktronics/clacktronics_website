@@ -18,46 +18,46 @@
     <div class="rm">
       <button type="button">File</button>
       <div class="rm-dd">
-        <button type="button" data-action="open">Open video… <kbd>Ctrl+O</kbd></button>
-        <button type="button" data-action="new">New project</button>
+        <button type="button" data-action="open"><span class="menu-item-label"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open video…</span><kbd>Ctrl+O</kbd></button>
+        <button type="button" data-action="new"><span class="menu-item-label"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New project</span></button>
         <div class="sep"></div>
-        <button type="button" data-action="export">Export… <kbd>Ctrl+E</kbd></button>
+        <button type="button" data-action="export"><span class="menu-item-label"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Export…</span><kbd>Ctrl+E</kbd></button>
       </div>
     </div>
     <div class="rm">
       <button type="button">Edit</button>
       <div class="rm-dd">
-        <button type="button" data-action="insert-before">Insert clip before</button>
-        <button type="button" data-action="insert-after">Insert clip after</button>
+        <button type="button" data-action="insert-before"><span class="menu-item-label"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Insert clip before</span></button>
+        <button type="button" data-action="insert-after"><span class="menu-item-label"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Insert clip after</span></button>
         <div class="sep"></div>
-        <button type="button" data-action="cut-before">Cut before playhead</button>
-        <button type="button" data-action="cut-after">Cut after playhead</button>
+        <button type="button" data-action="cut-before"><span class="menu-item-label"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Cut before playhead</span></button>
+        <button type="button" data-action="cut-after"><span class="menu-item-label"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Cut after playhead</span></button>
       </div>
     </div>
     <div class="rm">
       <button type="button">Playback</button>
       <div class="rm-dd">
-        <button type="button" data-action="marker-a">Set A marker <kbd>I</kbd></button>
-        <button type="button" data-action="marker-b">Set B marker <kbd>O</kbd></button>
-        <button type="button" data-action="clear-markers">Clear A/B markers</button>
+        <button type="button" data-action="marker-a"><span class="menu-item-label"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Set A marker</span><kbd>I</kbd></button>
+        <button type="button" data-action="marker-b"><span class="menu-item-label"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Set B marker</span><kbd>O</kbd></button>
+        <button type="button" data-action="clear-markers"><span class="menu-item-label"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear A/B markers</span></button>
         <div class="sep"></div>
-        <button type="button" data-action="toggle-loop">Toggle loop</button>
-        <button type="button" data-action="toggle-reverse">Toggle reverse <kbd>J</kbd></button>
+        <button type="button" data-action="toggle-loop"><span class="menu-item-label"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Toggle loop</span></button>
+        <button type="button" data-action="toggle-reverse"><span class="menu-item-label"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Toggle reverse</span><kbd>J</kbd></button>
       </div>
     </div>
     <div class="rm">
       <button type="button">Audio</button>
       <div class="rm-dd">
-        <button type="button" data-action="audio-mix">Mix audio at playhead…</button>
-        <button type="button" data-action="audio-replace">Replace audio at playhead…</button>
-        <button type="button" data-action="audio-remove">Remove new audio</button>
+        <button type="button" data-action="audio-mix"><span class="menu-item-label"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>Mix audio at playhead…</span></button>
+        <button type="button" data-action="audio-replace"><span class="menu-item-label"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Replace audio at playhead…</span></button>
+        <button type="button" data-action="audio-remove"><span class="menu-item-label"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Remove new audio</span></button>
       </div>
     </div>
     <div class="rm">
       <button type="button">Help</button>
       <div class="rm-dd">
-        <button type="button" data-action="help">Formats &amp; browser limits</button>
-        <button type="button" data-action="shortcuts">Keyboard shortcuts</button>
+        <button type="button" data-action="help"><span class="menu-item-label"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>Formats &amp; browser limits</span></button>
+        <button type="button" data-action="shortcuts"><span class="menu-item-label"><span class="pixel-icon" data-icon="keyboard-music" aria-hidden="true"></span>Keyboard shortcuts</span></button>
       </div>
     </div>
     <span class="engine-state" id="engine-state">ENGINE: STANDBY</span>
@@ -69,10 +69,10 @@
         <div class="viewer" id="drop-zone">
           <video id="player" playsinline preload="metadata" aria-label="Video preview"></video>
           <div class="empty-state" id="empty-state">
-            <span class="empty-icon" aria-hidden="true">▶</span>
+            <span class="empty-icon" aria-hidden="true"><span class="pixel-icon" data-icon="video"></span></span>
             <b>Drop a video here</b>
             <span>or open one from your computer</span>
-            <button class="btn primary" type="button" data-action="open">Open video</button>
+            <button class="btn primary" type="button" data-action="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span> Open video</button>
           </div>
           <div class="viewer-badge" id="viewer-badge" hidden>NO CLIP</div>
           <div class="drop-hint" id="drop-hint">DROP TO ADD CLIP</div>
@@ -94,12 +94,12 @@
           </div>
           <div class="transport-row">
             <div class="transport-buttons">
-              <button class="icon-btn" type="button" data-action="to-start" aria-label="Go to start">|◀</button>
-              <button class="icon-btn" type="button" data-action="frame-back" aria-label="Previous frame">◀|</button>
-              <button class="icon-btn main-play" type="button" data-action="play" aria-label="Play or pause"><span id="play-symbol">▶</span></button>
-              <button class="icon-btn" type="button" data-action="stop" aria-label="Stop">■</button>
-              <button class="icon-btn" type="button" data-action="frame-forward" aria-label="Next frame">|▶</button>
-              <button class="icon-btn" type="button" data-action="to-end" aria-label="Go to end">▶|</button>
+              <button class="icon-btn" type="button" data-action="to-start" aria-label="Go to start" title="Go to start"><span class="pixel-icon" data-icon="arrow-bar-left" aria-hidden="true"></span></button>
+              <button class="icon-btn" type="button" data-action="frame-back" aria-label="Previous frame" title="Previous frame"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span></button>
+              <button class="icon-btn main-play" type="button" data-action="play" aria-label="Play or pause" title="Play or pause"><span id="play-symbol"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span></span></button>
+              <button class="icon-btn" type="button" data-action="stop" aria-label="Stop" title="Stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span></button>
+              <button class="icon-btn" type="button" data-action="frame-forward" aria-label="Next frame" title="Next frame"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span></button>
+              <button class="icon-btn" type="button" data-action="to-end" aria-label="Go to end" title="Go to end"><span class="pixel-icon" data-icon="arrow-bar-right" aria-hidden="true"></span></button>
             </div>
             <label class="compact-field">Speed
               <select id="speed">
@@ -127,11 +127,11 @@
             <span class="timeline-empty">Open a video to start a timeline.</span>
           </div>
           <div class="edit-row">
-            <button class="btn ghost" type="button" data-action="insert-before">Insert before</button>
-            <button class="btn ghost" type="button" data-action="insert-after">Insert after</button>
+            <button class="btn ghost" type="button" data-action="insert-before"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span> Insert before</button>
+            <button class="btn ghost" type="button" data-action="insert-after"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span> Insert after</button>
             <span class="spacer"></span>
-            <button class="btn ghost" type="button" data-action="cut-before">Cut before</button>
-            <button class="btn ghost" type="button" data-action="cut-after">Cut after</button>
+            <button class="btn ghost" type="button" data-action="cut-before"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span> Cut before</button>
+            <button class="btn ghost" type="button" data-action="cut-after"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span> Cut after</button>
           </div>
         </section>
       </div>
@@ -140,11 +140,11 @@
         <section class="control-section" aria-labelledby="audio-title">
           <div class="section-head">
             <span class="app-lbl" id="audio-title">// Audio layer</span>
-            <button class="text-btn" type="button" data-action="audio-remove">CLEAR</button>
+            <button class="text-btn" type="button" data-action="audio-remove"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span> CLEAR</button>
           </div>
           <div class="audio-drop" id="audio-drop">
             <span id="audio-name">No extra audio</span>
-            <button class="btn ghost" type="button" data-action="audio-mix">Choose audio</button>
+            <button class="btn ghost" type="button" data-action="audio-mix"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span> Choose audio</button>
           </div>
           <div class="mode-row" role="radiogroup" aria-label="Audio layer mode">
             <label><input type="radio" name="audio-mode" value="mix" checked> Mix over</label>
@@ -183,8 +183,8 @@
             <input id="export-name" type="text" value="clack-video" spellcheck="false">
           </label>
           <label class="check-field export-check"><input id="bake-playback" type="checkbox" checked> Bake speed &amp; reverse into export</label>
-          <button class="btn primary export-btn" type="button" data-action="export">Export in browser</button>
-          <button class="btn ghost cancel-btn" id="cancel-export" type="button" data-action="cancel-export" hidden>Cancel</button>
+          <button class="btn primary export-btn" type="button" data-action="export"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span> Export in browser</button>
+          <button class="btn ghost cancel-btn" id="cancel-export" type="button" data-action="cancel-export" hidden><span class="pixel-icon" data-icon="close" aria-hidden="true"></span> Cancel</button>
           <div class="progress-wrap" id="progress-wrap" hidden>
             <div class="progress-track"><span id="progress-bar"></span></div>
             <span id="progress-label">Preparing engine…</span>
@@ -218,7 +218,7 @@
     <form method="dialog" class="dialog-card">
       <div class="dialog-head">
         <span class="app-lbl" id="dialog-title">// Browser formats</span>
-        <button class="dialog-close" aria-label="Close">×</button>
+        <button class="dialog-close" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button>
       </div>
       <div id="dialog-content"></div>
       <button class="btn primary" value="close">Close</button>

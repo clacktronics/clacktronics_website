@@ -55,30 +55,10 @@
 .editor-toolbar button:hover, .editor-toolbar button.active {
   background: var(--ink); border-color: var(--ink);
 }
-.editor-toolbar button:hover::after, .editor-toolbar button.active::after { color: var(--menu-text); }
+.editor-toolbar button:hover .pixel-icon, .editor-toolbar button.active .pixel-icon { color: var(--menu-text); }
 .editor-toolbar i.separator { border-left: 1px solid var(--paper-line); border-right: none; }
-/* text glyphs instead of FontAwesome (nothing external) */
 .editor-toolbar button i.fa { display: none; }
-.editor-toolbar button::after {
-  font-size: 13px; font-weight: 600; color: var(--control-text);
-}
-.editor-toolbar button.bold::after { content: 'B'; }
-.editor-toolbar button.italic::after { content: 'I'; font-style: italic; }
-.editor-toolbar button.strikethrough::after { content: 'S'; text-decoration: line-through; }
-.editor-toolbar button.heading::after { content: 'H'; }
-.editor-toolbar button.quote::after { content: '\201C'; font-size: 17px; }
-.editor-toolbar button.code::after { content: '</>'; font-size: 11px; }
-.editor-toolbar button.unordered-list::after { content: '\2022'; font-size: 16px; }
-.editor-toolbar button.ordered-list::after { content: '1.'; font-size: 11px; }
-.editor-toolbar button.table::after { content: '\229E'; font-size: 15px; }
-.editor-toolbar button.horizontal-rule::after { content: '\2014'; }
-.editor-toolbar button.link::after { content: 'a'; text-decoration: underline; }
-.editor-toolbar button.image::after { content: '\25A3'; }
-.editor-toolbar button.preview::after { content: '\00B6'; }
-.editor-toolbar button.side-by-side::after { content: '\25EB'; }
-.editor-toolbar button.fullscreen::after { content: '\26F6'; }
-.editor-toolbar button.undo::after { content: '\21B6'; }
-.editor-toolbar button.redo::after { content: '\21B7'; }
+.editor-toolbar button .pixel-icon { width: 17px; height: 17px; color: var(--control-text); }
 
 /* preview panes rendered like ClackOS pages */
 .editor-preview, .editor-preview-side {
@@ -166,25 +146,25 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 <div class="app">
   <div class="rm-bar">
     <div class="rm"><button>File</button><div class="rm-dd">
-      <button data-cmd="new">New</button>
-      <button data-cmd="open">Open&hellip;</button>
-      <button data-cmd="site">Open from website&hellip;</button>
-      <button data-cmd="save">Save</button>
-      <button data-cmd="saveas">Save As&hellip;</button>
+      <button data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New</button>
+      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open&hellip;</button>
+      <button data-cmd="site"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>Open from website&hellip;</button>
+      <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save</button>
+      <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As&hellip;</button>
       <div class="sep"></div>
-      <button data-cmd="commit">Commit to website&hellip;</button>
+      <button data-cmd="commit"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Commit to website&hellip;</button>
     </div></div>
     <div class="rm"><button>Insert</button><div class="rm-dd">
-      <button data-cmd="insert-window">Markdown window link&hellip;</button>
-      <button data-cmd="insert-action">Desktop action link&hellip;</button>
+      <button data-cmd="insert-window"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Markdown window link&hellip;</button>
+      <button data-cmd="insert-action"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Desktop action link&hellip;</button>
       <div class="sep"></div>
-      <button data-cmd="insert-video">Video Lab file link&hellip;</button>
-      <button data-cmd="insert-pdf">PDF Reader file link&hellip;</button>
-      <button data-cmd="insert-falstad">Falstad exported link&hellip;</button>
-      <button data-cmd="insert-circuit">Falstad circuit file link&hellip;</button>
-      <button data-cmd="insert-kicad">KiCad file link&hellip;</button>
+      <button data-cmd="insert-video"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Video Lab file link&hellip;</button>
+      <button data-cmd="insert-pdf"><span class="pixel-icon" data-icon="file-text" aria-hidden="true"></span>PDF Reader file link&hellip;</button>
+      <button data-cmd="insert-falstad"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>Falstad exported link&hellip;</button>
+      <button data-cmd="insert-circuit"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>Falstad circuit file link&hellip;</button>
+      <button data-cmd="insert-kicad"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>KiCad file link&hellip;</button>
       <div class="sep"></div>
-      <button data-cmd="insert-app">Application link&hellip;</button>
+      <button data-cmd="insert-app"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Application link&hellip;</button>
     </div></div>
   </div>
   <div class="md-wrap">
@@ -195,7 +175,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 
 <div class="site-modal" id="commitModal">
   <div class="site-box">
-    <header><span>Commit to website</span><button id="commitClose" aria-label="Close">&#10005;</button></header>
+    <header><span>Commit to website</span><button id="commitClose" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
     <div class="commit-form">
       <label>Repo path
         <input type="text" id="commitPath" spellcheck="false">
@@ -207,7 +187,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
         <input type="password" id="commitToken" autocomplete="off">
       </label>
       <div class="commit-actions">
-        <button class="btn primary" id="commitGo">Commit</button>
+        <button class="btn primary" id="commitGo"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Commit</button>
         <span class="app-status" id="commitStatus"></span>
       </div>
     </div>
@@ -216,7 +196,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 
 <div class="site-modal" id="siteModal">
   <div class="site-box">
-    <header><span>Open from website</span><button id="siteClose" aria-label="Close">&#10005;</button></header>
+    <header><span>Open from website</span><button id="siteClose" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
     <div class="site-filter"><input type="text" id="siteFilter" placeholder="Filter…" aria-label="Filter files"></div>
     <div class="site-list" id="siteList"></div>
   </div>
@@ -269,8 +249,26 @@ Write **markdown** here — headings, *emphasis*, ~~strikethrough~~, [links](htt
 int main(void) { return 0; }
 \`\`\`
 
-Use the toolbar or standard shortcuts (Ctrl+B, Ctrl+I…). ¶ previews, ◫ splits the view. Ctrl+S saves.
+Use the toolbar or standard shortcuts (Ctrl+B, Ctrl+I…). The preview and split-view buttons change the editor layout. Ctrl+S saves.
 `
+});
+
+const toolbarIcons = {
+  bold: 'letter-b', italic: 'letter-i', strikethrough: 'letter-s',
+  heading: 'heading', quote: 'quote-text-inline', code: 'terminal',
+  'unordered-list': 'bulletlist', 'ordered-list': 'list-box', table: 'grid-3x3',
+  'horizontal-rule': 'minus-box', link: 'link', image: 'image', preview: 'eye',
+  'side-by-side': 'align-horizontal-distribute-center', fullscreen: 'expand',
+  undo: 'undo', redo: 'reload'
+};
+Object.entries(toolbarIcons).forEach(([buttonClass, icon]) => {
+  const button = document.querySelector(`.editor-toolbar button.${buttonClass}`);
+  if (!button) return;
+  const marker = document.createElement('span');
+  marker.className = 'pixel-icon icon-only';
+  marker.dataset.icon = icon;
+  marker.setAttribute('aria-hidden', 'true');
+  button.appendChild(marker);
 });
 
 /* move the editor + side preview into their own flex row so the

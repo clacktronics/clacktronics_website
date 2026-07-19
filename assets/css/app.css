@@ -1,3 +1,5 @@
+@import url("icons.css");
+
 /* Shared chrome for ClackOS applications — self-contained pages under
    content/<menu>/ that run standalone or inside a ClackOS window (iframe). */
 :root {
@@ -40,8 +42,6 @@ body {
   padding: 9px 20px; border-radius: 6px; border: 1px solid var(--ink);
   background: var(--paper); color: var(--control-text);
 }
-.btn::before { content: '[ '; }
-.btn::after { content: ' ]'; }
 .btn:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
 .btn.primary { background: var(--ink); color: var(--button-text); }
 .btn.primary:hover { background: var(--leaf-deep); border-color: var(--leaf-deep); }
@@ -75,9 +75,10 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 }
 .rm.open .rm-dd { display: block; }
 .rm-dd button {
-  all: unset; box-sizing: border-box; display: block; width: 100%; cursor: pointer;
-  padding: 7px 14px; font: inherit; font-size: 12px; color: var(--control-text); white-space: nowrap;
+  all: unset; box-sizing: border-box; display: flex; align-items: center; width: 100%; cursor: pointer;
+  gap: 8px; padding: 7px 14px; font: inherit; font-size: 12px; color: var(--control-text); white-space: nowrap;
 }
+.rm-dd .pixel-icon { width: 16px; height: 16px; }
 .rm-dd button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
 .rm-dd button:disabled { color: var(--disabled-text); cursor: default; }
 .rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
@@ -103,6 +104,7 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 .rec-scope { flex: 1; min-width: 120px; border: 1px solid var(--ink); border-radius: 6px; background: var(--ink); }
 .rec-seek { width: 100%; }
 .rec-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+.rec-btns .pixel-icon { width: 17px; height: 17px; }
 .rec-record { color: #a04a3a; }
 
 /* ---- pattern editor ---- */
@@ -135,6 +137,7 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 .paint-tool:hover { background: var(--paper-deep); }
 .paint-tool.active { background: var(--ink); color: var(--menu-text); }
 .paint-tool:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.paint-tool .pixel-icon { width: 21px; height: 21px; }
 .paint-size { grid-column: span 2; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .paint-size input { width: 100%; }
 .paint-canvas-wrap { flex: 1; overflow: auto; min-height: 0; }

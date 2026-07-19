@@ -1,15 +1,15 @@
 {
   "label": "View",
   "items": [
-    { "type": "submenu", "label": "Tidy windows", "items": [
-      { "type": "action", "action": "arrange-cascade", "label": "Cascade" },
-      { "type": "action", "action": "arrange-grid", "label": "Tile" },
-      { "type": "action", "action": "arrange-rows", "label": "Tile horizontally" },
-      { "type": "action", "action": "arrange-columns", "label": "Tile vertically" },
+    { "type": "submenu", "label": "Tidy windows", "icon": "app-windows", "items": [
+      { "type": "action", "action": "arrange-cascade", "label": "Cascade", "icon": "app-windows" },
+      { "type": "action", "action": "arrange-grid", "label": "Tile", "icon": "align-horizontal-distribute-center" },
+      { "type": "action", "action": "arrange-rows", "label": "Tile horizontally", "icon": "align-vertical-space-between" },
+      { "type": "action", "action": "arrange-columns", "label": "Tile vertically", "icon": "align-horizontal-space-between" },
       { "type": "sep" },
-      { "type": "action", "action": "minimise-all", "label": "Minimise all" },
-      { "type": "action", "action": "restore-all", "label": "Restore all" }
+      { "type": "action", "action": "minimise-all", "label": "Minimise all", "icon": "minus-box" },
+      { "type": "action", "action": "restore-all", "label": "Restore all", "icon": "plus-box" }
     ] },
-    { "type": "action", "action": "toggle-taskbar", "label": "Toggle taskbar" }
+    { "type": "action", "action": "toggle-taskbar", "label": "Toggle taskbar", "icon": "eye" }
   ]
 }
