@@ -15,9 +15,9 @@
 .theme-main { min-height: 0; display: grid; grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.1fr); gap: 18px; }
 .theme-controls, .theme-preview-wrap { min-height: 0; }
 .theme-controls { overflow: auto; padding-right: 4px; }
-.theme-head { display: flex; gap: 12px; align-items: end; margin-bottom: 16px; }
+.theme-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; margin-bottom: 16px; }
 .theme-head label { display: flex; flex: 1; flex-direction: column; gap: 5px; }
-.theme-head input { width: 100%; }
+.theme-head input, .theme-head select { width: 100%; }
 .palette { display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr)); gap: 8px; }
 .colour-row {
   display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto;
@@ -99,7 +99,8 @@
   <main class="app-main theme-main">
     <section class="theme-controls">
       <div class="theme-head">
-        <label><span class="app-lbl">Template file</span><input id="themeName" type="text" value="clackos.css" spellcheck="false"></label>
+        <label><span class="app-lbl">Template file</span><select id="themeTemplate" aria-label="Template file"></select></label>
+        <label><span class="app-lbl">Theme file</span><input id="themeName" type="text" value="clackos.css" spellcheck="false"></label>
         <button class="btn" id="resetButton">Defaults</button>
       </div>
       <div class="palette" id="palette"></div>
@@ -172,6 +173,7 @@ const DEFAULTS = {
   '--disabled-text':'#b3ab8d'
 };
 const palette = document.getElementById('palette');
+const themeTemplate = document.getElementById('themeTemplate');
 const themeName = document.getElementById('themeName');
 const status = document.getElementById('status');
 const siteModal = document.getElementById('siteModal');
@@ -185,6 +187,25 @@ function safeName(value) {
   if (!name) name = 'custom-theme.css';
   if (!name.endsWith('.css')) name += '.css';
   return name;
+}
+
+function websiteThemeNames(site) {
+  return [...new Set([site?.theme, ...(site?.themes || [])].filter(name => /^[a-z0-9][a-z0-9._-]*\.css$/i.test(name || '')))];
+}
+
+function populateTemplateMenu(site, selected = themeTemplate.value) {
+  themeTemplate.textContent = '';
+  themeTemplate.title = site?.theme ? `Website default: ${site.theme}` : 'Available website CSS themes';
+  const localOption = document.createElement('option');
+  localOption.value = ''; localOption.textContent = 'Local / new theme';
+  themeTemplate.appendChild(localOption);
+  for (const name of websiteThemeNames(site)) {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    themeTemplate.appendChild(option);
+  }
+  themeTemplate.value = websiteThemeNames(site).includes(selected) ? selected : '';
 }
 
 function renderPalette() {
@@ -236,7 +257,9 @@ function loadCss(css, name) {
   for (const name of ['--heading', '--control-text', '--strong-text'])
     if (!seen.has(name)) next[name] = next['--ink-soft'];
   if (!seen.has('--shadow')) next['--shadow'] = next['--ink'];
-  values = next; themeName.value = safeName(name); renderPalette(); applyPreview();
+  values = next; themeName.value = safeName(name);
+  themeTemplate.value = [...themeTemplate.options].some(option => option.value === themeName.value) ? themeName.value : '';
+  renderPalette(); applyPreview();
   status.textContent = `${themeName.value} — loaded`;
 }
 
@@ -257,7 +280,8 @@ async function loadWebsiteTheme(name) {
 async function showWebsiteThemes() {
   try {
     const site = await getSiteConfig(true);
-    const names = [...new Set([site.theme, ...(site.themes || [])].filter(Boolean))];
+    populateTemplateMenu(site, themeName.value);
+    const names = websiteThemeNames(site);
     const list = document.getElementById('themeList'); list.textContent = '';
     for (const name of names) {
       const button = document.createElement('button');
@@ -273,7 +297,7 @@ async function showWebsiteThemes() {
 }
 
 function newTheme() {
-  values = { ...DEFAULTS }; themeName.value = 'custom-theme.css'; renderPalette(); applyPreview();
+  values = { ...DEFAULTS }; themeTemplate.value = ''; themeName.value = 'custom-theme.css'; renderPalette(); applyPreview();
   status.textContent = 'New theme — choose colours, then save or commit it.';
 }
 
@@ -346,12 +370,18 @@ async function commitTheme() {
     if (document.getElementById('makeActive').checked) remoteConfig.theme = filename;
     await putGithubFile('content/site.json', JSON.stringify(remoteConfig, null, 2) + '\n', `Register ${filename} website theme`, cfg, token);
     ghToken = token; themeName.value = filename; siteConfig = remoteConfig;
+    populateTemplateMenu(remoteConfig, filename);
     commitModal.classList.remove('open');
     status.textContent = `Committed ${themeCommit.commit.sha.slice(0, 7)} — ${filename}${remoteConfig.theme === filename ? ' is now active' : ' was added to the theme list'}.`;
   } catch (error) { commitStatus.textContent = error.message; }
 }
 
 palette.addEventListener('change', applyPreview);
+themeTemplate.addEventListener('change', async () => {
+  if (!themeTemplate.value) return;
+  try { await loadWebsiteTheme(themeTemplate.value); }
+  catch (error) { status.textContent = error.message; }
+});
 themeName.addEventListener('change', () => { themeName.value = safeName(themeName.value); });
 document.getElementById('resetButton').addEventListener('click', () => { values = { ...DEFAULTS }; renderPalette(); applyPreview(); });
 document.getElementById('commitButton').addEventListener('click', openCommit);
@@ -382,7 +412,11 @@ window.addEventListener('beforeunload', resetPreview);
 
 renderPalette();
 (async () => {
-  try { const site = await getSiteConfig(); await loadWebsiteTheme(site.theme || 'clackos.css'); }
+  try {
+    const site = await getSiteConfig();
+    populateTemplateMenu(site, site.theme || 'clackos.css');
+    await loadWebsiteTheme(site.theme || 'clackos.css');
+  }
   catch (error) { applyPreview(); status.textContent = error.message; }
 })();
 })();

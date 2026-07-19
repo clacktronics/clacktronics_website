@@ -21,6 +21,14 @@ let activeTheme = 'clackos.css';
 let themePreview = null;
 let availableThemes = new Set(['clackos.css']);
 const THEME_KEY = 'clackos-theme';
+const THEME_COOKIE = 'clackos-theme-default';
+
+function readCookie(name) {
+  const prefix = encodeURIComponent(name) + '=';
+  const item = document.cookie.split(';').map(value => value.trim()).find(value => value.startsWith(prefix));
+  if (!item) return null;
+  try { return decodeURIComponent(item.slice(prefix.length)); } catch { return null; }
+}
 
 function safeThemeName(name) {
   name = String(name || '');
@@ -848,6 +856,7 @@ async function boot() {
     savedWp = localStorage.getItem('clackos-wallpaper');
     savedTheme = localStorage.getItem(THEME_KEY);
   } catch {}
+  if (!savedTheme) savedTheme = readCookie(THEME_COOKIE);
   const configuredBackground = Object.keys(wallpapers).find(name => wallpapers[name].file === site.background);
   const fallbackBackground = configuredBackground || Object.keys(wallpapers)[0];
   if (savedWp && getWallpaper(savedWp)) applyWallpaper(savedWp);

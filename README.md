@@ -59,7 +59,10 @@ and the list shown in the editor are configured in `content/site.json`:
 ```
 
 Open **Applications → Theme Editor…** to change the palette with colour
-pickers and preview it live across the website. The File menu can open a theme
+pickers and preview it live across the website. Its Template file dropdown is
+populated from the CSS themes registered in `content/site.json`, while the
+separate Theme file field keeps Save As and new-theme workflows available.
+The File menu can open a theme
 already on the website, open/save a local `.css` file, or commit the current
 theme to GitHub. Committing always creates or updates one file under
 `assets/themes/`, registers it in `content/site.json`, and can make it the
@@ -165,7 +168,10 @@ and desktop actions.
 
 - `applications/appearance.html` (Applications → System → Appearance) — a
   simple chooser for the registered bitmap background tiles and colour themes.
-  Choices are saved in the browser and applied live to the desktop.
+  Choices are saved in the browser and applied live to the desktop. A selected
+  theme can be made the browser’s cookie default without GitHub access, or
+  committed as the website default in `content/site.json` with a fine-grained
+  Contents read/write token.
 - `applications/recorder.html` (Applications → Sound Recorder…) — a Windows
   98-style sound recorder with the full sndrec32 feature set. Records from
   the microphone (needs HTTPS + permission) with a live oscilloscope;

@@ -9,7 +9,7 @@
   "boot": [
     "file/home.md"
   ],
-  "theme": "poolside.css",
+  "theme": "clackos.css",
   "themes": [
     "clackos.css",
     "midnight.css",
