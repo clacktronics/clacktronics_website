@@ -123,6 +123,14 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 .paint-tool.active { background: var(--ink); color: var(--menu-text); }
 .paint-tool:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
 .paint-tool .pixel-icon { width: 21px; height: 21px; }
+.paint-zoom-icon {
+  position: relative; display: block; width: 13px; height: 13px;
+  border: 2px solid currentColor; border-radius: 50%; box-sizing: border-box;
+}
+.paint-zoom-icon::after {
+  content: ""; position: absolute; width: 8px; height: 2px; right: -7px; bottom: -4px;
+  background: currentColor; transform: rotate(45deg); transform-origin: left center;
+}
 .paint-size { grid-column: span 2; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .paint-size input { width: 100%; }
 .paint-size .paint-offset-check {
@@ -139,11 +147,17 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 }
 .paint-stack {
   position: relative; width: 640px; height: 400px;
-  border: 1px solid var(--ink); background: #fff; cursor: crosshair; touch-action: none;
+  box-sizing: content-box; border: 1px solid var(--ink); background: #fff; cursor: crosshair; touch-action: none;
 }
-.paint-stack canvas { position: absolute; inset: 0; }
-.paint-stack .overlay, .paint-stack .offset-preview { pointer-events: none; }
-.paint-stack.checking-seams { cursor: not-allowed; }
+.paint-stack canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.paint-stack .overlay, .paint-stack .seam-animation { pointer-events: none; }
+.paint-stack.checking-seams { cursor: crosshair; }
+.paint-stack.zoom-tool { cursor: zoom-in; }
+.paint-brush-cursor {
+  position: absolute; z-index: 4; box-sizing: border-box; border: 1px solid #fff;
+  border-radius: 50%; box-shadow: 0 0 0 1px #000; pointer-events: none;
+}
+.paint-brush-cursor.mirrored { opacity: .7; }
 .paint-bottom { display: flex; align-items: center; gap: 14px; padding: 0 14px 14px; flex-wrap: wrap; }
 .paint-current { position: relative; width: 38px; height: 38px; flex: none; }
 .paint-current .fg, .paint-current .bg {

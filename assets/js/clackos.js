@@ -838,6 +838,7 @@ observeCpuPressure();
 /* ---------------- Boot ---------------- */
 async function boot() {
   const site = await loadJSON('content/site.json');
+  site.backgrounds = await window.ClackOSBackgrounds.list(site);
   loadWebsiteBackgrounds(site);
   availableThemes = new Set((site.themes || []).map(safeThemeName));
   availableThemes.add(safeThemeName(site.theme));

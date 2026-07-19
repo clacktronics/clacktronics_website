@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
+<script src="../../assets/js/backgrounds.js"></script>
 </head>
 <body>
 <div class="app paint-app">
@@ -57,18 +58,22 @@
       <button class="paint-tool" data-tool="rect" title="Rectangle" aria-label="Rectangle"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="ellipse" title="Ellipse" aria-label="Ellipse"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="rect-fill" title="Filled rectangle" aria-label="Filled rectangle"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="zoom" title="Zoom — click in, right-click or Shift-click out" aria-label="Zoom"><span class="paint-zoom-icon" aria-hidden="true"></span></button>
       <div class="paint-size">
         <span class="app-lbl">Tool size</span>
         <input type="range" min="1" max="32" value="3" aria-label="Tool size">
         <label class="paint-offset-check" title="Preview the tile wrapped by half its width and height without changing the image"><input id="offsetPreview" type="checkbox"><span>Check seams<small>50% X/Y offset</small></span></label>
+        <label class="paint-offset-check" title="Reflect new paint strokes across the vertical centre line"><input id="mirrorPaint" type="checkbox"><span>Mirror paint<small>Y axis</small></span></label>
       </div>
     </div>
 
     <div class="paint-canvas-wrap">
       <div class="paint-stack">
         <canvas class="base" width="640" height="400"></canvas>
-        <canvas class="offset-preview" width="640" height="400" hidden></canvas>
+        <canvas class="seam-animation" width="640" height="400" hidden></canvas>
         <canvas class="overlay" width="640" height="400"></canvas>
+        <span class="paint-brush-cursor" aria-hidden="true" hidden></span>
+        <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
       </div>
     </div>
   </div>
@@ -145,15 +150,18 @@
 <script>
 (() => {
 const base = document.querySelector('canvas.base');
-const preview = document.querySelector('canvas.offset-preview');
+const seamAnimation = document.querySelector('canvas.seam-animation');
 const overlay = document.querySelector('canvas.overlay');
 const stack = document.querySelector('.paint-stack');
+const canvasWrap = document.querySelector('.paint-canvas-wrap');
+const brushCursors = [...document.querySelectorAll('.paint-brush-cursor')];
 const bx = base.getContext('2d', { willReadFrequently: true });
-const px = preview.getContext('2d');
+const ax = seamAnimation.getContext('2d');
 const ox = overlay.getContext('2d');
 const status = document.querySelector('.paint-status');
 const sizeInput = document.querySelector('.paint-size input');
 const offsetToggle = document.getElementById('offsetPreview');
+const mirrorToggle = document.getElementById('mirrorPaint');
 const cropButton = document.querySelector('[data-cmd="crop"]');
 const MAX_DIMENSION = 8192;
 const CUSTOM_BG_KEY = 'clackos-custom-background';
@@ -170,13 +178,17 @@ const COLORS = [
 let fg = '#000000', bg = '#FFFFFF', tool = 'pencil';
 let fileName = 'untitled.png';
 let selection = null;
-let cloneSource = null, cloneOffset = null, strokeBuffer = null;
+let cloneSource = null, cloneOffset = null, strokeBuffer = null, mirrorStrokeBefore = null;
+let seamModeApplied = false;
+let seamAnimating = false, seamAnimationToken = 0;
+let zoom = 1, cursorPoint = null;
+const ZOOM_LEVELS = [0.125, 0.25, 0.5, 1, 2, 4, 8];
 const undoStack = [], redoStack = [];
 const MAXUNDO = 25;
 const MAX_UNDO_BYTES = 96 * 1024 * 1024;
 
 const setStatus = message => {
-  if (offsetToggle.checked) updateOffsetPreview();
+  if (offsetToggle.checked && !seamAnimating) updateOffsetPreview();
   status.textContent = `${message} — ${width()} × ${height()} px`;
 };
 const fgEl = document.querySelector('.paint-current .fg');
@@ -195,21 +207,111 @@ COLORS.forEach(c => {
 showColors();
 
 function updateStackSize() {
-  stack.style.width = width() + 'px';
-  stack.style.height = height() + 'px';
+  stack.style.width = width() * zoom + 'px';
+  stack.style.height = height() * zoom + 'px';
+}
+
+function setZoom(nextZoom, focusPoint, clientX, clientY) {
+  const next = Math.max(ZOOM_LEVELS[0], Math.min(ZOOM_LEVELS[ZOOM_LEVELS.length - 1], nextZoom));
+  if (next === zoom) {
+    setStatus(`Zoom is already at ${Math.round(zoom * 100)}%`);
+    return;
+  }
+  const wrapRect = canvasWrap.getBoundingClientRect();
+  const viewportX = Number.isFinite(clientX) ? clientX - wrapRect.left : canvasWrap.clientWidth / 2;
+  const viewportY = Number.isFinite(clientY) ? clientY - wrapRect.top : canvasWrap.clientHeight / 2;
+  const focus = focusPoint || { x: width() / 2, y: height() / 2 };
+  zoom = next;
+  updateStackSize();
+  canvasWrap.scrollLeft = stack.offsetLeft + (focus.x + 0.5) * zoom - viewportX;
+  canvasWrap.scrollTop = stack.offsetTop + (focus.y + 0.5) * zoom - viewportY;
+  cursorPoint = null;
+  hideBrushCursor();
+  setStatus(`Zoom ${Math.round(zoom * 100)}%`);
+}
+
+function stepZoom(direction, point, clientX, clientY) {
+  let index = ZOOM_LEVELS.findIndex(level => level >= zoom - 0.0001);
+  if (index < 0) index = ZOOM_LEVELS.length - 1;
+  setZoom(ZOOM_LEVELS[Math.max(0, Math.min(ZOOM_LEVELS.length - 1, index + direction))], point, clientX, clientY);
 }
 
 function updateOffsetPreview() {
   const enabled = offsetToggle.checked;
-  preview.hidden = !enabled;
-  base.hidden = enabled;
-  overlay.hidden = enabled;
+  base.hidden = false;
+  overlay.hidden = false;
   stack.classList.toggle('checking-seams', enabled);
-  if (!enabled) return;
-  const dx = Math.floor(width() / 2), dy = Math.floor(height() / 2);
-  px.clearRect(0, 0, width(), height());
-  for (const x of [dx, dx - width()])
-    for (const y of [dy, dy - height()]) px.drawImage(base, x, y);
+  if (enabled === seamModeApplied) return;
+  shiftBase(enabled ? Math.floor(width() / 2) : -Math.floor(width() / 2), enabled ? Math.floor(height() / 2) : -Math.floor(height() / 2));
+  seamModeApplied = enabled;
+  cloneSource = null; cloneOffset = null; strokeBuffer = null;
+  clearSelection();
+}
+
+function drawWrapped(context, source, dx, dy) {
+  const x0 = ((dx % width()) + width()) % width();
+  const y0 = ((dy % height()) + height()) % height();
+  context.clearRect(0, 0, width(), height());
+  for (const x of [x0, x0 - width()])
+    for (const y of [y0, y0 - height()]) context.drawImage(source, x, y);
+}
+
+function animateSeamTransition(enabled) {
+  const token = ++seamAnimationToken;
+  const source = copyCanvas();
+  const targetX = enabled ? Math.floor(width() / 2) : -Math.floor(width() / 2);
+  const targetY = enabled ? Math.floor(height() / 2) : -Math.floor(height() / 2);
+  const duration = 460;
+  const started = performance.now();
+  seamAnimating = true;
+  hideBrushCursor();
+  seamAnimation.hidden = false;
+  base.style.visibility = 'hidden';
+  overlay.style.visibility = 'hidden';
+
+  return new Promise(resolve => {
+    let settled = false;
+    let fallbackTimer;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(fallbackTimer);
+      if (token !== seamAnimationToken) { resolve(false); return; }
+      drawWrapped(ax, source, targetX, targetY);
+      seamAnimation.hidden = true;
+      base.style.visibility = '';
+      overlay.style.visibility = '';
+      seamAnimating = false;
+      updateOffsetPreview();
+      if (cursorPoint) updateBrushCursor(cursorPoint);
+      resolve(true);
+    };
+    const frame = now => {
+      if (token !== seamAnimationToken) { finish(); return; }
+      const progress = Math.min(1, (now - started) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      drawWrapped(ax, source, Math.round(targetX * eased), Math.round(targetY * eased));
+      if (progress < 1) { requestAnimationFrame(frame); return; }
+      finish();
+    };
+    fallbackTimer = setTimeout(finish, duration + 100);
+    requestAnimationFrame(frame);
+  });
+}
+
+function shiftBase(dx, dy) {
+  const copy = copyCanvas();
+  drawWrapped(bx, copy, dx, dy);
+}
+
+function canonicaliseSeam() {
+  if (!seamModeApplied) return;
+  shiftBase(-Math.floor(width() / 2), -Math.floor(height() / 2));
+  seamModeApplied = false;
+}
+
+function reapplySeam() {
+  if (offsetToggle.checked) updateOffsetPreview();
 }
 
 function clearSelection() {
@@ -237,7 +339,8 @@ function resizeSurfaces(w, h) {
   h = Math.max(1, Math.min(MAX_DIMENSION, Math.round(h)));
   base.width = overlay.width = w;
   base.height = overlay.height = h;
-  preview.width = w; preview.height = h;
+  seamAnimation.width = w; seamAnimation.height = h;
+  seamModeApplied = false;
   updateStackSize();
   cloneSource = null; cloneOffset = null; strokeBuffer = null;
   clearSelection();
@@ -250,8 +353,21 @@ function copyCanvas() {
   return copy;
 }
 
+function canonicalCanvas() {
+  const copy = copyCanvas();
+  if (!seamModeApplied) return copy;
+  const canonical = document.createElement('canvas');
+  canonical.width = width(); canonical.height = height();
+  const context = canonical.getContext('2d');
+  const dx = ((-Math.floor(width() / 2) % width()) + width()) % width();
+  const dy = ((-Math.floor(height() / 2) % height()) + height()) % height();
+  for (const x of [dx, dx - width()])
+    for (const y of [dy, dy - height()]) context.drawImage(copy, x, y);
+  return canonical;
+}
+
 function snapshot() {
-  return { width: width(), height: height(), pixels: bx.getImageData(0, 0, width(), height()) };
+  return { width: width(), height: height(), seam: seamModeApplied, pixels: bx.getImageData(0, 0, width(), height()) };
 }
 
 const snapshotBytes = () => width() * height() * 4;
@@ -260,6 +376,8 @@ const stackBytes = items => items.reduce((total, item) => total + item.pixels.da
 function restore(snap) {
   resizeSurfaces(snap.width, snap.height);
   bx.putImageData(snap.pixels, 0, 0);
+  seamModeApplied = !!snap.seam;
+  updateOffsetPreview();
   setStatus('Restored image');
 }
 
@@ -295,11 +413,14 @@ document.querySelectorAll('.paint-tool').forEach(button => {
   button.addEventListener('click', () => {
     tool = button.dataset.tool;
     document.querySelectorAll('.paint-tool').forEach(item => item.classList.toggle('active', item === button));
+    stack.classList.toggle('zoom-tool', tool === 'zoom');
+    if (cursorPoint) updateBrushCursor(cursorPoint); else hideBrushCursor();
     if (tool === 'clone' && cloneSource) drawCloneSource();
     else if (tool !== 'select' && selection) renderSelection();
     if (tool === 'select') setStatus('Drag to select an area, then use Image → Crop to Selection');
     else if (tool === 'clone') setStatus(cloneSource ? 'Clone source ready; drag to paint from it' : 'Alt-click the image to choose a clone source');
     else if (tool === 'blur') setStatus('Blur brush selected; Tool Size controls the soft brush radius');
+    else if (tool === 'zoom') setStatus(`Zoom tool selected at ${Math.round(zoom * 100)}%; click to zoom in, right-click or Shift-click to zoom out`);
     else setStatus(`${button.title} selected`);
   });
 });
@@ -315,19 +436,98 @@ const rectFrom = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: M
 
 let drawing = false, start = null, last = null, drawColor = '#000000', sprayTimer = 0;
 const toolSize = () => +sizeInput.value;
+const BRUSH_TOOLS = new Set(['pencil', 'brush', 'eraser', 'spray', 'clone', 'blur']);
+
+function brushDiameter() {
+  if (tool === 'pencil') return 1;
+  if (tool === 'brush') return toolSize();
+  if (tool === 'eraser' || tool === 'clone') return toolSize() * 3;
+  if (tool === 'spray') return toolSize() * 4 + 8;
+  if (tool === 'blur') return Math.max(6, toolSize() * 4);
+  return 0;
+}
+
+function hideBrushCursor() {
+  brushCursors.forEach(cursor => { cursor.hidden = true; });
+}
+
+function placeBrushCursor(cursor, point, diameter) {
+  const scaleX = base.getBoundingClientRect().width / width();
+  const scaleY = base.getBoundingClientRect().height / height();
+  const displayWidth = Math.max(2, diameter * scaleX);
+  const displayHeight = Math.max(2, diameter * scaleY);
+  cursor.style.width = displayWidth + 'px';
+  cursor.style.height = displayHeight + 'px';
+  cursor.style.left = (point.x + 0.5) * scaleX - displayWidth / 2 + 'px';
+  cursor.style.top = (point.y + 0.5) * scaleY - displayHeight / 2 + 'px';
+  cursor.hidden = false;
+}
+
+function updateBrushCursor(point) {
+  cursorPoint = point;
+  if (!BRUSH_TOOLS.has(tool) || seamAnimating) { hideBrushCursor(); return; }
+  const diameter = brushDiameter();
+  placeBrushCursor(brushCursors[0], point, diameter);
+  if (mirrorToggle.checked) placeBrushCursor(brushCursors[1], mirroredPoint(point), diameter);
+  else brushCursors[1].hidden = true;
+}
+
+function paintMirrored(context, draw) {
+  draw();
+  if (!mirrorToggle.checked) return;
+  context.save();
+  context.translate(width(), 0);
+  context.scale(-1, 1);
+  draw();
+  context.restore();
+}
+
+const mirroredPoint = point => ({ ...point, x: Math.max(0, width() - 1 - point.x) });
+
+function finishMirroredStroke(sourcePoint) {
+  if (!mirrorStrokeBefore || !mirrorToggle.checked || !sourcePoint ||
+      mirrorStrokeBefore.width !== width() || mirrorStrokeBefore.height !== height()) {
+    mirrorStrokeBefore = null;
+    return;
+  }
+  const current = bx.getImageData(0, 0, width(), height());
+  const before = mirrorStrokeBefore.data, pixels = current.data;
+  const sourceOnLeft = sourcePoint.x < width() / 2;
+  const firstX = sourceOnLeft ? 0 : Math.ceil(width() / 2);
+  const lastX = sourceOnLeft ? Math.floor(width() / 2) : width();
+  for (let y = 0; y < height(); y++) {
+    for (let x = firstX; x < lastX; x++) {
+      const mirrorX = width() - 1 - x;
+      const sourceIndex = (y * width() + x) * 4;
+      const mirrorIndex = (y * width() + mirrorX) * 4;
+      let touched = false;
+      for (let channel = 0; channel < 4; channel++) {
+        if (pixels[sourceIndex + channel] !== before[sourceIndex + channel] ||
+            pixels[mirrorIndex + channel] !== before[mirrorIndex + channel]) touched = true;
+      }
+      if (touched) {
+        for (let channel = 0; channel < 4; channel++) pixels[mirrorIndex + channel] = pixels[sourceIndex + channel];
+      }
+    }
+  }
+  bx.putImageData(current, 0, 0);
+  mirrorStrokeBefore = null;
+}
 
 function strokeSeg(a, b, color, lineWidth) {
   bx.strokeStyle = color; bx.lineWidth = lineWidth; bx.lineCap = 'round'; bx.lineJoin = 'round';
-  bx.beginPath(); bx.moveTo(a.x, a.y); bx.lineTo(b.x, b.y); bx.stroke();
+  paintMirrored(bx, () => { bx.beginPath(); bx.moveTo(a.x, a.y); bx.lineTo(b.x, b.y); bx.stroke(); });
 }
 
 function spray(point, color) {
   bx.fillStyle = color;
   const radius = toolSize() * 2 + 4;
+  const dots = [];
   for (let i = 0; i < 24; i++) {
     const angle = Math.random() * Math.PI * 2, distance = Math.sqrt(Math.random()) * radius;
-    bx.fillRect(point.x + Math.cos(angle) * distance, point.y + Math.sin(angle) * distance, 1, 1);
+    dots.push([point.x + Math.cos(angle) * distance, point.y + Math.sin(angle) * distance]);
   }
+  paintMirrored(bx, () => dots.forEach(([x, y]) => bx.fillRect(x, y, 1, 1)));
 }
 
 function brushAlong(a, b, callback) {
@@ -359,33 +559,39 @@ function cloneAt(point) {
   const radius = Math.max(2, toolSize() * 1.5);
   const sourceX = point.x + cloneOffset.x - radius;
   const sourceY = point.y + cloneOffset.y - radius;
-  bx.save();
-  bx.beginPath(); bx.arc(point.x, point.y, radius, 0, Math.PI * 2); bx.clip();
-  bx.drawImage(strokeBuffer, sourceX, sourceY, radius * 2, radius * 2, point.x - radius, point.y - radius, radius * 2, radius * 2);
-  bx.restore();
+  paintMirrored(bx, () => {
+    bx.save();
+    bx.beginPath(); bx.arc(point.x, point.y, radius, 0, Math.PI * 2); bx.clip();
+    bx.drawImage(strokeBuffer, sourceX, sourceY, radius * 2, radius * 2, point.x - radius, point.y - radius, radius * 2, radius * 2);
+    bx.restore();
+  });
 }
 
 function blurAt(point) {
   if (!strokeBuffer) return;
   const radius = Math.max(3, toolSize() * 2);
-  bx.save();
-  bx.beginPath(); bx.arc(point.x, point.y, radius, 0, Math.PI * 2); bx.clip();
-  bx.filter = `blur(${Math.max(0.5, toolSize() / 2)}px)`;
-  bx.drawImage(strokeBuffer, 0, 0);
-  bx.restore();
+  paintMirrored(bx, () => {
+    bx.save();
+    bx.beginPath(); bx.arc(point.x, point.y, radius, 0, Math.PI * 2); bx.clip();
+    bx.filter = `blur(${Math.max(0.5, toolSize() / 2)}px)`;
+    bx.drawImage(strokeBuffer, 0, 0);
+    bx.restore();
+  });
 }
 
 function shapePreview(point) {
   ox.clearRect(0, 0, width(), height());
   ox.strokeStyle = drawColor; ox.fillStyle = drawColor; ox.lineWidth = toolSize();
   const rect = rectFrom(start, point);
-  ox.beginPath();
-  if (tool === 'line') { ox.moveTo(start.x, start.y); ox.lineTo(point.x, point.y); ox.stroke(); }
-  else if (tool === 'rect') ox.strokeRect(rect.x, rect.y, rect.w, rect.h);
-  else if (tool === 'rect-fill') ox.fillRect(rect.x, rect.y, rect.w, rect.h);
-  else if (tool === 'ellipse' && rect.w && rect.h) {
-    ox.ellipse(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, rect.h / 2, 0, 0, Math.PI * 2); ox.stroke();
-  }
+  paintMirrored(ox, () => {
+    ox.beginPath();
+    if (tool === 'line') { ox.moveTo(start.x, start.y); ox.lineTo(point.x, point.y); ox.stroke(); }
+    else if (tool === 'rect') ox.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    else if (tool === 'rect-fill') ox.fillRect(rect.x, rect.y, rect.w, rect.h);
+    else if (tool === 'ellipse' && rect.w && rect.h) {
+      ox.ellipse(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, rect.h / 2, 0, 0, Math.PI * 2); ox.stroke();
+    }
+  });
 }
 
 function commitShape(point) {
@@ -438,10 +644,14 @@ stack.addEventListener('contextmenu', event => event.preventDefault());
 stack.addEventListener('pointerdown', event => {
   if (event.button !== 0 && event.button !== 2) return;
   event.preventDefault();
-  if (offsetToggle.checked) { setStatus('Seam preview is on; uncheck Offset 50% X/Y to edit'); return; }
+  if (seamAnimating) { status.textContent = `Seam view is sliding into place — ${width()} × ${height()} px`; return; }
   const right = event.button === 2;
   const point = evPos(event);
   drawColor = right ? bg : fg;
+  if (tool === 'zoom') {
+    stepZoom(right || event.shiftKey ? -1 : 1, point, event.clientX, event.clientY);
+    return;
+  }
   if (tool === 'picker') { pickColor(point, right); return; }
   if (tool === 'clone' && event.altKey) {
     clearSelection(); cloneSource = point; drawCloneSource();
@@ -449,8 +659,16 @@ stack.addEventListener('pointerdown', event => {
     return;
   }
   if (tool === 'clone' && !cloneSource) { setStatus('Alt-click the image first to choose a clone source'); return; }
-  if (tool !== 'select') pushUndo();
-  if (tool === 'fill') { clearSelection(); floodFill(point, drawColor); setStatus('Area filled'); return; }
+  if (tool !== 'select') {
+    const undoSaved = pushUndo();
+    mirrorStrokeBefore = mirrorToggle.checked && undoSaved ? undoStack[undoStack.length - 1].pixels : null;
+  }
+  if (tool === 'fill') {
+    clearSelection(); floodFill(point, drawColor);
+    if (mirrorToggle.checked) floodFill(mirroredPoint(point), drawColor);
+    finishMirroredStroke(point);
+    setStatus('Area filled'); return;
+  }
   drawing = true; start = last = point;
   try { stack.setPointerCapture(event.pointerId); } catch {}
   if (tool === 'select') { selection = null; cropButton.disabled = true; renderSelection(rectFrom(point, point)); }
@@ -470,8 +688,9 @@ stack.addEventListener('pointerdown', event => {
 });
 
 stack.addEventListener('pointermove', event => {
-  if (!drawing) return;
   const point = evPos(event);
+  updateBrushCursor(point);
+  if (!drawing) return;
   if (tool === 'select') renderSelection(rectFrom(start, point));
   else if (tool === 'pencil') strokeSeg(last, point, drawColor, 1);
   else if (tool === 'brush') strokeSeg(last, point, drawColor, toolSize());
@@ -481,6 +700,8 @@ stack.addEventListener('pointermove', event => {
   else if (tool !== 'spray') shapePreview(point);
   last = point;
 });
+stack.addEventListener('pointerenter', event => updateBrushCursor(evPos(event)));
+stack.addEventListener('pointerleave', () => { if (!drawing) { cursorPoint = null; hideBrushCursor(); } });
 
 function endDraw(event) {
   if (!drawing) return;
@@ -499,6 +720,7 @@ function endDraw(event) {
   } else if (tool === 'blur') {
     strokeBuffer = null; setStatus('Blur stroke applied');
   }
+  if (tool !== 'select') finishMirroredStroke(start);
 }
 stack.addEventListener('pointerup', endDraw);
 stack.addEventListener('pointercancel', endDraw);
@@ -509,21 +731,25 @@ function validDimension(value) {
 }
 
 function resizeImage(w, h) {
+  pushUndo(); canonicaliseSeam();
   const copy = copyCanvas();
-  pushUndo(); resizeSurfaces(w, h);
+  resizeSurfaces(w, h);
   bx.imageSmoothingEnabled = true; bx.imageSmoothingQuality = 'high';
   bx.drawImage(copy, 0, 0, w, h);
+  reapplySeam();
   setStatus('Image resized');
 }
 
 function resizeCanvas(w, h, anchor) {
-  const copy = copyCanvas();
   const oldW = width(), oldH = height();
   const horizontal = anchor[1] === 'l' ? 0 : anchor[1] === 'r' ? 1 : 0.5;
   const vertical = anchor[0] === 't' ? 0 : anchor[0] === 'b' ? 1 : 0.5;
   const x = Math.round((w - oldW) * horizontal), y = Math.round((h - oldH) * vertical);
-  pushUndo(); resizeSurfaces(w, h);
+  pushUndo(); canonicaliseSeam();
+  const copy = copyCanvas();
+  resizeSurfaces(w, h);
   bx.fillStyle = bg; bx.fillRect(0, 0, w, h); bx.drawImage(copy, x, y);
+  reapplySeam();
   setStatus('Canvas resized');
 }
 
@@ -531,7 +757,8 @@ function cropSelection() {
   if (!selection) return;
   const rect = selection;
   const pixels = bx.getImageData(rect.x, rect.y, rect.w, rect.h);
-  pushUndo(); resizeSurfaces(rect.w, rect.h); bx.putImageData(pixels, 0, 0);
+  pushUndo(); seamModeApplied = false;
+  resizeSurfaces(rect.w, rect.h); bx.putImageData(pixels, 0, 0); reapplySeam();
   setStatus('Cropped to selection');
 }
 
@@ -577,8 +804,9 @@ function loadImage(src, name, done) {
     if (image.naturalWidth > MAX_DIMENSION || image.naturalHeight > MAX_DIMENSION) {
       setStatus(`Image is larger than ${MAX_DIMENSION} px`); if (done) done(); return;
     }
-    pushUndo(); resizeSurfaces(image.naturalWidth, image.naturalHeight);
+    pushUndo(); seamModeApplied = false; resizeSurfaces(image.naturalWidth, image.naturalHeight);
     bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); bx.drawImage(image, 0, 0);
+    reapplySeam();
     fileName = String(name || 'image.png').replace(/\.[^.]+$/, '') + '.png';
     setStatus(`Opened ${name}`); if (done) done();
   };
@@ -592,7 +820,7 @@ function savePng(as) {
     if (!name) return;
     fileName = /\.png$/i.test(name) ? name : name + '.png';
   }
-  base.toBlob(blob => {
+  canonicalCanvas().toBlob(blob => {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob); link.download = fileName; link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 5000); setStatus(`Saved ${fileName}`);
@@ -601,7 +829,7 @@ function savePng(as) {
 
 function setAsBackground() {
   try {
-    const dataUrl = base.toDataURL('image/png');
+    const dataUrl = canonicalCanvas().toDataURL('image/png');
     const payload = { name: fileName, dataUrl };
     localStorage.setItem(CUSTOM_BG_KEY, JSON.stringify(payload));
     localStorage.setItem('clackos-wallpaper', CUSTOM_BG_NAME);
@@ -627,8 +855,10 @@ async function openWebsiteBrowser() {
   try {
     const response = await fetch(`../site.json?_clack=${Date.now()}`, { cache: 'no-store' });
     if (!response.ok) throw new Error(response.status);
-    const site = await response.json(); list.textContent = '';
-    for (const item of site.backgrounds || []) {
+    const site = await response.json();
+    const backgrounds = await window.ClackOSBackgrounds.list(site);
+    list.textContent = '';
+    for (const item of backgrounds) {
       if (!/^[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|gif|webp|bmp)$/i.test(item.file || '')) continue;
       const button = document.createElement('button');
       button.innerHTML = `<strong>${escapeHtml(item.name || item.file)}</strong><span>assets/backgrounds/${escapeHtml(item.file)}</span>`;
@@ -638,7 +868,7 @@ async function openWebsiteBrowser() {
       });
       list.appendChild(button);
     }
-    if (!list.children.length) list.textContent = 'No bitmap backgrounds are registered in content/site.json.';
+    if (!list.children.length) list.textContent = 'No bitmap backgrounds were found.';
   } catch (error) { list.textContent = `Could not list website backgrounds (${error.message}).`; }
 }
 
@@ -691,16 +921,27 @@ document.getElementById('noiseForm').addEventListener('submit', event => {
   hideModal('noiseModal'); addNoise(amount, document.getElementById('noiseMonochrome').checked);
 });
 
-offsetToggle.addEventListener('change', () => {
-  updateOffsetPreview();
-  setStatus(offsetToggle.checked
+offsetToggle.addEventListener('change', async () => {
+  const enabled = offsetToggle.checked;
+  status.textContent = `${enabled ? 'Sliding to the 50% seam view' : 'Sliding back to the original view'} — ${width()} × ${height()} px`;
+  if (!await animateSeamTransition(enabled)) return;
+  setStatus(enabled
     ? 'Showing a non-destructive 50% offset for checking tile seams'
     : 'Seam preview off; image returned to its original position');
 });
 
+mirrorToggle.addEventListener('change', () => {
+  setStatus(mirrorToggle.checked
+    ? 'Y-axis mirror painting on; new marks are reflected left to right'
+    : 'Y-axis mirror painting off');
+  if (cursorPoint) updateBrushCursor(cursorPoint);
+});
+
+sizeInput.addEventListener('input', () => { if (cursorPoint) updateBrushCursor(cursorPoint); });
+
 function runCmd(cmd) {
   switch (cmd) {
-    case 'new': pushUndo(); resizeSurfaces(640, 400); bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); fileName = 'untitled.png'; setStatus('New image'); break;
+    case 'new': pushUndo(); seamModeApplied = false; resizeSurfaces(640, 400); bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); reapplySeam(); fileName = 'untitled.png'; setStatus('New image'); break;
     case 'open': filePick.click(); break;
     case 'open-site': openWebsiteBrowser(); break;
     case 'save': savePng(false); break;
@@ -720,10 +961,10 @@ function runCmd(cmd) {
       bx.putImageData(image, 0, 0); setStatus('Colours inverted'); break;
     }
     case 'flip-h': case 'flip-v': {
-      const copy = copyCanvas(); pushUndo(); clearSelection(); bx.save(); bx.clearRect(0, 0, width(), height());
+      pushUndo(); canonicaliseSeam(); const copy = copyCanvas(); clearSelection(); bx.save(); bx.clearRect(0, 0, width(), height());
       if (cmd === 'flip-h') { bx.scale(-1, 1); bx.drawImage(copy, -width(), 0); }
       else { bx.scale(1, -1); bx.drawImage(copy, 0, -height()); }
-      bx.restore(); setStatus(cmd === 'flip-h' ? 'Flipped horizontally' : 'Flipped vertically'); break;
+      bx.restore(); reapplySeam(); setStatus(cmd === 'flip-h' ? 'Flipped horizontally' : 'Flipped vertically'); break;
     }
   }
 }

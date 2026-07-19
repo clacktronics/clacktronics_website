@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
+<script src="../../assets/js/backgrounds.js"></script>
 <style>
 .appearance-main { gap: 14px; }
 .appearance-preview { height: 86px; border: 1px solid var(--ink); border-radius: 7px; background-color: var(--desktop); }
@@ -64,7 +65,8 @@ async function load() {
     const response = await fetch(`../site.json?_clack=${Date.now()}`, { cache: 'no-store' });
     if (!response.ok) throw new Error(response.status);
     const site = await response.json();
-    for (const item of site.backgrounds || []) {
+    const websiteBackgrounds = await window.ClackOSBackgrounds.list(site);
+    for (const item of websiteBackgrounds) {
       if (!/^[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|gif|webp|bmp)$/i.test(item.file || '')) continue;
       const url = `../../assets/backgrounds/${encodeURIComponent(item.file)}`;
       backgrounds.set(item.name, url); addOption(backgroundSelect, item.name, item.name);
@@ -75,7 +77,7 @@ async function load() {
       addOption(backgroundSelect, CUSTOM_BG_NAME, `${CUSTOM_BG_NAME} (${custom.name || 'paint-tile.png'})`);
     }
     for (const theme of site.themes || []) addOption(themeSelect, theme, theme.replace(/\.css$/i, ''));
-    let selectedBackground = site.background ? [...backgrounds.keys()].find(name => (site.backgrounds || []).find(item => item.name === name)?.file === site.background) : '';
+    let selectedBackground = site.background ? [...backgrounds.keys()].find(name => websiteBackgrounds.find(item => item.name === name)?.file === site.background) : '';
     try {
       const savedBackground = localStorage.getItem(WALLPAPER_KEY);
       const savedTheme = localStorage.getItem(THEME_KEY);
