@@ -322,6 +322,22 @@ function videoEmbed(markdown) {
   return `<div class="video-embed"><video src="${escAttr(src)}" aria-label="${escAttr(title)}" preload="metadata" playsinline${options.has('controls') ? ' controls' : ''}${options.has('noloop') ? '' : ' loop'}></video></div>`;
 }
 
+function kicanvasEmbed(markdown) {
+  const match = /^@\[kicanvas\]\((\S+?)(?:\s+["']([^"']+)["'])?\)$/i.exec(markdown.trim());
+  if (!match) return '';
+  const src = safeWebUrl(match[1], false);
+  if (!src || !/\.(?:kicad_sch|kicad_pcb|kicad_wks)(?:[?#].*)?$/i.test(src)) return '';
+  if (!customElements.get('kicanvas-embed') && !document.getElementById('kicanvas-module')) {
+    const script = document.createElement('script');
+    script.id = 'kicanvas-module';
+    script.type = 'module';
+    script.src = new URL('vendor/kicanvas/kicanvas-clackos.js', location.href).href;
+    document.head.appendChild(script);
+  }
+  const title = match[2] || 'KiCad design';
+  return `<figure class="kicanvas-embed"><kicanvas-embed controls="full" aria-label="${escAttr(title)}"><kicanvas-source src="${escAttr(src)}"></kicanvas-source></kicanvas-embed><figcaption>${esc(title)}</figcaption></figure>`;
+}
+
 /* Raw HTML is useful in hand-authored site content, but it must not turn a
  * Markdown file into a script injection point. Keep structural/content tags,
  * discard active elements, event handlers and unsafe URLs. YouTube iframes are
@@ -414,12 +430,15 @@ function mdToHtml(body, meta) {
     const fence = /^\x00fence(\d+)\x00$/.exec(block);
     const youtube = youtubeEmbed(block);
     const video = videoEmbed(block);
+    const kicanvas = kicanvasEmbed(block);
     if (fence) {
       out.push(fences[+fence[1]]);
     } else if (youtube) {
       out.push(youtube);
     } else if (video) {
       out.push(video);
+    } else if (kicanvas) {
+      out.push(kicanvas);
     } else if (/^<[/!A-Za-z][\s\S]*>$/m.test(block)) {
       out.push(`<div class="html-block">${sanitizeHtmlBlock(block)}</div>`);
     } else if (/^>\s?/.test(block)) {

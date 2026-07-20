@@ -160,6 +160,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <div class="sep"></div>
       <button data-cmd="insert-youtube-embed"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Inline YouTube video&hellip;</button>
       <button data-cmd="insert-video-embed"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Inline video file&hellip;</button>
+      <button data-cmd="insert-kicanvas-embed"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>Inline KiCanvas design&hellip;</button>
       <div class="sep"></div>
       <button data-cmd="insert-video"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Video Lab file link&hellip;</button>
       <button data-cmd="insert-pdf"><span class="pixel-icon" data-icon="file-text" aria-hidden="true"></span>PDF Reader file link&hellip;</button>
@@ -451,6 +452,15 @@ function insertVideoEmbed() {
   insertMarkdownEmbed('video', source, title, options);
 }
 
+function insertKicanvasEmbed() {
+  const source = prompt('KiCad file URL or path from the site root:', 'content/applications/kicad/example.kicad_sch');
+  if (!source) return;
+  const selected = cm.getSelection().trim();
+  const title = prompt('Optional design caption:', selected);
+  if (title === null) return;
+  insertMarkdownEmbed('kicanvas', source, title.trim().replace(/["']/g, ''));
+}
+
 function insertVideoLink() {
   const source = prompt('Video URL or path from the site root (for example content/media/demo.mp4):', 'content/media/demo.mp4');
   if (source) insertClackLink(`app:applications/video/index.html?src=${encodePart(source)}`, 'Open in Video Lab');
@@ -496,6 +506,7 @@ const insertCommands = {
   'insert-action': insertActionLink,
   'insert-youtube-embed': insertYouTubeEmbed,
   'insert-video-embed': insertVideoEmbed,
+  'insert-kicanvas-embed': insertKicanvasEmbed,
   'insert-video': insertVideoLink,
   'insert-pdf': insertPDFLink,
   'insert-falstad': insertFalstadLink,

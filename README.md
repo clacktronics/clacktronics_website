@@ -130,6 +130,10 @@ listing every post newest-first, grouped by year.
   looping is on and controls are hidden by default. Add `{noloop}`, `{controls}`,
   or `{noloop controls}` after it to change playback, for example:
   `@[video](clips/demo.webm){noloop controls}`.
+- `@[kicanvas](content/applications/kicad/example.kicad_sch "Optional caption")`
+  — interactive inline KiCad schematic, board, or worksheet viewer. Site-relative
+  and HTTP(S) sources ending in `.kicad_sch`, `.kicad_pcb`, or `.kicad_wks` are
+  accepted; remote sources must allow cross-origin requests.
 - Raw HTML blocks are rendered when a block starts with an HTML tag. Safe
   structural HTML is allowed; scripts, forms, styles, event handlers, SVG, and
   arbitrary iframes are removed. Use the YouTube directive for video.
