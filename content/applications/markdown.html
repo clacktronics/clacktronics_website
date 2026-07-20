@@ -233,6 +233,11 @@ const mde = new EasyMDE({
               action: insertVideoEmbed,
               className: 'video-embed',
               title: 'Insert inline video'
+            }, {
+              name: 'kicanvas-embed',
+              action: insertKicanvasEmbed,
+              className: 'kicanvas-embed',
+              title: 'Insert inline KiCad design'
             }, '|', 'preview', 'side-by-side', 'fullscreen', '|',
             'undo', 'redo'],
   initialValue: `# New document
@@ -266,7 +271,8 @@ const toolbarIcons = {
   bold: 'letter-b', italic: 'letter-i', strikethrough: 'letter-s',
   heading: 'heading', quote: 'quote-text-inline', code: 'terminal',
   'unordered-list': 'bulletlist', 'ordered-list': 'list-box', table: 'grid-3x3',
-  'horizontal-rule': 'minus-box', link: 'link', image: 'image', 'video-embed': 'video', preview: 'eye',
+  'horizontal-rule': 'minus-box', link: 'link', image: 'image',
+  'video-embed': 'video', 'kicanvas-embed': 'circuit-board', preview: 'eye',
   'side-by-side': 'align-horizontal-distribute-center', fullscreen: 'expand',
   undo: 'undo', redo: 'reload'
 };
