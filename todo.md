@@ -2,9 +2,10 @@
 
 ### To make it functioally complete for information
 
-* Desktop icons for EuroClack and blog
+* desktop icon that brings index page back up
 * A way to show the BYOM and Euroclack information cleanly
 * Play video from youtube in video player
+* mobile modification, maybe even just forwarding to desktopless
 
 ### Aesthetic Tweaks and experience improvements
 
