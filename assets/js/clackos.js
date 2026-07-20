@@ -859,6 +859,18 @@ const GAP = 8;
 function openWindowList() {
   return [...windows.values()].filter(rec => !rec.minimised);
 }
+
+function bindDesktopIcons() {
+  desktop.querySelectorAll('.desktop-icon[data-window]').forEach(icon => {
+    const open = () => openWindow(icon.dataset.window);
+    icon.addEventListener('dblclick', open);
+    icon.addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      open();
+    });
+  });
+}
 function placeWindow(rec, left, top, width, height) {
   rec.maxed = null;
   const s = rec.el.style;
@@ -1176,6 +1188,7 @@ async function boot() {
     menubar.insertBefore(buildMenu(folder, defs[i]), clock);
   });
 
+  bindDesktopIcons();
   for (const id of site.boot || []) await openWindow(id);
 }
 
