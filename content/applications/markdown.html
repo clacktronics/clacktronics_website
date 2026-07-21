@@ -579,7 +579,18 @@ async function startUpload() {
   uploadPicker.click();
 }
 
+/* Many shared hosts cap uploads around 64 MB (PHP upload_max_filesize /
+   post_max_size), so warn before attempting anything larger. */
+const UPLOAD_WARN_BYTES = 64 * 1024 * 1024;
+
 function beginUpload(file) {
+  if (file.size > UPLOAD_WARN_BYTES) {
+    const mb = (file.size / 1048576).toFixed(1);
+    if (!confirm(`${file.name} is ${mb} MB. Web hosts often reject uploads larger than 64 MB, so this may fail. Try uploading anyway?`)) {
+      status.textContent = 'Upload cancelled — file over 64 MB.';
+      return;
+    }
+  }
   pendingUpload = file;
   if (uploadToken) doUpload();
   else openUploadModal();
