@@ -12,6 +12,7 @@ inline. Run it after editing content:
 """
 import html
 import json
+import os
 import posixpath
 import re
 import pathlib
@@ -179,6 +180,24 @@ def kicanvas_embed(block, page_out, state):
             '<figcaption>%s</figcaption></figure>'
             % (esc(title), esc(fix_url(m.group(1), page_out)), esc(title)))
 
+def build_embed(block):
+    """@[build] -> a small stamp of the deployed commit. The values come from
+    the environment set by the deploy/mirror workflow (SITE_COMMIT etc.); with
+    none set (a plain local run) it degrades to a 'dev' label."""
+    if not re.match(r'^@\[build\]$', block.strip(), re.I):
+        return None
+    sha = os.environ.get('SITE_COMMIT', '').strip()
+    built = os.environ.get('SITE_BUILT_AT', '').strip()
+    repo = os.environ.get('SITE_REPO', '').strip()
+    if not sha:
+        return '<p class="build-stamp">Build: dev (unversioned)</p>'
+    code = '<span class="k">%s</span>' % esc(sha[:7])
+    if repo:
+        code = ('<a href="https://github.com/%s/commit/%s" target="_blank" '
+                'rel="noopener noreferrer">%s</a>' % (esc(repo), esc(sha), code))
+    tail = ' · ' + esc(built[:10]) if built else ''
+    return '<p class="build-stamp">Build %s%s</p>' % (code, tail)
+
 # ---------------------------------------------------------------- blocks
 def md_to_html(body, meta, page_out, state):
     fences = []
@@ -200,7 +219,7 @@ def md_to_html(body, meta, page_out, state):
 
         fence = re.match(r'^\x00fence(\d+)\x00$', block)
         embed = (youtube_embed(block) or video_embed(block, page_out)
-                 or kicanvas_embed(block, page_out, state))
+                 or kicanvas_embed(block, page_out, state) or build_embed(block))
         if fence:
             out.append(fences[int(fence.group(1))])
         elif embed:
@@ -319,6 +338,8 @@ body.plain-mirror main { flex: 1; width: 100%; }
 }
 #plain-site-footer a { color: var(--sage); }
 #plain-site-footer a:hover { color: var(--leaf); }
+
+.build-stamp { font-size: 11px; opacity: 0.6; }
 '''
 
 def main():

@@ -30,3 +30,5 @@ body.plain-mirror main { flex: 1; width: 100%; }
 }
 #plain-site-footer a { color: var(--sage); }
 #plain-site-footer a:hover { color: var(--leaf); }
+
+.build-stamp { font-size: 11px; opacity: 0.6; }

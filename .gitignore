@@ -3,3 +3,6 @@ assets/upload-config.php
 
 # Media uploaded via the upload endpoint lives on the web host, not in Git
 assets/uploads/
+
+# Build stamp written by the deploy workflow; not part of the source
+version.json

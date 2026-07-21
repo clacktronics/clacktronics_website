@@ -13,3 +13,5 @@ Set in IBM Plex Mono and Dosis.
 
 © 1984–2026 Clacktronics, Rochdale.
 No warranty expressed or implied, especially the implied one.
+
+@[build]
