@@ -12,8 +12,6 @@ Every board ships with schematics, source code and a written explanation of the 
 ## // What we make
 
 1. **EuroClack Green Screen 2350.** A dual-board Eurorack module with a real display, CV in and out, USB host, and dual-core headroom to spare. Sequence, visualise, misuse.
-2. **Firmware libraries.** PIO drivers, DMX transports, display glue and DMA plumbing — documented, tested, and published under permissive licences.
-3. **Notes from the bench.** Long-form write-ups of bring-up sessions, bus captures and the occasional twelve-error schematic post-mortem.
 
 ## // Why monochrome
 
