@@ -230,6 +230,9 @@ function bindWebLinkRouting(root) {
   root.addEventListener('click', event => {
     const anchor = event.target.closest?.('a[href]');
     if (!anchor || anchor.dataset.action || anchor.hasAttribute('download')) return;
+    /* target="_blank" is an explicit opt-out of in-OS routing (e.g. the
+     * taskbar's Plain HTML link) — let the browser open a real new tab */
+    if (anchor.target === '_blank') return;
     const appId = webViewerAppId(anchor.href);
     if (!appId) return;
     event.preventDefault();
