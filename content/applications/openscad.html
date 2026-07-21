@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>OpenSCAD — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<link rel="stylesheet" href="../../vendor/codemirror5/codemirror.css">
+<style>
+html, body, .app { height: 100%; min-height: 0; }
+body { overflow: hidden; }
+.app { display: flex; flex-direction: column; }
+.scad-bar { display: flex; align-items: center; gap: 10px; }
+.scad-bar .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; }
+.scad-bar .pixel-icon { width: 16px; height: 16px; }
+.scad-run { color: var(--leaf-deep); }
+.scad-stop { color: #a04a3a; }
+.scad-spacer { flex: 1; }
+.scad-auto { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--sage); user-select: none; cursor: pointer; }
+
+.scad-main {
+  flex: 1; min-height: 0; display: grid; gap: 10px; padding: 10px 12px;
+  grid-template-columns: minmax(240px, 1fr) minmax(260px, 1.1fr);
+  grid-template-rows: 1fr 150px;
+}
+.scad-editor { grid-column: 1; grid-row: 1; min-height: 0; display: flex; flex-direction: column; }
+.scad-preview { grid-column: 2; grid-row: 1 / 3; min-height: 0; display: flex; flex-direction: column; }
+.scad-console { grid-column: 1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; }
+
+.scad-pane-title {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--leaf-deep); padding: 0 2px 6px;
+}
+.scad-pane-title .pixel-icon { width: 16px; height: 16px; }
+.scad-pane-title .name { margin-left: auto; letter-spacing: 0.04em; text-transform: none; font-weight: 500; color: var(--sage); }
+
+.scad-editor .CodeMirror {
+  flex: 1; min-height: 0; height: auto;
+  border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--paper); color: var(--ink-soft);
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.6;
+}
+.CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
+.CodeMirror-selected { background: rgba(79, 174, 125, 0.25) !important; }
+.CodeMirror-gutters { background: var(--paper-deep) !important; border-right: 1px solid var(--paper-line) !important; }
+.CodeMirror-linenumber { color: var(--sage) !important; }
+.cm-s-default .cm-keyword { color: #276b47; font-weight: 600; }
+.cm-s-default .cm-builtin { color: #276b47; }
+.cm-s-default .cm-def { color: #09140d; font-weight: 600; }
+.cm-s-default .cm-variable-2 { color: #a8841f; }
+.cm-s-default .cm-string { color: #8a3d2e; }
+.cm-s-default .cm-comment { color: #66755a; font-style: italic; }
+.cm-s-default .cm-number { color: #a8841f; }
+.cm-s-default .cm-operator { color: #14231a; }
+
+.scad-stage {
+  position: relative; flex: 1; min-height: 0; overflow: hidden;
+  border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--paper-deep); outline: none;
+}
+.scad-stage.dragging { box-shadow: inset 0 0 0 4px var(--leaf); }
+.scad-stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.scad-prompt {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 20px; color: var(--sage); font-size: 12px; line-height: 1.7;
+}
+.scad-prompt[hidden] { display: none; }
+.scad-prompt strong { display: block; color: var(--control-text); margin-bottom: 4px; }
+.scad-busy {
+  position: absolute; inset: 0; z-index: 4; display: none;
+  align-items: center; justify-content: center;
+  color: var(--menu-text); background: color-mix(in srgb, var(--ink) 78%, transparent);
+  font-size: 12px; letter-spacing: 0.04em;
+}
+.scad-busy.visible { display: flex; }
+.scad-view-tools {
+  position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; gap: 6px;
+}
+.scad-view-tools .btn { padding: 5px 8px; font-size: 11px; }
+.scad-view-tools .pixel-icon { width: 15px; height: 15px; }
+.scad-view-tools .btn.active { color: var(--menu-text); background: var(--leaf-deep); border-color: var(--leaf-deep); }
+
+.scad-console-out {
+  flex: 1; min-height: 0; overflow-y: auto;
+  border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--ink); color: var(--menu-text);
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.5;
+  padding: 8px 12px; white-space: pre-wrap; word-break: break-word; user-select: text;
+}
+.scad-console-out .err { color: #e8927c; }
+.scad-console-out .warn { color: #e5c46a; }
+.scad-console-out .sys { color: #8fcaa8; }
+.scad-status { padding: 0 16px 10px; }
+
+/* ---- modals (shared look with the Markdown editor) ---- */
+.site-modal {
+  position: fixed; inset: 0; z-index: 50; display: none;
+  background: rgba(9, 20, 13, 0.35); align-items: center; justify-content: center;
+}
+.site-modal.open { display: flex; }
+.site-box {
+  width: min(560px, 92vw); max-height: 84vh; display: flex; flex-direction: column;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 10px;
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 35%, transparent);
+}
+.site-box header {
+  background: var(--ink); color: var(--menu-text); padding: 9px 14px;
+  border-radius: 8px 8px 0 0; font-size: 12.5px; display: flex; justify-content: space-between;
+}
+.site-box header button { all: unset; cursor: pointer; color: var(--menu-text); padding: 0 4px; }
+.commit-form { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.commit-form label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--control-text); font-weight: 500; }
+.commit-form .hint { font-weight: 400; font-size: 11px; color: var(--sage); }
+.commit-form input { width: 100%; }
+.commit-form .check { flex-direction: row; align-items: center; gap: 8px; }
+.commit-actions { display: flex; align-items: center; gap: 14px; }
+.rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div class="app">
+  <div class="rm-bar scad-bar">
+    <div class="rm"><button>File</button><div class="rm-dd">
+      <button data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New</button>
+      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open&hellip;</button>
+      <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save .scad</button>
+      <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save .scad As&hellip;</button>
+      <div class="sep"></div>
+      <button data-cmd="export"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>Export .stl&hellip;</button>
+    </div></div>
+    <div class="rm"><button>Publish</button><div class="rm-dd">
+      <button data-cmd="commit"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span>Commit .scad + .stl to website&hellip;</button>
+    </div></div>
+    <button class="btn ghost scad-run" data-cmd="render"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Render</button>
+    <button class="btn ghost scad-stop" data-cmd="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop</button>
+    <span class="scad-spacer"></span>
+    <label class="scad-auto"><input type="checkbox" id="autoRender"> Auto-render on save</label>
+  </div>
+
+  <div class="scad-main">
+    <div class="scad-editor">
+      <div class="scad-pane-title">
+        <span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span><span>Code</span>
+        <span class="name" id="fileLabel">model.scad</span>
+      </div>
+      <textarea id="code"></textarea>
+    </div>
+
+    <div class="scad-preview">
+      <div class="scad-pane-title"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span><span>Preview</span></div>
+      <div class="scad-stage" id="stage" aria-label="Rendered 3D model">
+        <div class="scad-view-tools">
+          <button class="btn ghost" id="fitView" type="button" title="Fit"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span></button>
+          <button class="btn ghost" id="wireView" type="button" aria-pressed="false" title="Wireframe"><span class="pixel-icon" data-icon="eye" aria-hidden="true"></span></button>
+          <button class="btn ghost" id="gridView" type="button" aria-pressed="true" title="Grid"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span></button>
+        </div>
+        <div class="scad-prompt" id="prompt">
+          <span><strong>Press Render &#9654; to build the model</strong>The OpenSCAD engine (~14&nbsp;MB) downloads the first time and is then cached. Drag to orbit &middot; right-drag to pan &middot; wheel to zoom.</span>
+        </div>
+        <div class="scad-busy" id="busy" role="status">Rendering&hellip;</div>
+      </div>
+    </div>
+
+    <div class="scad-console">
+      <div class="scad-pane-title"><span class="pixel-icon" data-icon="terminal" aria-hidden="true"></span><span>Console</span></div>
+      <div class="scad-console-out" id="out"></div>
+    </div>
+  </div>
+
+  <p class="app-status scad-status" id="status">Ready — models are built in this browser and never uploaded.</p>
+</div>
+
+<div class="site-modal" id="commitModal">
+  <div class="site-box">
+    <header><span>Commit to website</span><button id="commitClose" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
+    <div class="commit-form">
+      <label>Base name <span class="hint">(saved as content/applications/openscad/&lt;name&gt;.scad and .stl)</span>
+        <input type="text" id="commitName" spellcheck="false">
+      </label>
+      <label>Commit message
+        <input type="text" id="commitMsg" spellcheck="false">
+      </label>
+      <label class="check"><input type="checkbox" id="commitStl" checked> Also commit the rendered .stl</label>
+      <label id="tokenRow">Fine-grained access token <span class="hint">(Contents read/write on this repo only — kept in memory, forgotten when the tab closes)</span>
+        <input type="password" id="commitToken" autocomplete="off">
+      </label>
+      <div class="commit-actions">
+        <button class="btn primary" id="commitGo"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span>Commit</button>
+        <span class="app-status" id="commitStatus"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../../vendor/codemirror5/codemirror.js"></script>
+<script>
+/* A small OpenSCAD syntax mode for CodeMirror 5 (no extra addons needed). */
+CodeMirror.defineMode('openscad', function () {
+  const keywords = new Set(['module', 'function', 'if', 'else', 'for', 'intersection_for',
+    'let', 'each', 'true', 'false', 'undef', 'include', 'use', 'return']);
+  const builtins = new Set(['cube', 'sphere', 'cylinder', 'polyhedron', 'square', 'circle',
+    'polygon', 'text', 'translate', 'rotate', 'scale', 'resize', 'mirror', 'multmatrix',
+    'color', 'offset', 'hull', 'minkowski', 'union', 'difference', 'intersection',
+    'render', 'children', 'linear_extrude', 'rotate_extrude', 'projection', 'surface',
+    'import', 'echo', 'assert', 'search', 'str', 'len', 'concat', 'norm', 'cross',
+    'abs', 'sign', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2', 'floor',
+    'ceil', 'round', 'ln', 'log', 'pow', 'sqrt', 'exp', 'min', 'max', 'rands',
+    'lookup', 'chr', 'ord', 'is_undef', 'is_list', 'is_num', 'is_string', 'is_bool']);
+  return {
+    startState() { return { inBlockComment: false }; },
+    token(stream, state) {
+      if (state.inBlockComment) {
+        if (stream.skipTo('*/')) { stream.match('*/'); state.inBlockComment = false; }
+        else stream.skipToEnd();
+        return 'comment';
+      }
+      if (stream.eatSpace()) return null;
+      if (stream.match('//')) { stream.skipToEnd(); return 'comment'; }
+      if (stream.match('/*')) { state.inBlockComment = true; return 'comment'; }
+      if (stream.match(/^"(?:[^"\\]|\\.)*"?/)) return 'string';
+      if (stream.match(/^\$[A-Za-z_]\w*/)) return 'variable-2';
+      if (stream.match(/^-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/)) return 'number';
+      if (stream.match(/^[A-Za-z_]\w*/)) {
+        const word = stream.current();
+        if (keywords.has(word)) return 'keyword';
+        if (builtins.has(word)) return 'builtin';
+        if (stream.peek() === '(') return 'def';
+        return 'variable';
+      }
+      stream.next();
+      return null;
+    },
+    lineComment: '//',
+    blockCommentStart: '/*',
+    blockCommentEnd: '*/'
+  };
+});
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+
+const out = document.getElementById('status');
+const consoleOut = document.getElementById('out');
+const busy = document.getElementById('busy');
+const prompt = document.getElementById('prompt');
+const fileLabel = document.getElementById('fileLabel');
+const autoRender = document.getElementById('autoRender');
+
+let fileName = 'model.scad';
+let handle = null;              /* FileSystemFileHandle when supported */
+let lastStl = null;            /* ArrayBuffer of the most recent render */
+let rendering = false;
+
+/* ---------------- editor ---------------- */
+const cm = CodeMirror.fromTextArea(document.getElementById('code'), {
+  mode: 'openscad',
+  lineNumbers: true,
+  indentUnit: 2,
+  viewportMargin: Infinity
+});
+cm.setValue(`// clackos.scad — a small demo
+// Press Render (F5) to build. Files stay in this browser.
+
+$fn = 48;
+
+module rounded_box(size, r) {
+  minkowski() {
+    cube([size.x - 2*r, size.y - 2*r, size.z - 2*r], center = true);
+    sphere(r);
+  }
+}
+
+difference() {
+  rounded_box([40, 40, 16], 3);
+  translate([0, 0, 4])
+    cylinder(h = 20, r = 12, center = true);
+  for (a = [0 : 90 : 359])
+    rotate([0, 0, a])
+      translate([15, 0, 0])
+        cylinder(h = 30, r = 2.4, center = true);
+}
+`);
+
+const setFile = (name, h) => {
+  fileName = name || 'model.scad';
+  handle = h || null;
+  fileLabel.textContent = fileName;
+  document.title = fileName + ' — OpenSCAD — ClackOS';
+};
+
+/* ---------------- console ---------------- */
+function log(text, cls) {
+  const line = document.createElement('span');
+  if (cls) line.className = cls;
+  line.textContent = text.endsWith('\n') ? text : text + '\n';
+  consoleOut.appendChild(line);
+  consoleOut.scrollTop = consoleOut.scrollHeight;
+}
+
+/* ---------------- three.js preview ---------------- */
+const stage = document.getElementById('stage');
+const themeColor = (name, fallback) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(themeColor('--paper-deep', '#f3ecd1'));
+
+const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 2000);
+camera.position.set(95, 70, 105);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.screenSpacePanning = true;
+controls.minDistance = 6;
+controls.maxDistance = 900;
+controls.addEventListener('change', draw);
+
+const hemi = new THREE.HemisphereLight(themeColor('--paper', '#f8f2dd'), themeColor('--sage', '#66755a'), 2.1);
+scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, 3.0);
+key.position.set(70, 110, 80);
+scene.add(key);
+const fill = new THREE.DirectionalLight(themeColor('--menu-dim', '#8fcaa8'), 1.1);
+fill.position.set(-80, 40, -60);
+scene.add(fill);
+
+const grid = new THREE.GridHelper(140, 14, 0x276b47, 0xd8cfa9);
+grid.position.y = -42;
+scene.add(grid);
+
+let modelRoot = null;
+let wireframe = false;
+
+function draw() { renderer.render(scene, camera); }
+
+function resize() {
+  const w = Math.max(stage.clientWidth, 1);
+  const h = Math.max(stage.clientHeight, 1);
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  draw();
+}
+
+function meshMaterial() {
+  return new THREE.MeshStandardMaterial({
+    color: new THREE.Color(themeColor('--leaf', '#4fae7d')),
+    roughness: 0.6, metalness: 0.05, side: THREE.DoubleSide, wireframe
+  });
+}
+
+function disposeModel() {
+  if (!modelRoot) return;
+  scene.remove(modelRoot);
+  modelRoot.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) o.material.dispose();
+  });
+  modelRoot = null;
+}
+
+function showModel(geometry) {
+  disposeModel();
+  if (!geometry.getAttribute('normal')) geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox;
+  if (!box || box.isEmpty()) { log('The model has no visible geometry.', 'warn'); return; }
+  const centre = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const largest = Math.max(size.x, size.y, size.z) || 1;
+  const scale = 80 / largest;
+  const root = new THREE.Group();
+  const mesh = new THREE.Mesh(geometry, meshMaterial());
+  mesh.position.copy(centre).multiplyScalar(-1);
+  root.add(mesh);
+  root.scale.setScalar(scale);
+  scene.add(root);
+  modelRoot = root;
+  const norm = new THREE.Box3().setFromObject(root);
+  grid.position.y = norm.min.y - 1.5;
+  prompt.hidden = true;
+  fitView(true);
+}
+
+function fitView(reset) {
+  if (!modelRoot) return;
+  const box = new THREE.Box3().setFromObject(modelRoot);
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  const dir = reset
+    ? new THREE.Vector3(1, 0.72, 1).normalize()
+    : camera.position.clone().sub(controls.target).normalize();
+  const dist = Math.max(sphere.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov * 0.5)), 24) * 1.2;
+  controls.target.copy(sphere.center);
+  camera.position.copy(sphere.center).addScaledVector(dir, dist);
+  camera.near = Math.max(dist / 500, 0.05);
+  camera.far = dist * 20;
+  camera.updateProjectionMatrix();
+  controls.update();
+  draw();
+}
+
+function applyTheme() {
+  scene.background.set(themeColor('--paper-deep', '#f3ecd1'));
+  hemi.color.set(themeColor('--paper', '#f8f2dd'));
+  hemi.groundColor.set(themeColor('--sage', '#66755a'));
+  fill.color.set(themeColor('--menu-dim', '#8fcaa8'));
+  const gm = Array.isArray(grid.material) ? grid.material : [grid.material];
+  gm[0]?.color.set(themeColor('--leaf-deep', '#276b47'));
+  gm[1]?.color.set(themeColor('--paper-line', '#d8cfa9'));
+  if (modelRoot) modelRoot.traverse(o => { if (o.isMesh) o.material.color.set(themeColor('--leaf', '#4fae7d')); });
+  draw();
+}
+window.addEventListener('clackos-themechange', applyTheme);
+
+document.getElementById('fitView').addEventListener('click', () => fitView(false));
+document.getElementById('wireView').addEventListener('click', e => {
+  wireframe = !wireframe;
+  const b = e.currentTarget;
+  b.classList.toggle('active', wireframe);
+  b.setAttribute('aria-pressed', String(wireframe));
+  if (modelRoot) modelRoot.traverse(o => { if (o.isMesh) o.material.wireframe = wireframe; });
+  draw();
+});
+document.getElementById('gridView').addEventListener('click', e => {
+  grid.visible = !grid.visible;
+  const b = e.currentTarget;
+  b.classList.toggle('active', grid.visible);
+  b.setAttribute('aria-pressed', String(grid.visible));
+  draw();
+});
+document.getElementById('gridView').classList.add('active');
+
+new ResizeObserver(resize).observe(stage);
+resize();
+
+/* ---------------- OpenSCAD worker ----------------
+ * The engine (openscad-wasm, GPL-2.0) is fetched from a CDN on first render and
+ * runs in a Web Worker so a heavy render never freezes the desktop. Nothing is
+ * uploaded — the .scad goes in, an .stl comes back, both in this browser. */
+const OSCAD_URL = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.0.4/openscad.js';
+/* The WASM instance is single-use — a second callMain aborts the runtime — so
+ * every render runs in a fresh, short-lived worker that builds one model and
+ * exits. The engine .js is HTTP-cached after the first fetch, so repeat renders
+ * only pay the recompile, not the download. */
+const workerSrc = `
+self.onmessage = async e => {
+  try {
+    const mod = await import(${JSON.stringify(OSCAD_URL)});
+    const api = await mod.createOpenSCAD({
+      print: t => postMessage({ type: 'log', text: String(t) }),
+      printErr: t => postMessage({ type: 'log', text: String(t), stderr: true })
+    });
+    const inst = api.getInstance();
+    inst.FS.writeFile('/input.scad', e.data.code);
+    inst.callMain(['/input.scad', '-o', '/output.stl']);
+    let data = null;
+    try { data = inst.FS.readFile('/output.stl'); } catch (_) {}
+    if (!data || !data.length) { postMessage({ type: 'error', text: 'No geometry was produced — check the console.' }); return; }
+    const buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+    postMessage({ type: 'done', stl: buf }, [buf]);
+  } catch (err) {
+    postMessage({ type: 'error', text: String(err && err.message || err) });
+  }
+};
+`;
+const workerURL = URL.createObjectURL(new Blob([workerSrc], { type: 'text/javascript' }));
+
+let worker = null;
+function killWorker() {
+  if (worker) { worker.terminate(); worker = null; }
+}
+
+const stlLoader = new STLLoader();
+
+function render() {
+  if (rendering) return;
+  rendering = true;
+  busy.textContent = lastStl ? 'Rendering…' : 'Loading OpenSCAD engine…';
+  busy.classList.add('visible');
+  out.textContent = 'Rendering…';
+  log('>>> render ' + fileName, 'sys');
+  killWorker();
+  worker = new Worker(workerURL, { type: 'module' });
+  worker.onmessage = e => {
+    const m = e.data;
+    if (m.type === 'log') { log(m.text, m.stderr ? (/error/i.test(m.text) ? 'err' : 'warn') : undefined); return; }
+    killWorker();
+    if (m.type === 'done') finishRender(m.stl);
+    else failRender(m.text);
+  };
+  worker.onerror = ev => { killWorker(); failRender(ev.message || 'The OpenSCAD engine crashed.'); };
+  worker.postMessage({ code: cm.getValue() });
+}
+
+function finishRender(stl) {
+  rendering = false;
+  busy.classList.remove('visible');
+  lastStl = stl;
+  try {
+    const geometry = stlLoader.parse(stl);
+    showModel(geometry);
+    const triangles = Math.floor(geometry.getAttribute('position').count / 3);
+    out.textContent = `Rendered ${fileName} — ${triangles.toLocaleString()} triangles. Export or commit the .stl from the menus.`;
+    log(`Done — ${triangles.toLocaleString()} triangles.`, 'sys');
+  } catch (err) {
+    out.textContent = 'Rendered, but the STL could not be shown: ' + err.message;
+  }
+}
+
+function failRender(text) {
+  rendering = false;
+  busy.classList.remove('visible');
+  log(text, 'err');
+  out.textContent = 'Render failed — see the console.';
+}
+
+function stopRender() {
+  if (!rendering) return;
+  killWorker();
+  rendering = false;
+  busy.classList.remove('visible');
+  log('=== stopped ===', 'sys');
+  out.textContent = 'Render stopped.';
+}
+
+/* ---------------- files ---------------- */
+const fsAccess = 'showOpenFilePicker' in window;
+const scadTypes = [{ description: 'OpenSCAD', accept: { 'application/x-openscad': ['.scad'] } }];
+const stlTypes = [{ description: 'STL model', accept: { 'model/stl': ['.stl'] } }];
+
+const picker = document.createElement('input');
+picker.type = 'file';
+picker.accept = '.scad,text/plain';
+picker.addEventListener('change', async () => {
+  const f = picker.files[0];
+  picker.value = '';
+  if (f) loadScadFile(f);
+});
+
+async function loadScadFile(f) {
+  cm.setValue(await f.text());
+  setFile(f.name);
+  out.textContent = `Opened ${f.name}. Press Render to build it.`;
+}
+
+async function openFile() {
+  if (!fsAccess) { picker.click(); return; }
+  try {
+    const [h] = await window.showOpenFilePicker({ types: scadTypes });
+    const f = await h.getFile();
+    cm.setValue(await f.text());
+    setFile(f.name, h);
+    out.textContent = `Opened ${f.name}. Press Render to build it.`;
+  } catch {}
+}
+
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+async function saveScad(as) {
+  const text = cm.getValue();
+  if (fsAccess) {
+    try {
+      if (as || !handle)
+        handle = await window.showSaveFilePicker({ types: scadTypes, suggestedName: fileName });
+      const w = await handle.createWritable();
+      await w.write(text);
+      await w.close();
+      setFile((await handle.getFile()).name, handle);
+      out.textContent = `Saved ${fileName}`;
+    } catch {}
+    return;
+  }
+  if (as) {
+    const n = window.prompt('Save as:', fileName);
+    if (!n) return;
+    fileName = /\.scad$/i.test(n) ? n : n + '.scad';
+    fileLabel.textContent = fileName;
+  }
+  downloadBlob(new Blob([text], { type: 'application/x-openscad' }), fileName);
+  out.textContent = `Saved ${fileName} (downloaded)`;
+}
+
+async function exportStl() {
+  if (!lastStl) {
+    out.textContent = 'Nothing rendered yet — press Render first.';
+    render();
+    return;
+  }
+  const stlName = fileName.replace(/\.scad$/i, '') + '.stl';
+  if (fsAccess) {
+    try {
+      const h = await window.showSaveFilePicker({ types: stlTypes, suggestedName: stlName });
+      const w = await h.createWritable();
+      await w.write(new Blob([lastStl]));
+      await w.close();
+      out.textContent = `Exported ${stlName}`;
+      return;
+    } catch { return; }
+  }
+  downloadBlob(new Blob([lastStl], { type: 'model/stl' }), stlName);
+  out.textContent = `Exported ${stlName} (downloaded)`;
+}
+
+function newFile() {
+  cm.setValue('');
+  setFile('model.scad');
+  out.textContent = 'New sketch.';
+}
+
+/* ---------------- commit .scad + .stl to GitHub ---------------- */
+const contentBase = new URL('../../content/', location.href).href;
+const commitModal = document.getElementById('commitModal');
+const commitName = document.getElementById('commitName');
+const commitMsg = document.getElementById('commitMsg');
+const commitStl = document.getElementById('commitStl');
+const commitToken = document.getElementById('commitToken');
+const commitStatus = document.getElementById('commitStatus');
+let ghToken = null;             /* fine-grained PAT, memory only, per session */
+let repoCfg = null;
+
+async function getRepoCfg() {
+  if (repoCfg) return repoCfg;
+  const site = await (await fetch(contentBase + 'site.json')).json();
+  if (!site.repo) throw new Error('no "repo" configured in content/site.json');
+  repoCfg = { repo: site.repo, branch: site.branch || 'main' };
+  return repoCfg;
+}
+
+async function openCommit() {
+  try { await getRepoCfg(); } catch (e) { out.textContent = e.message; return; }
+  commitName.value = fileName.replace(/\.scad$/i, '') || 'model';
+  commitMsg.value = 'Add ' + commitName.value + '.scad';
+  commitStl.checked = !!lastStl;
+  document.getElementById('tokenRow').style.display = ghToken ? 'none' : 'flex';
+  commitStatus.textContent = `to ${repoCfg.repo} (${repoCfg.branch})`;
+  commitModal.classList.add('open');
+  (ghToken ? commitMsg : commitToken).focus();
+}
+
+const b64utf8 = s => {
+  const bytes = new TextEncoder().encode(s);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+const b64bytes = buf => {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+
+async function putFile(path, contentB64, message, token, branch, repo) {
+  const api = `https://api.github.com/repos/${repo}/contents/${path}`;
+  const headers = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' };
+  let sha = null;
+  const cur = await fetch(`${api}?ref=${encodeURIComponent(branch)}`, { headers });
+  if (cur.status === 200) sha = (await cur.json()).sha;
+  else if (cur.status === 401) throw new Error('token was rejected (401)');
+  else if (cur.status !== 404) throw new Error(`could not check ${path} (${cur.status})`);
+  const res = await fetch(api, {
+    method: 'PUT', headers,
+    body: JSON.stringify({ message, content: contentB64, branch, ...(sha ? { sha } : {}) })
+  });
+  if (!res.ok) throw new Error(`GitHub said ${res.status}: ${(await res.json()).message || ''}`);
+  return (await res.json()).commit.sha.slice(0, 7);
+}
+
+async function doCommit() {
+  const base = commitName.value.trim().replace(/[^\w.-]+/g, '-').replace(/\.scad$/i, '');
+  const token = ghToken || commitToken.value.trim();
+  if (!base) { commitStatus.textContent = 'A base name is needed.'; return; }
+  if (!token) { commitStatus.textContent = 'A token is needed.'; return; }
+  const withStl = commitStl.checked;
+  if (withStl && !lastStl) { commitStatus.textContent = 'Render first to commit an .stl, or untick it.'; return; }
+  const msg = commitMsg.value.trim() || ('Add ' + base);
+  const dir = 'content/applications/openscad/';
+  commitStatus.textContent = 'Committing .scad…';
+  try {
+    const { repo, branch } = repoCfg;
+    let sha = await putFile(dir + base + '.scad', b64utf8(cm.getValue()), msg, token, branch, repo);
+    if (withStl) {
+      commitStatus.textContent = 'Committing .stl…';
+      sha = await putFile(dir + base + '.stl', b64bytes(lastStl), msg + ' (STL)', token, branch, repo);
+    }
+    ghToken = token;
+    commitToken.value = '';
+    commitModal.classList.remove('open');
+    out.textContent = `Committed ${sha} — ${dir}${base}.scad${withStl ? ' + .stl' : ''}. The site rebuilds in about a minute.`;
+  } catch (e) {
+    commitStatus.textContent = e.message;
+  }
+}
+
+document.getElementById('commitGo').addEventListener('click', doCommit);
+document.getElementById('commitClose').addEventListener('click', () => commitModal.classList.remove('open'));
+commitModal.addEventListener('click', e => { if (e.target === commitModal) commitModal.classList.remove('open'); });
+commitModal.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') doCommit(); });
+
+/* ---------------- menu / toolbar ---------------- */
+const rms = document.querySelectorAll('.rm');
+const closeRm = () => rms.forEach(m => m.classList.remove('open'));
+rms.forEach(m => {
+  m.querySelector(':scope > button').addEventListener('click', e => {
+    e.stopPropagation();
+    const was = m.classList.contains('open');
+    closeRm();
+    if (!was) m.classList.add('open');
+  });
+});
+document.addEventListener('click', closeRm);
+document.querySelector('.scad-bar').addEventListener('click', e => {
+  const cmd = e.target.closest('[data-cmd]');
+  if (!cmd) return;
+  closeRm();
+  ({
+    new: newFile, open: openFile, save: () => saveScad(false), saveas: () => saveScad(true),
+    export: exportStl, commit: openCommit, render, stop: stopRender
+  })[cmd.dataset.cmd]?.();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') commitModal.classList.remove('open');
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveScad(e.shiftKey); }
+  if (e.key === 'F5') { e.preventDefault(); render(); }
+});
+
+cm.on('change', () => { if (autoRender.checked && !rendering) scheduleAuto(); });
+let autoTimer = null;
+function scheduleAuto() { clearTimeout(autoTimer); autoTimer = setTimeout(render, 900); }
+
+/* ---------------- drag & drop a .scad ---------------- */
+['dragenter', 'dragover'].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); stage.classList.add('dragging'); }));
+['dragleave', 'drop'].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); stage.classList.remove('dragging'); }));
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f && /\.scad$/i.test(f.name)) loadScadFile(f);
+});
+
+/* ---------------- code from the launch link ----------------
+ * app:applications/openscad.html?src=<site path to a .scad>
+ * app:applications/openscad.html?code=<url-encoded OpenSCAD source>
+ * app:applications/openscad.html?render=1  auto-builds after loading */
+async function applyLaunchOptions() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  const src = params.get('src');
+  let loaded = false;
+  if (code) {
+    cm.setValue(code);
+    setFile('linked.scad');
+    loaded = true;
+  } else if (src) {
+    const rel = src.replace(/^\/+/, '');
+    if (/^[\w./-]+$/.test(rel) && !rel.includes('..') && /\.scad$/i.test(rel)) {
+      try {
+        const res = await fetch(new URL(rel, new URL('../../', location.href)));
+        if (!res.ok) throw new Error(res.status);
+        cm.setValue(await res.text());
+        setFile(rel.split('/').pop());
+        loaded = true;
+      } catch (err) {
+        out.textContent = `Could not load ${rel} (${err.message}).`;
+      }
+    } else {
+      out.textContent = 'Refused to open an unexpected path.';
+    }
+  }
+  if (loaded && params.get('render') === '1') render();
+}
+
+setFile('model.scad');
+applyLaunchOptions();
+</script>
+</body>
+</html>

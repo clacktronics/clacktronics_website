@@ -169,6 +169,8 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <button data-cmd="insert-falstad"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>Falstad exported link&hellip;</button>
       <button data-cmd="insert-circuit"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>Falstad circuit file link&hellip;</button>
       <button data-cmd="insert-kicad"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>KiCad file link&hellip;</button>
+      <button data-cmd="insert-openscad"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>OpenSCAD file link&hellip;</button>
+      <button data-cmd="insert-openscad-code"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>OpenSCAD code link&hellip;</button>
       <div class="sep"></div>
       <button data-cmd="insert-app"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Application link&hellip;</button>
     </div></div>
@@ -516,6 +518,20 @@ function insertKicadLink() {
   if (file) insertClackLink(`app:applications/kicad.html?file=${encodePart(siteFileName(file, 'kicad'))}`, 'Open in KiCad Viewer');
 }
 
+function insertOpenscadLink() {
+  const file = prompt('OpenSCAD file path from the site root (for example content/applications/openscad/box.scad):', 'content/applications/openscad/box.scad');
+  if (!file) return;
+  const build = confirm('Build the model automatically when the link is opened?');
+  insertClackLink(`app:applications/openscad.html?src=${encodePart(file)}${build ? '&render=1' : ''}`, 'Open in OpenSCAD');
+}
+
+function insertOpenscadCodeLink() {
+  const code = prompt('Paste the OpenSCAD source to embed in the link (kept short — long code is better saved as a .scad file):', 'cube([20, 20, 20], center = true);');
+  if (!code) return;
+  const build = confirm('Build the model automatically when the link is opened?');
+  insertClackLink(`app:applications/openscad.html?code=${encodeURIComponent(code)}${build ? '&render=1' : ''}`, 'Open in OpenSCAD');
+}
+
 function insertAppLink() {
   const page = prompt('Registered application page under content/ (for example applications/video/index.html):', 'applications/video/index.html');
   if (!page) return;
@@ -536,6 +552,8 @@ const insertCommands = {
   'insert-falstad': insertFalstadLink,
   'insert-circuit': insertCircuitLink,
   'insert-kicad': insertKicadLink,
+  'insert-openscad': insertOpenscadLink,
+  'insert-openscad-code': insertOpenscadCodeLink,
   'insert-app': insertAppLink
 };
 
