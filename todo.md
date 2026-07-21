@@ -2,9 +2,6 @@
 
 ### To make it functioally complete for information
 
-* desktop icon that brings index page back up
-* A way to show the BYOM and Euroclack information cleanly
-* Play video from youtube in video player
 * mobile modification, maybe even just forwarding to desktopless
 
 ### Aesthetic Tweaks and experience improvements
@@ -13,7 +10,6 @@
 * Need links that are not like buttons and are inline
 * links seem to be showing as buttons in mardown?
 * Make entire site downloadable
-* Make escapable HTML1 version of site.
 * Consistent theme in in apps
 
 ### Non working features and bugs
@@ -23,10 +19,10 @@
 
 ### New Features and featurettes
 
-* A way for me to upload images and small video
 * Report bug button
 * in 3d model viewer need auto rotate and material selection (transparent) and lighting? background choice. hide/Show grid, export.
 * Add sliders in theme editor
+* Split out some of the settings in theme editor so colours can be different.
 
 ### New Apps
 
