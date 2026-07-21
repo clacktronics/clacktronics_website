@@ -45,5 +45,6 @@
     }
   ],
   "repo": "clacktronics/clacktronics_website",
-  "branch": "main"
+  "branch": "main",
+  "assetUpload": "assets/upload.php"
 }
