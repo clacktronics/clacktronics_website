@@ -383,9 +383,20 @@ body.win-drag iframe { pointer-events: none; }
   flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none;
 }
 #tasks::-webkit-scrollbar { display: none; }
+#plain-link {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  height: 28px; margin-left: auto; padding: 0 4px;
+  color: color-mix(in srgb, var(--menu-text) 68%, transparent);
+  text-decoration: none; white-space: nowrap;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  letter-spacing: 0.04em;
+}
+#plain-link:hover { color: var(--menu-text); text-decoration: underline; }
+#plain-link:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+#plain-link .pixel-icon { width: 12px; height: 12px; color: var(--leaf); }
 #resource-stats {
   display: flex; align-items: center; gap: 12px; flex: none;
-  height: 28px; margin-left: auto; padding-left: 12px;
+  height: 28px; padding-left: 12px;
   border-left: 1px solid color-mix(in srgb, var(--menu-text) 28%, transparent);
   color: color-mix(in srgb, var(--menu-text) 68%, transparent); white-space: nowrap;
   font-family: 'IBM Plex Mono', monospace; font-size: 10px;

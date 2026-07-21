@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
+<title>Scanner Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/icons.css">
+<link rel="stylesheet" href="../../assets/css/clackos.css">
+<link rel="stylesheet" href="../../assets/themes/monochrome.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body class="plain-mirror">
+<header id="plain-nav"><nav><a href="../index.html">Home</a> · <a href="../readme.html">README</a> · <a href="../catalogue.html">Catalogue</a> · <a href="../euroclack.html">EuroClack</a> · <a href="../blog.html">Blog</a> · <a href="../about.html">About</a></nav></header>
+<main>
+<div class="plain">
+<h1>Scanner Cloud</h1>
+<p class="tagline">18 May 2016</p>
+<div class="rule"></div>
+<p><img src="https://clacktronics.co.uk/assets/Foxall_scanner.jpg" alt="Foxall Studio Scanner - Image courtesy Foxall studio" loading="lazy"><br>Yes its true, I now do more than synths so my posts have diversified a bit although some new synth stuff coming soon, watch this space! This is a project I did a few months ago for <a href="http://foxallstudio.com/project/publishing-rooms/" target="_blank" rel="noopener noreferrer">Foxall Studio</a> concept was to get around 50 flatbed scanners scattered around an exhibition space scanning in unison. Then creating clustered mosaics of images from the results that were displayed in the space using projections and printers. My task on the project became how to connect and power all of these scanners. We ended up using Raspberry Pis because it offered us the low cost and flexibility to position the scanners anywhere. I was sent this image below when the scanners arrived!</p>
+<p><img src="https://clacktronics.co.uk/assets/Foxall_scanner_pile.jpg" alt="Foxall Studio Scanner - Image courtesy Foxall studio" loading="lazy"></p>
+<p>That is a lot of testing to do! they were all second hand from a recycling center I believe.</p>
+<p>On top of the function of scanning, the images from these scanners had to be shown in the space on a projector, be printed and hosted on a website.</p>
+<p>So the challenge was</p>
+<ul class="list"><li><p>How control configure all the scanners easily and at once</p></li><li><p>How an application can pull these images from the scanners without having to try any special protocols or drivers.</p></li></ul>
+<p>If you had to iterate over 50 flatbed scanners every time a configuration needed changing that was a problem. There were many many different ways I explored how this could be set up, but the solution I ended up choosing was the one that was the quickest to prototype and made compatibility easy. In Linux compatibility was provided by the amazing <a href="http://www.sane-project.org/" target="_blank" rel="noopener noreferrer">SANE</a> driver and <a href="https://github.com/jflesch/pyinsane" target="_blank" rel="noopener noreferrer">pyinsane</a> bindings for it in python so I could control the scanner. Then I turned each scanner into a basic web server using Python&#x27;s <a href="https://docs.python.org/2/library/basehttpserver.html" target="_blank" rel="noopener noreferrer">BaseHttpServer</a> which I love because it is the most simple and easy to use module. On each GET request the server would scan and return an image. Parameters such as resolution or colour mode could be simply put in the URL such as &quot;http://scannerurl/?mode=color&amp;resolution=100&quot;. My program also pulled info from the scanner and presented in under the root URL port 80. Why did I not use a lower level protocol to send images? I figured that there is not one contemporary programming language that does not have a quick library for HTTP requests, plus you can test it in browser!</p>
+<p><img src="https://clacktronics.co.uk/assets/Foxall_scanner_prints.jpg" alt="Foxall Studio Scanner - Image courtesy boningtongallery" loading="lazy"></p>
+<p>Some of the cameras had lenses attached to them that is why the images look like photographs this idea by Foxall Studio was to bring back the age of having to sit and wait for the photo to take like the dawn of photography. Where if you did not sit still the image distorted!</p>
+<p>I then worked with <a href="http://bleepsandblops.com/" target="_blank" rel="noopener noreferrer">Sebastien Dehesdin</a> who produced a node.js server that pulled all the images from the scanners and served them online. Both of us could not install the work due to other commitments but somehow it worked out thanks to Foxall studio and the Gallery manager who learned a lot of shell commands fast!</p>
+<p class="eyebrow">Reflection</p>
+<p>I learned a great deal on this project about working with scale and allowing flexibility. I am still not sure if it was the best idea to use Raspberry Pis (the new &quot;I can do that with a ..&quot; device) distributing 5v 50 ways was a challenge, but I think I am missing what I would have had to have done trailing USB hubs everywhere to single servers! The 0 configuration idea worked very well though, no scanner was assigned to any particular device, scanners could be swapped out if they broke or did not work with the drivers.</p>
+<p>See links below for more detail and the actual exhibition website.</p>
+<ul class="list"><li><p><a href="http://publishingrooms.com" target="_blank" rel="noopener noreferrer">PublishingRooms.com</a></p></li><li><p><a href="https://github.com/clacktronics/Foxall_Scanner" target="_blank" rel="noopener noreferrer">Scanner Server Code on Github</a></p></li><li><p><a href="http://boningtongallery.co.uk" target="_blank" rel="noopener noreferrer">Bonington Gallery</a></p></li></ul>
+<p>All images courtesy Foxall Studio and Bonington Gallery</p>
+</div>
+</main>
+<div id="plain-site-footer"><a href="../../index.html">Switch to the ClackOS desktop version</a></div>
+</body>
+</html>

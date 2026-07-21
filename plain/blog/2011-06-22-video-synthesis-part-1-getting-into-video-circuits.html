@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
+<title>Video Synthesis Part 1 : Getting into Video Circuits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/icons.css">
+<link rel="stylesheet" href="../../assets/css/clackos.css">
+<link rel="stylesheet" href="../../assets/themes/monochrome.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body class="plain-mirror">
+<header id="plain-nav"><nav><a href="../index.html">Home</a> · <a href="../readme.html">README</a> · <a href="../catalogue.html">Catalogue</a> · <a href="../euroclack.html">EuroClack</a> · <a href="../blog.html">Blog</a> · <a href="../about.html">About</a></nav></header>
+<main>
+<div class="plain">
+<h1>Video Synthesis Part 1 : Getting into Video Circuits</h1>
+<p class="tagline">22 June 2011</p>
+<div class="rule"></div>
+<p><img src="https://clacktronics.co.uk/assets/643_gieskes.gif" alt="" loading="lazy"> Frame from video by <a href="http://gieskes.nl" target="_blank" rel="noopener noreferrer">Gijs Gieskes</a> Just recently I have been researching how to work with analogue video, specifically Composite (the yellow phono connector you get on a lot of consumer video equipment.) Here is some information I have found out.</p>
+<p>Firstly composite video is far more complex than audio, the reason being that to represent a sound electronically you only need 2 dimensions amplitude over time. It is easily represented by voltage, making it possible to create quite interesting effects and adjustments to the sound with very little and low cost circuitry. Where as composite video is a 2 dimensional image (X,Y) over time with Brightness (luminance) and Colour (chrominance) information is still represented by a voltage, but it has to hold all that information in a 2 dimensional signal. To do this it is constructed of a repeating (scanning) waveform that contains triggers, frequency bursts and a DC voltage that each represent a different component of the image.</p>
+<p>There is a good app note here that explains it a lot better and in depth than me by Maxim Semiconductors - <a href="http://www.maxim-ic.com/app-notes/index.mvp/id/734" target="_blank" rel="noopener noreferrer">www.maxim-ic.com/app-notes/index.mvp/id/734</a></p>
+<p>Now, all this makes it quite difficult to use a handful of components to do anything effective as with sound. Of course you can glitch and mess up the image but in the end it gets a bit boring and &#x27;samey&#x27; and pretty much consists of making the image glitch a bit. Composite video is quite a sensitive high frequency signal and for example if you want to change one parameter like contrast (luminance) you have to do it without affecting the other parts of the signal.</p>
+<p>Ideally what you need to do is separate the parts (usually sync from luminosity and chrominance.)</p>
+<p>There is a lot out there on what can be achieved with circuitry, but not a lot on how. Then I found this excellent book by <a href="http://Elektor.com" target="_blank" rel="noopener noreferrer">Elektor</a>that describes to the modern user (released 2011) on how it all works including how to decode and encode composite video! Also touches on lost historical technologies such as mechanical TV and spiral scanning.</p>
+<p><a href="https://clacktronics.co.uk/assets/Analogue-Video-300.jpg" target="_blank" rel="noopener noreferrer"><img src="https://clacktronics.co.uk/assets/643_analogue-video-300.jpg" alt="" loading="lazy"></a>Copyright Elektor</p>
+<p>Below is some of the best bits I could find that certainly seem to have legs for direct video manipulation with circuitry.</p>
+<p><b>gieskes.nl</b><br>http://vimeo.com/20876345</p>
+<p>Gijs Gieskes created this fantastic swiping circuit based around micro-controllers that seem to work by switching between 2 video sources very quickly to create interesting fade patterns. His website is <a href="http://gieskes.nl/visual-equipment/?file=vm1" target="_blank" rel="noopener noreferrer">gieskes.nl</a>.</p>
+<p><b>256byteram</b><br>http://youtu.be/W5wv7RbJ3EQ</p>
+<p>Taking the idea of switches this video demonstrates using a comparator to super-impose video. His youtube channel is <a href="http://www.youtube.com/user/256byteram" target="_blank" rel="noopener noreferrer">256byteram</a></p>
+</div>
+</main>
+<div id="plain-site-footer"><a href="../../index.html">Switch to the ClackOS desktop version</a></div>
+</body>
+</html>
