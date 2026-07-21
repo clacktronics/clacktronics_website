@@ -184,8 +184,8 @@ Application links may include a query string. Only pages already registered as
 `"type": "app"` in a menu can be launched, so Markdown cannot turn the desktop
 into an arbitrary iframe launcher. The Markdown Editor's Insert menu creates
 links for Video Lab and PDF Reader files, Falstad exported data or saved
-circuit files, KiCad files, generic registered applications, Markdown windows,
-and desktop actions.
+circuit files, KiCad files, OpenSCAD files or inline OpenSCAD code, generic
+registered applications, Markdown windows, and desktop actions.
 
 - `applications/appearance.html` (Applications → System → Appearance) — a
   simple chooser for the registered bitmap background tiles and colour themes.
@@ -299,6 +299,23 @@ and desktop actions.
   files like the Markdown editor (File System Access API with download
   fallback, Ctrl+S). Only the core interpreter is vendored — installing
   packages with micropip fetches wheels from PyPI at runtime.
+- `applications/openscad.html` (Applications → Maths & Programming → OpenSCAD) —
+  a parametric CAD environment that runs the OpenSCAD engine as WebAssembly
+  (openscad-wasm, GPL-2.0), fetched from a CDN on first render and cached
+  afterwards. A CodeMirror 5 editor with OpenSCAD syntax highlighting on the
+  left; a live three.js STL preview on the right (orbit/pan/zoom, fit,
+  wireframe and grid toggles) that takes its colours from the active ClackOS
+  theme. Press Render (F5) to build; each render runs in a fresh, short-lived
+  Web Worker so a heavy or runaway model never freezes the desktop and can be
+  stopped. Nothing is uploaded — the .scad goes in and an .stl comes back in
+  the browser. File → Open loads your own .scad scripts (picker or
+  drag-and-drop); Save writes the .scad (File System Access API with a download
+  fallback); Export writes the rendered .stl. Publish → Commit sends both the
+  .scad and the rendered .stl to `content/applications/openscad/` through
+  GitHub's contents API, using the same in-memory fine-grained token approach as
+  the Markdown and Theme editors. It can be launched from a Markdown link with
+  `?src=<path to a .scad>` or `?code=<url-encoded source>` (add `&render=1` to
+  build on open), which the Markdown Editor's Insert menu writes for you.
 - `applications/paint.html` (Applications → ClackPaint) — a classic bitmap
   editor: pencil, brush, eraser, airbrush, flood fill, colour picker, clone
   stamp, soft blur, line, rectangle (outline/filled), ellipse and rectangular
