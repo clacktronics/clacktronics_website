@@ -323,6 +323,22 @@ wallpapers.
 1. Create `content/<name>/` with a `menu.json`.
 2. Add `<name>` to the `menus` array in `content/site.json`.
 
+## Plain HTML mirror
+
+`plain/` is a no-desktop mirror of all the markdown content — ordinary HTML
+pages with standard links, for readers (and machines) that don't want the
+ClackOS window manager. `window:` links become normal page-to-page links,
+`app:` links open the standalone application page in a new tab, and the
+`@[youtube]` / `@[video]` / `@[kicanvas]` embeds still render inline. Each
+page footer links back to the desktop version.
+
+The mirror is generated — don't edit `plain/` by hand. After changing
+content, regenerate it:
+
+```sh
+python3 scripts/build_plain_site.py
+```
+
 ## Developing locally
 
 `fetch()` doesn't work over `file://`, so serve the folder:

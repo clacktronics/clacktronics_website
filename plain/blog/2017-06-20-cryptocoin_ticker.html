@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cryptocoin ticker</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header><nav><a href="../index.html">Home</a> · <a href="../readme.html">README</a> · <a href="../catalogue.html">Catalogue</a> · <a href="../euroclack.html">EuroClack</a> · <a href="../blog.html">Blog</a> · <a href="../about.html">About</a></nav></header>
+<main>
+<h1>Cryptocoin ticker</h1>
+<p class="tagline">20 June 2017</p>
+<p><img src="https://clacktronics.co.uk/assets/microdot_bitcoin.jpg" alt="Pimoroni&amp;#x27;s microdot phat displaying Bitcoin program" loading="lazy"><br>A Quick 5 minute build and possibly a prototype for a future project. I took the Pimoroni micro dot display, which is suitably retro looking, like an 80s/90s stock exchange. Although it is LED, it actually looks a bit like an old <a href="https://en.wikipedia.org/wiki/Vacuum_fluorescent_display" target="_blank" rel="noopener noreferrer">Vacuum fluorescent display</a>! The code is a very simple Python script that uses Coinmarketcap API (I chose them because they pull all the coins together) which is simply just provided as JSON, the API allows you to request by currency so I just pulled the ones I wanted and fed the details into a single string that loops on the display.</p>
+<p>See the python code below, it gets the details of the coins one by one and pulls the dollar value of them, concatenating it into a single string that is fed into the Pimoroni module for loading up text on the display. It only requests new information every 20 loops to lower demand on the API as it is probably request limited.</p>
+<pre>from time import sleep
+from microdotphat import write_string, scroll, clear, show
+import json
+import urllib2
+
+# choose currencies to display
+currencies = [&#x27;bitcoin&#x27;, &#x27;litecoin&#x27;, &#x27;dogecoin&#x27;]
+
+while True:
+    ticker = &#x27;&#x27;
+
+    for currency in currencies:
+
+        url = &quot;https://api.coinmarketcap.com/v1/ticker/%s/&quot; % currency
+        data = json.load(urllib2.urlopen(url))[0]
+
+        ticker += &#x27;%s &#x27; % data[&#x27;symbol&#x27;]
+        ticker += &#x27;$%s &#x27; % data[&#x27;price_usd&#x27;]
+
+    for i in range(20):
+        clear()
+        write_string(ticker, kerning=False)
+        for c in ticker:
+            show()
+            scroll(amount_x=8)
+            sleep(.5)
+
+    sleep(10)</pre>
+<p>Here is a Demo of it working, it can simply be run at startup ensuring there is an internet connection.</p>
+<p class="ctas"><a href="https://www.youtube.com/watch?v=wlej3YBEKBU" target="_blank" rel="noopener noreferrer">Watch on YouTube</a></p>
+</main>
+<footer class="site"><a href="../../index.html">Switch to the ClackOS desktop version</a></footer>
+</body>
+</html>
