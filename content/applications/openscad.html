@@ -268,6 +268,7 @@ let fileName = 'model.scad';
 let handle = null;              /* FileSystemFileHandle when supported */
 let lastStl = null;            /* ArrayBuffer of the most recent render */
 let rendering = false;
+let projectFiles = {};         /* sibling name -> text, for include<> / use<> */
 
 /* ---------------- editor ---------------- */
 const cm = CodeMirror.fromTextArea(document.getElementById('code'), {
@@ -473,6 +474,10 @@ self.onmessage = async e => {
       printErr: t => postMessage({ type: 'log', text: String(t), stderr: true })
     });
     const inst = api.getInstance();
+    // sibling files (for include <> / use <>) live next to the entry point
+    for (const [name, text] of Object.entries(e.data.files || {})) {
+      try { inst.FS.writeFile('/' + name, text); } catch (_) {}
+    }
     inst.FS.writeFile('/input.scad', e.data.code);
     inst.callMain(['/input.scad', '-o', '/output.stl']);
     let data = null;
@@ -505,13 +510,22 @@ function render() {
   worker = new Worker(workerURL, { type: 'module' });
   worker.onmessage = e => {
     const m = e.data;
-    if (m.type === 'log') { log(m.text, m.stderr ? (/error/i.test(m.text) ? 'err' : 'warn') : undefined); return; }
+    if (m.type === 'log') {
+      // the WASM build always prints this benign locale note — drop the noise
+      if (/could not initialize localization/i.test(m.text)) return;
+      log(m.text, m.stderr ? (/error/i.test(m.text) ? 'err' : 'warn') : undefined);
+      return;
+    }
     killWorker();
     if (m.type === 'done') finishRender(m.stl);
     else failRender(m.text);
   };
   worker.onerror = ev => { killWorker(); failRender(ev.message || 'The OpenSCAD engine crashed.'); };
-  worker.postMessage({ code: cm.getValue() });
+  /* the editor holds the entry point; project siblings resolve include<>/use<>.
+     write the live editor text under its own name too, so a sibling that
+     includes the main file by name still sees the latest edits. */
+  const files = { ...projectFiles, [fileName]: cm.getValue() };
+  worker.postMessage({ code: cm.getValue(), files });
 }
 
 function finishRender(stl) {
@@ -553,26 +567,49 @@ const stlTypes = [{ description: 'STL model', accept: { 'model/stl': ['.stl'] } 
 const picker = document.createElement('input');
 picker.type = 'file';
 picker.accept = '.scad,text/plain';
+picker.multiple = true;
 picker.addEventListener('change', async () => {
-  const f = picker.files[0];
+  const files = [...picker.files];
   picker.value = '';
-  if (f) loadScadFile(f);
+  if (files.length) loadScadFiles(files);
 });
 
-async function loadScadFile(f) {
-  cm.setValue(await f.text());
-  setFile(f.name);
-  out.textContent = `Opened ${f.name}. Press Render to build it.`;
+/* the entry point is the file no other opened file includes/uses */
+function chooseMain(items) {
+  const referenced = new Set();
+  const re = /\b(?:include|use)\s*<([^>]+)>/g;
+  for (const it of items) {
+    let m;
+    while ((m = re.exec(it.text))) referenced.add(m[1].trim().replace(/^.*\//, ''));
+  }
+  return items.find(it => !referenced.has(it.name)) || items[0];
+}
+
+/* Load one or more .scad files. Extra files become project siblings so that
+ * include <lib.scad> / use <lib.scad> resolve against the same folder. */
+async function loadScadFiles(fileList, singleHandle) {
+  const items = [];
+  for (const f of fileList) {
+    if (!/\.scad$/i.test(f.name)) continue;
+    items.push({ name: f.name, text: await f.text() });
+  }
+  if (!items.length) { out.textContent = 'Choose one or more .scad files.'; return; }
+  const main = chooseMain(items);
+  projectFiles = {};
+  for (const it of items) projectFiles[it.name] = it.text;
+  cm.setValue(main.text);
+  setFile(main.name, items.length === 1 ? singleHandle : null);
+  out.textContent = items.length > 1
+    ? `Opened ${items.length} files (entry: ${main.name}). Press Render to build.`
+    : `Opened ${main.name}. Press Render to build it.`;
 }
 
 async function openFile() {
   if (!fsAccess) { picker.click(); return; }
   try {
-    const [h] = await window.showOpenFilePicker({ types: scadTypes });
-    const f = await h.getFile();
-    cm.setValue(await f.text());
-    setFile(f.name, h);
-    out.textContent = `Opened ${f.name}. Press Render to build it.`;
+    const handles = await window.showOpenFilePicker({ types: scadTypes, multiple: true });
+    const files = await Promise.all(handles.map(h => h.getFile()));
+    loadScadFiles(files, handles.length === 1 ? handles[0] : null);
   } catch {}
 }
 
@@ -631,6 +668,7 @@ async function exportStl() {
 
 function newFile() {
   cm.setValue('');
+  projectFiles = {};
   setFile('model.scad');
   out.textContent = 'New sketch.';
 }
@@ -763,8 +801,8 @@ function scheduleAuto() { clearTimeout(autoTimer); autoTimer = setTimeout(render
 document.addEventListener('dragover', e => e.preventDefault());
 document.addEventListener('drop', e => {
   e.preventDefault();
-  const f = e.dataTransfer.files[0];
-  if (f && /\.scad$/i.test(f.name)) loadScadFile(f);
+  const files = [...e.dataTransfer.files].filter(f => /\.scad$/i.test(f.name));
+  if (files.length) loadScadFiles(files);
 });
 
 /* ---------------- code from the launch link ----------------
@@ -776,6 +814,7 @@ async function applyLaunchOptions() {
   const code = params.get('code');
   const src = params.get('src');
   let loaded = false;
+  projectFiles = {};
   if (code) {
     cm.setValue(code);
     setFile('linked.scad');
