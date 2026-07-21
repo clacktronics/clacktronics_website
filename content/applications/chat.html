@@ -52,6 +52,12 @@
 .chat-compose .pixel-icon { width: 15px; height: 15px; }
 .chat-status { padding: 4px 14px 8px; background: var(--paper-deep); min-height: 22px; }
 .chat-about { margin: 10px 14px; }
+.chat-credit {
+  padding: 6px 14px; font-size: 10.5px; color: var(--sage); line-height: 1.6;
+  border-top: 1px solid var(--paper-line); background: var(--paper-deep);
+}
+.chat-credit a { color: var(--leaf-deep); text-decoration: underline; }
+.chat-credit a:hover { color: var(--leaf); }
 </style>
 </head>
 <body>
@@ -112,6 +118,15 @@
       <button class="btn primary chat-send" title="Send (Enter)"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Send</button>
     </div>
     <p class="app-status chat-status"></p>
+    <p class="chat-credit">Model:
+      <a href="https://huggingface.co/prism-ml/Bonsai-1.7B-unpacked" target="_blank" rel="noopener">Bonsai&nbsp;1.7B</a>
+      by prism-ml, <a href="https://huggingface.co/onnx-community/Bonsai-1.7B-ONNX" target="_blank" rel="noopener">ONNX conversion</a>
+      by onnx-community · Apache-2.0.<br>
+      Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
+      by Hugging Face, <a href="../../vendor/transformers/LICENSE" target="_blank">Apache-2.0</a> ·
+      <a href="https://github.com/microsoft/onnxruntime" target="_blank" rel="noopener">ONNX&nbsp;Runtime</a>
+      by Microsoft, <a href="../../vendor/transformers/LICENSE-onnxruntime.txt" target="_blank">MIT</a>
+    </p>
   </div>
 </div>
 
