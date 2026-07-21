@@ -10,6 +10,7 @@
       { "type": "action", "action": "minimise-all", "label": "Minimise all", "icon": "minus-box" },
       { "type": "action", "action": "restore-all", "label": "Restore all", "icon": "plus-box" }
     ] },
-    { "type": "action", "action": "toggle-taskbar", "label": "Toggle taskbar", "icon": "eye" }
+    { "type": "sep" },
+    { "type": "action", "action": "plain-html", "label": "Plain HTML", "icon": "file-text" }
   ]
 }

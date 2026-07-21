@@ -1,7 +1,6 @@
 {
   "menus": [
     "file",
-    "edit",
     "view",
     "applications"
   ],

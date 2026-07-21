@@ -1152,13 +1152,27 @@ function runAction(action) {
     case 'arrange-columns': arrangeColumns(); break;
     case 'minimise-all': minimiseAll(); break;
     case 'restore-all': restoreAll(); break;
-    case 'toggle-taskbar': document.body.classList.toggle('no-taskbar'); break;
+    case 'plain-html': window.open('plain/index.html', '_blank', 'noopener'); break;
     case 'copy': {
       const sel = String(document.getSelection() || '');
       if (sel && navigator.clipboard) navigator.clipboard.writeText(sel).catch(() => {});
       break;
     }
     case 'restart': {
+      document.body.style.transition = 'opacity 0.4s ease';
+      document.body.style.opacity = '0';
+      setTimeout(() => location.reload(), 420);
+      break;
+    }
+    case 'restart-reset': {
+      /* Clear the browser-saved theming overrides so the desktop reboots into
+       * the website's default appearance (theme, wallpaper and any custom
+       * background uploaded via Paint). */
+      try {
+        localStorage.removeItem(THEME_KEY);
+        localStorage.removeItem('clackos-wallpaper');
+        localStorage.removeItem(CUSTOM_BG_KEY);
+      } catch {}
       document.body.style.transition = 'opacity 0.4s ease';
       document.body.style.opacity = '0';
       setTimeout(() => location.reload(), 420);
@@ -1230,6 +1244,27 @@ async function observeCpuPressure() {
 updatePageMemory();
 setInterval(updatePageMemory, 5000);
 observeCpuPressure();
+
+/* ---------------- Taskbar build stamp ---------------- */
+/* Show the deployed commit in the bottom-right of the taskbar. version.json is
+ * written at deploy time (see siteVersion); on a raw checkout it is absent, so
+ * the stamp stays "dev". */
+(function taskbarBuildStamp() {
+  const stamp = document.getElementById('build-stamp-tb');
+  const sha = document.getElementById('build-sha');
+  if (!stamp || !sha) return;
+  siteVersion().then(v => {
+    if (!v || !v.short) return;
+    sha.textContent = v.short;
+    if (v.builtAt) stamp.title = `Deployed commit ${v.short} · ${String(v.builtAt).slice(0, 10)}`;
+    else stamp.title = `Deployed commit ${v.short}`;
+    if (v.url) {
+      stamp.href = v.url;
+      stamp.target = '_blank';
+      stamp.rel = 'noopener noreferrer';
+    }
+  });
+})();
 
 /* ---------------- Boot ---------------- */
 async function boot() {
