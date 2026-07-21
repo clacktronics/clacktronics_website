@@ -1,0 +1,6 @@
+{
+  "description": "Hosts whose pages and PDFs are allowed to open INSIDE the ClackOS web browser / PDF reader windows. Links that are local to this website are always allowed. Anything not local and not listed here opens in a real new browser tab instead, so the desktop never shows a blank window when a site refuses to be framed (X-Frame-Options / CSP). Entries match the exact host and any subdomain (e.g. \"example.com\" also matches \"docs.example.com\").",
+  "hosts": [
+    "clacktronics.co.uk"
+  ]
+}

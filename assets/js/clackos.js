@@ -218,9 +218,39 @@ function safeWebUrl(value, allowFragment = true) {
   return '';
 }
 
+/* Hosts allowed to open inside the in-OS browser / PDF reader, loaded from
+ * content/link-whitelist.json at boot. Local (same-origin) links are always
+ * allowed; everything else opens in a real new tab so a site that refuses to be
+ * framed (X-Frame-Options / CSP) can't leave a blank window on the desktop. */
+let linkWhitelist = [];
+
+async function loadLinkWhitelist() {
+  try {
+    const data = await loadJSON('content/link-whitelist.json');
+    const hosts = Array.isArray(data) ? data : (data.hosts || []);
+    linkWhitelist = hosts
+      .filter(host => typeof host === 'string')
+      .map(host => host.trim().toLowerCase())
+      .filter(Boolean);
+  } catch {
+    linkWhitelist = [];
+  }
+}
+
+/* A URL may be shown inside the OS when it is same-origin as this site or when
+ * its host (or a parent domain) is on the whitelist. */
+function canEmbedUrl(safe) {
+  let url;
+  try { url = new URL(safe, location.href); } catch { return false; }
+  if (url.origin === location.origin) return true;
+  const host = url.hostname.toLowerCase();
+  return linkWhitelist.some(entry => host === entry || host.endsWith('.' + entry));
+}
+
 function webViewerAppId(value) {
   const safe = safeWebUrl(value, false);
   if (!/^https?:/i.test(safe)) return '';
+  if (!canEmbedUrl(safe)) return '';
   let pathname;
   try { pathname = new URL(safe).pathname; } catch { return ''; }
   const isPdf = /\.pdf$/i.test(pathname);
@@ -235,10 +265,14 @@ function bindWebLinkRouting(root) {
     /* target="_blank" is an explicit opt-out of in-OS routing (e.g. the
      * taskbar's Plain HTML link) — let the browser open a real new tab */
     if (anchor.target === '_blank') return;
-    const appId = webViewerAppId(anchor.href);
-    if (!appId) return;
+    const safe = safeWebUrl(anchor.href, false);
+    if (!/^https?:/i.test(safe)) return;   /* mailto:, tel:, fragments — leave alone */
+    const appId = webViewerAppId(safe);
+    if (appId) { event.preventDefault(); openWindow(appId); return; }
+    /* Not local and not whitelisted: open in a real new tab rather than the
+     * in-OS viewer, so a site that blocks framing never leaves a blank window. */
     event.preventDefault();
-    openWindow(appId);
+    window.open(safe, '_blank', 'noopener');
   }, true);
 }
 
@@ -1273,6 +1307,7 @@ observeCpuPressure();
 async function boot() {
   const site = await loadJSON('content/site.json');
   if (typeof site.repo === 'string' && /^[\w.-]+\/[\w.-]+$/.test(site.repo)) siteRepo = site.repo;
+  await loadLinkWhitelist();
   site.backgrounds = await window.ClackOSBackgrounds.list(site);
   loadWebsiteBackgrounds(site);
   availableThemes = new Set((site.themes || []).map(safeThemeName));
