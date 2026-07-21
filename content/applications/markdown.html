@@ -433,7 +433,7 @@ function insertWindowLink() {
 }
 
 function insertActionLink() {
-  const action = prompt('Desktop action: close-front, tidy, toggle-taskbar, copy, or restart', 'tidy');
+  const action = prompt('Desktop action: close-front, tidy, plain-html, copy, or restart', 'tidy');
   if (action) insertClackLink('action:' + encodePart(action), action === 'tidy' ? 'Tidy windows' : 'Run action');
 }
 

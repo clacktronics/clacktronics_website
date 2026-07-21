@@ -1,9 +1,6 @@
 {
   "label": "Applications",
   "items": [
-    { "type": "submenu", "label": "Games", "icon": "target", "items": [
-      { "type": "app", "page": "clacksweeper.html", "label": "Clacksweeper", "title": "Clacksweeper", "icon": "grid-3x3", "width": 680, "height": 525, "fixed": true, "multi": true, "integrated": true }
-    ] },
     { "type": "submenu", "label": "Multimedia", "icon": "video", "items": [
       { "type": "app", "page": "clackbase.html", "label": "Clackbase MIDI Sequencer", "title": "Clackbase 1.0", "icon": "music", "width": 1120, "height": 760, "multi": true },
       { "type": "app", "page": "video/index.html", "label": "Video Lab", "title": "Video Lab", "icon": "video", "width": 1180, "height": 780, "multi": true },
@@ -26,12 +23,16 @@
       { "type": "app", "page": "pdf-reader/index.html", "label": "PDF Reader", "title": "PDF Reader", "icon": "file-text", "width": 1100, "height": 760, "multi": true },
       { "type": "app", "page": "markdown.html", "label": "Markdown Editor", "title": "Markdown Editor", "icon": "pencil", "multi": true }
     ] },
+    { "type": "submenu", "label": "Games", "icon": "target", "items": [
+      { "type": "app", "page": "clacksweeper.html", "label": "Clacksweeper", "title": "Clacksweeper", "icon": "grid-3x3", "width": 680, "height": 525, "fixed": true, "multi": true, "integrated": true }
+    ] },
     { "type": "submenu", "label": "System", "icon": "cpu", "items": [
       { "type": "app", "page": "appearance.html", "label": "Appearance", "title": "Appearance", "icon": "image", "width": 460, "height": 420, "fixed": true, "integrated": true },
       { "type": "app", "page": "theme.html", "label": "Theme Editor", "title": "Theme Editor", "icon": "colors-swatch", "width": 960, "height": 700, "fixed": true, "multi": true, "integrated": true }
     ] },
     { "type": "sep" },
     { "type": "window", "md": "about.md", "label": "About ClackOS", "icon": "info-box" },
-    { "type": "action", "action": "restart", "label": "Restart", "icon": "reload" }
+    { "type": "action", "action": "restart", "label": "Restart", "icon": "reload" },
+    { "type": "action", "action": "restart-reset", "label": "Restart and reset", "icon": "reload" }
   ]
 }

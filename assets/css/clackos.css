@@ -409,6 +409,18 @@ body.win-drag iframe { pointer-events: none; }
 #cpu-stat[data-state="fair"] { color: #f0c66a; }
 #cpu-stat[data-state="serious"] { color: #ef9862; }
 #cpu-stat[data-state="critical"] { color: #f06f65; }
+#build-stamp-tb {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  height: 28px; padding-left: 12px;
+  border-left: 1px solid color-mix(in srgb, var(--menu-text) 28%, transparent);
+  color: color-mix(in srgb, var(--menu-text) 68%, transparent);
+  text-decoration: none; white-space: nowrap;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  letter-spacing: 0.04em;
+}
+#build-stamp-tb[href]:hover { color: var(--menu-text); text-decoration: underline; }
+#build-stamp-tb .pixel-icon { width: 12px; height: 12px; color: var(--leaf); }
+#build-sha { color: var(--menu-text); font-weight: 500; }
 button.task {
   all: unset; box-sizing: border-box; cursor: pointer; flex: none;
   display: flex; align-items: center; gap: 9px;
@@ -423,8 +435,6 @@ button.task .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsi
 button.task.active { background: var(--leaf-deep); border-color: var(--leaf); }
 button.task.minimised { opacity: 0.55; }
 button.task.minimised .task-icon { color: var(--menu-text); }
-body.no-taskbar #taskbar { display: none; }
-body.no-taskbar #desktop { bottom: 0; }
 
 @media (max-width: 640px) {
   .page { padding: 24px 20px; }
