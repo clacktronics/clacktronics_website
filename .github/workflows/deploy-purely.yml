@@ -1,0 +1,73 @@
+name: Deploy to purely.website
+
+# Ships the built site to purely.website over rsync-on-SSH.
+# GitHub stays the source of truth; this only *copies* the result to the host.
+#
+# Runs after a push to main. The blog-index and plain-mirror workflows push
+# their own follow-up commits, so those pushes re-trigger this deploy and the
+# host always ends up with the fully generated site.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   SSH_HOST         purely server host or IP (e.g. 89.248.52.130)
+#   SSH_USER         your purely SSH username
+#   SSH_PRIVATE_KEY  a private key whose public half is in the host's
+#                    ~/.ssh/authorized_keys  (SSH into purely once and append it)
+#   DEPLOY_PATH      absolute web root on the host (e.g. /home/USER/public_html)
+# Optional:
+#   SSH_PORT         defaults to 22
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:            # lets you deploy on demand from the Actions tab
+
+concurrency:                    # never let two deploys overlap
+  group: deploy-purely
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Trust the host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+
+      - name: Sync to purely
+        run: |
+          rsync -avz --human-readable \
+            -e "ssh -p ${SSH_PORT:-22}" \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'scripts/' \
+            --exclude 'README.md' \
+            --exclude 'todo.md' \
+            --exclude 'assets/uploads/' \
+            ./ "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH%/}/"
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+
+# NOTE ON --delete
+# ----------------
+# This job intentionally does NOT pass --delete, so it never removes files on
+# the host. That means it will never touch assets/uploads/ (your direct-uploaded
+# images/video) or anything else you keep on the server outside Git — but it
+# also won't clean up files you delete from the repo.
+#
+# If you later want the host to mirror the repo exactly, add --delete AND keep
+# the `--exclude 'assets/uploads/'` line: rsync protects excluded paths from
+# deletion, so your uploads survive. Test with `--dry-run` the first time.
