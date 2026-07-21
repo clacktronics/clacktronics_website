@@ -10,6 +10,15 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
 <script src="../../assets/js/backgrounds.js"></script>
+<style>
+.paint-bg-intro p { font-size: 12px; line-height: 1.7; }
+.paint-bg-intro p + p { margin-top: 8px; }
+.paint-bg-progress { border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); height: 18px; overflow: hidden; margin: 4px 0; }
+.paint-bg-progress > div { height: 100%; width: 0%; background: var(--leaf-deep); transition: width 0.2s; }
+.paint-bg-detail { font-size: 10.5px; color: var(--sage); line-height: 1.6; min-height: 1.4em; }
+.paint-bg-credit { font-size: 10px; color: var(--sage); line-height: 1.6; margin-top: 2px; }
+.paint-bg-credit a { color: var(--leaf-deep); text-decoration: underline; }
+</style>
 </head>
 <body>
 <div class="app paint-app">
@@ -36,6 +45,8 @@
       <button data-cmd="invert"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Invert Colours</button>
       <button data-cmd="flip-h"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Flip Horizontal</button>
       <button data-cmd="flip-v"><span class="pixel-icon" data-icon="align-vertical-space-between" aria-hidden="true"></span>Flip Vertical</button>
+      <div class="sep"></div>
+      <button data-cmd="remove-bg"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Remove Background…</button>
     </div></div>
     <div class="rm"><button>Effects</button><div class="rm-dd">
       <button data-cmd="gaussian-blur"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Gaussian Blur…</button>
@@ -145,6 +156,27 @@
       <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="noiseModal">Cancel</button><button class="btn primary">Apply</button></div>
     </div>
   </form>
+</div>
+
+<div class="paint-modal" id="bgRemoveModal" role="dialog" aria-modal="true" aria-labelledby="bgRemoveTitle">
+  <div class="paint-modal-box paint-dialog">
+    <header><span id="bgRemoveTitle">Remove Background</span><button type="button" data-close="bgRemoveModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <div class="paint-bg-intro" data-bgview="intro">
+        <p>Cut the main subject out of the picture and make the rest transparent. A small AI model (<b>MODNet</b>) runs entirely in your browser — the image is never uploaded.</p>
+        <p>The first run downloads the model (about <b>13&nbsp;MB</b>) from the Hugging Face Hub, then your browser caches it so later runs start straight away.</p>
+      </div>
+      <div data-bgview="loading" hidden>
+        <div class="paint-bg-progress" role="progressbar" aria-label="Model download progress"><div></div></div>
+        <p class="paint-bg-detail">Starting…</p>
+      </div>
+      <p class="paint-bg-credit">Model: <a href="https://huggingface.co/Xenova/modnet" target="_blank" rel="noopener">MODNet</a> · Apache-2.0 · Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a></p>
+      <div class="paint-dialog-actions">
+        <button type="button" class="btn ghost" data-close="bgRemoveModal">Cancel</button>
+        <button type="button" class="btn primary" id="bgRemoveStart">Remove Background</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -939,6 +971,102 @@ mirrorToggle.addEventListener('change', () => {
 
 sizeInput.addEventListener('input', () => { if (cursorPoint) updateBrushCursor(cursorPoint); });
 
+/* ---- Background removal — MODNet via Transformers.js, run in a worker so the
+ *      model download and inference never freeze the paint UI ---- */
+const BG_MODEL_KEY = 'clackos-paint-bg-model-downloaded';
+const bgModal = document.getElementById('bgRemoveModal');
+const bgViews = bgModal.querySelectorAll('[data-bgview]');
+const bgProgressBar = bgModal.querySelector('.paint-bg-progress > div');
+const bgDetail = bgModal.querySelector('.paint-bg-detail');
+const bgStartBtn = document.getElementById('bgRemoveStart');
+let bgWorker = null, bgRunToken = 0, bgSize = null;
+
+const showBgView = name => bgViews.forEach(view => { view.hidden = view.dataset.bgview !== name; });
+
+function ensureBgWorker() {
+  if (bgWorker) return bgWorker;
+  bgWorker = new Worker(new URL('paint-worker.js', location.href), { type: 'module' });
+  bgWorker.onerror = event => finishBgError(event.message || 'worker failed to start');
+  bgWorker.onmessage = event => {
+    const msg = event.data;
+    if (msg.token !== undefined && msg.token !== bgRunToken) return; /* a superseded run */
+    switch (msg.type) {
+      case 'loading': bgDetail.textContent = msg.detail; break;
+      case 'progress': {
+        if (!msg.total) break;
+        bgProgressBar.style.width = Math.min(100, msg.loaded / msg.total * 100).toFixed(1) + '%';
+        bgDetail.textContent = `Downloading the model — ${(msg.loaded / 1048576).toFixed(1)} / ${(msg.total / 1048576).toFixed(1)} MB (cached for next time)`;
+        break;
+      }
+      case 'ready':
+        localStorage.setItem(BG_MODEL_KEY, '1');
+        bgProgressBar.style.width = '100%';
+        setStatus(msg.device === 'webgpu' ? 'Removing background on your GPU…' : 'Removing background…');
+        break;
+      case 'result': applyBgResult(msg); break;
+      case 'error': finishBgError(msg.message); break;
+    }
+  };
+  return bgWorker;
+}
+
+function startBgRemoval() {
+  const source = canonicalCanvas();
+  const pixels = source.getContext('2d').getImageData(0, 0, source.width, source.height);
+  const buffer = pixels.data.buffer; /* a fresh ImageData buffer — safe to transfer */
+  bgSize = { width: source.width, height: source.height };
+  const token = ++bgRunToken;
+  showBgView('loading');
+  bgStartBtn.hidden = true;
+  bgProgressBar.style.width = '0%';
+  bgDetail.textContent = 'Starting…';
+  setStatus('Loading the background-removal model…');
+  ensureBgWorker().postMessage(
+    { type: 'run', token, data: buffer, width: source.width, height: source.height },
+    [buffer]
+  );
+}
+
+function applyBgResult(msg) {
+  if (!bgModal.classList.contains('open')) { bgSize = null; return; } /* cancelled */
+  if (!bgSize || msg.width !== width() || msg.height !== height()) {
+    hideModal('bgRemoveModal'); bgSize = null;
+    setStatus('Canvas changed before the result arrived; background removal cancelled');
+    return;
+  }
+  pushUndo(); canonicaliseSeam();
+  bx.clearRect(0, 0, width(), height());
+  bx.putImageData(new ImageData(new Uint8ClampedArray(msg.data), msg.width, msg.height), 0, 0);
+  reapplySeam(); clearSelection();
+  hideModal('bgRemoveModal'); bgSize = null;
+  setStatus('Background removed — the subject now sits on transparency');
+}
+
+function finishBgError(message) {
+  bgRunToken++; bgSize = null;
+  showBgView('intro');
+  bgStartBtn.hidden = false;
+  bgDetail.textContent = '';
+  bgProgressBar.style.width = '0%';
+  setStatus(`Background removal failed: ${message}`);
+}
+
+function openBgRemoval() {
+  bgStartBtn.hidden = false;
+  bgDetail.textContent = '';
+  bgProgressBar.style.width = '0%';
+  showBgView('intro');
+  showModal('bgRemoveModal');
+  /* model already cached from a previous run — skip the explainer and go */
+  if (localStorage.getItem(BG_MODEL_KEY)) startBgRemoval();
+}
+
+bgStartBtn.addEventListener('click', startBgRemoval);
+/* closing the dialog (button, backdrop or Escape) abandons an in-flight run */
+bgModal.addEventListener('click', event => { if (event.target.closest('[data-close]')) { bgRunToken++; bgSize = null; } });
+bgModal.addEventListener('pointerdown', event => { if (event.target === bgModal) { bgRunToken++; bgSize = null; } });
+window.addEventListener('pagehide', () => { if (bgWorker) bgWorker.terminate(); });
+
 function runCmd(cmd) {
   switch (cmd) {
     case 'new': pushUndo(); seamModeApplied = false; resizeSurfaces(640, 400); bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); reapplySeam(); fileName = 'untitled.png'; setStatus('New image'); break;
@@ -952,6 +1080,7 @@ function runCmd(cmd) {
     case 'image-size': openImageSize(); break;
     case 'canvas-size': openCanvasSize(); break;
     case 'crop': cropSelection(); break;
+    case 'remove-bg': openBgRemoval(); break;
     case 'gaussian-blur': showModal('gaussianBlurModal'); document.getElementById('gaussianRadius').focus(); break;
     case 'noise': showModal('noiseModal'); document.getElementById('noiseAmount').focus(); break;
     case 'clear': pushUndo(); clearSelection(); bx.fillStyle = bg; bx.fillRect(0, 0, width(), height()); setStatus('Image cleared to the background colour'); break;
