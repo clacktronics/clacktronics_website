@@ -29,14 +29,11 @@
 * Old fasioned Amiga style tracker
 * Some kind of fun GAL/EEPROM tool
 * Serial Console for USB
-* Web Browser
 * File Manager
 * Games
 * Web based Pure data
 * Web based processing
 * OpenSCAD
-* Processing
-* Pure Data
 * Perf/Strip/Bread(board) layout app ;ike lochmaster
 * Midi controllable, downloadable, mono synth.
 * Waveacity
