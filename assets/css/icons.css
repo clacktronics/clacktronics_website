@@ -84,6 +84,7 @@
 .pixel-icon[data-icon="grid-3x3"] { --pixel-icon: url('../icons/pixelarticons/grid-3x3.svg'); }
 .pixel-icon[data-icon="link"] { --pixel-icon: url('../icons/pixelarticons/link.svg'); }
 .pixel-icon[data-icon="keyboard-music"] { --pixel-icon: url('../icons/pixelarticons/keyboard-music.svg'); }
+.pixel-icon[data-icon="message-text"] { --pixel-icon: url('../icons/pixelarticons/message-text.svg'); }
 
 .icon-label,
 .menu-item-label {

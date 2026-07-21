@@ -24,6 +24,9 @@
       { "type": "app", "page": "pdf-reader/index.html", "label": "PDF Reader", "title": "PDF Reader", "icon": "file-text", "width": 1100, "height": 760, "multi": true },
       { "type": "app", "page": "markdown.html", "label": "Markdown Editor", "title": "Markdown Editor", "icon": "pencil", "multi": true }
     ] },
+    { "type": "submenu", "label": "Artificial Intelligence", "icon": "memory-stick", "items": [
+      { "type": "app", "page": "chat.html", "label": "ClackChat", "title": "ClackChat", "icon": "message-text", "width": 440, "height": 600 }
+    ] },
     { "type": "submenu", "label": "Games", "icon": "target", "items": [
       { "type": "app", "page": "clacksweeper.html", "label": "Clacksweeper", "title": "Clacksweeper", "icon": "grid-3x3", "width": 680, "height": 525, "fixed": true, "multi": true, "integrated": true }
     ] },

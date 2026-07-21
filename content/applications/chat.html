@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>ClackChat — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+.app { height: 100%; }
+.app-main { padding: 0; gap: 0; min-height: 0; }
+.app-main [hidden] { display: none !important; }
+
+/* ---- gate / loading screens ---- */
+.chat-gate { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; overflow-y: auto; }
+.chat-gate p { font-size: 12px; line-height: 1.7; }
+.chat-gate .app-panel p + p { margin-top: 8px; }
+.chat-gate .btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; }
+.chat-gate .pixel-icon { width: 16px; height: 16px; }
+.chat-progress { border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); height: 18px; overflow: hidden; }
+.chat-progress > div { height: 100%; width: 0%; background: var(--leaf-deep); transition: width 0.2s; }
+.chat-small { font-size: 10.5px; color: var(--sage); line-height: 1.6; }
+
+/* ---- chat log ---- */
+.chat-log {
+  flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;
+  gap: 10px; padding: 14px 14px 10px;
+}
+.chat-msg { max-width: 88%; border: 1px solid var(--ink); border-radius: 8px; padding: 8px 11px; font-size: 12px; line-height: 1.65; }
+.chat-msg .chat-who { display: block; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--leaf-deep); margin-bottom: 3px; }
+.chat-msg .chat-body { white-space: pre-wrap; word-break: break-word; user-select: text; }
+.chat-msg.user { align-self: flex-end; background: var(--paper-deep); }
+.chat-msg.assistant { align-self: flex-start; background: var(--paper); }
+.chat-msg.assistant.busy .chat-body::after { content: "▌"; color: var(--leaf-deep); animation: chat-blink 1s steps(1) infinite; }
+@keyframes chat-blink { 50% { opacity: 0; } }
+.chat-think { margin-bottom: 6px; }
+.chat-think summary { cursor: pointer; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--sage); }
+.chat-think .chat-think-body { white-space: pre-wrap; word-break: break-word; font-size: 10.5px; font-style: italic; color: var(--sage); margin-top: 4px; user-select: text; }
+
+/* ---- composer ---- */
+.chat-compose { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--paper-line); background: var(--paper-deep); align-items: flex-end; }
+.chat-compose textarea {
+  flex: 1; resize: none; font: inherit; font-size: 12.5px; color: var(--control-text);
+  background: var(--paper); border: 1px solid var(--ink); border-radius: 6px; padding: 7px 10px;
+  max-height: 110px; line-height: 1.5;
+}
+.chat-compose textarea:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.chat-compose .btn { padding: 7px 12px; display: inline-flex; align-items: center; gap: 6px; }
+.chat-compose .pixel-icon { width: 15px; height: 15px; }
+.chat-status { padding: 4px 14px 8px; background: var(--paper-deep); min-height: 22px; }
+.chat-about { margin: 10px 14px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="rm-bar">
+    <div class="rm"><button>Chat</button><div class="rm-dd">
+      <button data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New Conversation</button>
+      <button data-cmd="stop" data-need="busy"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop Generating</button>
+    </div></div>
+    <div class="rm"><button>Help</button><div class="rm-dd">
+      <button data-cmd="about"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>About ClackChat</button>
+    </div></div>
+  </div>
+  <div class="app-main">
+
+    <div class="chat-gate" data-view="gate" hidden>
+      <span class="app-lbl">Local AI chat</span>
+      <div class="app-panel">
+        <p>ClackChat runs a small language model — <b>Bonsai&nbsp;1.7B</b>, a 1-bit
+        model — entirely inside your browser using WebGPU. Nothing you type is
+        sent to a server: once the model is downloaded, the conversation stays
+        on your machine.</p>
+        <p>The first start downloads <b>≈&nbsp;291&nbsp;MB</b> of model weights from the
+        Hugging Face Hub. Your browser caches them, so later starts are quick.</p>
+      </div>
+      <button class="btn primary" data-cmd="download"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Download model &amp; start</button>
+      <p class="chat-small">Expect a small, occasionally confused assistant — it is a
+      tiny model running on your GPU, not a datacentre. Requires roughly 2&nbsp;GB of
+      free memory.</p>
+    </div>
+
+    <div class="chat-gate" data-view="no-webgpu" hidden>
+      <span class="app-lbl">Not supported here</span>
+      <div class="app-panel">
+        <p>ClackChat needs <b>WebGPU</b>, which this browser or device doesn't
+        offer. Recent Chrome, Edge, Firefox or Safari on a desktop machine
+        should work.</p>
+      </div>
+    </div>
+
+    <div class="chat-gate" data-view="loading" hidden>
+      <span class="app-lbl">Loading model</span>
+      <div class="chat-progress" role="progressbar" aria-label="Model download progress"><div></div></div>
+      <p class="chat-small chat-loading-detail">Starting…</p>
+    </div>
+
+    <div class="chat-log" data-view="chat" hidden></div>
+
+    <div class="app-panel chat-about" hidden>
+      <b>ClackChat</b> — local AI chat for ClackOS.<br>
+      Model: Bonsai&nbsp;1.7B by prism-ml, ONNX conversion by onnx-community
+      (Apache-2.0). Runs via Transformers.js (Apache-2.0) on ONNX&nbsp;Runtime (MIT)
+      with WebGPU. All inference happens in your browser.
+    </div>
+
+    <div class="chat-compose" hidden>
+      <textarea rows="1" placeholder="Type a message…" aria-label="Message"></textarea>
+      <button class="btn primary chat-send" title="Send (Enter)"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Send</button>
+    </div>
+    <p class="app-status chat-status"></p>
+  </div>
+</div>
+
+<script>
+(() => {
+const appRoot = window.ClackOSMountRoot || document.currentScript?.getRootNode() || document;
+
+const views = appRoot.querySelectorAll('[data-view]');
+const log = appRoot.querySelector('.chat-log');
+const compose = appRoot.querySelector('.chat-compose');
+const input = compose.querySelector('textarea');
+const sendBtn = compose.querySelector('.chat-send');
+const status = appRoot.querySelector('.chat-status');
+const aboutPanel = appRoot.querySelector('.chat-about');
+const progressBar = appRoot.querySelector('.chat-progress > div');
+const loadingDetail = appRoot.querySelector('.chat-loading-detail');
+
+const SYSTEM_PROMPT = 'You are ClackChat, a small helpful assistant running locally ' +
+  'inside ClackOS on the Clacktronics website. Keep answers short and friendly.';
+const DOWNLOADED_KEY = 'clackos-chat-model-downloaded';
+
+let worker = null;
+let busy = false;
+let ready = false;
+let history = [];             /* [{role, content}] excluding system prompt */
+let currentBody = null;       /* streaming assistant .chat-body element */
+let currentMsg = null;
+let currentThink = null;
+let streamText = '';
+
+const say = t => { status.textContent = t; };
+const show = name => views.forEach(v => { v.hidden = v.dataset.view !== name; });
+const showCompose = on => { compose.hidden = !on; };
+
+function nearBottom() { return log.scrollHeight - log.scrollTop - log.clientHeight < 60; }
+function scrollDown(force) { if (force || nearBottom()) log.scrollTop = log.scrollHeight; }
+
+function addMsg(role, text) {
+  const el = document.createElement('div');
+  el.className = 'chat-msg ' + role;
+  const who = document.createElement('span');
+  who.className = 'chat-who';
+  who.textContent = role === 'user' ? 'You' : 'ClackChat';
+  const body = document.createElement('div');
+  body.className = 'chat-body';
+  body.textContent = text;
+  el.append(who, body);
+  log.appendChild(el);
+  scrollDown(true);
+  return { el, body };
+}
+
+/* Qwen-style models may open with a <think>…</think> block; show it dimmed
+ * and collapsible instead of mixing it into the answer */
+function renderStream() {
+  let think = '', answer = '';
+  const t = streamText.replace(/^\s+/, '');
+  if (t.startsWith('<think>')) {
+    const end = t.indexOf('</think>');
+    if (end === -1) think = t.slice(7);
+    else { think = t.slice(7, end); answer = t.slice(end + 8).replace(/^\s+/, ''); }
+  } else answer = streamText;
+  if (think.trim() && !currentThink) {
+    currentThink = document.createElement('details');
+    currentThink.className = 'chat-think';
+    currentThink.open = true;
+    const sum = document.createElement('summary');
+    sum.textContent = 'thinking…';
+    const body = document.createElement('div');
+    body.className = 'chat-think-body';
+    currentThink.append(sum, body);
+    currentMsg.el.insertBefore(currentThink, currentBody);
+  }
+  if (currentThink) {
+    currentThink.querySelector('.chat-think-body').textContent = think.trim();
+    if (answer) {
+      currentThink.open = false;
+      currentThink.querySelector('summary').textContent = 'thought process';
+    }
+  }
+  currentBody.textContent = answer;
+  scrollDown(false);
+  return answer;
+}
+
+function setBusy(on) {
+  busy = on;
+  sendBtn.disabled = on;
+  input.disabled = on;
+  if (!on) input.focus();
+}
+
+function finishStream(finalAnswer) {
+  if (!currentMsg) return;   /* stream already discarded (new conversation) */
+  currentMsg.el.classList.remove('busy');
+  if (currentThink) { currentThink.open = false; currentThink.querySelector('summary').textContent = 'thought process'; }
+  if (finalAnswer !== undefined && currentBody) currentBody.textContent = finalAnswer;
+  history.push({ role: 'assistant', content: currentBody ? currentBody.textContent : '' });
+  currentMsg = null; currentBody = null; currentThink = null; streamText = '';
+  setBusy(false);
+  say('Ready.');
+}
+
+/* ---- worker wiring ---- */
+function ensureWorker() {
+  if (worker) return worker;
+  worker = new Worker(new URL('chat-worker.js', document.currentScript?.src || location.href), { type: 'module' });
+  worker.onerror = e => { say('Worker error: ' + (e.message || 'unknown')); setBusy(false); };
+  worker.onmessage = e => {
+    const msg = e.data;
+    switch (msg.type) {
+      case 'webgpu':
+        if (msg.ok) {
+          if (localStorage.getItem(DOWNLOADED_KEY)) startLoad();
+          else show('gate');
+        } else show('no-webgpu');
+        break;
+      case 'no-webgpu': show('no-webgpu'); break;
+      case 'loading':
+        loadingDetail.textContent = msg.detail;
+        break;
+      case 'progress': {
+        if (!msg.total) break;
+        const pct = Math.min(100, msg.loaded / msg.total * 100);
+        progressBar.style.width = pct.toFixed(1) + '%';
+        loadingDetail.textContent = `Downloading — ${(msg.loaded / 1048576).toFixed(0)} / ${(msg.total / 1048576).toFixed(0)} MB (cached for next time)`;
+        break;
+      }
+      case 'ready':
+        ready = true;
+        localStorage.setItem(DOWNLOADED_KEY, '1');
+        show('chat');
+        showCompose(true);
+        if (!log.childElementCount) addMsg('assistant', 'Hello! I\'m a little language model running right here on your GPU. What shall we talk about?');
+        say('Ready — everything runs locally.');
+        setBusy(false);
+        break;
+      case 'token':
+        if (currentBody) { streamText += msg.text; renderStream(); }
+        break;
+      case 'done':
+        finishStream(msg.text ? renderFinal(msg.text) : undefined);
+        break;
+      case 'error':
+        if (currentMsg) { currentMsg.el.classList.remove('busy'); }
+        if (!ready) { show('gate'); say(''); loadingDetail.textContent = ''; }
+        say('Error: ' + msg.message);
+        setBusy(false);
+        currentMsg = null; currentBody = null; currentThink = null; streamText = '';
+        break;
+    }
+  };
+  return worker;
+}
+
+/* strip a think block from the authoritative final text */
+function renderFinal(text) {
+  const t = text.replace(/^\s+/, '');
+  if (t.startsWith('<think>')) {
+    const end = t.indexOf('</think>');
+    return end === -1 ? '' : t.slice(end + 8).replace(/^\s+/, '');
+  }
+  return text;
+}
+
+function startLoad() {
+  show('loading');
+  progressBar.style.width = '0%';
+  say('');
+  ensureWorker().postMessage({ type: 'load' });
+}
+
+function send() {
+  const text = input.value.trim();
+  if (!text || busy || !ready) return;
+  input.value = '';
+  input.style.height = 'auto';
+  addMsg('user', text);
+  history.push({ role: 'user', content: text });
+  currentMsg = addMsg('assistant', '');
+  currentMsg.el.classList.add('busy');
+  currentBody = currentMsg.body;
+  streamText = '';
+  setBusy(true);
+  say('Thinking…');
+  worker.postMessage({ type: 'generate', messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history] });
+}
+
+function newConversation() {
+  if (busy) worker.postMessage({ type: 'interrupt' });
+  history = [];
+  log.replaceChildren();
+  currentMsg = null; currentBody = null; currentThink = null; streamText = '';
+  setBusy(false);
+  if (ready) { addMsg('assistant', 'Fresh page! What next?'); say('Ready.'); }
+}
+
+/* ---- UI events ---- */
+sendBtn.addEventListener('click', send);
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 110) + 'px';
+});
+
+const rms = appRoot.querySelectorAll('.rm');
+const closeRm = () => rms.forEach(m => m.classList.remove('open'));
+rms.forEach(m => {
+  m.querySelector(':scope > button').addEventListener('click', e => {
+    e.stopPropagation();
+    const was = m.classList.contains('open');
+    closeRm();
+    if (!was) {
+      m.querySelectorAll('[data-need="busy"]').forEach(b => { b.disabled = !busy; });
+      m.classList.add('open');
+    }
+  });
+});
+appRoot.querySelector('.rm-bar').addEventListener('click', e => {
+  const cmd = e.target.closest('[data-cmd]');
+  if (!cmd || cmd.disabled) return;
+  closeRm();
+  switch (cmd.dataset.cmd) {
+    case 'new': newConversation(); break;
+    case 'stop': if (busy) { worker.postMessage({ type: 'interrupt' }); say('Stopping…'); } break;
+    case 'about': aboutPanel.hidden = !aboutPanel.hidden; break;
+  }
+});
+appRoot.addEventListener('click', closeRm);
+appRoot.querySelector('[data-cmd="download"]').addEventListener('click', startLoad);
+
+if (appRoot !== document) appRoot.host.addEventListener('clackos-disconnect', () => {
+  if (worker) worker.terminate();
+}, { once: true });
+
+/* boot: probe WebGPU, then show the right screen */
+say('');
+showCompose(false);
+ensureWorker().postMessage({ type: 'check' });
+})();
+</script>
+</body>
+</html>
