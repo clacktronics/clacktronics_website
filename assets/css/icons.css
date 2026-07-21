@@ -52,6 +52,7 @@
 .pixel-icon[data-icon="reload"] { --pixel-icon: url('../icons/pixelarticons/reload.svg'); }
 .pixel-icon[data-icon="memory-stick"] { --pixel-icon: url('../icons/pixelarticons/memory-stick.svg'); }
 .pixel-icon[data-icon="git-commit"] { --pixel-icon: url('../icons/pixelarticons/git-commit.svg'); }
+.pixel-icon[data-icon="bug"] { --pixel-icon: url('../icons/pixelarticons/bug.svg'); }
 .pixel-icon[data-icon="play"] { --pixel-icon: url('../icons/pixelarticons/play.svg'); }
 .pixel-icon[data-icon="square"] { --pixel-icon: url('../icons/pixelarticons/square.svg'); }
 .pixel-icon[data-icon="circle"] { --pixel-icon: url('../icons/pixelarticons/circle.svg'); }
