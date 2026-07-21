@@ -23,6 +23,8 @@ let availableThemes = new Set(['clackos.css']);
 const observedThemeFrames = new WeakSet();
 const THEME_KEY = 'clackos-theme';
 const THEME_COOKIE = 'clackos-theme-default';
+/* GitHub "owner/repo" for the Report bug action; overridden from site.json at boot. */
+let siteRepo = 'clacktronics/clacktronics_website';
 
 function readCookie(name) {
   const prefix = encodeURIComponent(name) + '=';
@@ -1153,6 +1155,7 @@ function runAction(action) {
     case 'minimise-all': minimiseAll(); break;
     case 'restore-all': restoreAll(); break;
     case 'plain-html': window.open('plain/index.html', '_blank', 'noopener'); break;
+    case 'report-bug': window.open(`https://github.com/${siteRepo}/issues/new`, '_blank', 'noopener'); break;
     case 'copy': {
       const sel = String(document.getSelection() || '');
       if (sel && navigator.clipboard) navigator.clipboard.writeText(sel).catch(() => {});
@@ -1269,6 +1272,7 @@ observeCpuPressure();
 /* ---------------- Boot ---------------- */
 async function boot() {
   const site = await loadJSON('content/site.json');
+  if (typeof site.repo === 'string' && /^[\w.-]+\/[\w.-]+$/.test(site.repo)) siteRepo = site.repo;
   site.backgrounds = await window.ClackOSBackgrounds.list(site);
   loadWebsiteBackgrounds(site);
   availableThemes = new Set((site.themes || []).map(safeThemeName));
