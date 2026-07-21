@@ -22,9 +22,7 @@
     { "type": "submenu", "label": "Internet", "icon": "file-text", "items": [
       { "type": "app", "page": "browser.html", "label": "Web Browser", "title": "Web Browser", "icon": "link", "width": 1100, "height": 760, "multi": true },
       { "type": "app", "page": "pdf-reader/index.html", "label": "PDF Reader", "title": "PDF Reader", "icon": "file-text", "width": 1100, "height": 760, "multi": true },
-      { "type": "app", "page": "markdown.html", "label": "Markdown Editor", "title": "Markdown Editor", "icon": "pencil", "multi": true }
-    ] },
-    { "type": "submenu", "label": "Artificial Intelligence", "icon": "memory-stick", "items": [
+      { "type": "app", "page": "markdown.html", "label": "Markdown Editor", "title": "Markdown Editor", "icon": "pencil", "multi": true },
       { "type": "app", "page": "chat.html", "label": "ClackChat", "title": "ClackChat", "icon": "message-text", "width": 440, "height": 600 }
     ] },
     { "type": "submenu", "label": "Games", "icon": "target", "items": [
