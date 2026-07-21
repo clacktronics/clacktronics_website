@@ -3,9 +3,12 @@ name: Deploy to purely.website
 # Ships the built site to purely.website over rsync-on-SSH.
 # GitHub stays the source of truth; this only *copies* the result to the host.
 #
-# Runs after a push to main. The blog-index and plain-mirror workflows push
-# their own follow-up commits, so those pushes re-trigger this deploy and the
-# host always ends up with the fully generated site.
+# Runs after a push to main. It regenerates the plain HTML mirror itself
+# (build_plain_site.py) right before syncing, so the host always ends up with
+# plain/ matching the current content — regardless of whether the plain-mirror
+# workflow's follow-up commit has landed yet. (That bot commit is pushed with
+# the automatic GITHUB_TOKEN, which by design does NOT re-trigger this deploy,
+# so we cannot rely on it to ship the regenerated mirror.)
 #
 # Required repository secrets (Settings -> Secrets and variables -> Actions):
 #   SSH_HOST         purely server host or IP (e.g. 89.248.52.130)
@@ -30,6 +33,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Regenerate plain HTML mirror
+        # Build the static plain/ pages from the current content so the deploy
+        # always ships an up-to-date mirror, even before the plain-mirror
+        # workflow commits its copy back to the repo. This runs against the
+        # checked-out tree only; it does not commit anything.
+        run: python3 scripts/build_plain_site.py
 
       - name: Load SSH key
         uses: webfactory/ssh-agent@v0.9.0
