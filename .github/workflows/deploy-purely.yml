@@ -46,6 +46,11 @@ jobs:
 
       - name: Sync to purely
         run: |
+          # Staging subfolder: the site publishes to <web root>/temp, i.e.
+          # https://clacktronics.co.uk/temp/ — safe to preview without touching
+          # the live root. To go live, set SUBDIR="" (empty).
+          SUBDIR="temp"
+          DEST="${DEPLOY_PATH%/}${SUBDIR:+/$SUBDIR}"
           rsync -avz --human-readable \
             -e "ssh -p ${SSH_PORT:-22}" \
             --exclude '.git/' \
@@ -54,7 +59,7 @@ jobs:
             --exclude 'README.md' \
             --exclude 'todo.md' \
             --exclude 'assets/uploads/' \
-            ./ "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH%/}/"
+            ./ "${SSH_USER}@${SSH_HOST}:${DEST}/"
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
