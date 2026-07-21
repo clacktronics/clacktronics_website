@@ -3,30 +3,40 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
 <title>VGA cap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/icons.css">
+<link rel="stylesheet" href="../../assets/css/clackos.css">
+<link rel="stylesheet" href="../../assets/themes/monochrome.css">
 <link rel="stylesheet" href="../style.css">
 </head>
-<body>
-<header><nav><a href="../index.html">Home</a> · <a href="../readme.html">README</a> · <a href="../catalogue.html">Catalogue</a> · <a href="../euroclack.html">EuroClack</a> · <a href="../blog.html">Blog</a> · <a href="../about.html">About</a></nav></header>
+<body class="plain-mirror">
+<header id="plain-nav"><nav><a href="../index.html">Home</a> · <a href="../readme.html">README</a> · <a href="../catalogue.html">Catalogue</a> · <a href="../euroclack.html">EuroClack</a> · <a href="../blog.html">Blog</a> · <a href="../about.html">About</a></nav></header>
 <main>
+<div class="plain">
 <h1>VGA cap</h1>
 <p class="tagline">16 January 2016</p>
+<div class="rule"></div>
 <p><img src="https://clacktronics.co.uk/assets/Raspberry_pi_VGA.jpg" alt="Raspberry Pi VGA, audio and composite breakout" loading="lazy"><br>Here is a PCB I have designed, it was made in response to the release of the Raspberry Pi Zero. For a low cost it helps to break out the analogue outputs from the zero. The analogue ports it provides are stereo audio, composite and VGA. This is all on the same edge as the Zero&#x27;s existing connectors. This board is ideal if you want to utilize a computer monitor, especially if it has built in speakers like many &#x27;multimedia&#x27; TFT screens that now cost very little second hand. Apart from the composite output it will also work on any Raspberry Pi that has the 40 pin GPIO header (Raspberry Pi A/B+ and the Raspberry Pi 2) I am fund raising to make a bunch of them on Kickstarter <a href="http://kck.st/1SuGDvV" target="_blank" rel="noopener noreferrer">see here</a></p>
-<h2>It is a kit</h2>
+<p class="eyebrow">It is a kit</p>
 <p>To make it as cheap as possible and easy to adapt for different purposes it is a kit / bare PCB that uses only through-hole components. Due to a lack of space all components are folded this may make it a little fiddly to construct if you have less experience but it is not too hard.</p>
 <p>What this means though is that you can choose which way up the cap is mounted, if you what the VGA or not and if you are building into an enclosure the pads can be directly soldered.</p>
-<p class="ctas"><a href="https://www.youtube.com/watch?v=iH7NiAvxM0Y" target="_blank" rel="noopener noreferrer">Watch on YouTube</a></p>
-<h2>Enabling the outputs</h2>
+<div class="ctas"><a class="btn primary" href="https://www.youtube.com/watch?v=iH7NiAvxM0Y" target="_blank" rel="noopener noreferrer">Watch on YouTube</a></div>
+<p class="eyebrow">Enabling the outputs</p>
 <p>Full instructions can be found on <a href="http://crab.design" target="_blank" rel="noopener noreferrer">crab.design</a></p>
 <p>Due to space and cost the cap does not have auto configuration EEPROM as defined by the HAT specification. It has to be set up by editing the config.txt and adding files to the /boot/ partition.</p>
 <p>For VGA it uses Gert van loos VGA666 circuit which uses a passive resistor network to perform the Digital to Analogue conversion. The pins it uses are slightly different to allow for the audio to also be broken out of the GPIO header. To activate VGA an &#x27;overlay&#x27; has to be added to the configuration files of the boot partition. These will be provided in the Github repository.</p>
 <p>Analogue audio is the same as the circuit on the Raspberry Pi B+ schematic, but instead the output comes from the GPIO. To activate another &#x27;overlay&#x27; is used that comes with the default Rasbian distribution (pwm-2chan-overlay) If this and the VGA is activated only 4 GPIO pins will remain.</p>
 <p>The composite is simply an extension of the new breakout pins next to the the Zero&#x27;s GPIO header, it is connected by its own socket when the cap is pushed on.</p>
 <p>The parts activated are up to the user by simply disabling and enabling parts in the config.txt file. More information will be up soon at the crab github pages.</p>
-<p class="ctas"><a href="https://github.com/crab-design/analogue_cap" target="_blank" rel="noopener noreferrer">Github files</a></p>
-<h2>What is crab?</h2>
+<div class="ctas"><a class="btn primary" href="https://github.com/crab-design/analogue_cap" target="_blank" rel="noopener noreferrer">Github files</a></div>
+<p class="eyebrow">What is crab?</p>
 <p>Crab is going to be a series of circuits that I think are useful repeatable modules for use in installations. That is not strict though, I am also designing circuits and boards that can inspire ideas and teach that may not be so practical.</p>
+</div>
 </main>
-<footer class="site"><a href="../../index.html">Switch to the ClackOS desktop version</a></footer>
+<div id="plain-site-footer"><a href="../../index.html">Switch to the ClackOS desktop version</a></div>
 </body>
 </html>

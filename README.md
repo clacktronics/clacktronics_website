@@ -329,8 +329,10 @@ wallpapers.
 pages with standard links, for readers (and machines) that don't want the
 ClackOS window manager. `window:` links become normal page-to-page links,
 `app:` links open the standalone application page in a new tab, and the
-`@[youtube]` / `@[video]` / `@[kicanvas]` embeds still render inline. Each
-page footer links back to the desktop version.
+`@[youtube]` / `@[video]` / `@[kicanvas]` embeds still render inline. The
+pages reuse `assets/css/clackos.css` plus the active theme from `site.json`,
+so the mirror keeps the ClackOS typography and palette. Each page footer
+links back to the desktop version, and the taskbar links to the mirror.
 
 The mirror is generated — don't edit `plain/` by hand. After changing
 content, regenerate it:

@@ -11,6 +11,7 @@ inline. Run it after editing content:
     python3 scripts/build_plain_site.py
 """
 import html
+import json
 import posixpath
 import re
 import pathlib
@@ -19,6 +20,7 @@ import urllib.parse
 root = pathlib.Path(__file__).resolve().parent.parent
 content = root / 'content'
 out_root = root / 'plain'
+site = json.loads((content / 'site.json').read_text())
 
 NAV = [
     ('index.html', 'Home', 'file/home.md'),
@@ -96,7 +98,7 @@ def inline(s, page_out):
         return '\x00%d\x00' % (len(imgs) - 1)
 
     s = re.sub(r'!\[([^\]]*)\]\(([^)\s]+)\)', img_sub, s)
-    s = re.sub(r'`([^`]+)`', r'<code>\1</code>', s)
+    s = re.sub(r'`([^`]+)`', r'<span class="k">\1</span>', s)
     s = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', s)
     s = re.sub(r'(^|[^*])\*([^*]+)\*', r'\1<i>\2</i>', s)
 
@@ -181,7 +183,7 @@ def kicanvas_embed(block, page_out, state):
 def md_to_html(body, meta, page_out, state):
     fences = []
     body = re.sub(r'```\w*\r?\n([\s\S]*?)```',
-                  lambda m: fences.append('<pre>%s</pre>' % esc(m.group(1).rstrip())) or
+                  lambda m: fences.append('<pre class="code">%s</pre>' % esc(m.group(1).rstrip())) or
                   '\x00fence%d\x00' % (len(fences) - 1), body)
 
     blocks = [b.strip() for b in re.split(r'\r?\n[ \t]*\r?\n', body) if b.strip()]
@@ -208,29 +210,32 @@ def md_to_html(body, meta, page_out, state):
             out.append('<blockquote>%s</blockquote>'
                        % inline(text, page_out).replace('\n', '<br>'))
         elif re.match(r'^##\s+', block):
-            out.append('<h2>%s</h2>' % inline(re.sub(r'^##\s+', '', block), page_out))
+            out.append('<p class="eyebrow">%s</p>' % inline(re.sub(r'^##\s+', '', block), page_out))
         elif re.match(r'^#\s+', block):
             out.append('<h1>%s</h1>' % inline(re.sub(r'^#\s+', '', block), page_out))
             if meta.get('tagline'):
                 out.append('<p class="tagline">%s</p>' % esc(meta['tagline']))
+                out.append('<div class="rule"></div>')
         elif re.match(r'^-{3,}$', block):
             if idx == len(blocks) - 2:
                 footer_next = True
             else:
-                out.append('<hr>')
+                out.append('<div class="rule"></div>')
         elif re.match(r'^\d+\.\s', block):
             items = re.split(r'\r?\n(?=\d+\.\s)', block)
-            out.append('<ol>%s</ol>' % ''.join(
-                '<li>%s</li>' % inline(re.sub(r'^\d+\.\s+', '', i).replace('\n', ' '), page_out)
+            out.append('<ol class="list">%s</ol>' % ''.join(
+                '<li><p>%s</p></li>' % inline(re.sub(r'^\d+\.\s+', '', i).replace('\n', ' '), page_out)
                 for i in items))
         elif re.match(r'^[-*]\s', block):
             items = re.split(r'\r?\n(?=[-*]\s)', block)
-            out.append('<ul>%s</ul>' % ''.join(
-                '<li>%s</li>' % inline(re.sub(r'^[-*]\s+', '', i).replace('\n', ' '), page_out)
+            out.append('<ul class="list">%s</ul>' % ''.join(
+                '<li><p>%s</p></li>' % inline(re.sub(r'^[-*]\s+', '', i).replace('\n', ' '), page_out)
                 for i in items))
         elif all(re.match(r'^\[[^\]]+\]\([^)]+\)$', l.strip()) for l in block.splitlines()):
-            links = ' '.join(inline(l.strip(), page_out) for l in block.splitlines())
-            out.append('<p class="ctas">%s</p>' % links)
+            btns = [inline(l.strip(), page_out).replace(
+                        '<a ', '<a class="btn %s" ' % ('primary' if i == 0 else 'ghost'), 1)
+                    for i, l in enumerate(block.splitlines())]
+            out.append('<div class="ctas">%s</div>' % ''.join(btns))
         else:
             out.append('<p>%s</p>' % inline(block, page_out).replace('\n', '<br>'))
     return '\n'.join(out)
@@ -242,6 +247,7 @@ def render_page(md_rel, page_out):
     meta, body = parse_front_matter((content / md_rel).read_text())
     state = {'kicanvas': False}
     article = md_to_html(body, meta, page_out, state)
+    style_class = 'page' if meta.get('style') == 'page' else 'plain'
     title = meta.get('title', 'Clacktronics')
     nav = ' · '.join(
         '<a href="%s"%s>%s</a>'
@@ -249,49 +255,70 @@ def render_page(md_rel, page_out):
            ' class="current"' if out == page_out else '',
            esc(label))
         for out, label, _md in NAV)
-    kicanvas = ('<script type="module" src="%s"></script>'
+    kicanvas = ('<script type="module" src="%s"></script>\n'
                 % esc(resolve_site_url('vendor/kicanvas/kicanvas.js', page_out))
                 if state['kicanvas'] else '')
+    theme = site.get('theme', 'clackos.css')
+    css = lambda path: esc(resolve_site_url(path, page_out))
     return f'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
 <title>{esc(title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{css('assets/css/icons.css')}">
+<link rel="stylesheet" href="{css('assets/css/clackos.css')}">
+<link rel="stylesheet" href="{css('assets/themes/' + theme)}">
 <link rel="stylesheet" href="{esc(rel_href(STYLE, page_out))}">
 {kicanvas}</head>
-<body>
-<header><nav>{nav}</nav></header>
+<body class="plain-mirror">
+<header id="plain-nav"><nav>{nav}</nav></header>
 <main>
+<div class="{style_class}">
 {article}
+</div>
 </main>
-<footer class="site"><a href="{esc(resolve_site_url('index.html', page_out))}">Switch to the ClackOS desktop version</a></footer>
+<div id="plain-site-footer"><a href="{esc(resolve_site_url('index.html', page_out))}">Switch to the ClackOS desktop version</a></div>
 </body>
 </html>
 '''
 
-CSS = '''/* Plain mirror of clacktronics.co.uk — no desktop, just documents. */
-:root { color-scheme: light dark; }
-body {
-  font-family: Georgia, 'Times New Roman', serif;
-  max-width: 44rem;
-  margin: 0 auto;
-  padding: 1rem 1.25rem 3rem;
-  line-height: 1.55;
+CSS = '''/* Plain mirror of clacktronics.co.uk — the ClackOS look without the desktop.
+ * Loaded after assets/css/clackos.css + the active theme; these overrides
+ * turn the fixed desktop shell back into an ordinary scrolling document. */
+html, body.plain-mirror { height: auto; overflow: auto; }
+body.plain-mirror {
+  background: var(--paper);
+  user-select: text;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
 }
-header nav { font-family: monospace; padding: .5rem 0 1rem; border-bottom: 1px solid; }
-h1 { margin-bottom: .25rem; }
-.tagline { margin-top: 0; font-style: italic; opacity: .75; }
-img, video, iframe, kicanvas-embed { max-width: 100%; height: auto; }
-.youtube-embed iframe { width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; }
-kicanvas-embed { display: block; width: 100%; height: 24rem; }
-pre { overflow-x: auto; padding: .75rem; border: 1px solid; }
-code { font-family: monospace; }
-blockquote { border-left: 3px solid; margin-left: 0; padding-left: 1rem; opacity: .85; }
-footer { display: block; margin-top: 2rem; font-size: .85em; opacity: .7; }
-footer span { display: block; }
-footer.site { border-top: 1px solid; padding-top: .75rem; }
-a { color: inherit; }
+body.plain-mirror main { flex: 1; width: 100%; }
+
+#plain-nav {
+  background: var(--ink); color: var(--menu-text);
+  font-size: 13px; font-weight: 500;
+  padding: 8px 16px;
+}
+#plain-nav nav { max-width: 980px; margin: 0 auto; }
+#plain-nav a {
+  color: var(--menu-text); text-decoration: none;
+  padding: 3px 8px; border-radius: 5px;
+}
+#plain-nav a:hover { background: var(--leaf-deep); }
+#plain-nav a.current { background: var(--leaf-deep); color: var(--accent-hover); }
+
+#plain-site-footer {
+  border-top: 1px solid var(--paper-line);
+  padding: 14px 16px 28px; text-align: center;
+  font-size: 11px; color: var(--sage);
+}
+#plain-site-footer a { color: var(--sage); }
+#plain-site-footer a:hover { color: var(--leaf); }
 '''
 
 def main():

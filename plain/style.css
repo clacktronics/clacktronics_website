@@ -1,22 +1,32 @@
-/* Plain mirror of clacktronics.co.uk — no desktop, just documents. */
-:root { color-scheme: light dark; }
-body {
-  font-family: Georgia, 'Times New Roman', serif;
-  max-width: 44rem;
-  margin: 0 auto;
-  padding: 1rem 1.25rem 3rem;
-  line-height: 1.55;
+/* Plain mirror of clacktronics.co.uk — the ClackOS look without the desktop.
+ * Loaded after assets/css/clackos.css + the active theme; these overrides
+ * turn the fixed desktop shell back into an ordinary scrolling document. */
+html, body.plain-mirror { height: auto; overflow: auto; }
+body.plain-mirror {
+  background: var(--paper);
+  user-select: text;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
 }
-header nav { font-family: monospace; padding: .5rem 0 1rem; border-bottom: 1px solid; }
-h1 { margin-bottom: .25rem; }
-.tagline { margin-top: 0; font-style: italic; opacity: .75; }
-img, video, iframe, kicanvas-embed { max-width: 100%; height: auto; }
-.youtube-embed iframe { width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; }
-kicanvas-embed { display: block; width: 100%; height: 24rem; }
-pre { overflow-x: auto; padding: .75rem; border: 1px solid; }
-code { font-family: monospace; }
-blockquote { border-left: 3px solid; margin-left: 0; padding-left: 1rem; opacity: .85; }
-footer { display: block; margin-top: 2rem; font-size: .85em; opacity: .7; }
-footer span { display: block; }
-footer.site { border-top: 1px solid; padding-top: .75rem; }
-a { color: inherit; }
+body.plain-mirror main { flex: 1; width: 100%; }
+
+#plain-nav {
+  background: var(--ink); color: var(--menu-text);
+  font-size: 13px; font-weight: 500;
+  padding: 8px 16px;
+}
+#plain-nav nav { max-width: 980px; margin: 0 auto; }
+#plain-nav a {
+  color: var(--menu-text); text-decoration: none;
+  padding: 3px 8px; border-radius: 5px;
+}
+#plain-nav a:hover { background: var(--leaf-deep); }
+#plain-nav a.current { background: var(--leaf-deep); color: var(--accent-hover); }
+
+#plain-site-footer {
+  border-top: 1px solid var(--paper-line);
+  padding: 14px 16px 28px; text-align: center;
+  font-size: 11px; color: var(--sage);
+}
+#plain-site-footer a { color: var(--sage); }
+#plain-site-footer a:hover { color: var(--leaf); }

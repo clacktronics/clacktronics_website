@@ -3,23 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
 <title>Paris Opera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/icons.css">
+<link rel="stylesheet" href="../../assets/css/clackos.css">
+<link rel="stylesheet" href="../../assets/themes/monochrome.css">
 <link rel="stylesheet" href="../style.css">
 </head>
-<body>
-<header><nav><a href="../index.html">Home</a> · <a href="../readme.html">README</a> · <a href="../catalogue.html">Catalogue</a> · <a href="../euroclack.html">EuroClack</a> · <a href="../blog.html">Blog</a> · <a href="../about.html">About</a></nav></header>
+<body class="plain-mirror">
+<header id="plain-nav"><nav><a href="../index.html">Home</a> · <a href="../readme.html">README</a> · <a href="../catalogue.html">Catalogue</a> · <a href="../euroclack.html">EuroClack</a> · <a href="../blog.html">Blog</a> · <a href="../about.html">About</a></nav></header>
 <main>
+<div class="plain">
 <h1>Paris Opera</h1>
 <p class="tagline">26 June 2017</p>
+<div class="rule"></div>
 <p><img src="https://clacktronics.co.uk/assets/Palais_garnier_roof_haroon_mirza.gif" alt="paris opera ceiling -  chagall painting, illuminated by DMX lights" loading="lazy"><br>I had the rare opportunity to be a part of a project at the Palais Garnier, that is one of the main Opera house’s in Paris. I was working with Haroon Mirza to produce a live light and projection installation that interacted with a composition by Pierre Boulez called “Anthèmes II” and was a collaboration with the choreographer Wayne McGregor.</p>
 <p>“Anthèmes II” was a fairly early production created at IRCAM by Boulez, using the latest technological research at that time. In fact it actually used early versions of “Max” the visual programming software. I had the opportunity to look at the technical document for that work, it was fascinating to see how the work has been adapted for each new advance in technology. Originally using a number of NeXT machines serial linked and processed with FX processors to now simply running on a single Macbook Pro! There are a lot of technical details in the work that I will skim over, but its basically a program that follows a solo violinist reacting and performing with them according to a score. It does things like passing the violinist sound through various FX and panning the results around 6 speakers, also triggering various samplers. The technicians from IRCAM kindly let us receive data feeds from the MAX/MSP program via open sound control so the elements we control could respond to the live sound. Below is an example of the peice played at the BBC Proms.</p>
-<p class="ctas"><a href="https://www.youtube.com/watch?v=TMYDgwNALY8" target="_blank" rel="noopener noreferrer">Watch on YouTube</a></p>
+<div class="ctas"><a class="btn primary" href="https://www.youtube.com/watch?v=TMYDgwNALY8" target="_blank" rel="noopener noreferrer">Watch on YouTube</a></div>
 <p>The Palais Garnier is a very lavish building, with a complicated baroque style gilt interior. Haroon wanted to work with the internal structure of the auditorium, highlighting parts with lights. We focused on the windows that go around the dome of the auditorium, there were 64 little windows on the edge of the Chagall painting, this is an idea number when working computers! Those were each fitted with PARLED’s. The other element of the work was a projected backdrop on the stage, the idea was to make it look a little bit like an oscilloscope. The data provided to move the beam was quite slow so the movement of the dot was simply a rotating dot. I have recently been learning more about using mathematics to produce graphics from the great youtube series called coding with math by Keith Peters. To produce a rotation all I needed to do was use sine and cosine! The software I used to produce the visualisation was Processing.</p>
 <p>Haroon typically produces light / audio works by programming Arduino’s (well AVR’s) built in PWM peripheral. To keep the sound but control the DMX lights I simply established a simple serial link over USB to the control program.</p>
 <p><img src="https://clacktronics.co.uk/assets/Paris_opera_control_box.png" alt="paris opera control box diagram" loading="lazy"></p>
 <p>Overall this was a very good experience, I got to try out experimental technology in a fairly low tech live production environment. There is little public recordings of the performance but bellow is a small excerpt from the rehearsals showing the projection and the lights performing.</p>
-<p class="ctas"><a href="https://www.youtube.com/watch?v=QnbSaL5OvnU" target="_blank" rel="noopener noreferrer">Watch on YouTube</a></p>
+<div class="ctas"><a class="btn primary" href="https://www.youtube.com/watch?v=QnbSaL5OvnU" target="_blank" rel="noopener noreferrer">Watch on YouTube</a></div>
+</div>
 </main>
-<footer class="site"><a href="../../index.html">Switch to the ClackOS desktop version</a></footer>
+<div id="plain-site-footer"><a href="../../index.html">Switch to the ClackOS desktop version</a></div>
 </body>
 </html>
