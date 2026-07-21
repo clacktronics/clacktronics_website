@@ -155,6 +155,8 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <button data-cmd="commit"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Commit to website&hellip;</button>
     </div></div>
     <div class="rm"><button>Insert</button><div class="rm-dd">
+      <button data-cmd="insert-upload"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload image or video&hellip;</button>
+      <div class="sep"></div>
       <button data-cmd="insert-window"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Markdown window link&hellip;</button>
       <button data-cmd="insert-action"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Desktop action link&hellip;</button>
       <div class="sep"></div>
@@ -193,6 +195,21 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <div class="commit-actions">
         <button class="btn primary" id="commitGo"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Commit</button>
         <span class="app-status" id="commitStatus"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="site-modal" id="uploadModal">
+  <div class="site-box">
+    <header><span>Upload media</span><button id="uploadClose" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
+    <div class="commit-form">
+      <label>Upload token <span class="hint">(the secret set in upload-config.php on the web host — kept in memory, forgotten when the tab closes)</span>
+        <input type="password" id="uploadTokenInput" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="commit-actions">
+        <button class="btn primary" id="uploadTokenGo"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload</button>
+        <span class="app-status" id="uploadStatus"></span>
       </div>
     </div>
   </div>
@@ -508,6 +525,7 @@ function insertAppLink() {
 }
 
 const insertCommands = {
+  'insert-upload': startUpload,
   'insert-window': insertWindowLink,
   'insert-action': insertActionLink,
   'insert-youtube-embed': insertYouTubeEmbed,
@@ -520,6 +538,105 @@ const insertCommands = {
   'insert-kicad': insertKicadLink,
   'insert-app': insertAppLink
 };
+
+/* ---- upload an image/video/audio to the web host ----
+ * Sends the file to the endpoint named by "assetUpload" in content/site.json
+ * (resolved against the site root, so it is same-origin) with a secret token
+ * held only in memory. The server stores it under assets/uploads/ and returns
+ * a public URL, which is inserted as the right Markdown for its media type. */
+const uploadModal = document.getElementById('uploadModal');
+const uploadTokenInput = document.getElementById('uploadTokenInput');
+const uploadStatus = document.getElementById('uploadStatus');
+let uploadToken = null;          /* secret, memory only, per session */
+let assetUploadUrl = null;       /* resolved endpoint URL, or '' if unset */
+let pendingUpload = null;        /* the File waiting to be sent */
+
+const uploadPicker = document.createElement('input');
+uploadPicker.type = 'file';
+uploadPicker.accept = 'image/*,video/*,audio/*';
+uploadPicker.addEventListener('change', () => {
+  const f = uploadPicker.files[0];
+  uploadPicker.value = '';
+  if (f) beginUpload(f);
+});
+
+async function getAssetUploadUrl() {
+  if (assetUploadUrl !== null) return assetUploadUrl;
+  try {
+    const site = await (await fetch(contentBase + 'site.json')).json();
+    assetUploadUrl = site.assetUpload
+      ? new URL(site.assetUpload, new URL('../', contentBase)).href : '';
+  } catch { assetUploadUrl = ''; }
+  return assetUploadUrl;
+}
+
+async function startUpload() {
+  const url = await getAssetUploadUrl();
+  if (!url) {
+    status.textContent = 'Uploads are not configured — add "assetUpload" to content/site.json.';
+    return;
+  }
+  uploadPicker.click();
+}
+
+function beginUpload(file) {
+  pendingUpload = file;
+  if (uploadToken) doUpload();
+  else openUploadModal();
+}
+
+function openUploadModal() {
+  uploadModal.classList.add('open');
+  uploadStatus.textContent = pendingUpload ? `Ready: ${pendingUpload.name}` : '';
+  uploadTokenInput.focus();
+}
+
+async function doUpload() {
+  const file = pendingUpload;
+  const url = await getAssetUploadUrl();
+  if (!file || !url) return;
+  const body = new FormData();
+  body.append('file', file);
+  status.textContent = `Uploading ${file.name}…`;
+  uploadStatus.textContent = 'Uploading…';
+  try {
+    const res = await fetch(url, { method: 'POST', headers: { 'X-Upload-Token': uploadToken }, body });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || `server said ${res.status}`);
+    insertUploadedMedia(data, file.name);
+    uploadModal.classList.remove('open');
+    uploadTokenInput.value = '';
+    pendingUpload = null;
+    status.textContent = `Uploaded ${data.name} — link inserted.`;
+  } catch (e) {
+    uploadStatus.textContent = e.message;
+    status.textContent = `Upload failed: ${e.message}`;
+    /* a rejected token is the likely cause — forget it and ask again */
+    if (/token/i.test(e.message)) { uploadToken = null; openUploadModal(); }
+  }
+}
+
+function insertUploadedMedia(data, name) {
+  const alt = (name || '').replace(/\.[^.]+$/, '').replace(/\]/g, '\\]') || 'media';
+  let snippet;
+  if (data.kind === 'video') snippet = `@[video](${data.url}){controls}`;
+  else if (data.kind === 'image') snippet = `![${alt}](${data.url})`;
+  else snippet = `[${alt}](${data.url})`;
+  cm.replaceSelection(snippet + '\n');
+  cm.focus();
+}
+
+document.getElementById('uploadTokenGo').addEventListener('click', () => {
+  const t = uploadTokenInput.value.trim();
+  if (!t) { uploadStatus.textContent = 'Enter your upload token.'; return; }
+  uploadToken = t;
+  doUpload();
+});
+document.getElementById('uploadClose').addEventListener('click', () => uploadModal.classList.remove('open'));
+uploadModal.addEventListener('click', e => { if (e.target === uploadModal) uploadModal.classList.remove('open'); });
+uploadModal.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT') document.getElementById('uploadTokenGo').click();
+});
 
 /* ---- open markdown straight from the website ----
  * a static site can't list directories, so files are discovered the same
@@ -705,7 +822,7 @@ siteFilter.addEventListener('input', () => {
 document.getElementById('siteClose').addEventListener('click', () => siteModal.classList.remove('open'));
 siteModal.addEventListener('click', e => { if (e.target === siteModal) siteModal.classList.remove('open'); });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { siteModal.classList.remove('open'); commitModal.classList.remove('open'); }
+  if (e.key === 'Escape') { siteModal.classList.remove('open'); commitModal.classList.remove('open'); uploadModal.classList.remove('open'); }
 });
 
 /* menu */
@@ -744,6 +861,14 @@ document.addEventListener('drop', async e => {
   document.body.classList.remove('dragging');
   const f = e.dataTransfer.files[0];
   if (!f) return;
+  /* an image/video/audio file is uploaded to the web host; anything else is
+     treated as text and loaded into the editor */
+  if (/^(image|video|audio)\//.test(f.type)) {
+    const url = await getAssetUploadUrl();
+    if (!url) { status.textContent = 'Dropped media, but uploads are not configured in content/site.json.'; return; }
+    beginUpload(f);
+    return;
+  }
   mde.value(await f.text());
   handle = null;
   fileName = f.name;

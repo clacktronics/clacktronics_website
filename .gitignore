@@ -1,0 +1,5 @@
+# Server-only upload secret/config — must never be committed (see upload.php)
+assets/upload-config.php
+
+# Media uploaded via the upload endpoint lives on the web host, not in Git
+assets/uploads/

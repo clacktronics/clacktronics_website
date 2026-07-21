@@ -59,6 +59,8 @@ jobs:
             --exclude 'README.md' \
             --exclude 'todo.md' \
             --exclude 'assets/uploads/' \
+            --exclude 'assets/upload-config.php' \
+            --exclude 'assets/upload-config.example.php' \
             ./ "${SSH_USER}@${SSH_HOST}:${DEST}/"
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}

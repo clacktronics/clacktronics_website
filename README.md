@@ -342,6 +342,55 @@ whenever anything under `content/` changes. To rebuild it locally:
 python3 scripts/build_plain_site.py
 ```
 
+## Deploying to a web host (purely.website)
+
+GitHub stays the source of truth; a GitHub Action copies the built site to the
+web host so everything is served from one origin. `.github/workflows/deploy-purely.yml`
+runs on every push to `main` (and can be run by hand from the Actions tab) and
+`rsync`s the repo to the host over SSH. It uploads only changed files, never
+deletes on the host, and excludes VCS/CI files, `scripts/`, the notes, and the
+upload folders. It publishes to a `temp/` subfolder by default (set `SUBDIR=""`
+in the workflow to go live at the web root).
+
+It needs these repository secrets (Settings → Secrets and variables → Actions):
+`SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` (a key whose public half is in the
+host's `~/.ssh/authorized_keys`), `DEPLOY_PATH` (the absolute web root, e.g.
+`/home/USER/public_html`), and optionally `SSH_PORT` (defaults to 22).
+
+## Uploading images and video
+
+Large binaries do not belong in Git (repo-size and Actions limits), so the site
+links to media served from the web host instead — the same pattern the old blog
+posts already use. ClackOS can upload media straight to the host from the
+browser and hand back a URL to link:
+
+- **Applications → Markdown Editor… → Insert → Upload image or video…** (or just
+  drag an image/video/audio file onto the editor). The file is sent to the host,
+  and the returned URL is inserted as `![](…)`, `@[video](…){controls}`, or a
+  plain link depending on its type.
+
+The endpoint is `assets/upload.php`, named by `"assetUpload"` in
+`content/site.json` and resolved against the site root (so it is same-origin —
+no CORS needed once the site is on the host). It stores files under
+`assets/uploads/YYYY/MM/`, which the deploy never touches and Git ignores.
+
+**One-time server setup.** Because the repo is public, the secret is not in it.
+On the host, next to `upload.php`, copy `upload-config.example.php` to
+`upload-config.php` and set a strong `token` (e.g. `openssl rand -hex 32`). That
+file is git-ignored and excluded from deploys, so it never leaves the server.
+Paste the same token into the editor's upload dialog (kept in memory for the
+session only). To keep links stable while the site is staged under `temp/`, also
+set `base` and `dir` in the config to the canonical live paths.
+
+**How malicious uploads are prevented.** Every request needs the secret token
+(constant-time checked); only an allow-list of image/video/audio types is
+accepted, with the stored extension taken from the file's *sniffed* content type
+rather than its name; filenames are generated server-side (date + random) so
+there is no path traversal or overwriting; a size cap applies (100 MB default,
+subject to the host's `upload_max_filesize`/`post_max_size`); and `upload.php`
+drops a `.htaccess` into the uploads folder that disables script execution, so
+nothing stored there can ever run.
+
 ## Developing locally
 
 `fetch()` doesn't work over `file://`, so serve the folder:
