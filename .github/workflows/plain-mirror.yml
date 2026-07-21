@@ -1,0 +1,33 @@
+name: Rebuild plain HTML mirror
+
+on:
+  push:
+    paths:
+      - 'content/**'
+      - 'scripts/build_plain_site.py'
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Regenerate plain/
+        run: python3 scripts/build_plain_site.py
+
+      - name: Commit the mirror if it changed
+        run: |
+          if [ -n "$(git status --porcelain plain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add plain
+            git commit -m "Rebuild plain HTML mirror"
+            # the blog-index workflow may push concurrently
+            git pull --rebase
+            git push
+          else
+            echo "plain/ already up to date"
+          fi
