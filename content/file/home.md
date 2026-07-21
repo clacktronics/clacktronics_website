@@ -5,7 +5,7 @@ tagline: Hardware for people who fail to read the datasheet twice.
 ---
 # Clacktronics
 
-[Open in OpenSCAD](app:applications/openscad.html?code=%24fa%3D2%3B%20%24fs%3D2%3B%20%20difference()%20%7B%20%20%20cylinder(d%3D30%2C%20h%3D5%2C%20center%3Dtrue)%3B%20%20%20cylinder(d%3D25%2C%20h%3D6%2C%20center%3Dtrue)%3B%20%7D%20%20difference()%20%7B%20%20%20cylinder(d%3D15%2C%20h%3D5%2C%20center%3Dtrue)%3B%20%20%20cylinder(d%3D10%2C%20h%3D6%2C%20center%3Dtrue)%3B%20%7D%20%20for(t%3D%5B0%3A30%3A369%5D)%20%20%20rotate(%5B0%2C0%2Ct%5D)%20%20%20%20%20translate(%5B10%2C0%2C0%5D)%20%20%20%20%20%20%20sphere(d%3D5%2C%20center%3Dtrue)%3B&render=1)
+[Open in OpenSCAD](app:applications/openscad.html?code=%24fa%3D1%3B%20%24fs%3D0.5%3B%20%20difference()%20%7B%20%20%20cylinder(d%3D30%2C%20h%3D5%2C%20center%3Dtrue)%3B%20%20%20cylinder(d%3D25%2C%20h%3D6%2C%20center%3Dtrue)%3B%20%7D%20%20difference()%20%7B%20%20%20cylinder(d%3D15%2C%20h%3D5%2C%20center%3Dtrue)%3B%20%20%20cylinder(d%3D10%2C%20h%3D6%2C%20center%3Dtrue)%3B%20%7D%20%20for(t%3D%5B0%3A30%3A369%5D)%20%20%20rotate(%5B0%2C0%2Ct%5D)%20%20%20%20%20translate(%5B10%2C0%2C0%5D)%20%20%20%20%20%20%20sphere(d%3D5%2C%20center%3Dtrue)%3B&render=1)
 
 Clacktronics designs and builds open, hackable electronics from a small workshop in the north of England. We make Eurorack modules, development boards and firmware libraries built around the RP2350 — machines that do one thing well and tell you exactly how they do it.
 
@@ -21,7 +21,5 @@ Because constraints are clarifying. A 1-bit screen forces every pixel to justify
 
 [Browse the catalogue](window:file/catalogue.md)
 [Read the docs](window:file/readme.md)
-[Open circuit simulator](app:applications/circuit.html?ctz=DwYwlgTgBAZgvAIgIwKgFwM6IAwDpsEECsqYIiATPtgBxFEDMAbAJwUNI0DsTXqIAI0RFsqAA5CEI1ADcIw1AFtMwgKYBaJCgB8AKChRgMKAA9KtKEjZQKRJpbap4CBhVlpESXCSgDVOfDcAej0DYAAlU09rJAAWWMt4xNinHFQAd2dRKEUAQxMZBRD9Q3SohFt7JB4bO2TUhFFisIAbcqsKZNqq%20Ibsls9SckbSAOx4mmZeTmwiFitYugRmwwATcsqu12x62EolAHtEVdUYXIBXFrRl0NLy7e7Hyr6bkuAyswq6zZ-aF5XgABzDbfUH2ChcNx7EYA6CfCZdBHPaHZeTIQivMIfRBIuoPZFZTF3T4POIJBFk-63YAAeXKFKSsRYPRS0JQUAwwya1JkGwsvxoDihhKgmX2sDRSAxOXyhSkqAEYFyWHlUFW5zQAE8AMKakAtfyNXBMGhE958wU-MFUt5iED3Cg7MlQfF2F5QLnUAjssByvDe1AYNHZRRy9kyVaeBjG2IMWhcFhsBjxdgkAEHKCqAB2nihGDEOIaJhABChBZGtzCYigfsDwylRKrNcQDDrARQAKCB2pGeznnZ%20cL0JMsVL4kGlcM1drHOGo7NXepuVWACtM7nUKowIhTZmcwgACIazVQXX61RKfchz5S7IYDyH4%20nvUG17AILgCB6IA)
-
 
 
