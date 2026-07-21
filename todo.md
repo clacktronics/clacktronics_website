@@ -19,7 +19,6 @@
 
 ### New Features and featurettes
 
-* Report bug button
 * in 3d model viewer need auto rotate and material selection (transparent) and lighting? background choice. hide/Show grid, export.
 * Add sliders in theme editor
 * Split out some of the settings in theme editor so colours can be different.
@@ -33,7 +32,6 @@
 * Games
 * Web based Pure data
 * Web based processing
-* OpenSCAD
 * Perf/Strip/Bread(board) layout app ;ike lochmaster
 * Midi controllable, downloadable, mono synth.
 * Waveacity
