@@ -39,11 +39,25 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Stamp the build
+        # version.json is fetched (no-store) by the About window so ClackOS can
+        # show which commit the host is actually serving — handy for spotting a
+        # stale cache. The same values stamp the plain mirror below.
+        run: |
+          echo "SITE_COMMIT=$GITHUB_SHA" >> "$GITHUB_ENV"
+          echo "SITE_REPO=$GITHUB_REPOSITORY" >> "$GITHUB_ENV"
+          BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "SITE_BUILT_AT=$BUILT_AT" >> "$GITHUB_ENV"
+          printf '{"commit":"%s","short":"%s","builtAt":"%s","ref":"%s","url":"https://github.com/%s/commit/%s"}\n' \
+            "$GITHUB_SHA" "${GITHUB_SHA:0:7}" "$BUILT_AT" "$GITHUB_REF_NAME" "$GITHUB_REPOSITORY" "$GITHUB_SHA" \
+            > version.json
+
       - name: Regenerate plain HTML mirror
         # Build the static plain/ pages from the current content so the deploy
         # always ships an up-to-date mirror, even before the plain-mirror
-        # workflow commits its copy back to the repo. This runs against the
-        # checked-out tree only; it does not commit anything.
+        # workflow commits its copy back to the repo. Reads the SITE_* values
+        # set above to stamp the build. Runs against the checked-out tree only;
+        # it does not commit anything.
         run: python3 scripts/build_plain_site.py
 
       - name: Load SSH key

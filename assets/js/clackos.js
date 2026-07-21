@@ -341,6 +341,54 @@ function kicanvasEmbed(markdown) {
   return `<figure class="kicanvas-embed"><kicanvas-embed controls="full" aria-label="${escAttr(title)}"><kicanvas-source src="${escAttr(src)}"></kicanvas-source></kicanvas-embed><figcaption>${esc(title)}</figcaption></figure>`;
 }
 
+/* @[build] renders a placeholder that is filled in after the window mounts
+ * with the deployed commit from version.json (see populateBuildStamps). Useful
+ * for telling at a glance which build the host is actually serving — handy when
+ * a cache is showing stale content. */
+function buildEmbed(markdown) {
+  if (!/^@\[build\]$/i.test(markdown.trim())) return '';
+  return '<p class="build-stamp" data-build-stamp>Build <span class="k">checking…</span></p>';
+}
+
+/* version.json is written at deploy time and fetched no-store so it always
+ * reflects what the server currently has, even when index.html/clackos.js are
+ * themselves cached. Absent on hosts that never ran the deploy (e.g. a raw
+ * checkout), in which case the stamp reads "dev". */
+let versionInfo;
+function siteVersion() {
+  if (!versionInfo) {
+    versionInfo = fetch(new URL('version.json', location.href), { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null)).catch(() => null);
+  }
+  return versionInfo;
+}
+
+function populateBuildStamps(root) {
+  const stamps = root.querySelectorAll('[data-build-stamp]');
+  if (!stamps.length) return;
+  siteVersion().then(v => {
+    stamps.forEach(el => {
+      el.textContent = '';
+      if (v && v.short) {
+        el.append('Build ');
+        let code = document.createElement('span');
+        code.className = 'k';
+        code.textContent = v.short;
+        if (v.url) {
+          const a = document.createElement('a');
+          a.href = v.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+          a.appendChild(code);
+          code = a;
+        }
+        el.append(code);
+        if (v.builtAt) el.append(' · ' + String(v.builtAt).slice(0, 10));
+      } else {
+        el.append('Build: dev (unversioned)');
+      }
+    });
+  });
+}
+
 /* Raw HTML is useful in hand-authored site content, but it must not turn a
  * Markdown file into a script injection point. Keep structural/content tags,
  * discard active elements, event handlers and unsafe URLs. YouTube iframes are
@@ -434,6 +482,7 @@ function mdToHtml(body, meta) {
     const youtube = youtubeEmbed(block);
     const video = videoEmbed(block);
     const kicanvas = kicanvasEmbed(block);
+    const build = buildEmbed(block);
     if (fence) {
       out.push(fences[+fence[1]]);
     } else if (youtube) {
@@ -442,6 +491,8 @@ function mdToHtml(body, meta) {
       out.push(video);
     } else if (kicanvas) {
       out.push(kicanvas);
+    } else if (build) {
+      out.push(build);
     } else if (/^<[/!A-Za-z][\s\S]*>$/m.test(block)) {
       out.push(`<div class="html-block">${sanitizeHtmlBlock(block)}</div>`);
     } else if (/^>\s?/.test(block)) {
@@ -728,7 +779,7 @@ async function openWindow(id) {
 
   const winbody = el.querySelector('.winbody');
   if (mount) mount(winbody, { onClose: fn => rec.cleanups.push(fn) });
-  else winbody.innerHTML = contentHtml;
+  else { winbody.innerHTML = contentHtml; populateBuildStamps(winbody); }
 
   const titlebar = el.querySelector('.titlebar');
 
