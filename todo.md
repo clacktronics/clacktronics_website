@@ -16,6 +16,7 @@
 
 * Open app to video is not working
 * If click outside of "commit to website" in the markdown editor it seems to close the window which is awk
+* Drop down menus don't work in Pure data in Firefox
 
 ### New Features and featurettes
 
