@@ -9,7 +9,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
-<link rel="stylesheet" href="../../vendor/codemirror5/codemirror.css">
 <style>
 html, body, .app { height: 100%; min-height: 0; }
 body { overflow: hidden; }
@@ -20,6 +19,8 @@ body { overflow: hidden; }
 .pd-run { color: var(--leaf-deep); }
 .pd-stop { color: #a04a3a; }
 .pd-spacer { flex: 1; }
+.pd-mode.btn { padding: 6px 12px; }
+.pd-mode.editing { background: var(--leaf-deep); border-color: var(--leaf-deep); color: var(--menu-text); }
 .pd-dsp {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 11.5px; color: var(--sage); user-select: none;
@@ -30,102 +31,137 @@ body { overflow: hidden; }
 }
 .pd-dsp.on .dot { background: var(--leaf); }
 
-.pd-main {
-  flex: 1; min-height: 0; display: grid; gap: 10px; padding: 10px 12px;
-  grid-template-columns: minmax(260px, 1.1fr) minmax(240px, 1fr);
-  grid-template-rows: 1fr 140px;
-}
-.pd-editor { grid-column: 1; grid-row: 1; min-height: 0; display: flex; flex-direction: column; }
-.pd-panel { grid-column: 2; grid-row: 1 / 3; min-height: 0; display: flex; flex-direction: column; }
-.pd-console { grid-column: 1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; }
-
-.pd-pane-title {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--leaf-deep); padding: 0 2px 6px;
-}
-.pd-pane-title .pixel-icon { width: 16px; height: 16px; }
-.pd-pane-title .name { margin-left: auto; letter-spacing: 0.04em; text-transform: none; font-weight: 500; color: var(--sage); }
-
-.pd-editor .CodeMirror {
-  flex: 1; min-height: 0; height: auto;
-  border: 1px solid var(--ink); border-radius: 8px;
-  background: var(--paper); color: var(--ink-soft);
-  font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.6;
-}
-.CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
-.CodeMirror-selected { background: rgba(79, 174, 125, 0.25) !important; }
-.CodeMirror-gutters { background: var(--paper-deep) !important; border-right: 1px solid var(--paper-line) !important; }
-.CodeMirror-linenumber { color: var(--sage) !important; }
-.cm-s-default .cm-keyword { color: #276b47; font-weight: 600; }
-.cm-s-default .cm-builtin { color: #276b47; }
-.cm-s-default .cm-atom { color: #a8841f; }
-.cm-s-default .cm-number { color: #a8841f; }
-.cm-s-default .cm-string { color: #8a3d2e; }
-.cm-s-default .cm-comment { color: #66755a; font-style: italic; }
-
-/* ---- the rendered patch controls ---- */
+.pd-main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px; gap: 8px; }
 .pd-stage {
   position: relative; flex: 1; min-height: 0; overflow: auto;
   border: 1px solid var(--ink); border-radius: 8px;
-  background: var(--paper-deep);
+  background: var(--paper);
 }
-.pd-stage.dragging { box-shadow: inset 0 0 0 4px var(--leaf); }
-.pd-canvas { position: relative; min-width: 100%; min-height: 100%; }
-.pd-prompt {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  text-align: center; padding: 20px; color: var(--sage); font-size: 12px; line-height: 1.7;
-  pointer-events: none;
+.pd-stage.dragging-file { box-shadow: inset 0 0 0 4px var(--leaf); }
+.pd-stage.run-mode { background: var(--paper-deep); }
+#paper { position: relative; min-width: 100%; min-height: 100%; }
+#cords { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+#cords .cord { stroke: var(--ink); stroke-width: 1.4; fill: none; }
+#cords .cord.sig { stroke-width: 3; }
+#cords .cord.selected { stroke: var(--leaf-deep); }
+#cords .cord-hit { stroke: transparent; stroke-width: 9; fill: none; cursor: pointer; }
+#cords .rubber { stroke: var(--leaf-deep); stroke-width: 1.6; stroke-dasharray: 4 3; fill: none; }
+#marquee {
+  position: absolute; border: 1px dashed var(--leaf-deep);
+  background: rgba(79, 174, 125, 0.12); display: none; pointer-events: none;
 }
-.pd-prompt[hidden] { display: none; }
-.pd-prompt strong { display: block; color: var(--control-text); margin-bottom: 4px; }
 
-.pd-ctl { position: absolute; display: flex; flex-direction: column; gap: 3px; }
-.pd-ctl .lbl { font-size: 10.5px; color: var(--sage); line-height: 1; white-space: nowrap; }
-.pd-ctl input[type=range] { accent-color: var(--leaf-deep); margin: 0; }
-.pd-ctl input[type=range].v { writing-mode: vertical-lr; direction: rtl; }
-.pd-ctl input[type=number] {
-  font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 2px 6px;
-  border: 1px solid var(--ink); border-radius: 5px; background: var(--paper); color: var(--ink-soft);
+/* ---- patch boxes ---- */
+.box {
+  position: absolute; box-sizing: border-box;
+  font: 12px/1.35 'IBM Plex Mono', monospace; color: var(--ink-soft);
+  border: 1px solid var(--ink); background: var(--paper);
+  padding: 3px 7px; white-space: pre; user-select: none; cursor: default;
+  min-width: 24px; min-height: 21px;
 }
-.pd-bng {
-  border: 1px solid var(--ink); border-radius: 50%; background: var(--paper);
-  cursor: pointer; padding: 0;
+.run-mode .box { cursor: default; }
+.edit-mode .box { cursor: move; }
+.box.selected { border-color: var(--leaf-deep); box-shadow: 0 0 0 1px var(--leaf-deep); }
+.box.obj.empty { border-style: dashed; color: var(--sage); }
+.box.msg {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 22%, calc(100% - 5px) 78%, 100% 100%, 0 100%);
+  border-right-width: 5px; cursor: pointer;
 }
-.pd-bng:active, .pd-bng.flash { background: var(--leaf); }
-.pd-tgl {
-  border: 1px solid var(--ink); border-radius: 4px; background: var(--paper);
-  cursor: pointer; padding: 0; position: relative;
+.edit-mode .box.msg { cursor: move; }
+.box.msg:active { background: var(--paper-deep); }
+.box.comment { border: none; background: transparent; color: var(--sage); }
+.box.comment.selected { outline: 1px dashed var(--leaf-deep); }
+.box.atom {
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%);
+  cursor: ns-resize; min-width: 44px;
 }
-.pd-tgl.on::after {
-  content: ''; position: absolute; inset: 3px; background: var(--leaf-deep); border-radius: 2px;
+.edit-mode .box.atom { cursor: move; }
+.box.gui { padding: 0; background: var(--paper-deep); }
+.box.gui .fill { position: absolute; background: var(--leaf-deep); pointer-events: none; }
+.box.bng .circle {
+  position: absolute; inset: 2px; border: 1px solid var(--ink); border-radius: 50%;
+  background: var(--paper); pointer-events: none;
 }
-.pd-radio { display: flex; gap: 0; }
-.pd-radio.v { flex-direction: column; }
-.pd-radio button {
-  border: 1px solid var(--ink); background: var(--paper); cursor: pointer; padding: 0; position: relative;
+.box.bng.flash .circle { background: var(--leaf); }
+.box.tgl .cross { display: none; position: absolute; inset: 0; pointer-events: none; }
+.box.tgl.on .cross { display: block; }
+.box.tgl .cross::before, .box.tgl .cross::after {
+  content: ''; position: absolute; left: 15%; right: 15%; top: 50%;
+  border-top: 2px solid var(--ink); transform: rotate(45deg);
 }
-.pd-radio button.on::after {
-  content: ''; position: absolute; inset: 4px; background: var(--leaf-deep); border-radius: 50%;
+.box.tgl .cross::after { transform: rotate(-45deg); }
+.box.slider .knob { position: absolute; background: var(--ink); pointer-events: none; }
+.box.hsl .knob { top: 1px; bottom: 1px; width: 3px; }
+.box.vsl .knob { left: 1px; right: 1px; height: 3px; }
+.run-mode .box.bng, .run-mode .box.tgl, .run-mode .box.slider, .run-mode .box.radio { cursor: pointer; }
+.box.radio { display: flex; }
+.box.radio.v { flex-direction: column; }
+.box.radio .cell { position: relative; border: 1px solid var(--ink); flex: 0 0 auto; box-sizing: border-box; }
+.box.radio .cell.on::after { content: ''; position: absolute; inset: 3px; background: var(--ink); }
+.box.cnv { border: none; background: color-mix(in srgb, var(--leaf) 18%, var(--paper)); }
+.gui-label {
+  position: absolute; font: 10px 'IBM Plex Mono', monospace; color: var(--sage);
+  white-space: nowrap; pointer-events: none;
 }
-.pd-msgbox {
-  font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; cursor: pointer;
-  border: 1px solid var(--ink); border-right-width: 4px; border-radius: 3px;
-  background: var(--paper); color: var(--ink-soft); padding: 3px 8px;
-}
-.pd-msgbox:active { background: var(--leaf); }
 
+/* portlets */
+.port { position: absolute; width: 9px; height: 4px; background: var(--ink); z-index: 2; }
+.port.in { top: -1px; }
+.port.out { bottom: -1px; cursor: crosshair; }
+.edit-mode .port::after { content: ''; position: absolute; inset: -4px; }
+.edit-mode .port:hover { background: var(--leaf-deep); }
+.run-mode .port { pointer-events: none; }
+
+/* box text editing */
+.box-edit {
+  position: absolute; z-index: 5; box-sizing: border-box;
+  font: 12px/1.35 'IBM Plex Mono', monospace; color: var(--ink-soft);
+  border: 1px solid var(--leaf-deep); background: var(--paper);
+  padding: 3px 7px; outline: none; min-width: 60px;
+}
+
+.pd-console-row { display: flex; gap: 10px; height: 108px; min-height: 0; }
 .pd-console-out {
   flex: 1; min-height: 0; overflow-y: auto;
   border: 1px solid var(--ink); border-radius: 8px;
   background: var(--ink); color: var(--menu-text);
   font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.5;
-  padding: 8px 12px; white-space: pre-wrap; word-break: break-word; user-select: text;
+  padding: 6px 12px; white-space: pre-wrap; word-break: break-word; user-select: text;
 }
 .pd-console-out .err { color: #e8927c; }
 .pd-console-out .warn { color: #e5c46a; }
 .pd-console-out .sys { color: #8fcaa8; }
 .pd-status { padding: 0 16px 4px; }
+
+/* ---- source modal ---- */
+.site-modal {
+  position: fixed; inset: 0; z-index: 50; display: none;
+  background: rgba(9, 20, 13, 0.35); align-items: center; justify-content: center;
+}
+.site-modal.open { display: flex; }
+.site-box {
+  width: min(640px, 92vw); max-height: 86vh; display: flex; flex-direction: column;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 10px;
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 35%, transparent);
+}
+.site-box header {
+  background: var(--ink); color: var(--menu-text); padding: 9px 14px;
+  border-radius: 8px 8px 0 0; font-size: 12.5px; display: flex; justify-content: space-between;
+}
+.site-box header button { all: unset; cursor: pointer; color: var(--menu-text); padding: 0 4px; }
+.modal-form { padding: 14px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.modal-form textarea {
+  width: 100%; height: 46vh; resize: vertical; box-sizing: border-box;
+  font: 12px/1.5 'IBM Plex Mono', monospace; color: var(--ink-soft);
+  border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); padding: 8px;
+}
+.modal-form label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--control-text); font-weight: 500; }
+.modal-form input {
+  font: 12px 'IBM Plex Mono', monospace; padding: 4px 8px;
+  border: 1px solid var(--ink); border-radius: 5px; background: var(--paper); color: var(--ink-soft);
+}
+.modal-actions { display: flex; align-items: center; gap: 14px; }
+.props-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 .credit {
   margin: 0; padding: 6px 16px; font-size: 10.5px; line-height: 1.6;
@@ -144,44 +180,48 @@ body { overflow: hidden; }
       <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open&hellip;</button>
       <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save .pd</button>
       <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save .pd As&hellip;</button>
+      <div class="sep"></div>
+      <button data-cmd="source"><span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span>Edit .pd source&hellip;</button>
+    </div></div>
+    <div class="rm"><button>Put</button><div class="rm-dd">
+      <button data-cmd="put-obj">Object <span style="margin-left:auto;color:var(--sage)">Ctrl+1</span></button>
+      <button data-cmd="put-msg">Message <span style="margin-left:auto;color:var(--sage)">Ctrl+2</span></button>
+      <button data-cmd="put-num">Number <span style="margin-left:auto;color:var(--sage)">Ctrl+3</span></button>
+      <button data-cmd="put-comment">Comment <span style="margin-left:auto;color:var(--sage)">Ctrl+5</span></button>
+      <div class="sep"></div>
+      <button data-cmd="put-bng">Bang</button>
+      <button data-cmd="put-tgl">Toggle</button>
+      <button data-cmd="put-hsl">Hslider</button>
+      <button data-cmd="put-vsl">Vslider</button>
+      <button data-cmd="put-hradio">Hradio</button>
     </div></div>
     <div class="rm"><button>Examples</button><div class="rm-dd">
       <button data-cmd="ex-synth"><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>Sine organ</button>
       <button data-cmd="ex-bleeps"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Random bleeps</button>
     </div></div>
+    <button class="btn ghost pd-mode" data-cmd="mode" title="Toggle edit mode (Ctrl+E)">
+      <span class="pixel-icon" data-icon="pencil" aria-hidden="true"></span><span id="modeLabel">Edit</span>
+    </button>
     <button class="btn ghost pd-run" data-cmd="run"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Run</button>
     <button class="btn ghost pd-stop" data-cmd="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop</button>
     <span class="pd-spacer"></span>
+    <span class="app-lbl" id="fileLabel">untitled.pd</span>
     <span class="pd-dsp" id="dsp"><span class="dot"></span>DSP off</span>
   </div>
 
   <div class="pd-main">
-    <div class="pd-editor">
-      <div class="pd-pane-title">
-        <span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span><span>Patch source</span>
-        <span class="name" id="fileLabel">untitled.pd</span>
-      </div>
-      <textarea id="code"></textarea>
-    </div>
-
-    <div class="pd-panel">
-      <div class="pd-pane-title"><span class="pixel-icon" data-icon="keyboard-music" aria-hidden="true"></span><span>Patch</span></div>
-      <div class="pd-stage" id="stage" aria-label="Patch controls">
-        <div class="pd-canvas" id="canvas"></div>
-        <div class="pd-prompt" id="prompt">
-          <span><strong>Press Run &#9654; to compile the patch</strong>GUI objects (sliders, toggles, bangs, numbers)
-          appear here, live. Drop a .pd file anywhere to open it.</span>
-        </div>
+    <div class="pd-stage edit-mode" id="stage">
+      <div id="paper">
+        <svg id="cords"></svg>
+        <div id="marquee"></div>
       </div>
     </div>
-
-    <div class="pd-console">
-      <div class="pd-pane-title"><span class="pixel-icon" data-icon="terminal" aria-hidden="true"></span><span>Console</span></div>
+    <div class="pd-console-row">
       <div class="pd-console-out" id="out"></div>
     </div>
   </div>
 
-  <p class="app-status pd-status" id="status">Ready — patches compile and play in this browser, nothing is uploaded.</p>
+  <p class="app-status pd-status" id="status">Edit mode — Put menu (or Ctrl+1/2/3) adds boxes, drag from an outlet to an inlet to connect, Ctrl+E locks the patch, Run compiles it. No undo yet — save often.</p>
   <p class="credit">Engine:
     <a href="https://github.com/sebpiq/WebPd" target="_blank" rel="noopener">WebPd</a>
     by S&eacute;bastien Piquemal &amp; contributors, compiling patches to JavaScript DSP &middot; free software,
@@ -193,120 +233,841 @@ body { overflow: hidden; }
   </p>
 </div>
 
-<script src="../../vendor/codemirror5/codemirror.js"></script>
-<script>
-/* A tiny Pd file-format mode for CodeMirror 5. */
-CodeMirror.defineMode('puredata', function () {
-  return {
-    startState() { return { field: 0 }; },
-    token(stream, state) {
-      if (stream.sol()) state.field = 0;
-      if (stream.eatSpace()) return null;
-      if (stream.match(/^#[NX]/)) { state.field = 1; return 'keyword'; }
-      if (stream.match(/^(canvas|obj|msg|floatatom|symbolatom|listbox|text|connect|coords|restore|array)\b/)) {
-        state.field += 1;
-        return state.field === 2 ? 'builtin' : 'atom';
-      }
-      if (stream.match(/^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?(?=[\s;]|$)/i)) { state.field += 1; return 'number'; }
-      if (stream.match(/^;/)) { state.field = 0; return 'keyword'; }
-      if (stream.match(/^[^\s;]+/)) {
-        state.field += 1;
-        /* the object class right after "#X obj x y" stands out */
-        return state.field === 5 ? 'string' : null;
-      }
-      stream.next();
-      return null;
-    },
-  };
-});
-</script>
+<div class="site-modal" id="srcModal">
+  <div class="site-box">
+    <header><span>.pd source</span><button data-close aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
+    <div class="modal-form">
+      <textarea id="srcText" spellcheck="false"></textarea>
+      <div class="modal-actions">
+        <button class="btn primary" id="srcApply">Apply</button>
+        <span class="app-status" id="srcStatus"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="site-modal" id="propsModal">
+  <div class="site-box" style="width:min(420px,92vw)">
+    <header><span id="propsTitle">Properties</span><button data-close aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
+    <div class="modal-form">
+      <div class="props-grid" id="propsFields"></div>
+      <div class="modal-actions">
+        <button class="btn primary" id="propsApply">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script type="module">
 import { Build, Browser } from '../../vendor/webpd/dist/src/index.js';
 
-const status = document.getElementById('status');
-const consoleOut = document.getElementById('out');
-const canvas = document.getElementById('canvas');
 const stage = document.getElementById('stage');
-const promptBox = document.getElementById('prompt');
+const paper = document.getElementById('paper');
+const cordsSvg = document.getElementById('cords');
+const marquee = document.getElementById('marquee');
+const statusEl = document.getElementById('status');
+const consoleOut = document.getElementById('out');
 const fileLabel = document.getElementById('fileLabel');
 const dspLight = document.getElementById('dsp');
+const modeBtn = document.querySelector('.pd-mode');
+const modeLabel = document.getElementById('modeLabel');
 
-const EXAMPLE_SYNTH = `#N canvas 100 100 560 420 12;
-#X obj 40 60 hsl 162 15 36 84 0 0 empty empty pitch -2 -8 0 10 -262144 -1 -1 7000 1;
-#X obj 40 120 mtof;
-#X obj 40 160 osc~ 220;
-#X obj 300 60 tgl 19 0 empty empty voice -2 -8 0 10 -262144 -1 -1 0 1;
-#X obj 300 120 * 0.15;
-#X obj 300 160 pack 0 50;
-#X obj 300 200 line~;
-#X obj 40 250 *~;
-#X obj 40 300 dac~;
-#X connect 0 0 1 0;
-#X connect 1 0 2 0;
-#X connect 2 0 7 0;
-#X connect 3 0 4 0;
-#X connect 4 0 5 0;
-#X connect 5 0 6 0;
-#X connect 6 0 7 1;
-#X connect 7 0 8 0;
-#X connect 7 0 8 1;
-`;
+const GUI_TYPES = new Set(['bng', 'tgl', 'nbx', 'hsl', 'vsl', 'hradio', 'vradio', 'vu', 'cnv']);
+const SVGNS = 'http://www.w3.org/2000/svg';
 
-const EXAMPLE_BLEEPS = `#N canvas 100 100 560 460 12;
-#X obj 40 40 tgl 19 0 empty empty run -2 -8 0 10 -262144 -1 -1 0 1;
-#X obj 40 90 metro 180;
-#X obj 40 130 trigger b b;
-#X obj 90 170 random 24;
-#X obj 90 210 + 54;
-#X obj 90 250 mtof;
-#X obj 90 290 osc~;
-#X obj 260 170 msg 0.2 10 \\, 0 150;
-#X obj 260 210 line~;
-#X obj 90 340 *~;
-#X obj 90 390 dac~;
-#X obj 340 40 hsl 130 15 60 400 0 0 empty empty speed -2 -8 0 10 -262144 -1 -1 3200 1;
-#X connect 0 0 1 0;
-#X connect 1 0 2 0;
-#X connect 2 1 3 0;
-#X connect 3 0 4 0;
-#X connect 4 0 5 0;
-#X connect 5 0 6 0;
-#X connect 6 0 9 0;
-#X connect 2 0 7 0;
-#X connect 7 0 8 0;
-#X connect 8 0 9 1;
-#X connect 9 0 10 0;
-#X connect 9 0 10 1;
-#X connect 11 0 1 1;
-`;
-
+/* =====================================================================
+ * model
+ * =================================================================== */
+let patch;                 /* { canvas:{wx,wy,w,h,font}, extrasTop:[], extrasBottom:[], nodes:[], connects:[] } */
 let fileName = 'untitled.pd';
-let handle = null;               /* FileSystemFileHandle when supported */
-let audioCtx = null;             /* one AudioContext for the page */
-let webpdNode = null;
-let micSource = null;
-let micStream = null;
-let running = false;
-let widgets = {};                /* graph nodeId -> { update(value) } */
+let handle = null;
+let editMode = true;
+let selection = new Set(); /* of nodes */
+let selectedCord = null;
+let lastPutPos = { x: 40, y: 40 };
+let editingNode = null;    /* node whose text is being edited */
 
-/* ---------------- editor ---------------- */
-const cm = CodeMirror.fromTextArea(document.getElementById('code'), {
-  mode: 'puredata',
-  lineNumbers: true,
-  lineWrapping: true,
-  viewportMargin: Infinity
-});
-cm.setValue(EXAMPLE_SYNTH);
+function blankPatch() {
+  return { canvas: { wx: 100, wy: 100, w: 640, h: 480, font: 12 },
+           extrasTop: [], extrasBottom: [], nodes: [], connects: [] };
+}
 
-const setFile = (name, h) => {
-  fileName = name || 'untitled.pd';
-  handle = h || null;
-  fileLabel.textContent = fileName;
-  document.title = fileName + ' — Pure Data — ClackOS';
+/* ---------------- .pd text -> model ---------------- */
+function splitRecords(src) {
+  const records = [];
+  let cur = '';
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === ';' && src[i - 1] !== '\\') { records.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  if (cur.trim()) records.push(cur);
+  return records.map(r => r.replace(/\s*\r?\n\s*/g, ' ').trim()).filter(Boolean);
+}
+
+const unescapePd = s => s.replace(/\\([;,$])/g, '$1').replace(/\s*,\s*/g, ', ');
+const escapePd = (s, dollars) => {
+  let out = s.replace(/([;,])/g, ' \\$1 ').replace(/\s+/g, ' ').trim();
+  if (dollars) out = out.replace(/(^|\s)\$(?=\d)/g, '$1\\$');
+  return out;
 };
 
-/* ---------------- console ---------------- */
+function parsePd(text) {
+  const records = splitRecords(text);
+  if (!records.length || !/^#N canvas/.test(records[0]))
+    throw new Error('Not a Pd patch (missing "#N canvas" header).');
+  const p = blankPatch();
+  const c0 = records[0].split(/\s+/);
+  p.canvas = { wx: +c0[2] || 100, wy: +c0[3] || 100, w: +c0[4] || 640, h: +c0[5] || 480, font: +c0[6] || 12 };
+  const rawConnects = [];
+  let depth = 0;
+  let blobLines = [];
+
+  for (let i = 1; i < records.length; i++) {
+    const rec = records[i];
+    const t = rec.split(/\s+/);
+    if (t[0] === '#N' && t[1] === 'canvas') {
+      depth++;
+      blobLines.push(rec);
+      continue;
+    }
+    if (depth > 0) {
+      if (t[0] === '#X' && t[1] === 'restore') {
+        depth--;
+        if (depth === 0) {
+          p.nodes.push({ kind: 'blob', x: +t[2] || 0, y: +t[3] || 0,
+            rawLines: blobLines, restoreTail: t.slice(4).join(' '),
+            nIn: countPorts(blobLines, 'inlet'), nOut: countPorts(blobLines, 'outlet') });
+          blobLines = [];
+          continue;
+        }
+      }
+      blobLines.push(rec);
+      continue;
+    }
+    if (t[0] === '#X' && t[1] === 'connect') {
+      rawConnects.push([+t[2], +t[3], +t[4], +t[5]]);
+    } else if (t[0] === '#X' && t[1] === 'obj') {
+      const type = t[4] || '';
+      if (GUI_TYPES.has(type))
+        p.nodes.push({ kind: 'gui', type, x: +t[2], y: +t[3], tail: t.slice(5) });
+      else
+        p.nodes.push({ kind: 'obj', x: +t[2], y: +t[3], text: unescapePd(t.slice(4).join(' ')) });
+    } else if (t[0] === '#X' && t[1] === 'msg') {
+      p.nodes.push({ kind: 'msg', x: +t[2], y: +t[3], text: unescapePd(t.slice(4).join(' ')) });
+    } else if (t[0] === '#X' && t[1] === 'floatatom') {
+      p.nodes.push({ kind: 'atom', x: +t[2], y: +t[3], tail: t.slice(4) });
+    } else if (t[0] === '#X' && t[1] === 'text') {
+      p.nodes.push({ kind: 'comment', x: +t[2], y: +t[3], text: unescapePd(t.slice(4).join(' ')) });
+    } else if (t[0] === '#X' && (t[1] === 'declare' || t[1] === 'coords' || t[1] === 'scalar')) {
+      (t[1] === 'coords' ? p.extrasBottom : p.extrasTop).push(rec);
+    } else if (t[0] === '#N') {
+      p.extrasTop.push(rec);
+    } else {
+      /* symbolatom, listbox and anything unexpected: keep it verbatim */
+      p.nodes.push({ kind: 'raw', x: +t[2] || 0, y: +t[3] || 0, tokens: t });
+    }
+  }
+  for (const [a, b, c, d] of rawConnects) {
+    const src = p.nodes[a], dst = p.nodes[c];
+    if (src && dst) p.connects.push({ src, outlet: b, dst, inlet: d });
+  }
+  return p;
+}
+
+function countPorts(lines, what) {
+  let depth = 0, n = 0;
+  const re = new RegExp(`^#X obj \\S+ \\S+ ${what}~?( |$)`);
+  for (const rec of lines.slice(1)) {
+    if (/^#N canvas/.test(rec)) depth++;
+    else if (/^#X restore/.test(rec) && depth > 0) depth--;
+    else if (depth === 0 && re.test(rec)) n++;
+  }
+  return n;
+}
+
+/* ---------------- model -> .pd text ---------------- */
+function serialize(p = patch) {
+  const L = [];
+  const cv = p.canvas;
+  L.push(`#N canvas ${cv.wx} ${cv.wy} ${cv.w} ${cv.h} ${cv.font}`);
+  L.push(...p.extrasTop);
+  for (const n of p.nodes) {
+    const x = Math.round(n.x), y = Math.round(n.y);
+    if (n.kind === 'obj') L.push(`#X obj ${x} ${y}${n.text.trim() ? ' ' + escapePd(n.text, false) : ''}`);
+    else if (n.kind === 'msg') L.push(`#X msg ${x} ${y} ${escapePd(n.text, true)}`);
+    else if (n.kind === 'comment') L.push(`#X text ${x} ${y} ${escapePd(n.text, false)}`);
+    else if (n.kind === 'atom') L.push(`#X floatatom ${x} ${y} ${n.tail.join(' ')}`);
+    else if (n.kind === 'gui') L.push(`#X obj ${x} ${y} ${n.type} ${n.tail.join(' ')}`);
+    else if (n.kind === 'blob') { L.push(...n.rawLines); L.push(`#X restore ${x} ${y} ${n.restoreTail}`); }
+    else if (n.kind === 'raw') { const t = [...n.tokens]; t[2] = x; t[3] = y; L.push(t.join(' ')); }
+  }
+  L.push(...p.extrasBottom);
+  for (const c of p.connects) {
+    const a = p.nodes.indexOf(c.src), b = p.nodes.indexOf(c.dst);
+    if (a >= 0 && b >= 0) L.push(`#X connect ${a} ${c.outlet} ${b} ${c.inlet}`);
+  }
+  return L.map(l => l + ';').join('\n') + '\n';
+}
+
+/* =====================================================================
+ * portlet counts
+ * =================================================================== */
+const PORTS = {
+  'osc~': [2, 1], 'phasor~': [2, 1], 'noise~': [0, 1], 'sig~': [1, 1],
+  'line~': [2, 1], 'vline~': [2, 1], 'line': [3, 1], 'adc~': [0, 2],
+  'mtof': [1, 1], 'ftom': [1, 1], 'mtof~': [1, 1], 'ftom~': [1, 1],
+  'dbtorms': [1, 1], 'rmstodb': [1, 1], 'dbtopow': [1, 1], 'powtodb': [1, 1],
+  'abs': [1, 1], 'sqrt': [1, 1], 'wrap': [1, 1], 'exp': [1, 1], 'log': [2, 1],
+  'sin': [1, 1], 'cos': [1, 1], 'tan': [1, 1], 'atan': [1, 1], 'atan2': [2, 1],
+  'abs~': [1, 1], 'sqrt~': [1, 1], 'wrap~': [1, 1], 'exp~': [1, 1], 'cos~': [1, 1],
+  'metro': [2, 1], 'delay': [2, 1], 'del': [2, 1], 'timer': [2, 1], 'random': [2, 1],
+  'float': [2, 1], 'f': [2, 1], 'int': [2, 1], 'i': [2, 1], 'symbol': [2, 1],
+  'change': [1, 1], 'moses': [2, 2], 'spigot': [2, 1], 'clip': [3, 1], 'clip~': [3, 1],
+  'send': [1, 0], 's': [1, 0], 'receive': [0, 1], 'r': [0, 1],
+  'send~': [1, 0], 's~': [1, 0], 'receive~': [0, 1], 'r~': [0, 1],
+  'throw~': [1, 0], 'catch~': [0, 1], 'loadbang': [0, 1], 'print': [1, 0],
+  'bp~': [3, 1], 'lop~': [2, 1], 'hip~': [2, 1], 'vcf~': [3, 2],
+  'delwrite~': [1, 0], 'delread~': [1, 1], 'delread4~': [1, 1], 'vd~': [1, 1],
+  'samphold~': [2, 1], 'snapshot~': [1, 1], 'samplerate~': [1, 1],
+  'tabread': [1, 1], 'tabread~': [1, 1], 'tabread4~': [1, 1],
+  'tabwrite': [1, 0], 'tabwrite~': [1, 0], 'tabplay~': [1, 2],
+  'writesf~': [1, 0], 'soundfiler': [1, 1], 'until': [2, 1], 'pipe': [2, 1],
+  'list': [2, 1], 'swap': [2, 2], 'mod': [2, 1], 'div': [2, 1], 'pow': [2, 1],
+  'min': [2, 1], 'max': [2, 1], 'pow~': [2, 1], 'min~': [2, 1], 'max~': [2, 1],
+};
+const BINOPS = new Set(['+', '-', '*', '/', '%', '==', '!=', '>', '<', '>=', '<=', '&&', '||', '&', '|', '<<', '>>',
+  '+~', '-~', '*~', '/~']);
+/* signal outlets that actually carry messages */
+const MSG_OUT = new Set(['snapshot~', 'samplerate~']);
+
+function portCounts(n) {
+  if (n.kind === 'msg') return [1, 1];
+  if (n.kind === 'atom') return [1, 1];
+  if (n.kind === 'comment') return [0, 0];
+  if (n.kind === 'blob') return [n.nIn, n.nOut];
+  if (n.kind === 'raw') return [1, 1];
+  if (n.kind === 'gui') {
+    if (n.type === 'cnv') return [0, 0];
+    if (n.type === 'vu') return [1, 0];
+    return [1, 1];
+  }
+  const toks = n.text.trim().split(/\s+/);
+  const cls = toks[0] || '';
+  const args = toks.slice(1);
+  if (!cls) return [1, 1];
+  if (cls === 'dac~') return [Math.max(args.length, 2), 0];
+  if (cls === 'adc~') return [0, Math.max(args.length, 2)];
+  if (cls === 'trigger' || cls === 't') return [1, Math.max(args.length, 1)];
+  if (cls === 'pack') return [Math.max(args.length, 2), 1];
+  if (cls === 'unpack') return [1, Math.max(args.length, 2)];
+  if (cls === 'route') return [2, args.length + 1];
+  if (cls === 'select' || cls === 'sel') return [Math.max(args.length, 1) > 1 ? 1 : 2, args.length + 1];
+  if (cls === 'readsf~') return [1, (parseInt(args[0]) || 1) + 1];
+  if (cls === 'expr') return [Math.max((n.text.match(/\$[fis]\d/g) || []).length, 1), 1];
+  if (cls === 'expr~') return [Math.max((n.text.match(/\$[fvs]\d/g) || []).length, 1), 1];
+  if (PORTS[cls]) return PORTS[cls];
+  if (BINOPS.has(cls)) return [2, 1];
+  return [1, 1];
+}
+
+function isSignalOut(n, outlet) {
+  if (n.kind !== 'obj') return false;
+  const cls = (n.text.trim().split(/\s+/)[0] || '');
+  if (!cls.endsWith('~') || MSG_OUT.has(cls)) return false;
+  if (cls === 'tabplay~' && outlet > 0) return false;
+  if (cls === 'readsf~') return outlet < portCounts(n)[1] - 1;
+  return true;
+}
+
+/* =====================================================================
+ * gui node helpers (tail token layouts follow the Pd file format)
+ * =================================================================== */
+const GUI_DEFAULT_TAILS = {
+  bng: '15 250 50 0 empty empty empty 17 7 0 10 -262144 -1 -1',
+  tgl: '15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0 1',
+  hsl: '128 15 0 127 0 0 empty empty empty -2 -8 0 10 -262144 -1 -1 0 1',
+  vsl: '15 128 0 127 0 0 empty empty empty 0 -9 0 10 -262144 -1 -1 0 1',
+  hradio: '15 1 0 8 empty empty empty 0 -8 0 10 -262144 -1 -1 0',
+};
+const GUI_FIELDS = {
+  bng:   { size: 0, label: 6 },
+  tgl:   { size: 0, label: 4, initValue: 12, onValue: 13 },
+  hsl:   { w: 0, h: 1, min: 2, max: 3, label: 8, pix: 16 },
+  vsl:   { w: 0, h: 1, min: 2, max: 3, label: 8, pix: 16 },
+  nbx:   { w: 0, h: 1, min: 2, max: 3, label: 8, value: 16 },
+  hradio:{ size: 0, count: 3, label: 6, value: 14 },
+  vradio:{ size: 0, count: 3, label: 6, value: 14 },
+  vu:    { w: 0, h: 1, label: 3 },
+  cnv:   { size: 0, w: 1, h: 2, label: 6 },
+};
+const gf = (n, field, fallback = 0) => {
+  const i = (GUI_FIELDS[n.type] || {})[field];
+  if (i === undefined || n.tail[i] === undefined) return fallback;
+  return n.tail[i];
+};
+const gfNum = (n, field, fallback = 0) => {
+  const v = parseFloat(gf(n, field, fallback));
+  return Number.isFinite(v) ? v : fallback;
+};
+const gfSet = (n, field, value) => {
+  const i = (GUI_FIELDS[n.type] || {})[field];
+  if (i !== undefined) { while (n.tail.length <= i) n.tail.push('0'); n.tail[i] = String(value); }
+};
+const guiLabel = n => {
+  const l = gf(n, 'label', 'empty');
+  return (l === 'empty' || l === '-') ? '' : String(l);
+};
+function sliderInit(n) {
+  const min = gfNum(n, 'min'), max = gfNum(n, 'max');
+  const size = n.type === 'hsl' ? gfNum(n, 'w', 128) : gfNum(n, 'h', 128);
+  const pix = gfNum(n, 'pix');
+  return min + (max - min) * pix / (((size - 1) * 100) || 1);
+}
+
+/* =====================================================================
+ * rendering
+ * =================================================================== */
+function render() {
+  paper.querySelectorAll('.box, .gui-label').forEach(el => el.remove());
+  selection.clear();
+  selectedCord = null;
+  for (const n of patch.nodes) makeBox(n);
+  sizePaper();
+  redrawCords();
+}
+
+function sizePaper() {
+  let w = patch.canvas.w, h = patch.canvas.h;
+  for (const n of patch.nodes) {
+    if (!n.el) continue;
+    w = Math.max(w, n.x + n.el.offsetWidth + 60);
+    h = Math.max(h, n.y + n.el.offsetHeight + 60);
+  }
+  paper.style.width = w + 'px';
+  paper.style.height = h + 'px';
+}
+
+function makeBox(n) {
+  const el = document.createElement('div');
+  el.className = 'box';
+  n.el = el;
+  el._node = n;
+
+  if (n.kind === 'obj') {
+    el.classList.add('obj');
+    el.textContent = n.text;
+    if (!n.text.trim()) { el.classList.add('empty'); el.textContent = ' '; }
+  } else if (n.kind === 'msg') {
+    el.classList.add('msg');
+    el.textContent = n.text;
+  } else if (n.kind === 'comment') {
+    el.classList.add('comment');
+    el.textContent = n.text;
+    el.style.whiteSpace = 'pre-wrap';
+    el.style.maxWidth = '340px';
+  } else if (n.kind === 'atom') {
+    el.classList.add('atom');
+    n.value = n.value || 0;
+    el.textContent = String(n.value);
+    const wChars = parseInt(n.tail[0]) || 5;
+    el.style.minWidth = (wChars * 8 + 14) + 'px';
+  } else if (n.kind === 'raw') {
+    el.classList.add('obj');
+    el.textContent = n.tokens[1] || '?';
+  } else if (n.kind === 'blob') {
+    el.classList.add('obj');
+    el.textContent = n.restoreTail.replace(/;$/, '') || 'pd';
+    el.title = 'subpatch — not editable here (edit the .pd source)';
+  } else if (n.kind === 'gui') {
+    el.classList.add('gui', n.type);
+    buildGuiVisual(n, el);
+  }
+
+  el.style.left = n.x + 'px';
+  el.style.top = n.y + 'px';
+  paper.appendChild(el);
+  makePorts(n);
+
+  if (n.kind === 'gui') {
+    const lbl = guiLabel(n);
+    if (lbl) {
+      const l = document.createElement('span');
+      l.className = 'gui-label';
+      l.textContent = lbl;
+      l.style.left = (n.x + el.offsetWidth + 5) + 'px';
+      l.style.top = (n.y + 2) + 'px';
+      paper.appendChild(l);
+      n.labelEl = l;
+    }
+  }
+  return el;
+}
+
+function buildGuiVisual(n, el) {
+  el.textContent = '';
+  const S = t => Math.max(15, gfNum(n, t === 'size' ? 'size' : t, 15));
+  if (n.type === 'bng') {
+    const s = S('size');
+    el.style.width = el.style.height = s + 'px';
+    el.appendChild(Object.assign(document.createElement('div'), { className: 'circle' }));
+  } else if (n.type === 'tgl') {
+    const s = S('size');
+    el.style.width = el.style.height = s + 'px';
+    el.appendChild(Object.assign(document.createElement('div'), { className: 'cross' }));
+    n.on = !!gfNum(n, 'initValue');
+    el.classList.toggle('on', n.on);
+  } else if (n.type === 'hsl' || n.type === 'vsl') {
+    el.classList.add('slider');
+    const w = Math.max(8, gfNum(n, 'w', 128)), h = Math.max(8, gfNum(n, 'h', 15));
+    el.style.width = w + 'px';
+    el.style.height = h + 'px';
+    const knob = Object.assign(document.createElement('div'), { className: 'knob' });
+    el.appendChild(knob);
+    n.knob = knob;
+    n.value = sliderInit(n);
+    positionKnob(n);
+  } else if (n.type === 'nbx') {
+    el.classList.remove('gui');
+    el.classList.add('atom');
+    n.value = gfNum(n, 'value');
+    el.textContent = String(n.value);
+  } else if (n.type === 'hradio' || n.type === 'vradio') {
+    el.classList.add('radio');
+    if (n.type === 'vradio') el.classList.add('v');
+    const s = S('size'), count = Math.max(1, gfNum(n, 'count', 8));
+    n.value = gfNum(n, 'value');
+    n.cells = [];
+    for (let i = 0; i < count; i++) {
+      const c = document.createElement('div');
+      c.className = 'cell' + (i === n.value ? ' on' : '');
+      c.style.width = c.style.height = s + 'px';
+      n.cells.push(c);
+      el.appendChild(c);
+    }
+  } else if (n.type === 'vu') {
+    el.style.width = Math.max(8, gfNum(n, 'w', 15)) + 'px';
+    el.style.height = Math.max(8, gfNum(n, 'h', 120)) + 'px';
+  } else if (n.type === 'cnv') {
+    el.classList.add('cnv');
+    el.style.width = Math.max(10, gfNum(n, 'w', 100)) + 'px';
+    el.style.height = Math.max(10, gfNum(n, 'h', 60)) + 'px';
+  }
+}
+
+function positionKnob(n) {
+  const min = gfNum(n, 'min'), max = gfNum(n, 'max');
+  const f = max === min ? 0 : Math.min(1, Math.max(0, (n.value - min) / (max - min)));
+  if (n.type === 'hsl') n.knob.style.left = `calc(${(f * 100).toFixed(2)}% - ${Math.round(f * 3)}px)`;
+  else n.knob.style.bottom = `calc(${(f * 100).toFixed(2)}% - ${Math.round(f * 3)}px)`;
+}
+
+function makePorts(n) {
+  n.el.querySelectorAll('.port').forEach(p => p.remove());
+  const [nIn, nOut] = portCounts(n);
+  n.ports = [nIn, nOut];
+  const mk = (cls, i, count) => {
+    const p = document.createElement('div');
+    p.className = 'port ' + cls;
+    p.dataset.index = i;
+    p.style.left = count > 1 ? `calc(${(i / (count - 1) * 100).toFixed(2)}% - ${Math.round(i / (count - 1) * 9)}px)` : '0';
+    n.el.appendChild(p);
+  };
+  for (let i = 0; i < nIn; i++) mk('in', i, nIn);
+  for (let i = 0; i < nOut; i++) mk('out', i, nOut);
+}
+
+/* ---------------- cords ---------------- */
+function portPoint(n, isOut, index) {
+  const [nIn, nOut] = n.ports || portCounts(n);
+  const count = isOut ? nOut : nIn;
+  const w = n.el.offsetWidth, h = n.el.offsetHeight;
+  const x = n.el.offsetLeft + (count > 1 ? (index / (count - 1)) * (w - 9) : 0) + 4.5;
+  const y = n.el.offsetTop + (isOut ? h - 1 : 1);
+  return [x, y];
+}
+
+function redrawCords() {
+  cordsSvg.querySelectorAll('.cord, .cord-hit').forEach(e => e.remove());
+  for (const c of patch.connects) {
+    if (!c.src.el || !c.dst.el) continue;
+    const [x1, y1] = portPoint(c.src, true, c.outlet);
+    const [x2, y2] = portPoint(c.dst, false, c.inlet);
+    const line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('class', 'cord' + (isSignalOut(c.src, c.outlet) ? ' sig' : '') + (c === selectedCord ? ' selected' : ''));
+    cordsSvg.appendChild(line);
+    const hit = document.createElementNS(SVGNS, 'line');
+    hit.setAttribute('x1', x1); hit.setAttribute('y1', y1);
+    hit.setAttribute('x2', x2); hit.setAttribute('y2', y2);
+    hit.setAttribute('class', 'cord-hit');
+    hit._connect = c;
+    cordsSvg.appendChild(hit);
+  }
+}
+
+/* =====================================================================
+ * selection & editing
+ * =================================================================== */
+function setSelection(nodes) {
+  selection.forEach(n => n.el && n.el.classList.remove('selected'));
+  selection = new Set(nodes);
+  selection.forEach(n => n.el && n.el.classList.add('selected'));
+  if (selectedCord) { selectedCord = null; redrawCords(); }
+}
+
+function selectCord(c) {
+  setSelection([]);
+  selectedCord = c;
+  redrawCords();
+}
+
+function deleteSelection() {
+  if (selectedCord) {
+    patch.connects = patch.connects.filter(c => c !== selectedCord);
+    selectedCord = null;
+    redrawCords();
+    return;
+  }
+  if (!selection.size) return;
+  patch.connects = patch.connects.filter(c => !selection.has(c.src) && !selection.has(c.dst));
+  patch.nodes = patch.nodes.filter(n => !selection.has(n));
+  selection.forEach(n => { n.el?.remove(); n.labelEl?.remove(); });
+  selection.clear();
+  redrawCords();
+}
+
+function refreshNode(n) {
+  const wasSelected = selection.has(n);
+  n.el?.remove(); n.labelEl?.remove(); n.labelEl = null;
+  makeBox(n);
+  if (wasSelected) n.el.classList.add('selected');
+  const [nIn, nOut] = portCounts(n);
+  patch.connects = patch.connects.filter(c =>
+    !((c.src === n && c.outlet >= nOut) || (c.dst === n && c.inlet >= nIn)));
+  sizePaper();
+  redrawCords();
+}
+
+function beginTextEdit(n) {
+  if (editingNode) commitTextEdit();
+  editingNode = n;
+  const input = document.createElement('input');
+  input.className = 'box-edit';
+  input.value = n.kind === 'obj' || n.kind === 'msg' || n.kind === 'comment' ? n.text : '';
+  input.style.left = n.x + 'px';
+  input.style.top = n.y + 'px';
+  input.style.width = Math.max(70, n.el.offsetWidth + 30) + 'px';
+  n.el.style.visibility = 'hidden';
+  paper.appendChild(input);
+  input.focus();
+  input.select();
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commitTextEdit(); }
+    if (e.key === 'Escape') { e.preventDefault(); commitTextEdit(true); }
+    e.stopPropagation();
+  });
+  input.addEventListener('blur', () => commitTextEdit());
+  n._editInput = input;
+}
+
+function commitTextEdit(cancel) {
+  const n = editingNode;
+  if (!n) return;
+  editingNode = null;
+  const input = n._editInput;
+  delete n._editInput;
+  const value = input.value;
+  input.remove();
+  n.el.style.visibility = '';
+  if (!cancel && value !== n.text) { n.text = value; refreshNode(n); }
+}
+
+/* ---------------- properties dialog ---------------- */
+const propsModal = document.getElementById('propsModal');
+const propsFields = document.getElementById('propsFields');
+const propsTitle = document.getElementById('propsTitle');
+let propsNode = null;
+
+function openProps(n) {
+  propsNode = n;
+  propsFields.textContent = '';
+  const add = (name, key, value) => {
+    const lab = document.createElement('label');
+    lab.textContent = name;
+    const inp = document.createElement('input');
+    inp.dataset.key = key;
+    inp.value = value;
+    lab.appendChild(inp);
+    propsFields.appendChild(lab);
+  };
+  if (n.kind === 'atom') {
+    propsTitle.textContent = 'number box';
+    add('width (chars)', 'a0', n.tail[0] ?? 5);
+    add('minimum', 'a1', n.tail[1] ?? 0);
+    add('maximum', 'a2', n.tail[2] ?? 0);
+  } else if (n.kind === 'gui') {
+    propsTitle.textContent = n.type;
+    const F = GUI_FIELDS[n.type] || {};
+    if ('size' in F) add('size', 'size', gf(n, 'size', 15));
+    if ('w' in F) add('width', 'w', gf(n, 'w', 128));
+    if ('h' in F) add('height', 'h', gf(n, 'h', 15));
+    if ('min' in F) add('minimum', 'min', gf(n, 'min', 0));
+    if ('max' in F) add('maximum', 'max', gf(n, 'max', 127));
+    if ('count' in F) add('cells', 'count', gf(n, 'count', 8));
+    if ('label' in F) add('label', 'label', guiLabel(n));
+  } else return;
+  propsModal.classList.add('open');
+  propsFields.querySelector('input')?.focus();
+}
+
+document.getElementById('propsApply').addEventListener('click', () => {
+  const n = propsNode;
+  if (n) {
+    propsFields.querySelectorAll('input').forEach(inp => {
+      const k = inp.dataset.key, v = inp.value.trim();
+      if (n.kind === 'atom') n.tail[+k.slice(1)] = v === '' ? '0' : v;
+      else if (k === 'label') gfSet(n, 'label', v === '' ? 'empty' : v.replace(/\s+/g, '_'));
+      else gfSet(n, k, v === '' ? '0' : v);
+    });
+    refreshNode(n);
+  }
+  propsModal.classList.remove('open');
+  propsNode = null;
+});
+
+/* =====================================================================
+ * mouse interaction
+ * =================================================================== */
+let drag = null;   /* {type:'move'|'cord'|'marquee'|'widget', ...} */
+
+const paperPos = e => {
+  const r = paper.getBoundingClientRect();
+  return [e.clientX - r.left, e.clientY - r.top];
+};
+
+stage.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  const box = e.target.closest('.box');
+  const [px, py] = paperPos(e);
+  lastPutPos = { x: px, y: py };
+
+  if (!editMode) {
+    if (box) widgetMouseDown(box._node, e);
+    return;
+  }
+
+  if (e.target.classList.contains('out')) {
+    const n = e.target.parentElement._node;
+    drag = { type: 'cord', src: n, outlet: +e.target.dataset.index };
+    const rubber = document.createElementNS(SVGNS, 'line');
+    rubber.setAttribute('class', 'rubber');
+    const [x1, y1] = portPoint(n, true, drag.outlet);
+    rubber.setAttribute('x1', x1); rubber.setAttribute('y1', y1);
+    rubber.setAttribute('x2', px); rubber.setAttribute('y2', py);
+    cordsSvg.appendChild(rubber);
+    drag.rubber = rubber;
+    e.preventDefault();
+    return;
+  }
+  if (e.target.classList.contains('cord-hit')) {
+    selectCord(e.target._connect);
+    return;
+  }
+  if (box) {
+    const n = box._node;
+    if (!selection.has(n)) setSelection(e.shiftKey ? [...selection, n] : [n]);
+    else if (e.shiftKey) { selection.delete(n); box.classList.remove('selected'); return; }
+    drag = { type: 'move', startX: px, startY: py, moved: false,
+             origins: [...selection].map(m => [m, m.x, m.y]) };
+    e.preventDefault();
+    return;
+  }
+  /* empty canvas: marquee select */
+  setSelection([]);
+  drag = { type: 'marquee', startX: px, startY: py };
+});
+
+document.addEventListener('mousemove', e => {
+  if (!drag) return;
+  const [px, py] = paperPos(e);
+  if (drag.type === 'move') {
+    const dx = px - drag.startX, dy = py - drag.startY;
+    if (Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
+    for (const [n, ox, oy] of drag.origins) {
+      n.x = Math.max(0, ox + dx);
+      n.y = Math.max(0, oy + dy);
+      n.el.style.left = n.x + 'px';
+      n.el.style.top = n.y + 'px';
+      if (n.labelEl) {
+        n.labelEl.style.left = (n.x + n.el.offsetWidth + 5) + 'px';
+        n.labelEl.style.top = (n.y + 2) + 'px';
+      }
+    }
+    redrawCords();
+  } else if (drag.type === 'cord') {
+    drag.rubber.setAttribute('x2', px);
+    drag.rubber.setAttribute('y2', py);
+  } else if (drag.type === 'marquee') {
+    const x = Math.min(px, drag.startX), y = Math.min(py, drag.startY);
+    const w = Math.abs(px - drag.startX), h = Math.abs(py - drag.startY);
+    Object.assign(marquee.style, { display: 'block', left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+    drag.rect = { x, y, w, h };
+  } else if (drag.type === 'widget') {
+    widgetDrag(drag, e);
+  }
+});
+
+document.addEventListener('mouseup', e => {
+  if (!drag) return;
+  const d = drag;
+  drag = null;
+  if (d.type === 'cord') {
+    d.rubber.remove();
+    const inPort = e.target.closest && e.target.closest('.port.in');
+    if (inPort) {
+      const dst = inPort.parentElement._node;
+      const inlet = +inPort.dataset.index;
+      if (dst !== d.src || inlet !== d.outlet) {
+        const dup = patch.connects.some(c => c.src === d.src && c.outlet === d.outlet && c.dst === dst && c.inlet === inlet);
+        if (!dup) { patch.connects.push({ src: d.src, outlet: d.outlet, dst, inlet }); redrawCords(); }
+      }
+    }
+  } else if (d.type === 'marquee') {
+    marquee.style.display = 'none';
+    if (d.rect) {
+      const hits = patch.nodes.filter(n => n.el &&
+        n.x >= d.rect.x && n.y >= d.rect.y &&
+        n.x + n.el.offsetWidth <= d.rect.x + d.rect.w &&
+        n.y + n.el.offsetHeight <= d.rect.y + d.rect.h);
+      setSelection(hits);
+    }
+  } else if (d.type === 'move') {
+    sizePaper();
+  } else if (d.type === 'widget') {
+    widgetDragEnd(d);
+  }
+});
+
+stage.addEventListener('dblclick', e => {
+  if (!editMode) {
+    const box = e.target.closest('.box');
+    if (box && (box._node.kind === 'atom' || box._node.type === 'nbx')) typeAtomValue(box._node);
+    return;
+  }
+  const box = e.target.closest('.box');
+  if (box) {
+    const n = box._node;
+    if (n.kind === 'obj' || n.kind === 'msg' || n.kind === 'comment') beginTextEdit(n);
+    else if (n.kind === 'gui' || n.kind === 'atom') openProps(n);
+    else if (n.kind === 'blob') openSource();
+  } else {
+    const [px, py] = paperPos(e);
+    putNode('obj', px, py);
+  }
+});
+
+/* =====================================================================
+ * run-mode widget behaviour
+ * =================================================================== */
+function widgetMouseDown(n, e) {
+  if (n.kind === 'msg') {
+    n.el.classList.add('flash');
+    setTimeout(() => n.el.classList.remove('flash'), 120);
+    sendToNode(n, ['bang']);
+    return;
+  }
+  if (n.kind !== 'gui' && n.kind !== 'atom') return;
+  if (n.kind === 'gui' && n.type === 'bng') {
+    n.el.classList.add('flash');
+    setTimeout(() => n.el.classList.remove('flash'), 140);
+    sendToNode(n, ['bang']);
+  } else if (n.kind === 'gui' && n.type === 'tgl') {
+    n.on = !n.on;
+    n.el.classList.toggle('on', n.on);
+    sendToNode(n, [n.on ? (gfNum(n, 'onValue') || 1) : 0]);
+  } else if (n.kind === 'gui' && (n.type === 'hsl' || n.type === 'vsl')) {
+    drag = { type: 'widget', widget: 'slider', n };
+    widgetDrag(drag, e);
+    e.preventDefault();
+  } else if (n.kind === 'gui' && (n.type === 'hradio' || n.type === 'vradio')) {
+    const cell = e.target.closest('.cell');
+    if (!cell) return;
+    const i = n.cells.indexOf(cell);
+    n.value = i;
+    n.cells.forEach((c, j) => c.classList.toggle('on', j === i));
+    sendToNode(n, [i]);
+  } else if (n.kind === 'atom' || n.type === 'nbx') {
+    drag = { type: 'widget', widget: 'atom', n, startY: e.clientY, startV: n.value || 0, moved: false };
+    e.preventDefault();
+  }
+}
+
+function widgetDrag(d, e) {
+  const n = d.n;
+  if (d.widget === 'slider') {
+    const r = n.el.getBoundingClientRect();
+    const min = gfNum(n, 'min'), max = gfNum(n, 'max');
+    let f = n.type === 'hsl'
+      ? (e.clientX - r.left) / (r.width || 1)
+      : 1 - (e.clientY - r.top) / (r.height || 1);
+    f = Math.min(1, Math.max(0, f));
+    n.value = min + (max - min) * f;
+    positionKnob(n);
+    sendToNode(n, [n.value]);
+  } else if (d.widget === 'atom') {
+    const dy = d.startY - e.clientY;
+    if (Math.abs(dy) > 1) d.moved = true;
+    let v = d.startV + (e.shiftKey ? dy * 0.01 : dy);
+    if (!e.shiftKey) v = Math.round(v);
+    setAtomValue(n, v, true);
+  }
+}
+
+function widgetDragEnd(d) {
+  if (d.widget === 'atom' && !d.moved) typeAtomValue(d.n);
+}
+
+function setAtomValue(n, v, send) {
+  const min = parseFloat(n.kind === 'atom' ? n.tail[1] : gf(n, 'min')) || 0;
+  const max = parseFloat(n.kind === 'atom' ? n.tail[2] : gf(n, 'max')) || 0;
+  if (min !== 0 || max !== 0) v = Math.min(max, Math.max(min, v));
+  n.value = v;
+  n.el.textContent = String(+v.toFixed(4));
+  if (send) sendToNode(n, [v]);
+}
+
+function typeAtomValue(n) {
+  const v = window.prompt('value:', String(n.value || 0));
+  if (v === null) return;
+  const num = parseFloat(v);
+  if (Number.isFinite(num)) setAtomValue(n, num, true);
+}
+
+/* =====================================================================
+ * put / new nodes
+ * =================================================================== */
+function putNode(what, x, y) {
+  if (!editMode) toggleMode();
+  x = x ?? lastPutPos.x + 15;
+  y = y ?? lastPutPos.y + 15;
+  let n;
+  if (what === 'obj') n = { kind: 'obj', x, y, text: '' };
+  else if (what === 'msg') n = { kind: 'msg', x, y, text: '' };
+  else if (what === 'num') n = { kind: 'atom', x, y, tail: '5 0 0 0 - - -'.split(' ') };
+  else if (what === 'comment') n = { kind: 'comment', x, y, text: 'comment' };
+  else n = { kind: 'gui', type: what, x, y, tail: GUI_DEFAULT_TAILS[what].split(' ') };
+  patch.nodes.push(n);
+  makeBox(n);
+  setSelection([n]);
+  sizePaper();
+  if (n.kind === 'obj' || n.kind === 'msg' || n.kind === 'comment') beginTextEdit(n);
+}
+
+/* =====================================================================
+ * console, dsp state
+ * =================================================================== */
 function log(text, cls) {
   const line = document.createElement('span');
   if (cls) line.className = cls;
@@ -316,18 +1077,56 @@ function log(text, cls) {
   consoleOut.scrollTop = consoleOut.scrollHeight;
 }
 
+let running = false;
 function setDsp(on) {
   running = on;
   dspLight.classList.toggle('on', on);
   dspLight.lastChild.textContent = on ? 'DSP on' : 'DSP off';
 }
 
-/* ---------------- run / stop ---------------- */
+/* =====================================================================
+ * run / stop (WebPd)
+ * =================================================================== */
+let audioCtx = null, webpdNode = null, micSource = null, micStream = null;
+let ioMap = {};        /* patch.nodes index (string) -> { graphNodeId, portletId } */
+let reverseMap = {};   /* graphNodeId -> model node */
+
+function sendToNode(n, message) {
+  if (!webpdNode) { statusEl.textContent = 'DSP is off — press Run first.'; return; }
+  const entry = ioMap[String(patch.nodes.indexOf(n))];
+  if (!entry) return;
+  webpdNode.port.postMessage({
+    type: 'io:messageReceiver',
+    payload: { nodeId: entry.graphNodeId, portletId: entry.portletId, message },
+  });
+}
+
+function onMessageFromPatch(graphNodeId, portletId, message) {
+  const n = reverseMap[graphNodeId];
+  if (!n) { log(`[${graphNodeId}] ${message.join(' ')}`); return; }
+  if (n.kind === 'gui' && n.type === 'tgl') {
+    n.on = !!Number(message[0]);
+    n.el.classList.toggle('on', n.on);
+  } else if (n.kind === 'gui' && (n.type === 'hsl' || n.type === 'vsl')) {
+    n.value = Number(message[0]) || 0;
+    positionKnob(n);
+  } else if (n.kind === 'gui' && (n.type === 'hradio' || n.type === 'vradio')) {
+    n.value = Number(message[0]) || 0;
+    n.cells.forEach((c, j) => c.classList.toggle('on', j === n.value));
+  } else if (n.kind === 'gui' && n.type === 'bng') {
+    n.el.classList.add('flash');
+    setTimeout(() => n.el.classList.remove('flash'), 140);
+  } else if (n.kind === 'atom' || (n.kind === 'gui' && n.type === 'nbx')) {
+    setAtomValue(n, Number(message[0]) || 0, false);
+  }
+}
+
 async function run() {
+  if (editingNode) commitTextEdit();
   stop(true);
-  status.textContent = 'Compiling…';
+  statusEl.textContent = 'Compiling…';
+  const pdText = serialize();
   log('>>> compile ' + fileName, 'sys');
-  const pdText = cm.getValue();
 
   let jsCode, metadata;
   try {
@@ -338,7 +1137,7 @@ async function run() {
       (result.warnings || []).forEach(w => log(w, 'warn'));
       if (result.status === 1) {
         (result.errors || []).forEach(e => log(e, 'err'));
-        status.textContent = 'Compilation failed — see the console.';
+        statusEl.textContent = 'Compilation failed — see the console.';
         return;
       }
     }
@@ -346,7 +1145,7 @@ async function run() {
     metadata = await Browser.readMetadata(jsCode);
   } catch (err) {
     log(String(err && err.message || err), 'err');
-    status.textContent = 'Compilation failed — see the console.';
+    statusEl.textContent = 'Compilation failed — see the console.';
     return;
   }
 
@@ -376,14 +1175,31 @@ async function run() {
     }
   } catch (err) {
     log(String(err && err.message || err), 'err');
-    status.textContent = 'Could not start audio — see the console.';
+    statusEl.textContent = 'Could not start audio — see the console.';
     return;
   }
 
-  buildControls(metadata);
+  buildIoMaps(metadata);
   setDsp(true);
+  if (editMode) toggleMode();
   log('=== DSP on ===', 'sys');
-  status.textContent = 'Running — tweak the controls in the Patch panel.';
+  statusEl.textContent = 'Running — click and drag the controls. Ctrl+E goes back to editing.';
+}
+
+function buildIoMaps(metadata) {
+  ioMap = {};
+  reverseMap = {};
+  const meta = metadata.customMetadata || {};
+  const receivers = ((metadata.settings || {}).io || {}).messageReceivers || {};
+  const rootId = (meta.pdGui && meta.pdGui.length) ? meta.pdGui[0].patchId : '0';
+  for (const gui of meta.pdGui || []) {
+    if (gui.nodeClass !== 'control' || gui.patchId !== rootId) continue;
+    const n = patch.nodes[+gui.pdNodeId];
+    if (!n) continue;
+    const portlets = receivers[gui.nodeId];
+    ioMap[gui.pdNodeId] = { graphNodeId: gui.nodeId, portletId: (portlets && portlets[0]) || '0' };
+    reverseMap[gui.nodeId] = n;
+  }
 }
 
 function stop(silent) {
@@ -394,206 +1210,102 @@ function stop(silent) {
   }
   if (micSource) { try { micSource.disconnect(); } catch {} micSource = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  ioMap = {};
+  reverseMap = {};
   if (running && !silent) {
     log('=== DSP off ===', 'sys');
-    status.textContent = 'Stopped.';
+    statusEl.textContent = 'Stopped.';
   }
   setDsp(false);
 }
 
-/* ---------------- messages patch <-> page ---------------- */
-function sendToPatch(nodeId, portletId, message) {
-  if (!webpdNode) return;
-  webpdNode.port.postMessage({
-    type: 'io:messageReceiver',
-    payload: { nodeId, portletId, message },
-  });
+/* =====================================================================
+ * edit / run mode
+ * =================================================================== */
+function toggleMode() {
+  if (editingNode) commitTextEdit();
+  editMode = !editMode;
+  stage.classList.toggle('edit-mode', editMode);
+  stage.classList.toggle('run-mode', !editMode);
+  modeBtn.classList.toggle('editing', editMode);
+  modeLabel.textContent = editMode ? 'Edit' : 'Locked';
+  setSelection([]);
+  if (editMode) statusEl.textContent = 'Edit mode — boxes move, cords connect. Ctrl+E locks the patch again.';
+  else statusEl.textContent = running ? 'Run mode — click and drag the controls.' : 'Run mode — press Run to start DSP.';
 }
 
-function onMessageFromPatch(nodeId, portletId, message) {
-  const w = widgets[nodeId];
-  if (w && w.update) w.update(message);
-  else log(`[${nodeId}] ${message.join(' ')}`);
+/* =====================================================================
+ * files & examples
+ * =================================================================== */
+const EXAMPLE_SYNTH = `#N canvas 100 100 640 460 12;
+#X obj 60 60 hsl 162 16 36 84 0 0 empty empty pitch -2 -8 0 10 -262144 -1 -1 7000 1;
+#X obj 60 130 mtof;
+#X obj 60 180 osc~ 220;
+#X obj 330 60 tgl 19 0 empty empty voice -2 -8 0 10 -262144 -1 -1 0 1;
+#X obj 330 130 * 0.15;
+#X obj 330 180 pack 0 50;
+#X obj 330 230 line~;
+#X obj 60 290 *~;
+#X obj 60 350 dac~;
+#X text 460 60 slide the pitch \\, flip the toggle;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
+#X connect 2 0 7 0;
+#X connect 3 0 4 0;
+#X connect 4 0 5 0;
+#X connect 5 0 6 0;
+#X connect 6 0 7 1;
+#X connect 7 0 8 0;
+#X connect 7 0 8 1;
+`;
+
+const EXAMPLE_BLEEPS = `#N canvas 100 100 680 500 12;
+#X obj 60 50 tgl 19 0 empty empty run -2 -8 0 10 -262144 -1 -1 0 1;
+#X obj 60 110 metro 180;
+#X obj 60 160 trigger b b;
+#X obj 120 210 random 24;
+#X obj 120 260 + 54;
+#X obj 120 310 mtof;
+#X obj 120 360 osc~;
+#X msg 330 210 0.2 10 \\, 0 150;
+#X obj 330 260 line~;
+#X obj 120 410 *~;
+#X obj 120 460 dac~;
+#X obj 420 50 hsl 130 16 60 400 0 0 empty empty speed -2 -8 0 10 -262144 -1 -1 3200 1;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
+#X connect 2 1 3 0;
+#X connect 3 0 4 0;
+#X connect 4 0 5 0;
+#X connect 5 0 6 0;
+#X connect 6 0 9 0;
+#X connect 2 0 7 0;
+#X connect 7 0 8 0;
+#X connect 8 0 9 1;
+#X connect 9 0 10 0;
+#X connect 9 0 10 1;
+#X connect 11 0 1 1;
+`;
+
+const setFile = (name, h) => {
+  fileName = name || 'untitled.pd';
+  handle = h || null;
+  fileLabel.textContent = fileName;
+  document.title = fileName + ' — Pure Data — ClackOS';
+};
+
+function loadText(text, name, h) {
+  stop(true);
+  let p;
+  try { p = parsePd(text); }
+  catch (err) { statusEl.textContent = 'Could not open: ' + err.message; return false; }
+  patch = p;
+  setFile(name, h);
+  render();
+  if (!editMode) toggleMode();
+  return true;
 }
 
-/* ---------------- patch controls ----------------
- * WebPd's compile metadata carries the patch GUI tree (pdGui), the raw pd
- * nodes and the io message receivers, so the GUI objects can be rebuilt as
- * live HTML controls, roughly where they sit on the Pd canvas. */
-const SCALE = 1.15, PAD = 14;
-
-function buildControls(metadata) {
-  canvas.textContent = '';
-  widgets = {};
-  const meta = metadata.customMetadata || {};
-  const io = (metadata.settings && metadata.settings.io) || {};
-  const receivers = io.messageReceivers || {};
-  let count = 0;
-
-  const walk = (pdGuiNodes, offX, offY) => {
-    for (const gui of pdGuiNodes || []) {
-      if (gui.nodeClass === 'subpatch') {
-        const pdNode = (meta.pdNodes[gui.patchId] || {})[gui.pdNodeId];
-        const l = (pdNode && pdNode.layout) || {};
-        walk(gui.children, offX + (l.x || 0), offY + (l.y || 0));
-      } else if (gui.nodeClass === 'control') {
-        const pdNode = (meta.pdNodes[gui.patchId] || {})[gui.pdNodeId];
-        if (!pdNode) continue;
-        const el = makeWidget(gui.nodeId, pdNode, receivers[gui.nodeId]);
-        if (!el) continue;
-        const l = pdNode.layout || {};
-        el.style.left = Math.round(((l.x || 0) + offX) * SCALE + PAD) + 'px';
-        el.style.top = Math.round(((l.y || 0) + offY) * SCALE + PAD) + 'px';
-        canvas.appendChild(el);
-        count++;
-      }
-    }
-  };
-  walk(meta.pdGui, 0, 0);
-  promptBox.hidden = true;
-  if (!count) {
-    const note = document.createElement('div');
-    note.className = 'pd-prompt';
-    note.style.position = 'absolute';
-    note.innerHTML = '<span><strong>No GUI objects in this patch</strong>' +
-      'Add [hsl], [tgl], [bng], [nbx] or a number box to get controls here.</span>';
-    canvas.appendChild(note);
-  }
-}
-
-function makeWidget(nodeId, pdNode, receiverPortlets) {
-  const portletId = (receiverPortlets && receiverPortlets[0]) || '0';
-  const type = pdNode.type;
-  const layout = pdNode.layout || {};
-  const args = pdNode.args || [];
-  const wrap = document.createElement('div');
-  wrap.className = 'pd-ctl';
-
-  const label = layout.label && layout.label !== 'empty' && layout.label !== '-'
-    ? layout.label : '';
-  const addLabel = () => {
-    if (!label) return;
-    const l = document.createElement('span');
-    l.className = 'lbl';
-    l.textContent = label;
-    wrap.appendChild(l);
-  };
-  const send = msg => sendToPatch(nodeId, portletId, msg);
-
-  if (type === 'bng') {
-    addLabel();
-    const b = document.createElement('button');
-    b.className = 'pd-bng';
-    const s = Math.max(18, (layout.size || 15) * SCALE);
-    b.style.width = b.style.height = s + 'px';
-    b.title = label || 'bang';
-    b.addEventListener('click', () => {
-      send(['bang']);
-      b.classList.add('flash');
-      setTimeout(() => b.classList.remove('flash'), 120);
-    });
-    wrap.appendChild(b);
-    widgets[nodeId] = { update: () => {} };
-
-  } else if (type === 'tgl') {
-    addLabel();
-    const onValue = Number(args[0]) || 1;    /* args: [defaultValue, init, initValue, receive, send] */
-    let on = !!Number(args[2]);
-    const b = document.createElement('button');
-    b.className = 'pd-tgl' + (on ? ' on' : '');
-    const s = Math.max(18, (layout.size || 15) * SCALE);
-    b.style.width = b.style.height = s + 'px';
-    b.title = label || 'toggle';
-    b.setAttribute('aria-pressed', String(on));
-    b.addEventListener('click', () => {
-      on = !on;
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-pressed', String(on));
-      send([on ? onValue : 0]);
-    });
-    wrap.appendChild(b);
-    widgets[nodeId] = { update: m => {
-      on = !!Number(m[0]);
-      b.classList.toggle('on', on);
-    } };
-
-  } else if (type === 'hsl' || type === 'vsl') {
-    addLabel();
-    /* args: [min, max, init, initValue, receive, send] */
-    const min = Number(args[0]), max = Number(args[1]);
-    const input = document.createElement('input');
-    input.type = 'range';
-    input.min = String(Math.min(min, max));
-    input.max = String(Math.max(min, max));
-    input.step = String(Math.abs(max - min) / 500 || 0.01);
-    input.value = String(Number(args[3]) || 0);
-    input.title = label || type;
-    if (type === 'vsl') {
-      input.classList.add('v');
-      input.style.height = Math.max(60, (layout.height || 120) * SCALE) + 'px';
-    } else {
-      input.style.width = Math.max(60, (layout.width || 120) * SCALE) + 'px';
-    }
-    input.addEventListener('input', () => send([Number(input.value)]));
-    wrap.appendChild(input);
-    widgets[nodeId] = { update: m => { input.value = String(Number(m[0])); } };
-
-  } else if (type === 'nbx' || type === 'floatatom') {
-    addLabel();
-    /* nbx args: [min, max, init, initValue, receive, send]; floatatom: [min, max, receive, send] */
-    const min = Number(args[0]) || 0, max = Number(args[1]) || 0;
-    const input = document.createElement('input');
-    input.type = 'number';
-    if (min !== 0 || max !== 0) { input.min = String(min); input.max = String(max); }
-    input.step = 'any';
-    input.value = type === 'nbx' ? String(Number(args[3]) || 0) : '0';
-    input.style.width = Math.max(58, (layout.widthInChars || 5) * 11) + 'px';
-    input.title = label || 'number';
-    input.addEventListener('change', () => send([Number(input.value) || 0]));
-    wrap.appendChild(input);
-    widgets[nodeId] = { update: m => { input.value = String(Number(m[0])); } };
-
-  } else if (type === 'hradio' || type === 'vradio') {
-    addLabel();
-    const n = Math.max(1, Number(args[0]) || 8);   /* args: [number, init, initValue, ...] */
-    let value = Number(args[2]) || 0;
-    const row = document.createElement('div');
-    row.className = 'pd-radio' + (type === 'vradio' ? ' v' : '');
-    const s = Math.max(16, (layout.size || 15) * SCALE);
-    const cells = [];
-    for (let i = 0; i < n; i++) {
-      const b = document.createElement('button');
-      b.style.width = b.style.height = s + 'px';
-      if (i === value) b.classList.add('on');
-      b.addEventListener('click', () => {
-        value = i;
-        cells.forEach((c, j) => c.classList.toggle('on', j === i));
-        send([i]);
-      });
-      cells.push(b);
-      row.appendChild(b);
-    }
-    wrap.appendChild(row);
-    widgets[nodeId] = { update: m => {
-      value = Number(m[0]) || 0;
-      cells.forEach((c, j) => c.classList.toggle('on', j === value));
-    } };
-
-  } else if (type === 'msg') {
-    const b = document.createElement('button');
-    b.className = 'pd-msgbox';
-    b.textContent = (args || []).join(' ');
-    b.addEventListener('click', () => send(['bang']));
-    wrap.appendChild(b);
-    widgets[nodeId] = { update: () => {} };
-
-  } else {
-    return null;   /* vu, cnv, symbolatom… — nothing useful to render yet */
-  }
-  return wrap;
-}
-
-/* ---------------- files ---------------- */
 const fsAccess = 'showOpenFilePicker' in window;
 const pdTypes = [{ description: 'Pure Data patch', accept: { 'text/plain': ['.pd'] } }];
 
@@ -603,7 +1315,7 @@ picker.accept = '.pd,text/plain';
 picker.addEventListener('change', async () => {
   const f = picker.files[0];
   picker.value = '';
-  if (f) { cm.setValue(await f.text()); setFile(f.name); status.textContent = `Opened ${f.name}. Press Run to play it.`; }
+  if (f && loadText(await f.text(), f.name)) statusEl.textContent = `Opened ${f.name}.`;
 });
 
 async function openFile() {
@@ -611,9 +1323,7 @@ async function openFile() {
   try {
     const [h] = await window.showOpenFilePicker({ types: pdTypes });
     const f = await h.getFile();
-    cm.setValue(await f.text());
-    setFile(f.name, h);
-    status.textContent = `Opened ${f.name}. Press Run to play it.`;
+    if (loadText(await f.text(), f.name, h)) statusEl.textContent = `Opened ${f.name}.`;
   } catch {}
 }
 
@@ -626,7 +1336,8 @@ function downloadBlob(blob, name) {
 }
 
 async function saveFile(as) {
-  const text = cm.getValue();
+  if (editingNode) commitTextEdit();
+  const text = serialize();
   if (fsAccess) {
     try {
       if (as || !handle)
@@ -635,7 +1346,7 @@ async function saveFile(as) {
       await w.write(text);
       await w.close();
       setFile((await handle.getFile()).name, handle);
-      status.textContent = `Saved ${fileName}`;
+      statusEl.textContent = `Saved ${fileName}`;
     } catch {}
     return;
   }
@@ -646,28 +1357,50 @@ async function saveFile(as) {
     fileLabel.textContent = fileName;
   }
   downloadBlob(new Blob([text], { type: 'text/plain' }), fileName);
-  status.textContent = `Saved ${fileName} (downloaded)`;
+  statusEl.textContent = `Saved ${fileName} (downloaded)`;
 }
 
 function newFile() {
-  stop();
-  cm.setValue('#N canvas 100 100 520 380 12;\n');
+  stop(true);
+  patch = blankPatch();
   setFile('untitled.pd');
-  canvas.textContent = '';
-  promptBox.hidden = false;
-  status.textContent = 'New patch.';
+  render();
+  if (!editMode) toggleMode();
+  statusEl.textContent = 'New patch — Put menu (or Ctrl+1) adds the first box.';
 }
 
-function loadExample(name, text) {
-  stop();
-  cm.setValue(text);
-  setFile(name);
-  canvas.textContent = '';
-  promptBox.hidden = false;
-  status.textContent = 'Example loaded. Press Run to play it.';
-}
+/* ---------------- source modal ---------------- */
+const srcModal = document.getElementById('srcModal');
+const srcText = document.getElementById('srcText');
+const srcStatus = document.getElementById('srcStatus');
 
-/* ---------------- menu / toolbar ---------------- */
+function openSource() {
+  if (editingNode) commitTextEdit();
+  srcText.value = serialize();
+  srcStatus.textContent = '';
+  srcModal.classList.add('open');
+}
+document.getElementById('srcApply').addEventListener('click', () => {
+  try {
+    const p = parsePd(srcText.value);
+    stop(true);
+    patch = p;
+    render();
+    srcModal.classList.remove('open');
+    statusEl.textContent = 'Source applied.';
+  } catch (err) {
+    srcStatus.textContent = err.message;
+  }
+});
+
+document.querySelectorAll('.site-modal [data-close]').forEach(b =>
+  b.addEventListener('click', () => b.closest('.site-modal').classList.remove('open')));
+document.querySelectorAll('.site-modal').forEach(m =>
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+/* =====================================================================
+ * menus, commands, keyboard
+ * =================================================================== */
 const rms = document.querySelectorAll('.rm');
 const closeRm = () => rms.forEach(m => m.classList.remove('open'));
 rms.forEach(m => {
@@ -679,35 +1412,51 @@ rms.forEach(m => {
   });
 });
 document.addEventListener('click', closeRm);
+
+const COMMANDS = {
+  new: newFile, open: openFile, save: () => saveFile(false), saveas: () => saveFile(true),
+  source: openSource, run, stop: () => stop(false), mode: toggleMode,
+  'put-obj': () => putNode('obj'), 'put-msg': () => putNode('msg'), 'put-num': () => putNode('num'),
+  'put-comment': () => putNode('comment'), 'put-bng': () => putNode('bng'), 'put-tgl': () => putNode('tgl'),
+  'put-hsl': () => putNode('hsl'), 'put-vsl': () => putNode('vsl'), 'put-hradio': () => putNode('hradio'),
+  'ex-synth': () => { if (loadText(EXAMPLE_SYNTH, 'sine-organ.pd')) statusEl.textContent = 'Example loaded — press Run.'; },
+  'ex-bleeps': () => { if (loadText(EXAMPLE_BLEEPS, 'random-bleeps.pd')) statusEl.textContent = 'Example loaded — press Run.'; },
+};
+
 document.querySelector('.pd-bar').addEventListener('click', e => {
   const cmd = e.target.closest('[data-cmd]');
   if (!cmd) return;
   closeRm();
-  ({
-    new: newFile, open: openFile, save: () => saveFile(false), saveas: () => saveFile(true),
-    run, stop: () => stop(false),
-    'ex-synth': () => loadExample('sine-organ.pd', EXAMPLE_SYNTH),
-    'ex-bleeps': () => loadExample('random-bleeps.pd', EXAMPLE_BLEEPS)
-  })[cmd.dataset.cmd]?.();
+  COMMANDS[cmd.dataset.cmd]?.();
 });
 
 document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveFile(e.shiftKey); }
-  if (e.key === 'F5') { e.preventDefault(); run(); }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveFile(e.shiftKey); return; }
+  if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); toggleMode(); return; }
+  if (e.key === 'F5') { e.preventDefault(); run(); return; }
+  if (mod && e.key === '1') { e.preventDefault(); putNode('obj'); return; }
+  if (mod && e.key === '2') { e.preventDefault(); putNode('msg'); return; }
+  if (mod && e.key === '3') { e.preventDefault(); putNode('num'); return; }
+  if (mod && e.key === '5') { e.preventDefault(); putNode('comment'); return; }
+  if (editMode && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); deleteSelection(); return; }
+  if (editMode && mod && e.key.toLowerCase() === 'a') {
+    e.preventDefault();
+    setSelection(patch.nodes.filter(n => n.el));
+  }
 });
 
-/* ---------------- drag & drop a .pd ---------------- */
-['dragenter', 'dragover'].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); stage.classList.add('dragging'); }));
-['dragleave', 'drop'].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); stage.classList.remove('dragging'); }));
+/* ---------------- drag & drop a .pd file ---------------- */
+['dragenter', 'dragover'].forEach(t => stage.addEventListener(t, e => {
+  if ([...(e.dataTransfer?.types || [])].includes('Files')) { e.preventDefault(); stage.classList.add('dragging-file'); }
+}));
+['dragleave', 'drop'].forEach(t => stage.addEventListener(t, e => stage.classList.remove('dragging-file')));
 document.addEventListener('dragover', e => e.preventDefault());
 document.addEventListener('drop', async e => {
   e.preventDefault();
   const f = [...e.dataTransfer.files].find(f => /\.pd$/i.test(f.name));
-  if (!f) return;
-  stop();
-  cm.setValue(await f.text());
-  setFile(f.name);
-  status.textContent = `Opened ${f.name}. Press Run to play it.`;
+  if (f && loadText(await f.text(), f.name)) statusEl.textContent = `Opened ${f.name}.`;
 });
 
 /* ---------------- patch from the launch link ----------------
@@ -720,30 +1469,27 @@ async function applyLaunchOptions() {
   const src = params.get('src');
   let loaded = false;
   if (code) {
-    cm.setValue(code);
-    setFile('linked.pd');
-    loaded = true;
+    loaded = loadText(code, 'linked.pd');
   } else if (src) {
     const rel = src.replace(/^\/+/, '');
     if (/^[\w./-]+$/.test(rel) && !rel.includes('..') && /\.pd$/i.test(rel)) {
       try {
         const res = await fetch(new URL(rel, new URL('../../', location.href)));
         if (!res.ok) throw new Error(res.status);
-        cm.setValue(await res.text());
-        setFile(rel.split('/').pop());
-        loaded = true;
+        loaded = loadText(await res.text(), rel.split('/').pop());
       } catch (err) {
-        status.textContent = `Could not load ${rel} (${err.message}).`;
+        statusEl.textContent = `Could not load ${rel} (${err.message}).`;
       }
     } else {
-      status.textContent = 'Refused to open an unexpected path.';
+      statusEl.textContent = 'Refused to open an unexpected path.';
     }
   }
   if (loaded && params.get('run') === '1') run();
 }
 
 window.addEventListener('pagehide', () => stop(true));
-setFile('sine-organ.pd');
+patch = blankPatch();
+loadText(EXAMPLE_SYNTH, 'sine-organ.pd');
 applyLaunchOptions();
 </script>
 </body>
