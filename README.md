@@ -214,10 +214,11 @@ registered applications, Markdown windows, and desktop actions.
   licence are retained under `vendor/solitaire/`.
 - `applications/qbasic.html` (Applications → Emulation → QBasic 1.1) — launches
   the supplied `QBASIC.EXE` directly in a browser-hosted DOSBox WebAssembly
-  runtime. js-dos 8.4.1 is vendored under `vendor/js-dos/` (GPL-2.0). Its kiosk
-  mode removes the emulator controls and the startup curtain remains in place
-  until the QBasic screen is rendered, so users see QBasic rather than the DOS
-  shell or DOSBox interface.
+  runtime. The stable js-dos 6.22.60 canvas build is vendored under
+  `vendor/js-dos-6.22/` (GPL-2.0); the v8 player was unsuitable because its
+  DOSBox backend crashed on mouse input in QBasic. The startup curtain remains
+  in place until the QBasic screen is rendered, so users see QBasic rather than
+  the DOS shell or emulator interface.
 - `applications/video/index.html` (Applications → Video Lab…) — a
   browser-only video player and editor with native preview plus a version-pinned
   FFmpeg WebAssembly compatibility/export engine. Supports forward and
