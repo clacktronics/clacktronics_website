@@ -1,0 +1,131 @@
+import { assertOptionalNumber } from '../validation.js';
+import { pow, log } from '../global-code/funcs.js';
+import { ast } from '../../../node_modules/@webpd/compiler/dist/src/ast/declare.js';
+
+/*
+ * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
+ *
+ * This file is part of WebPd
+ * (see https://github.com/sebpiq/WebPd).
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+// ------------------------------- node builder ------------------------------ //
+const makeBuilder = (defaultValue) => ({
+    translateArgs: (pdNode) => {
+        const value = assertOptionalNumber(pdNode.args[0]);
+        return {
+            value: value !== undefined ? value : defaultValue,
+        };
+    },
+    build: () => ({
+        inlets: {
+            '0': { type: 'signal', id: '0' },
+            '1': { type: 'signal', id: '1' },
+        },
+        outlets: {
+            '0': { type: 'signal', id: '0' },
+        },
+    }),
+    configureMessageToSignalConnection(inletId, nodeArgs) {
+        if (inletId === '0') {
+            return { initialSignalValue: 0 };
+        }
+        if (inletId === '1') {
+            return { initialSignalValue: nodeArgs.value };
+        }
+        return undefined;
+    },
+});
+// ------------------------------- node implementation ------------------------------ //
+const nodeImplementations = {
+    '+~': {
+        flags: {
+            isPureFunction: true,
+            isDspInline: true,
+            alphaName: 'add_t',
+        },
+        dsp: ({ ins }) => ast `${ins.$0} + ${ins.$1}`,
+    },
+    '-~': {
+        flags: {
+            isPureFunction: true,
+            isDspInline: true,
+            alphaName: 'sub_t',
+        },
+        dsp: ({ ins }) => ast `${ins.$0} - ${ins.$1}`,
+    },
+    '*~': {
+        flags: {
+            isPureFunction: true,
+            isDspInline: true,
+            alphaName: 'mul_t',
+        },
+        dsp: ({ ins }) => ast `${ins.$0} * ${ins.$1}`,
+    },
+    '/~': {
+        flags: {
+            isPureFunction: true,
+            isDspInline: true,
+            alphaName: 'div_t',
+        },
+        dsp: ({ ins }) => ast `${ins.$1} !== 0 ? ${ins.$0} / ${ins.$1} : 0`,
+    },
+    'min~': {
+        flags: {
+            isPureFunction: true,
+            isDspInline: true,
+            alphaName: 'min_t',
+        },
+        dsp: ({ ins }) => ast `Math.min(${ins.$0}, ${ins.$1})`,
+    },
+    'max~': {
+        flags: {
+            isPureFunction: true,
+            isDspInline: true,
+            alphaName: 'max_t',
+        },
+        dsp: ({ ins }) => ast `Math.max(${ins.$0}, ${ins.$1})`,
+    },
+    'pow~': {
+        flags: {
+            isPureFunction: true,
+            isDspInline: true,
+            alphaName: 'pow_t',
+        },
+        dsp: ({ ins }, { funcs }) => ast `${funcs.pow}(${ins.$0}, ${ins.$1})`,
+        dependencies: [pow],
+    },
+    'log~': {
+        flags: {
+            isPureFunction: true,
+            isDspInline: true,
+            alphaName: 'log_t',
+        },
+        dsp: ({ ins }, { funcs }) => ast `${funcs.log}(${ins.$0}, ${ins.$1} > 0 ? ${ins.$1} : Math.E)`,
+        dependencies: [log],
+    },
+};
+const builders = {
+    '+~': makeBuilder(0),
+    '-~': makeBuilder(0),
+    '*~': makeBuilder(0),
+    '/~': makeBuilder(0),
+    'min~': makeBuilder(0),
+    'max~': makeBuilder(0),
+    'pow~': makeBuilder(0),
+    'log~': makeBuilder(Math.E),
+};
+
+export { builders, nodeImplementations };

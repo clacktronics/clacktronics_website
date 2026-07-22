@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Pure Data — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<link rel="stylesheet" href="../../vendor/codemirror5/codemirror.css">
+<style>
+html, body, .app { height: 100%; min-height: 0; }
+body { overflow: hidden; }
+.app { display: flex; flex-direction: column; }
+.pd-bar { display: flex; align-items: center; gap: 10px; }
+.pd-bar .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; }
+.pd-bar .pixel-icon { width: 16px; height: 16px; }
+.pd-run { color: var(--leaf-deep); }
+.pd-stop { color: #a04a3a; }
+.pd-spacer { flex: 1; }
+.pd-dsp {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11.5px; color: var(--sage); user-select: none;
+}
+.pd-dsp .dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--paper-line); border: 1px solid var(--ink);
+}
+.pd-dsp.on .dot { background: var(--leaf); }
+
+.pd-main {
+  flex: 1; min-height: 0; display: grid; gap: 10px; padding: 10px 12px;
+  grid-template-columns: minmax(260px, 1.1fr) minmax(240px, 1fr);
+  grid-template-rows: 1fr 140px;
+}
+.pd-editor { grid-column: 1; grid-row: 1; min-height: 0; display: flex; flex-direction: column; }
+.pd-panel { grid-column: 2; grid-row: 1 / 3; min-height: 0; display: flex; flex-direction: column; }
+.pd-console { grid-column: 1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; }
+
+.pd-pane-title {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--leaf-deep); padding: 0 2px 6px;
+}
+.pd-pane-title .pixel-icon { width: 16px; height: 16px; }
+.pd-pane-title .name { margin-left: auto; letter-spacing: 0.04em; text-transform: none; font-weight: 500; color: var(--sage); }
+
+.pd-editor .CodeMirror {
+  flex: 1; min-height: 0; height: auto;
+  border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--paper); color: var(--ink-soft);
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.6;
+}
+.CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
+.CodeMirror-selected { background: rgba(79, 174, 125, 0.25) !important; }
+.CodeMirror-gutters { background: var(--paper-deep) !important; border-right: 1px solid var(--paper-line) !important; }
+.CodeMirror-linenumber { color: var(--sage) !important; }
+.cm-s-default .cm-keyword { color: #276b47; font-weight: 600; }
+.cm-s-default .cm-builtin { color: #276b47; }
+.cm-s-default .cm-atom { color: #a8841f; }
+.cm-s-default .cm-number { color: #a8841f; }
+.cm-s-default .cm-string { color: #8a3d2e; }
+.cm-s-default .cm-comment { color: #66755a; font-style: italic; }
+
+/* ---- the rendered patch controls ---- */
+.pd-stage {
+  position: relative; flex: 1; min-height: 0; overflow: auto;
+  border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--paper-deep);
+}
+.pd-stage.dragging { box-shadow: inset 0 0 0 4px var(--leaf); }
+.pd-canvas { position: relative; min-width: 100%; min-height: 100%; }
+.pd-prompt {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 20px; color: var(--sage); font-size: 12px; line-height: 1.7;
+  pointer-events: none;
+}
+.pd-prompt[hidden] { display: none; }
+.pd-prompt strong { display: block; color: var(--control-text); margin-bottom: 4px; }
+
+.pd-ctl { position: absolute; display: flex; flex-direction: column; gap: 3px; }
+.pd-ctl .lbl { font-size: 10.5px; color: var(--sage); line-height: 1; white-space: nowrap; }
+.pd-ctl input[type=range] { accent-color: var(--leaf-deep); margin: 0; }
+.pd-ctl input[type=range].v { writing-mode: vertical-lr; direction: rtl; }
+.pd-ctl input[type=number] {
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 2px 6px;
+  border: 1px solid var(--ink); border-radius: 5px; background: var(--paper); color: var(--ink-soft);
+}
+.pd-bng {
+  border: 1px solid var(--ink); border-radius: 50%; background: var(--paper);
+  cursor: pointer; padding: 0;
+}
+.pd-bng:active, .pd-bng.flash { background: var(--leaf); }
+.pd-tgl {
+  border: 1px solid var(--ink); border-radius: 4px; background: var(--paper);
+  cursor: pointer; padding: 0; position: relative;
+}
+.pd-tgl.on::after {
+  content: ''; position: absolute; inset: 3px; background: var(--leaf-deep); border-radius: 2px;
+}
+.pd-radio { display: flex; gap: 0; }
+.pd-radio.v { flex-direction: column; }
+.pd-radio button {
+  border: 1px solid var(--ink); background: var(--paper); cursor: pointer; padding: 0; position: relative;
+}
+.pd-radio button.on::after {
+  content: ''; position: absolute; inset: 4px; background: var(--leaf-deep); border-radius: 50%;
+}
+.pd-msgbox {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; cursor: pointer;
+  border: 1px solid var(--ink); border-right-width: 4px; border-radius: 3px;
+  background: var(--paper); color: var(--ink-soft); padding: 3px 8px;
+}
+.pd-msgbox:active { background: var(--leaf); }
+
+.pd-console-out {
+  flex: 1; min-height: 0; overflow-y: auto;
+  border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--ink); color: var(--menu-text);
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.5;
+  padding: 8px 12px; white-space: pre-wrap; word-break: break-word; user-select: text;
+}
+.pd-console-out .err { color: #e8927c; }
+.pd-console-out .warn { color: #e5c46a; }
+.pd-console-out .sys { color: #8fcaa8; }
+.pd-status { padding: 0 16px 4px; }
+
+.credit {
+  margin: 0; padding: 6px 16px; font-size: 10.5px; line-height: 1.6;
+  font-family: 'IBM Plex Mono', monospace; color: var(--sage);
+  border-top: 1px solid var(--paper-line); background: var(--paper-deep);
+}
+.credit a { color: var(--leaf-deep); text-decoration: underline; }
+.credit a:hover { color: var(--leaf); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="rm-bar pd-bar">
+    <div class="rm"><button>File</button><div class="rm-dd">
+      <button data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New</button>
+      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open&hellip;</button>
+      <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save .pd</button>
+      <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save .pd As&hellip;</button>
+    </div></div>
+    <div class="rm"><button>Examples</button><div class="rm-dd">
+      <button data-cmd="ex-synth"><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>Sine organ</button>
+      <button data-cmd="ex-bleeps"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Random bleeps</button>
+    </div></div>
+    <button class="btn ghost pd-run" data-cmd="run"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Run</button>
+    <button class="btn ghost pd-stop" data-cmd="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop</button>
+    <span class="pd-spacer"></span>
+    <span class="pd-dsp" id="dsp"><span class="dot"></span>DSP off</span>
+  </div>
+
+  <div class="pd-main">
+    <div class="pd-editor">
+      <div class="pd-pane-title">
+        <span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span><span>Patch source</span>
+        <span class="name" id="fileLabel">untitled.pd</span>
+      </div>
+      <textarea id="code"></textarea>
+    </div>
+
+    <div class="pd-panel">
+      <div class="pd-pane-title"><span class="pixel-icon" data-icon="keyboard-music" aria-hidden="true"></span><span>Patch</span></div>
+      <div class="pd-stage" id="stage" aria-label="Patch controls">
+        <div class="pd-canvas" id="canvas"></div>
+        <div class="pd-prompt" id="prompt">
+          <span><strong>Press Run &#9654; to compile the patch</strong>GUI objects (sliders, toggles, bangs, numbers)
+          appear here, live. Drop a .pd file anywhere to open it.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pd-console">
+      <div class="pd-pane-title"><span class="pixel-icon" data-icon="terminal" aria-hidden="true"></span><span>Console</span></div>
+      <div class="pd-console-out" id="out"></div>
+    </div>
+  </div>
+
+  <p class="app-status pd-status" id="status">Ready — patches compile and play in this browser, nothing is uploaded.</p>
+  <p class="credit">Engine:
+    <a href="https://github.com/sebpiq/WebPd" target="_blank" rel="noopener">WebPd</a>
+    by S&eacute;bastien Piquemal &amp; contributors, compiling patches to JavaScript DSP &middot; free software,
+    <a href="../../vendor/webpd/COPYING.LESSER" target="_blank">LGPL-3.0</a> &middot;
+    <a href="https://github.com/sebpiq/WebPd" target="_blank" rel="noopener">source</a> &middot;
+    <a href="https://puredata.info/" target="_blank" rel="noopener">Pure Data</a> is by Miller Puckette &amp; community
+    &middot; WebPd is alpha: only a subset of Pd objects is supported
+    (<a href="https://github.com/sebpiq/WebPd/blob/main/ROADMAP.md" target="_blank" rel="noopener">list</a>)
+  </p>
+</div>
+
+<script src="../../vendor/codemirror5/codemirror.js"></script>
+<script>
+/* A tiny Pd file-format mode for CodeMirror 5. */
+CodeMirror.defineMode('puredata', function () {
+  return {
+    startState() { return { field: 0 }; },
+    token(stream, state) {
+      if (stream.sol()) state.field = 0;
+      if (stream.eatSpace()) return null;
+      if (stream.match(/^#[NX]/)) { state.field = 1; return 'keyword'; }
+      if (stream.match(/^(canvas|obj|msg|floatatom|symbolatom|listbox|text|connect|coords|restore|array)\b/)) {
+        state.field += 1;
+        return state.field === 2 ? 'builtin' : 'atom';
+      }
+      if (stream.match(/^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?(?=[\s;]|$)/i)) { state.field += 1; return 'number'; }
+      if (stream.match(/^;/)) { state.field = 0; return 'keyword'; }
+      if (stream.match(/^[^\s;]+/)) {
+        state.field += 1;
+        /* the object class right after "#X obj x y" stands out */
+        return state.field === 5 ? 'string' : null;
+      }
+      stream.next();
+      return null;
+    },
+  };
+});
+</script>
+
+<script type="module">
+import { Build, Browser } from '../../vendor/webpd/dist/src/index.js';
+
+const status = document.getElementById('status');
+const consoleOut = document.getElementById('out');
+const canvas = document.getElementById('canvas');
+const stage = document.getElementById('stage');
+const promptBox = document.getElementById('prompt');
+const fileLabel = document.getElementById('fileLabel');
+const dspLight = document.getElementById('dsp');
+
+const EXAMPLE_SYNTH = `#N canvas 100 100 560 420 12;
+#X obj 40 60 hsl 162 15 36 84 0 0 empty empty pitch -2 -8 0 10 -262144 -1 -1 7000 1;
+#X obj 40 120 mtof;
+#X obj 40 160 osc~ 220;
+#X obj 300 60 tgl 19 0 empty empty voice -2 -8 0 10 -262144 -1 -1 0 1;
+#X obj 300 120 * 0.15;
+#X obj 300 160 pack 0 50;
+#X obj 300 200 line~;
+#X obj 40 250 *~;
+#X obj 40 300 dac~;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
+#X connect 2 0 7 0;
+#X connect 3 0 4 0;
+#X connect 4 0 5 0;
+#X connect 5 0 6 0;
+#X connect 6 0 7 1;
+#X connect 7 0 8 0;
+#X connect 7 0 8 1;
+`;
+
+const EXAMPLE_BLEEPS = `#N canvas 100 100 560 460 12;
+#X obj 40 40 tgl 19 0 empty empty run -2 -8 0 10 -262144 -1 -1 0 1;
+#X obj 40 90 metro 180;
+#X obj 40 130 trigger b b;
+#X obj 90 170 random 24;
+#X obj 90 210 + 54;
+#X obj 90 250 mtof;
+#X obj 90 290 osc~;
+#X obj 260 170 msg 0.2 10 \\, 0 150;
+#X obj 260 210 line~;
+#X obj 90 340 *~;
+#X obj 90 390 dac~;
+#X obj 340 40 hsl 130 15 60 400 0 0 empty empty speed -2 -8 0 10 -262144 -1 -1 3200 1;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
+#X connect 2 1 3 0;
+#X connect 3 0 4 0;
+#X connect 4 0 5 0;
+#X connect 5 0 6 0;
+#X connect 6 0 9 0;
+#X connect 2 0 7 0;
+#X connect 7 0 8 0;
+#X connect 8 0 9 1;
+#X connect 9 0 10 0;
+#X connect 9 0 10 1;
+#X connect 11 0 1 1;
+`;
+
+let fileName = 'untitled.pd';
+let handle = null;               /* FileSystemFileHandle when supported */
+let audioCtx = null;             /* one AudioContext for the page */
+let webpdNode = null;
+let micSource = null;
+let micStream = null;
+let running = false;
+let widgets = {};                /* graph nodeId -> { update(value) } */
+
+/* ---------------- editor ---------------- */
+const cm = CodeMirror.fromTextArea(document.getElementById('code'), {
+  mode: 'puredata',
+  lineNumbers: true,
+  lineWrapping: true,
+  viewportMargin: Infinity
+});
+cm.setValue(EXAMPLE_SYNTH);
+
+const setFile = (name, h) => {
+  fileName = name || 'untitled.pd';
+  handle = h || null;
+  fileLabel.textContent = fileName;
+  document.title = fileName + ' — Pure Data — ClackOS';
+};
+
+/* ---------------- console ---------------- */
+function log(text, cls) {
+  const line = document.createElement('span');
+  if (cls) line.className = cls;
+  line.textContent = text.endsWith('\n') ? text : text + '\n';
+  consoleOut.appendChild(line);
+  while (consoleOut.childNodes.length > 400) consoleOut.removeChild(consoleOut.firstChild);
+  consoleOut.scrollTop = consoleOut.scrollHeight;
+}
+
+function setDsp(on) {
+  running = on;
+  dspLight.classList.toggle('on', on);
+  dspLight.lastChild.textContent = on ? 'DSP on' : 'DSP off';
+}
+
+/* ---------------- run / stop ---------------- */
+async function run() {
+  stop(true);
+  status.textContent = 'Compiling…';
+  log('>>> compile ' + fileName, 'sys');
+  const pdText = cm.getValue();
+
+  let jsCode, metadata;
+  try {
+    const settings = Browser.defaultSettingsForBuild(new URL('puredata', location.href).href);
+    const artefacts = { pd: pdText };
+    for (const step of Build.listBuildSteps('pd', 'javascript')) {
+      const result = await Build.performBuildStep(artefacts, step, settings);
+      (result.warnings || []).forEach(w => log(w, 'warn'));
+      if (result.status === 1) {
+        (result.errors || []).forEach(e => log(e, 'err'));
+        status.textContent = 'Compilation failed — see the console.';
+        return;
+      }
+    }
+    jsCode = artefacts.javascript;
+    metadata = await Browser.readMetadata(jsCode);
+  } catch (err) {
+    log(String(err && err.message || err), 'err');
+    status.textContent = 'Compilation failed — see the console.';
+    return;
+  }
+
+  try {
+    if (!audioCtx) {
+      audioCtx = new AudioContext();
+      await Browser.initialize(audioCtx);   /* registers the worklet, once per context */
+    }
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    webpdNode = await Browser.run(audioCtx, jsCode, Browser.defaultSettingsForRun(
+      new URL('puredata/patch.pd', location.href).href,
+      onMessageFromPatch
+    ));
+    webpdNode.connect(audioCtx.destination);
+
+    /* only ask for the microphone when the patch actually uses [adc~] */
+    if (/(^|\s)adc~(\s|,|;)/.test(pdText)) {
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micSource = audioCtx.createMediaStreamSource(micStream);
+        micSource.connect(webpdNode);
+        log('microphone connected to [adc~]', 'sys');
+      } catch {
+        log('microphone unavailable — [adc~] will stay silent', 'warn');
+      }
+    }
+  } catch (err) {
+    log(String(err && err.message || err), 'err');
+    status.textContent = 'Could not start audio — see the console.';
+    return;
+  }
+
+  buildControls(metadata);
+  setDsp(true);
+  log('=== DSP on ===', 'sys');
+  status.textContent = 'Running — tweak the controls in the Patch panel.';
+}
+
+function stop(silent) {
+  if (webpdNode) {
+    try { webpdNode.destroy(); } catch {}
+    try { webpdNode.disconnect(); } catch {}
+    webpdNode = null;
+  }
+  if (micSource) { try { micSource.disconnect(); } catch {} micSource = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  if (running && !silent) {
+    log('=== DSP off ===', 'sys');
+    status.textContent = 'Stopped.';
+  }
+  setDsp(false);
+}
+
+/* ---------------- messages patch <-> page ---------------- */
+function sendToPatch(nodeId, portletId, message) {
+  if (!webpdNode) return;
+  webpdNode.port.postMessage({
+    type: 'io:messageReceiver',
+    payload: { nodeId, portletId, message },
+  });
+}
+
+function onMessageFromPatch(nodeId, portletId, message) {
+  const w = widgets[nodeId];
+  if (w && w.update) w.update(message);
+  else log(`[${nodeId}] ${message.join(' ')}`);
+}
+
+/* ---------------- patch controls ----------------
+ * WebPd's compile metadata carries the patch GUI tree (pdGui), the raw pd
+ * nodes and the io message receivers, so the GUI objects can be rebuilt as
+ * live HTML controls, roughly where they sit on the Pd canvas. */
+const SCALE = 1.15, PAD = 14;
+
+function buildControls(metadata) {
+  canvas.textContent = '';
+  widgets = {};
+  const meta = metadata.customMetadata || {};
+  const io = (metadata.settings && metadata.settings.io) || {};
+  const receivers = io.messageReceivers || {};
+  let count = 0;
+
+  const walk = (pdGuiNodes, offX, offY) => {
+    for (const gui of pdGuiNodes || []) {
+      if (gui.nodeClass === 'subpatch') {
+        const pdNode = (meta.pdNodes[gui.patchId] || {})[gui.pdNodeId];
+        const l = (pdNode && pdNode.layout) || {};
+        walk(gui.children, offX + (l.x || 0), offY + (l.y || 0));
+      } else if (gui.nodeClass === 'control') {
+        const pdNode = (meta.pdNodes[gui.patchId] || {})[gui.pdNodeId];
+        if (!pdNode) continue;
+        const el = makeWidget(gui.nodeId, pdNode, receivers[gui.nodeId]);
+        if (!el) continue;
+        const l = pdNode.layout || {};
+        el.style.left = Math.round(((l.x || 0) + offX) * SCALE + PAD) + 'px';
+        el.style.top = Math.round(((l.y || 0) + offY) * SCALE + PAD) + 'px';
+        canvas.appendChild(el);
+        count++;
+      }
+    }
+  };
+  walk(meta.pdGui, 0, 0);
+  promptBox.hidden = true;
+  if (!count) {
+    const note = document.createElement('div');
+    note.className = 'pd-prompt';
+    note.style.position = 'absolute';
+    note.innerHTML = '<span><strong>No GUI objects in this patch</strong>' +
+      'Add [hsl], [tgl], [bng], [nbx] or a number box to get controls here.</span>';
+    canvas.appendChild(note);
+  }
+}
+
+function makeWidget(nodeId, pdNode, receiverPortlets) {
+  const portletId = (receiverPortlets && receiverPortlets[0]) || '0';
+  const type = pdNode.type;
+  const layout = pdNode.layout || {};
+  const args = pdNode.args || [];
+  const wrap = document.createElement('div');
+  wrap.className = 'pd-ctl';
+
+  const label = layout.label && layout.label !== 'empty' && layout.label !== '-'
+    ? layout.label : '';
+  const addLabel = () => {
+    if (!label) return;
+    const l = document.createElement('span');
+    l.className = 'lbl';
+    l.textContent = label;
+    wrap.appendChild(l);
+  };
+  const send = msg => sendToPatch(nodeId, portletId, msg);
+
+  if (type === 'bng') {
+    addLabel();
+    const b = document.createElement('button');
+    b.className = 'pd-bng';
+    const s = Math.max(18, (layout.size || 15) * SCALE);
+    b.style.width = b.style.height = s + 'px';
+    b.title = label || 'bang';
+    b.addEventListener('click', () => {
+      send(['bang']);
+      b.classList.add('flash');
+      setTimeout(() => b.classList.remove('flash'), 120);
+    });
+    wrap.appendChild(b);
+    widgets[nodeId] = { update: () => {} };
+
+  } else if (type === 'tgl') {
+    addLabel();
+    const onValue = Number(args[0]) || 1;    /* args: [defaultValue, init, initValue, receive, send] */
+    let on = !!Number(args[2]);
+    const b = document.createElement('button');
+    b.className = 'pd-tgl' + (on ? ' on' : '');
+    const s = Math.max(18, (layout.size || 15) * SCALE);
+    b.style.width = b.style.height = s + 'px';
+    b.title = label || 'toggle';
+    b.setAttribute('aria-pressed', String(on));
+    b.addEventListener('click', () => {
+      on = !on;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+      send([on ? onValue : 0]);
+    });
+    wrap.appendChild(b);
+    widgets[nodeId] = { update: m => {
+      on = !!Number(m[0]);
+      b.classList.toggle('on', on);
+    } };
+
+  } else if (type === 'hsl' || type === 'vsl') {
+    addLabel();
+    /* args: [min, max, init, initValue, receive, send] */
+    const min = Number(args[0]), max = Number(args[1]);
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = String(Math.min(min, max));
+    input.max = String(Math.max(min, max));
+    input.step = String(Math.abs(max - min) / 500 || 0.01);
+    input.value = String(Number(args[3]) || 0);
+    input.title = label || type;
+    if (type === 'vsl') {
+      input.classList.add('v');
+      input.style.height = Math.max(60, (layout.height || 120) * SCALE) + 'px';
+    } else {
+      input.style.width = Math.max(60, (layout.width || 120) * SCALE) + 'px';
+    }
+    input.addEventListener('input', () => send([Number(input.value)]));
+    wrap.appendChild(input);
+    widgets[nodeId] = { update: m => { input.value = String(Number(m[0])); } };
+
+  } else if (type === 'nbx' || type === 'floatatom') {
+    addLabel();
+    /* nbx args: [min, max, init, initValue, receive, send]; floatatom: [min, max, receive, send] */
+    const min = Number(args[0]) || 0, max = Number(args[1]) || 0;
+    const input = document.createElement('input');
+    input.type = 'number';
+    if (min !== 0 || max !== 0) { input.min = String(min); input.max = String(max); }
+    input.step = 'any';
+    input.value = type === 'nbx' ? String(Number(args[3]) || 0) : '0';
+    input.style.width = Math.max(58, (layout.widthInChars || 5) * 11) + 'px';
+    input.title = label || 'number';
+    input.addEventListener('change', () => send([Number(input.value) || 0]));
+    wrap.appendChild(input);
+    widgets[nodeId] = { update: m => { input.value = String(Number(m[0])); } };
+
+  } else if (type === 'hradio' || type === 'vradio') {
+    addLabel();
+    const n = Math.max(1, Number(args[0]) || 8);   /* args: [number, init, initValue, ...] */
+    let value = Number(args[2]) || 0;
+    const row = document.createElement('div');
+    row.className = 'pd-radio' + (type === 'vradio' ? ' v' : '');
+    const s = Math.max(16, (layout.size || 15) * SCALE);
+    const cells = [];
+    for (let i = 0; i < n; i++) {
+      const b = document.createElement('button');
+      b.style.width = b.style.height = s + 'px';
+      if (i === value) b.classList.add('on');
+      b.addEventListener('click', () => {
+        value = i;
+        cells.forEach((c, j) => c.classList.toggle('on', j === i));
+        send([i]);
+      });
+      cells.push(b);
+      row.appendChild(b);
+    }
+    wrap.appendChild(row);
+    widgets[nodeId] = { update: m => {
+      value = Number(m[0]) || 0;
+      cells.forEach((c, j) => c.classList.toggle('on', j === value));
+    } };
+
+  } else if (type === 'msg') {
+    const b = document.createElement('button');
+    b.className = 'pd-msgbox';
+    b.textContent = (args || []).join(' ');
+    b.addEventListener('click', () => send(['bang']));
+    wrap.appendChild(b);
+    widgets[nodeId] = { update: () => {} };
+
+  } else {
+    return null;   /* vu, cnv, symbolatom… — nothing useful to render yet */
+  }
+  return wrap;
+}
+
+/* ---------------- files ---------------- */
+const fsAccess = 'showOpenFilePicker' in window;
+const pdTypes = [{ description: 'Pure Data patch', accept: { 'text/plain': ['.pd'] } }];
+
+const picker = document.createElement('input');
+picker.type = 'file';
+picker.accept = '.pd,text/plain';
+picker.addEventListener('change', async () => {
+  const f = picker.files[0];
+  picker.value = '';
+  if (f) { cm.setValue(await f.text()); setFile(f.name); status.textContent = `Opened ${f.name}. Press Run to play it.`; }
+});
+
+async function openFile() {
+  if (!fsAccess) { picker.click(); return; }
+  try {
+    const [h] = await window.showOpenFilePicker({ types: pdTypes });
+    const f = await h.getFile();
+    cm.setValue(await f.text());
+    setFile(f.name, h);
+    status.textContent = `Opened ${f.name}. Press Run to play it.`;
+  } catch {}
+}
+
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+async function saveFile(as) {
+  const text = cm.getValue();
+  if (fsAccess) {
+    try {
+      if (as || !handle)
+        handle = await window.showSaveFilePicker({ types: pdTypes, suggestedName: fileName });
+      const w = await handle.createWritable();
+      await w.write(text);
+      await w.close();
+      setFile((await handle.getFile()).name, handle);
+      status.textContent = `Saved ${fileName}`;
+    } catch {}
+    return;
+  }
+  if (as) {
+    const n = window.prompt('Save as:', fileName);
+    if (!n) return;
+    fileName = /\.pd$/i.test(n) ? n : n + '.pd';
+    fileLabel.textContent = fileName;
+  }
+  downloadBlob(new Blob([text], { type: 'text/plain' }), fileName);
+  status.textContent = `Saved ${fileName} (downloaded)`;
+}
+
+function newFile() {
+  stop();
+  cm.setValue('#N canvas 100 100 520 380 12;\n');
+  setFile('untitled.pd');
+  canvas.textContent = '';
+  promptBox.hidden = false;
+  status.textContent = 'New patch.';
+}
+
+function loadExample(name, text) {
+  stop();
+  cm.setValue(text);
+  setFile(name);
+  canvas.textContent = '';
+  promptBox.hidden = false;
+  status.textContent = 'Example loaded. Press Run to play it.';
+}
+
+/* ---------------- menu / toolbar ---------------- */
+const rms = document.querySelectorAll('.rm');
+const closeRm = () => rms.forEach(m => m.classList.remove('open'));
+rms.forEach(m => {
+  m.querySelector(':scope > button').addEventListener('click', e => {
+    e.stopPropagation();
+    const was = m.classList.contains('open');
+    closeRm();
+    if (!was) m.classList.add('open');
+  });
+});
+document.addEventListener('click', closeRm);
+document.querySelector('.pd-bar').addEventListener('click', e => {
+  const cmd = e.target.closest('[data-cmd]');
+  if (!cmd) return;
+  closeRm();
+  ({
+    new: newFile, open: openFile, save: () => saveFile(false), saveas: () => saveFile(true),
+    run, stop: () => stop(false),
+    'ex-synth': () => loadExample('sine-organ.pd', EXAMPLE_SYNTH),
+    'ex-bleeps': () => loadExample('random-bleeps.pd', EXAMPLE_BLEEPS)
+  })[cmd.dataset.cmd]?.();
+});
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveFile(e.shiftKey); }
+  if (e.key === 'F5') { e.preventDefault(); run(); }
+});
+
+/* ---------------- drag & drop a .pd ---------------- */
+['dragenter', 'dragover'].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); stage.classList.add('dragging'); }));
+['dragleave', 'drop'].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); stage.classList.remove('dragging'); }));
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', async e => {
+  e.preventDefault();
+  const f = [...e.dataTransfer.files].find(f => /\.pd$/i.test(f.name));
+  if (!f) return;
+  stop();
+  cm.setValue(await f.text());
+  setFile(f.name);
+  status.textContent = `Opened ${f.name}. Press Run to play it.`;
+});
+
+/* ---------------- patch from the launch link ----------------
+ * app:applications/puredata.html?src=<site path to a .pd>
+ * app:applications/puredata.html?code=<url-encoded patch source>
+ * app:applications/puredata.html?run=1  compiles right away */
+async function applyLaunchOptions() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  const src = params.get('src');
+  let loaded = false;
+  if (code) {
+    cm.setValue(code);
+    setFile('linked.pd');
+    loaded = true;
+  } else if (src) {
+    const rel = src.replace(/^\/+/, '');
+    if (/^[\w./-]+$/.test(rel) && !rel.includes('..') && /\.pd$/i.test(rel)) {
+      try {
+        const res = await fetch(new URL(rel, new URL('../../', location.href)));
+        if (!res.ok) throw new Error(res.status);
+        cm.setValue(await res.text());
+        setFile(rel.split('/').pop());
+        loaded = true;
+      } catch (err) {
+        status.textContent = `Could not load ${rel} (${err.message}).`;
+      }
+    } else {
+      status.textContent = 'Refused to open an unexpected path.';
+    }
+  }
+  if (loaded && params.get('run') === '1') run();
+}
+
+window.addEventListener('pagehide', () => stop(true));
+setFile('sine-organ.pd');
+applyLaunchOptions();
+</script>
+</body>
+</html>
