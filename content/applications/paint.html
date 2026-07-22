@@ -822,25 +822,34 @@ filePick.addEventListener('change', () => {
   const file = filePick.files[0]; filePick.value = '';
   if (!file || !/^image\/(?:png|jpeg|gif|webp|bmp)$/i.test(file.type)) { if (file) setStatus('Please choose a bitmap image'); return; }
   const url = URL.createObjectURL(file);
-  loadImage(url, file.name, () => URL.revokeObjectURL(url));
+  loadImage(url, file.name).catch(() => {}).finally(() => URL.revokeObjectURL(url));
 });
 
 function loadImage(src, name, done) {
-  const image = new Image();
-  const imageURL = new URL(src, window.location.href);
-  if (imageURL.origin !== window.location.origin) image.crossOrigin = 'anonymous';
-  image.onload = () => {
-    if (image.naturalWidth > MAX_DIMENSION || image.naturalHeight > MAX_DIMENSION) {
-      setStatus(`Image is larger than ${MAX_DIMENSION} px`); if (done) done(); return;
-    }
-    pushUndo(); seamModeApplied = false; resizeSurfaces(image.naturalWidth, image.naturalHeight);
-    bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); bx.drawImage(image, 0, 0);
-    reapplySeam();
-    fileName = String(name || 'image.png').replace(/\.[^.]+$/, '') + '.png';
-    setStatus(`Opened ${name}`); if (done) done();
-  };
-  image.onerror = () => { setStatus(`Could not open ${name}`); if (done) done(); };
-  image.src = src;
+  return new Promise((resolve, reject) => {
+    const image = new Image(); const imageURL = new URL(src, window.location.href);
+    let anonymous = imageURL.origin !== window.location.origin; let displayOnly = false;
+    if (anonymous) image.crossOrigin = 'anonymous';
+    image.onload = () => {
+      if (image.naturalWidth > MAX_DIMENSION || image.naturalHeight > MAX_DIMENSION) {
+        const error = new Error(`Image is larger than ${MAX_DIMENSION} px`); setStatus(error.message); reject(error); return;
+      }
+      pushUndo(); seamModeApplied = false; resizeSurfaces(image.naturalWidth, image.naturalHeight);
+      bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); bx.drawImage(image, 0, 0);
+      reapplySeam();
+      fileName = String(name || 'image.png').replace(/\.[^.]+$/, '') + '.png';
+      setStatus(`Opened ${name}${displayOnly ? ' (display only — the media host blocks canvas editing)' : ''}`);
+      if (done) done(); resolve();
+    };
+    image.onerror = () => {
+      if (anonymous) {
+        anonymous = false; displayOnly = true; image.removeAttribute('crossorigin'); image.src = '';
+        setTimeout(() => { image.src = src; }, 0); return;
+      }
+      const error = new Error(`Could not open ${name}`); setStatus(error.message); if (done) done(); reject(error);
+    };
+    image.src = src;
+  });
 }
 
 function savePng(as) {
@@ -882,7 +891,7 @@ function openWebsiteBrowser() {
   window.ClackOSFileManager.open({
     title: 'Open image from website',
     accept: item => item.kind === 'image',
-    onSelect: item => loadImage(`${item.downloadUrl}${item.downloadUrl.includes('?') ? '&' : '?'}_clack=${Date.now()}`, item.name)
+    onSelect: item => loadImage(item.drive === 'github' ? item.url : item.downloadUrl, item.name)
   });
 }
 
@@ -1078,6 +1087,15 @@ function runCmd(cmd) {
       bx.restore(); reapplySeam(); setStatus(cmd === 'flip-h' ? 'Flipped horizontally' : 'Flipped vertically'); break;
     }
   }
+}
+
+const linkedImage = new URLSearchParams(location.search).get('src');
+if (linkedImage) {
+  try {
+    const linkedUrl = new URL(linkedImage, new URL('../../', location.href));
+    if (!/^https?:$/.test(linkedUrl.protocol) || !/\.(?:png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(linkedUrl.pathname)) throw new Error();
+    loadImage(linkedUrl.href, decodeURIComponent(linkedUrl.pathname.split('/').pop()) || 'image').catch(() => {});
+  } catch (_) { setStatus('Refused to open an unexpected image path'); }
 }
 
 const rms = document.querySelectorAll('.rm');

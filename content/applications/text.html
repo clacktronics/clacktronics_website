@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Text Editor — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<link rel="stylesheet" href="../../assets/css/file-manager.css">
+<style>
+html, body { height: 100%; margin: 0; overflow: hidden; }
+.text-app { height: 100%; display: grid; grid-template-rows: auto 1fr auto; background: var(--paper); color: var(--ink); }
+.text-editor { width: 100%; height: 100%; box-sizing: border-box; resize: none; border: 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); outline: 0; padding: 12px; background: #fffef8; color: var(--ink); font: 14px/1.55 "IBM Plex Mono", monospace; tab-size: 2; }
+.text-status { display: flex; justify-content: space-between; gap: 12px; padding: 5px 9px; min-height: 18px; font-size: 11px; color: var(--sage); }
+</style>
+</head>
+<body>
+<div class="text-app">
+  <nav class="rm-bar" aria-label="Text Editor menu">
+    <div class="rm"><button type="button">File</button><div class="rm-dd">
+      <button type="button" data-cmd="new">New</button>
+      <button type="button" data-cmd="open">Open…</button>
+      <button type="button" data-cmd="open-site">Open from website…</button>
+      <button type="button" data-cmd="save">Save</button>
+      <button type="button" data-cmd="save-as">Save As…</button>
+    </div></div>
+  </nav>
+  <textarea class="text-editor" id="editor" aria-label="Plain text" spellcheck="false"></textarea>
+  <footer class="text-status"><span id="status">Ready</span><span id="position">Ln 1, Col 1</span></footer>
+</div>
+<input id="picker" type="file" accept=".txt,.log,.csv,.json,.css,.js,.mjs,.xml,.yaml,.yml,.ini,.conf,text/plain" hidden>
+<script src="../../assets/js/file-manager.js"></script>
+<script>
+(() => {
+const editor = document.getElementById('editor'), status = document.getElementById('status'), position = document.getElementById('position');
+const picker = document.getElementById('picker'); const siteRoot = new URL('../../', location.href);
+let fileName = 'untitled.txt', handle = null, dirty = false;
+const textPattern = /\.(?:txt|log|csv|json|css|js|mjs|xml|ya?ml|ini|conf)$/i;
+
+function showStatus(message) { status.textContent = `${dirty ? '● ' : ''}${message}`; }
+function setDocument(text, name, fileHandle = null) {
+  editor.value = text; fileName = name || 'untitled.txt'; handle = fileHandle; dirty = false;
+  document.title = `${fileName} — Text Editor`; showStatus(`Opened ${fileName}`); updatePosition(); editor.focus();
+}
+function updatePosition() {
+  const before = editor.value.slice(0, editor.selectionStart); const lines = before.split('\n');
+  position.textContent = `Ln ${lines.length}, Col ${lines[lines.length - 1].length + 1}`;
+}
+editor.addEventListener('input', () => { dirty = true; showStatus(fileName); updatePosition(); });
+editor.addEventListener('click', updatePosition); editor.addEventListener('keyup', updatePosition);
+
+async function openLocal() {
+  if ('showOpenFilePicker' in window) {
+    const [picked] = await showOpenFilePicker({ types: [{ description: 'Text files', accept: { 'text/plain': ['.txt', '.log', '.csv', '.json', '.css', '.js', '.xml', '.yaml', '.yml', '.ini', '.conf'] } }] });
+    const file = await picked.getFile(); setDocument(await file.text(), file.name, picked); return;
+  }
+  picker.click();
+}
+picker.addEventListener('change', async () => { const file = picker.files[0]; picker.value = ''; if (file) setDocument(await file.text(), file.name); });
+
+async function save(forceDownload) {
+  if (handle && !forceDownload) {
+    const writable = await handle.createWritable(); await writable.write(editor.value); await writable.close();
+    dirty = false; showStatus(`Saved ${fileName}`); return;
+  }
+  const name = forceDownload ? prompt('Save as:', fileName) : fileName; if (!name) return;
+  fileName = name; const blob = new Blob([editor.value], { type: 'text/plain;charset=utf-8' });
+  const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = fileName; link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 5000); dirty = false; showStatus(`Saved ${fileName}`);
+}
+
+async function openRepositoryFile(item) {
+  const source = item.drive === 'github' ? item.url : item.url; const response = await fetch(source, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Could not open ${item.name} (${response.status})`);
+  setDocument(await response.text(), item.name);
+}
+function openWebsite() {
+  window.ClackOSFileManager.open({ title: 'Open text from website', accept: item => textPattern.test(item.name), onSelect: openRepositoryFile });
+}
+async function openRequested(path) {
+  const rel = path.replace(/^\/+/, '');
+  const parts = rel.split('/');
+  if (!rel || /[\\?#\0]/.test(rel) || parts.some(part => !part || part === '.' || part === '..') || !textPattern.test(rel)) throw new Error('Refused to open an unexpected path.');
+  const response = await fetch(new URL(parts.map(encodeURIComponent).join('/'), siteRoot), { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Could not open ${rel} (${response.status})`);
+  setDocument(await response.text(), rel.split('/').pop());
+}
+
+document.querySelectorAll('[data-cmd]').forEach(button => button.addEventListener('click', async () => {
+  document.querySelectorAll('.rm').forEach(menu => menu.classList.remove('open'));
+  try {
+    if (button.dataset.cmd === 'new') { if (!dirty || confirm('Discard the unsaved changes?')) setDocument('', 'untitled.txt'); }
+    else if (button.dataset.cmd === 'open') await openLocal();
+    else if (button.dataset.cmd === 'open-site') openWebsite();
+    else if (button.dataset.cmd === 'save') await save(false);
+    else if (button.dataset.cmd === 'save-as') await save(true);
+  } catch (error) { if (error.name !== 'AbortError') showStatus(error.message); }
+}));
+const menus = document.querySelectorAll('.rm');
+menus.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
+  event.stopPropagation(); const opening = !menu.classList.contains('open'); menus.forEach(item => item.classList.remove('open')); if (opening) menu.classList.add('open');
+}));
+document.addEventListener('click', () => menus.forEach(menu => menu.classList.remove('open')));
+document.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); save(false).catch(error => showStatus(error.message)); } });
+window.addEventListener('beforeunload', event => { if (dirty) event.preventDefault(); });
+
+const requested = new URLSearchParams(location.search).get('repo');
+if (requested) openRequested(requested).catch(error => showStatus(error.message));
+else setDocument('', 'untitled.txt');
+})();
+</script>
+</body>
+</html>
