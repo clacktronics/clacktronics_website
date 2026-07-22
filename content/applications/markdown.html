@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
+<link rel="stylesheet" href="../../assets/css/file-manager.css">
 <link rel="stylesheet" href="../../vendor/easymde/easymde.min.css">
 <style>
 .app { height: 100%; }
@@ -217,15 +218,8 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
   </div>
 </div>
 
-<div class="site-modal" id="siteModal">
-  <div class="site-box">
-    <header><span>Open from website</span><button id="siteClose" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
-    <div class="site-filter"><input type="text" id="siteFilter" placeholder="Filter…" aria-label="Filter files"></div>
-    <div class="site-list" id="siteList"></div>
-  </div>
-</div>
-
 <script src="../../vendor/easymde/easymde.min.js"></script>
+<script src="../../assets/js/file-manager.js"></script>
 <script>
 (() => {
 const status = document.getElementById('status');
@@ -676,99 +670,44 @@ uploadModal.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.tagName === 'INPUT') document.getElementById('uploadTokenGo').click();
 });
 
-/* ---- open markdown straight from the website ----
- * a static site can't list directories, so files are discovered the same
- * way the desktop finds them: site.json -> each menu.json, plus the blog
- * index's links for the posts */
+/* The shared File Manager exposes the complete repository and keeps legacy
+ * media hosted on the live website on a separate read-only drive. Markdown
+ * files open as documents; every other file is inserted as a suitable link. */
 const contentBase = new URL('../../content/', location.href).href;
-const siteModal = document.getElementById('siteModal');
-const siteList = document.getElementById('siteList');
-const siteFilter = document.getElementById('siteFilter');
-let siteFiles = null;
 
-async function listSiteFiles() {
-  if (siteFiles) return siteFiles;
-  const files = [];
-  const site = await (await fetch(contentBase + 'site.json')).json();
-  for (const menu of site.menus) {
-    try {
-      const m = await (await fetch(`${contentBase}${menu}/menu.json`)).json();
-      /* walk nested submenus so items grouped under Open/categories still count */
-      const walk = items => {
-        for (const it of items || []) {
-          if (it.md) files.push(`${menu}/${it.md}`);
-          if (it.items) walk(it.items);
-        }
-      };
-      walk(m.items);
-    } catch {}
-  }
-  try {
-    const idx = await (await fetch(contentBase + 'file/blog.md')).text();
-    for (const m of idx.matchAll(/window:file\/(blog\/[^)\s]+\.md)/g))
-      files.push('file/' + m[1]);
-  } catch {}
-  siteFiles = [...new Set(files)];
-  return siteFiles;
+function markdownForFile(item) {
+  const label = item.name.replace(/\.[^.]+$/, '').replace(/[\[\]]/g, '');
+  const target = item.drive === 'github' ? item.path : item.url;
+  if (item.kind === 'image') return `![${label}](${target})`;
+  if (item.kind === 'video') return `@[video](${target} "${label.replace(/"/g, '')}"){controls}`;
+  return `[${label}](${target})`;
 }
 
-function renderSiteList(files, filter) {
-  siteList.innerHTML = '';
-  const groups = new Map();
-  for (const f of files) {
-    if (filter && !f.toLowerCase().includes(filter.toLowerCase())) continue;
-    const grp = f.split('/').slice(0, -1).join('/');
-    if (!groups.has(grp)) groups.set(grp, []);
-    groups.get(grp).push(f);
-  }
-  for (const [grp, list] of groups) {
-    const h = document.createElement('div');
-    h.className = 'grp';
-    h.textContent = 'content/' + grp;
-    siteList.appendChild(h);
-    for (const f of list) {
-      const b = document.createElement('button');
-      const name = f.split('/').pop();
-      b.innerHTML = `${name}<span class="path">${f}</span>`;
-      b.addEventListener('click', () => openSiteFile(f));
-      siteList.appendChild(b);
-    }
-  }
-  if (!siteList.children.length) {
-    const d = document.createElement('div');
-    d.className = 'grp';
-    d.textContent = 'no matches';
-    siteList.appendChild(d);
-  }
-}
-
-async function openSiteBrowser() {
-  siteModal.classList.add('open');
-  siteFilter.value = '';
-  siteList.textContent = 'Loading…';
-  try {
-    renderSiteList(await listSiteFiles(), '');
-    siteFilter.focus();
-  } catch (e) {
-    siteList.textContent = 'Could not list site files: ' + e.message;
-  }
-}
-
-async function openSiteFile(path) {
-  try {
-    const res = await fetch(contentBase + path);
-    if (!res.ok) throw new Error(res.status);
+async function useManagedFile(item) {
+  if (item.drive === 'github' && item.kind === 'markdown') {
+    const res = await fetch(item.downloadUrl, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Could not open ${item.path} (${res.status})`);
     mde.value(await res.text());
     handle = null;
-    fileName = path.split('/').pop();
-    sitePath = 'content/' + path;
+    fileName = item.name;
+    sitePath = item.path;
     dirty = false;
-    siteModal.classList.remove('open');
     show();
-    status.textContent = `${path} — opened from the website; File → Commit to website… publishes your edit`;
-  } catch (e) {
-    status.textContent = `Could not open ${path} (${e.message}).`;
+    status.textContent = `${item.path} — opened from GitHub; File → Commit to website… publishes your edit`;
+    return;
   }
+  mde.codemirror.replaceSelection(markdownForFile(item));
+  mde.codemirror.focus();
+  status.textContent = `Inserted ${item.name} from ${item.drive === 'github' ? 'GitHub' : 'Website Media'}`;
+}
+
+function openSiteBrowser() {
+  window.ClackOSFileManager.open({
+    title: 'Open from website',
+    accept: () => true,
+    actionFor: item => item.drive === 'github' && item.kind === 'markdown' ? 'Open' : 'Insert',
+    onSelect: useManagedFile
+  });
 }
 
 /* ---- commit to the repo via GitHub's contents API ---- */
@@ -854,13 +793,8 @@ document.getElementById('commitClose').addEventListener('click', () => commitMod
 commitModal.addEventListener('click', e => { if (e.target === commitModal) commitModal.classList.remove('open'); });
 commitModal.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') doCommit(); });
 
-siteFilter.addEventListener('input', () => {
-  if (siteFiles) renderSiteList(siteFiles, siteFilter.value);
-});
-document.getElementById('siteClose').addEventListener('click', () => siteModal.classList.remove('open'));
-siteModal.addEventListener('click', e => { if (e.target === siteModal) siteModal.classList.remove('open'); });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { siteModal.classList.remove('open'); commitModal.classList.remove('open'); uploadModal.classList.remove('open'); }
+  if (e.key === 'Escape') { commitModal.classList.remove('open'); uploadModal.classList.remove('open'); }
 });
 
 /* menu */

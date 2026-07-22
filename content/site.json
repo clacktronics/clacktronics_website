@@ -45,5 +45,10 @@
   ],
   "repo": "clacktronics/clacktronics_website",
   "branch": "main",
-  "assetUpload": "assets/upload.php"
+  "assetUpload": "assets/upload.php",
+  "media": {
+    "label": "Website Media",
+    "baseUrl": "https://clacktronics.co.uk/assets/",
+    "index": "content/media-index.json"
+  }
 }

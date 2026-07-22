@@ -229,6 +229,19 @@ registered applications, Markdown windows, and desktop actions.
   paths relative to the site root as well as remote HTTP(S) URLs whose servers
   allow cross-origin browser requests. MuPDF.js 1.28.0 is vendored under
   `vendor/mupdf/` (AGPL-3.0; see its LICENSE and PROVENANCE files).
+- `applications/files.html` (Applications → System → File Manager) — a shared,
+  read-only faux file manager with two drives. **GitHub** browses the complete
+  repository tree with folder navigation; **Website Media** browses legacy
+  images, video, and audio hosted at `clacktronics.co.uk/assets/` rather than in
+  the repository. The same explorer powers File → Open from website in the
+  Markdown Editor, ClackPaint, and PDF Reader. Markdown opens `.md` files and
+  inserts links/media for other selections, Paint accepts images, and PDF
+  Reader accepts PDFs.
+
+  The live `/assets/` directory intentionally cannot be enumerated over HTTP,
+  so this drive reads `content/media-index.json`. After adding legacy media
+  references to site content, refresh the catalogue with
+  `python3 scripts/build_media_index.py`.
 - `applications/browser.html` (Applications → Internet → Web Browser) — a
   lightweight iframe-based browser with an address bar, local navigation
   history, reload, home, and external-tab fallback. HTTP(S) links across
@@ -274,9 +287,9 @@ registered applications, Markdown windows, and desktop actions.
   side-by-side split rendered in the ClackOS style. Open/save uses the
   File System Access API where the browser supports it (true in-place
   saving); elsewhere saving downloads the file. Drag-and-drop works,
-  Ctrl+S saves. File → Open from website… lists every markdown file the
-  site serves (discovered from site.json, the menu.json files and the
-  blog index) and opens it in the editor. File → Commit to website…
+  Ctrl+S saves. File → Open from website… opens the shared file manager:
+  Markdown files load into the editor, while other files insert a suitable
+  link or media embed. File → Commit to website…
   publishes an edit straight to the repo through GitHub's contents API:
   it needs a fine-grained personal access token (GitHub → Settings →
   Developer settings → Fine-grained tokens; scope it to this repo only
