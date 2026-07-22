@@ -212,6 +212,12 @@ registered applications, Markdown windows, and desktop actions.
   scoring and browser-saved high scores, persistent games, restart, undo,
   hints and auto-complete. The upstream revision, adaptation notes and full
   licence are retained under `vendor/solitaire/`.
+- `applications/qbasic.html` (Applications → Emulation → QBasic 1.1) — launches
+  the supplied `QBASIC.EXE` directly in a browser-hosted DOSBox WebAssembly
+  runtime. js-dos 8.4.1 is vendored under `vendor/js-dos/` (GPL-2.0). Its kiosk
+  mode removes the emulator controls and the startup curtain remains in place
+  until the QBasic screen is rendered, so users see QBasic rather than the DOS
+  shell or DOSBox interface.
 - `applications/video/index.html` (Applications → Video Lab…) — a
   browser-only video player and editor with native preview plus a version-pinned
   FFmpeg WebAssembly compatibility/export engine. Supports forward and
