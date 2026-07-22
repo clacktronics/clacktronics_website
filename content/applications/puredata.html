@@ -30,6 +30,11 @@ body { overflow: hidden; }
   background: var(--paper-line); border: 1px solid var(--ink);
 }
 .pd-dsp.on .dot { background: var(--leaf); }
+.pd-meter {
+  width: 64px; height: 10px; display: inline-block; overflow: hidden;
+  border: 1px solid var(--ink); border-radius: 3px; background: var(--paper);
+}
+.pd-meter i { display: block; height: 100%; width: 0; background: var(--leaf); }
 
 .pd-main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px; gap: 8px; }
 .pd-stage {
@@ -206,6 +211,7 @@ body { overflow: hidden; }
     <button class="btn ghost pd-stop" data-cmd="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop</button>
     <span class="pd-spacer"></span>
     <span class="app-lbl" id="fileLabel">untitled.pd</span>
+    <span class="pd-meter" id="meter" title="patch output level"><i id="meterFill"></i></span>
     <span class="pd-dsp" id="dsp"><span class="dot"></span>DSP off</span>
   </div>
 
@@ -1088,6 +1094,42 @@ function setDsp(on) {
  * run / stop (WebPd)
  * =================================================================== */
 let audioCtx = null, webpdNode = null, micSource = null, micStream = null;
+let workletReady = null, analyser = null, meterRaf = 0;
+const meterFill = document.getElementById('meterFill');
+
+/* Safari (and strict autoplay settings) only unlock audio when the context is
+ * created / resumed inside the click itself — so this runs synchronously at the
+ * top of run(), before any compile await. */
+function unlockAudio() {
+  if (!audioCtx) {
+    audioCtx = new AudioContext();
+    workletReady = Browser.initialize(audioCtx);   /* registers the worklet, once per context */
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+document.addEventListener('pointerdown', () => {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+});
+
+function startMeter() {
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  webpdNode.connect(analyser);
+  const buf = new Float32Array(analyser.fftSize);
+  const tick = () => {
+    analyser.getFloatTimeDomainData(buf);
+    let m = 0;
+    for (let i = 0; i < buf.length; i++) m = Math.max(m, Math.abs(buf[i]));
+    meterFill.style.width = Math.min(100, Math.round(m * 130)) + '%';
+    meterRaf = requestAnimationFrame(tick);
+  };
+  tick();
+}
+function stopMeter() {
+  cancelAnimationFrame(meterRaf);
+  if (analyser) { try { analyser.disconnect(); } catch {} analyser = null; }
+  meterFill.style.width = '0';
+}
 let ioMap = {};        /* patch.nodes index (string) -> { graphNodeId, portletId } */
 let reverseMap = {};   /* graphNodeId -> model node */
 
@@ -1122,6 +1164,7 @@ function onMessageFromPatch(graphNodeId, portletId, message) {
 }
 
 async function run() {
+  unlockAudio();                 /* must happen first, inside the click */
   if (editingNode) commitTextEdit();
   stop(true);
   statusEl.textContent = 'Compiling…';
@@ -1150,11 +1193,10 @@ async function run() {
   }
 
   try {
-    if (!audioCtx) {
-      audioCtx = new AudioContext();
-      await Browser.initialize(audioCtx);   /* registers the worklet, once per context */
-    }
+    await workletReady;
     if (audioCtx.state === 'suspended') await audioCtx.resume();
+    if (audioCtx.state !== 'running')
+      log('the browser is blocking audio — click anywhere on the patch, then Run again', 'warn');
 
     webpdNode = await Browser.run(audioCtx, jsCode, Browser.defaultSettingsForRun(
       new URL('puredata/patch.pd', location.href).href,
@@ -1180,10 +1222,11 @@ async function run() {
   }
 
   buildIoMaps(metadata);
+  startMeter();
   setDsp(true);
   if (editMode) toggleMode();
   log('=== DSP on ===', 'sys');
-  statusEl.textContent = 'Running — click and drag the controls. Ctrl+E goes back to editing.';
+  statusEl.textContent = 'Running — click and drag the controls (many patches are silent until a toggle is flipped). The meter top-right shows the patch output.';
 }
 
 function buildIoMaps(metadata) {
@@ -1203,6 +1246,7 @@ function buildIoMaps(metadata) {
 }
 
 function stop(silent) {
+  stopMeter();
   if (webpdNode) {
     try { webpdNode.destroy(); } catch {}
     try { webpdNode.disconnect(); } catch {}
