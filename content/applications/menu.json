@@ -1,6 +1,10 @@
 {
   "label": "Applications",
   "items": [
+    { "type": "submenu", "label": "Games", "icon": "target", "items": [
+      { "type": "app", "page": "clacksweeper.html", "label": "Clacksweeper", "title": "Clacksweeper", "icon": "grid-3x3", "width": 680, "height": 525, "fixed": true, "multi": true, "integrated": true },
+      { "type": "app", "page": "solitaire.html", "label": "Solitaire", "title": "Solitaire", "icon": "copy", "width": 850, "height": 720, "multi": true }
+    ] },
     { "type": "submenu", "label": "Multimedia", "icon": "video", "items": [
       { "type": "app", "page": "clackbase.html", "label": "Clackbase MIDI Sequencer", "title": "Clackbase 1.0", "icon": "music", "width": 1120, "height": 760, "multi": true },
       { "type": "app", "page": "puredata.html", "label": "Pure Data", "title": "Pure Data", "icon": "keyboard-music", "width": 1080, "height": 740, "multi": true },
