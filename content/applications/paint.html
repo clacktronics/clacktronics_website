@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
+<link rel="stylesheet" href="../../assets/css/file-manager.css">
 <script src="../../assets/js/backgrounds.js"></script>
 <style>
 .paint-bg-intro p { font-size: 12px; line-height: 1.7; }
@@ -19,6 +20,7 @@
 .paint-bg-credit { font-size: 10px; color: var(--sage); line-height: 1.6; margin-top: 2px; }
 .paint-bg-credit a { color: var(--leaf-deep); text-decoration: underline; }
 </style>
+<script src="../../assets/js/file-manager.js"></script>
 </head>
 <body>
 <div class="app paint-app">
@@ -97,13 +99,6 @@
 </div>
 
 <input id="paintFilePicker" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,image/png,image/jpeg,image/gif,image/webp,image/bmp" hidden>
-
-<div class="paint-modal" id="siteModal" role="dialog" aria-modal="true" aria-labelledby="siteTitle">
-  <div class="paint-modal-box">
-    <header><span id="siteTitle">Open image from website</span><button data-close="siteModal" aria-label="Close">×</button></header>
-    <div class="paint-site-list" id="siteList"></div>
-  </div>
-</div>
 
 <div class="paint-modal" id="imageSizeModal" role="dialog" aria-modal="true" aria-labelledby="imageSizeTitle">
   <form class="paint-modal-box paint-dialog" id="imageSizeForm">
@@ -832,6 +827,8 @@ filePick.addEventListener('change', () => {
 
 function loadImage(src, name, done) {
   const image = new Image();
+  const imageURL = new URL(src, window.location.href);
+  if (imageURL.origin !== window.location.origin) image.crossOrigin = 'anonymous';
   image.onload = () => {
     if (image.naturalWidth > MAX_DIMENSION || image.naturalHeight > MAX_DIMENSION) {
       setStatus(`Image is larger than ${MAX_DIMENSION} px`); if (done) done(); return;
@@ -881,27 +878,12 @@ document.addEventListener('click', event => {
 });
 modals.forEach(modal => modal.addEventListener('pointerdown', event => { if (event.target === modal) hideModal(modal.id); }));
 
-async function openWebsiteBrowser() {
-  const list = document.getElementById('siteList');
-  list.textContent = 'Loading…'; showModal('siteModal');
-  try {
-    const response = await fetch(`../site.json?_clack=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) throw new Error(response.status);
-    const site = await response.json();
-    const backgrounds = await window.ClackOSBackgrounds.list(site);
-    list.textContent = '';
-    for (const item of backgrounds) {
-      if (!/^[a-z0-9][a-z0-9._-]*\.(?:png|jpe?g|gif|webp|bmp)$/i.test(item.file || '')) continue;
-      const button = document.createElement('button');
-      button.innerHTML = `<strong>${escapeHtml(item.name || item.file)}</strong><span>assets/backgrounds/${escapeHtml(item.file)}</span>`;
-      button.addEventListener('click', () => {
-        hideModal('siteModal');
-        loadImage(`../../assets/backgrounds/${encodeURIComponent(item.file)}?_clack=${Date.now()}`, item.file);
-      });
-      list.appendChild(button);
-    }
-    if (!list.children.length) list.textContent = 'No bitmap backgrounds were found.';
-  } catch (error) { list.textContent = `Could not list website backgrounds (${error.message}).`; }
+function openWebsiteBrowser() {
+  window.ClackOSFileManager.open({
+    title: 'Open image from website',
+    accept: item => item.kind === 'image',
+    onSelect: item => loadImage(`${item.downloadUrl}${item.downloadUrl.includes('?') ? '&' : '?'}_clack=${Date.now()}`, item.name)
+  });
 }
 
 const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
