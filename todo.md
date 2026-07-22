@@ -6,9 +6,7 @@
 
 ### Aesthetic Tweaks and experience improvements
 
-* Access all of the website github from the website
 * Need links that are not like buttons and are inline
-* links seem to be showing as buttons in mardown?
 * Make entire site downloadable
 * Consistent theme in in apps
 
@@ -21,7 +19,7 @@
 ### New Features and featurettes
 
 * in 3d model viewer need auto rotate and material selection (transparent) and lighting? background choice. hide/Show grid, export.
-* Add sliders in theme editor
+* Add sliders in theme editor for transparency and maybe text sizes, maybe also font choser?
 * Split out some of the settings in theme editor so colours can be different.
 
 ### New Apps
@@ -29,7 +27,6 @@
 * Old fasioned Amiga style tracker
 * Some kind of fun GAL/EEPROM tool
 * Serial Console for USB
-* File Manager
 * Perf/Strip/Bread(board) layout app ;ike lochmaster
 * Midi controllable, downloadable, mono synth.
 * Waveacity
