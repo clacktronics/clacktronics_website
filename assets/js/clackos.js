@@ -288,6 +288,40 @@ function iconHTML(name, extraClass = '') {
     : '';
 }
 
+/* Find a Markdown link destination without treating parentheses inside a URL
+ * as the end of the link. This matters for generated links whose query value
+ * contains source code (for example OpenSCAD's cylinder(...)). */
+function markdownLinks(s, render) {
+  const start = /\[([^\]]+)\]\(/g;
+  let out = '';
+  let copiedTo = 0;
+  let match;
+
+  while ((match = start.exec(s))) {
+    let depth = 1;
+    let end = start.lastIndex;
+    for (; end < s.length; end++) {
+      if (s[end] === '(') depth++;
+      else if (s[end] === ')' && --depth === 0) break;
+    }
+    if (depth !== 0) break;
+
+    const href = s.slice(start.lastIndex, end);
+    if (/\s/.test(href)) continue;
+    out += s.slice(copiedTo, match.index) + render(match[1], href);
+    copiedTo = end + 1;
+    start.lastIndex = copiedTo;
+  }
+
+  return out + s.slice(copiedTo);
+}
+
+function isMarkdownLink(s) {
+  let matched = false;
+  const rendered = markdownLinks(s, () => { matched = true; return ''; });
+  return matched && rendered === '';
+}
+
 /* Inline markdown: `code` -> keyword span, **bold**, *italic*, ![alt](src),
  * [text](href). Links may use window:<md-path> to open a content window,
  * app:<registered-page>?<options> to launch an application, or action:<name>
@@ -304,7 +338,7 @@ function inline(s) {
   s = s.replace(/`([^`]+)`/g, '<span class="k">$1</span>');
   s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
   s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>');
-  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, text, href) => {
+  s = markdownLinks(s, (text, href) => {
     if (href.startsWith('window:'))
       return `<a href="#" data-action="open:${escInlineAttr(href.slice(7))}">${text.trim()}</a>`;
     if (href.startsWith('app:')) {
@@ -555,7 +589,7 @@ function mdToHtml(body, meta) {
       const items = block.split(/\r?\n(?=[-*]\s)/).map(item =>
         `<li><p>${inline(item.replace(/^[-*]\s+/, '').replace(/\r?\n/g, ' '))}</p></li>`);
       out.push(`<ul class="list">${items.join('')}</ul>`);
-    } else if (block.split(/\r?\n/).every(l => /^\[[^\]]+\]\([^)]+\)$/.test(l.trim()))) {
+    } else if (block.split(/\r?\n/).every(l => isMarkdownLink(l.trim()))) {
       /* a block made only of links becomes the call-to-action button row;
        * the first button is solid, the rest are ghosts */
       const btns = block.split(/\r?\n/).map((l, i) =>

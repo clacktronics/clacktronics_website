@@ -414,12 +414,21 @@ function linkLabel(fallback) {
 function insertClackLink(href, fallbackLabel) {
   const label = linkLabel(fallbackLabel);
   if (!label) return;
-  cm.replaceSelection(`[${label}](${href})`);
+  cm.replaceSelection(`[${label}](${markdownLinkTarget(href)})`);
   cm.focus();
 }
 
 function encodePart(value) {
-  return encodeURIComponent(value.trim());
+  /* encodeURIComponent leaves !'()* untouched. Parentheses are meaningful to
+     Markdown link syntax, so use strict RFC 3986 encoding for query values. */
+  return encodeURIComponent(value.trim()).replace(/[!'()*]/g, character =>
+    '%' + character.charCodeAt(0).toString(16).toUpperCase());
+}
+
+function markdownLinkTarget(value) {
+  return value.trim().replace(/\s|[()]/g, character =>
+    [...new TextEncoder().encode(character)]
+      .map(byte => '%' + byte.toString(16).toUpperCase().padStart(2, '0')).join(''));
 }
 
 function siteFileName(value, folder) {
@@ -431,7 +440,7 @@ function siteFileName(value, folder) {
 
 function insertWindowLink() {
   const path = prompt('Markdown path under content/ (for example file/catalogue.md):', 'file/catalogue.md');
-  if (path) insertClackLink('window:' + encodeURI(path.trim()).replace(/[()]/g, c => '%' + c.charCodeAt(0).toString(16)), 'Open page');
+  if (path) insertClackLink('window:' + encodeURI(path.trim()), 'Open page');
 }
 
 function insertActionLink() {
