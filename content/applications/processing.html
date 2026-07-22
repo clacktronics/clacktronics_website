@@ -109,7 +109,8 @@
 .credit a { color: var(--leaf-deep); text-decoration: underline; }
 .credit a:hover { color: var(--leaf); }
 
-/* ---- sketch display window (mimics a ClackOS window) ---- */
+/* ---- sketch display window (fallback when running standalone; inside
+   ClackOS the window is injected into the desktop itself) ---- */
 .sketch-window {
   position: fixed; z-index: 40; display: flex; flex-direction: column;
   border-radius: 10px; padding: 2px; background: transparent;
@@ -310,9 +311,24 @@ const renderTab = () => {
   }
 };
 
-/* ---- sketch display window ---- */
+/* ---- sketch display window ----
+ * Inside ClackOS (a same-origin iframe on the desktop) the display window
+ * is injected straight into the desktop, so the sketch runs in its own
+ * window beside the IDE, styled by the desktop's own .window CSS. When the
+ * page runs standalone there is no desktop, so a lookalike window is shown
+ * inside the page instead. */
 let instance = null;
 let sketchWin = null;
+
+function parentDesktop() {
+  try {
+    if (window.parent !== window) {
+      const d = window.parent.document;
+      if (d.getElementById('desktop')) return d;
+    }
+  } catch {}
+  return null;
+}
 
 function closeSketchWindow() {
   if (instance) { try { instance.exit(); } catch {} instance = null; }
@@ -320,7 +336,100 @@ function closeSketchWindow() {
   runBtn.classList.remove('running');
 }
 
+function openDesktopSketchWindow(doc) {
+  const desktop = doc.getElementById('desktop');
+  if (!doc.getElementById('pjs-sketch-style')) {
+    const st = doc.createElement('style');
+    st.id = 'pjs-sketch-style';
+    st.textContent = `
+      .pjs-sketch-window .winbody {
+        display: flex; align-items: center; justify-content: center;
+        padding: 8px; background: var(--paper-deep); overflow: hidden;
+      }
+      .pjs-sketch-window .winbody canvas { display: block; outline: none; }
+      .pjs-sketch-window .titlebar .title { transform: translateX(-10px); }`;
+    doc.head.appendChild(st);
+  }
+
+  const win = doc.createElement('section');
+  win.className = 'window fixed pjs-sketch-window';
+  win.setAttribute('role', 'dialog');
+  const name = fileName.replace(/\.pde$/i, '');
+  win.setAttribute('aria-label', name);
+  const bar = doc.createElement('div');
+  bar.className = 'titlebar';
+  const dot = doc.createElement('button');
+  dot.className = 'dot close';
+  dot.title = 'Stop sketch';
+  dot.setAttribute('aria-label', `Stop ${name}`);
+  const title = doc.createElement('span');
+  title.className = 'title';
+  const label = doc.createElement('span');
+  label.className = 'title-label';
+  label.textContent = name;
+  title.appendChild(label);
+  bar.append(dot, title);
+  const body = doc.createElement('div');
+  body.className = 'winbody';
+  const canvas = doc.createElement('canvas');
+  canvas.tabIndex = 0;
+  body.appendChild(canvas);
+  const frame = doc.createElement('div');
+  frame.className = 'frame';
+  frame.setAttribute('aria-hidden', 'true');
+  win.append(bar, body, frame);
+  desktop.appendChild(win);
+
+  /* spawn beside the IDE window if there is room, and above every window */
+  const raise = () => {
+    let top = 10;
+    doc.querySelectorAll('.window').forEach(w => {
+      top = Math.max(top, parseInt(w.style.zIndex || 0, 10));
+      if (w !== win) w.classList.add('inactive');
+    });
+    win.style.zIndex = top + 1;
+    win.classList.remove('inactive');
+  };
+  const ide = window.frameElement ? window.frameElement.getBoundingClientRect() : null;
+  win.style.left = Math.max(12, Math.min(ide ? ide.right - 60 : 80, desktop.clientWidth - 380)) + 'px';
+  win.style.top = Math.max(12, ide ? ide.top + 24 : 80) + 'px';
+  raise();
+
+  dot.addEventListener('click', e => {
+    e.stopPropagation();
+    closeSketchWindow();
+    setMessage('Sketch stopped.');
+  });
+  win.addEventListener('pointerdown', raise);
+
+  /* drag, matching the desktop's own window behaviour */
+  bar.addEventListener('pointerdown', e => {
+    if (e.target === dot) return;
+    e.preventDefault();
+    doc.body.classList.add('win-drag');
+    const startX = e.clientX, startY = e.clientY;
+    const origL = win.offsetLeft, origT = win.offsetTop;
+    const move = ev => {
+      win.style.left = Math.min(Math.max(origL + (ev.clientX - startX), -win.offsetWidth + 80), desktop.clientWidth - 80) + 'px';
+      win.style.top = Math.min(Math.max(origT + (ev.clientY - startY), 0), desktop.clientHeight - 40) + 'px';
+    };
+    const up = () => {
+      doc.body.classList.remove('win-drag');
+      doc.defaultView.removeEventListener('pointermove', move);
+      doc.defaultView.removeEventListener('pointerup', up);
+    };
+    doc.defaultView.addEventListener('pointermove', move);
+    doc.defaultView.addEventListener('pointerup', up);
+  });
+
+  sketchWin = win;
+  return canvas;
+}
+
 function openSketchWindow() {
+  const doc = parentDesktop();
+  if (doc) return openDesktopSketchWindow(doc);
+
   const win = document.createElement('div');
   win.className = 'sketch-window';
   const bar = document.createElement('div');
@@ -375,6 +484,9 @@ function openSketchWindow() {
   sketchWin = win;
   return canvas;
 }
+
+/* the sketch window must not outlive the IDE window it belongs to */
+addEventListener('pagehide', closeSketchWindow);
 
 /* route the sketch's print()/println() into the IDE console */
 Processing.logger = {
