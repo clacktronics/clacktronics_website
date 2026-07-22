@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Processing — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<link rel="stylesheet" href="../../vendor/codemirror5/codemirror.css">
+<style>
+.app { height: 100%; }
+
+/* ---- PDE-style toolbar: round Run / Stop buttons, mode chip on the right ---- */
+.pde-toolbar {
+  display: flex; align-items: center; gap: 10px; flex: none;
+  padding: 8px 12px; background: var(--paper-deep);
+  border-bottom: 1px solid var(--paper-line);
+}
+.pde-round {
+  all: unset; box-sizing: border-box; cursor: pointer; flex: none;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1.5px solid var(--ink); background: var(--paper);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--control-text);
+}
+.pde-round .pixel-icon { width: 16px; height: 16px; }
+.pde-round:hover { background: var(--ink); color: var(--menu-text); }
+.pde-round:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+.pde-run { background: var(--leaf); border-color: var(--leaf-deep); color: var(--ink); }
+.pde-run:hover { background: var(--accent-hover); border-color: var(--leaf-deep); color: var(--ink); }
+.pde-run.running { background: var(--leaf-deep); color: var(--menu-text); }
+.pde-mode {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; letter-spacing: 0.08em; color: var(--sage);
+  border: 1px solid var(--paper-line); border-radius: 6px; padding: 5px 10px;
+  background: var(--paper);
+}
+.pde-mode b { color: var(--leaf-deep); font-weight: 600; }
+
+/* ---- PDE-style tab strip ---- */
+.pde-tabs {
+  display: flex; align-items: flex-end; gap: 4px; flex: none;
+  padding: 6px 12px 0; background: var(--paper-deep);
+}
+.pde-tab {
+  font-size: 11.5px; font-weight: 600; color: var(--leaf-deep);
+  background: var(--paper); border: 1px solid var(--ink); border-bottom: none;
+  border-radius: 7px 7px 0 0; padding: 5px 16px 4px;
+  max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pde-tab .dirty { color: var(--sage); font-weight: 400; }
+
+/* ---- editor ---- */
+.pde-editor {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  margin: 0 12px; border: 1px solid var(--ink); border-radius: 0 8px 8px 8px;
+  overflow: hidden;
+}
+.pde-editor .CodeMirror {
+  flex: 1; min-height: 0; height: auto;
+  background: var(--paper); color: var(--ink-soft);
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.6;
+}
+.CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
+.CodeMirror-selected { background: rgba(79, 174, 125, 0.25) !important; }
+.CodeMirror-gutters { background: var(--paper-deep) !important; border-right: 1px solid var(--paper-line) !important; }
+.CodeMirror-linenumber { color: var(--sage) !important; }
+.cm-s-default .cm-keyword { color: #276b47; font-weight: 600; }
+.cm-s-default .cm-def { color: #09140d; font-weight: 600; }
+.cm-s-default .cm-variable-3, .cm-s-default .cm-type { color: #276b47; }
+.cm-s-default .cm-string { color: #8a3d2e; }
+.cm-s-default .cm-comment { color: #66755a; font-style: italic; }
+.cm-s-default .cm-number { color: #a8841f; }
+.cm-s-default .cm-builtin { color: #276b47; }
+.cm-s-default .cm-operator { color: #14231a; }
+
+/* ---- PDE message area (the strip between editor and console) ---- */
+.pde-message {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  margin: 6px 12px 0; padding: 5px 12px;
+  border: 1px solid var(--ink); border-radius: 6px;
+  background: var(--paper-deep); color: var(--ink-soft);
+  font-size: 11.5px; min-height: 27px;
+}
+.pde-message.error { background: #a04a3a; border-color: #a04a3a; color: #f8f2dd; }
+.pde-message .msg { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pde-message .line-no { flex: none; color: var(--sage); font-variant-numeric: tabular-nums; }
+.pde-message.error .line-no { color: #f3d9c9; }
+
+/* ---- PDE console ---- */
+.pde-console {
+  flex: none; height: 130px; margin: 6px 12px 0;
+  border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--ink); color: var(--menu-text);
+  font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; line-height: 1.55;
+  padding: 8px 12px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-word; user-select: text;
+}
+.pde-console .err { color: #e8927c; }
+.pde-console .sys { color: #8fcaa8; }
+
+.credit {
+  flex: none; margin: 6px 0 0; padding: 6px 16px; font-size: 10.5px; line-height: 1.6;
+  color: var(--sage); border-top: 1px solid var(--paper-line); background: var(--paper-deep);
+}
+.credit a { color: var(--leaf-deep); text-decoration: underline; }
+.credit a:hover { color: var(--leaf); }
+
+/* ---- sketch display window (mimics a ClackOS window) ---- */
+.sketch-window {
+  position: fixed; z-index: 40; display: flex; flex-direction: column;
+  border-radius: 10px; padding: 2px; background: transparent;
+}
+.sketch-window::before {
+  content: ''; position: absolute; inset: 0; z-index: -2;
+  transform: translate(8px, 8px); border-radius: 10px;
+  background-image: repeating-conic-gradient(color-mix(in srgb, var(--ink) 40%, transparent) 0 25%, transparent 0 50%);
+  background-size: 2px 2px;
+}
+.sketch-window::after {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: var(--paper); border-radius: 10px;
+}
+.sketch-window .frame {
+  position: absolute; inset: 0; z-index: 6; pointer-events: none;
+  border: 2px solid var(--ink); border-radius: 10px;
+}
+.sketch-titlebar {
+  background: var(--ink); color: var(--menu-text);
+  padding: 9px 14px; display: flex; align-items: center; gap: 8px;
+  border-radius: 8px 8px 0 0; cursor: grab; flex: none; touch-action: none;
+  user-select: none;
+}
+.sketch-titlebar:active { cursor: grabbing; }
+.sketch-titlebar .dot {
+  all: unset; width: 11px; height: 11px; border-radius: 50%; cursor: pointer; flex: none;
+  border: 1.5px solid var(--menu-text); box-sizing: border-box;
+  background: var(--leaf); border-color: var(--leaf);
+}
+.sketch-titlebar .dot:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.sketch-titlebar .dot:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+.sketch-titlebar .title {
+  margin: 0 auto; transform: translateX(-10px);
+  font-size: 12.5px; font-weight: 500; letter-spacing: 0.03em; color: var(--title-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sketch-body {
+  flex: 1; border-radius: 0 0 8px 8px; overflow: hidden;
+  background: var(--paper-deep); display: flex;
+  align-items: center; justify-content: center; padding: 8px;
+}
+.sketch-body canvas { display: block; outline: none; image-rendering: auto; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="rm-bar">
+    <div class="rm"><button>File</button><div class="rm-dd">
+      <button data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New</button>
+      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open&hellip;</button>
+      <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save</button>
+      <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As&hellip;</button>
+    </div></div>
+    <div class="rm"><button>Sketch</button><div class="rm-dd">
+      <button data-cmd="run"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Run</button>
+      <button data-cmd="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop</button>
+      <div class="sep"></div>
+      <button data-example="bounce"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Example: Bouncing Ball</button>
+      <button data-example="waves"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Example: Sine Waves</button>
+      <button data-example="draw"><span class="pixel-icon" data-icon="brush" aria-hidden="true"></span>Example: Mouse Painter</button>
+    </div></div>
+    <div class="rm"><button>Help</button><div class="rm-dd">
+      <button data-cmd="reference"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>Processing Reference</button>
+    </div></div>
+  </div>
+  <div class="pde-toolbar">
+    <button class="pde-round pde-run" data-cmd="run" title="Run (Ctrl+R)" aria-label="Run sketch"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span></button>
+    <button class="pde-round pde-stop" data-cmd="stop" title="Stop" aria-label="Stop sketch"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span></button>
+    <span class="pde-mode"><b>Java</b> (Processing.js)</span>
+  </div>
+  <div class="pde-tabs"><span class="pde-tab" id="tab">sketch</span></div>
+  <div class="pde-editor"><textarea id="code"></textarea></div>
+  <div class="pde-message" id="message"><span class="msg" id="msg-text"></span><span class="line-no" id="line-no">1</span></div>
+  <div class="pde-console" id="console"></div>
+  <p class="credit">Engine:
+    <a href="http://processingjs.org" target="_blank" rel="noopener">Processing.js</a> 1.6.6
+    by John Resig &amp; the Processing.js team · free software,
+    <a href="../../vendor/processingjs/LICENSE" target="_blank">MIT</a> ·
+    <a href="https://github.com/processing-js/processing-js" target="_blank" rel="noopener">source</a> ·
+    the <a href="https://processing.org" target="_blank" rel="noopener">Processing</a> language is a project of the
+    <a href="https://processingfoundation.org" target="_blank" rel="noopener">Processing Foundation</a>
+  </p>
+</div>
+
+<script src="../../vendor/codemirror5/codemirror.js"></script>
+<script src="../../vendor/codemirror5/clike.js"></script>
+<script src="../../vendor/processingjs/processing.min.js"></script>
+<script>
+(() => {
+const consoleEl = document.getElementById('console');
+const messageEl = document.getElementById('message');
+const msgText = document.getElementById('msg-text');
+const lineNo = document.getElementById('line-no');
+const tab = document.getElementById('tab');
+const runBtn = document.querySelector('.pde-run');
+
+/* PDE-style default sketch name: sketch_YYMMDDa */
+const d = new Date();
+const pad = n => String(n).padStart(2, '0');
+const defaultName = `sketch_${String(d.getFullYear()).slice(2)}${pad(d.getMonth() + 1)}${pad(d.getDate())}a`;
+let fileName = defaultName + '.pde';
+let handle = null;
+let dirty = false;
+
+const EXAMPLES = {
+  bounce: `// Bouncing Ball
+float x = 60, y = 40;
+float vx = 3.1, vy = 2.4;
+
+void setup() {
+  size(360, 240);
+}
+
+void draw() {
+  background(9, 20, 13);
+  x += vx;
+  y += vy;
+  if (x < 14 || x > width - 14) vx = -vx;
+  if (y < 14 || y > height - 14) vy = -vy;
+  noStroke();
+  fill(79, 174, 125);
+  ellipse(x, y, 28, 28);
+}
+`,
+  waves: `// Sine Waves
+void setup() {
+  size(360, 240);
+  strokeWeight(2);
+}
+
+void draw() {
+  background(248, 242, 221);
+  float t = frameCount * 0.03;
+  for (int w = 0; w < 3; w++) {
+    stroke(39 + w * 20, 107 + w * 30, 71 + w * 20);
+    noFill();
+    beginShape();
+    for (int x = 0; x <= width; x += 4) {
+      float y = height / 2 + sin(x * 0.03 + t + w * PI / 3) * (30 + w * 15);
+      vertex(x, y);
+    }
+    endShape();
+  }
+}
+`,
+  draw: `// Mouse Painter — drag to paint, press any key to clear
+void setup() {
+  size(360, 240);
+  background(248, 242, 221);
+}
+
+void draw() {
+  if (mousePressed) {
+    stroke(9, 20, 13);
+    strokeWeight(6);
+    line(pmouseX, pmouseY, mouseX, mouseY);
+  }
+}
+
+void keyPressed() {
+  background(248, 242, 221);
+}
+`
+};
+
+const cm = CodeMirror.fromTextArea(document.getElementById('code'), {
+  mode: 'text/x-java',
+  lineNumbers: true,
+  indentUnit: 2,
+  viewportMargin: Infinity
+});
+cm.setValue(EXAMPLES.bounce);
+cm.on('change', () => { if (!dirty) { dirty = true; renderTab(); } });
+cm.on('cursorActivity', () => { lineNo.textContent = cm.getCursor().line + 1; });
+
+const print = (text, cls) => {
+  const s = document.createElement('span');
+  if (cls) s.className = cls;
+  s.textContent = text;
+  consoleEl.appendChild(s);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+};
+
+const setMessage = (text, isError) => {
+  msgText.textContent = text || '';
+  messageEl.classList.toggle('error', !!isError);
+};
+
+const renderTab = () => {
+  tab.innerHTML = '';
+  tab.appendChild(document.createTextNode(fileName.replace(/\.pde$/i, '')));
+  if (dirty) {
+    const s = document.createElement('span');
+    s.className = 'dirty';
+    s.textContent = ' §';
+    tab.appendChild(s);
+  }
+};
+
+/* ---- sketch display window ---- */
+let instance = null;
+let sketchWin = null;
+
+function closeSketchWindow() {
+  if (instance) { try { instance.exit(); } catch {} instance = null; }
+  if (sketchWin) { sketchWin.remove(); sketchWin = null; }
+  runBtn.classList.remove('running');
+}
+
+function openSketchWindow() {
+  const win = document.createElement('div');
+  win.className = 'sketch-window';
+  const bar = document.createElement('div');
+  bar.className = 'sketch-titlebar';
+  const dot = document.createElement('button');
+  dot.className = 'dot';
+  dot.title = 'Stop sketch';
+  dot.setAttribute('aria-label', 'Stop sketch');
+  const title = document.createElement('span');
+  title.className = 'title';
+  title.textContent = fileName.replace(/\.pde$/i, '');
+  bar.append(dot, title);
+  const body = document.createElement('div');
+  body.className = 'sketch-body';
+  const canvas = document.createElement('canvas');
+  canvas.tabIndex = 0;
+  body.appendChild(canvas);
+  const frame = document.createElement('div');
+  frame.className = 'frame';
+  win.append(bar, body, frame);
+  document.body.appendChild(win);
+
+  win.style.right = '26px';
+  win.style.top = '96px';
+
+  dot.addEventListener('click', () => {
+    closeSketchWindow();
+    setMessage('Sketch stopped.');
+  });
+
+  /* dragging */
+  bar.addEventListener('pointerdown', e => {
+    if (e.target === dot) return;
+    const r = win.getBoundingClientRect();
+    win.style.right = 'auto';
+    win.style.left = r.left + 'px';
+    win.style.top = r.top + 'px';
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = ev => {
+      win.style.left = Math.max(-r.width + 60, Math.min(innerWidth - 40, ev.clientX - dx)) + 'px';
+      win.style.top = Math.max(0, Math.min(innerHeight - 30, ev.clientY - dy)) + 'px';
+    };
+    const up = () => {
+      removeEventListener('pointermove', move);
+      removeEventListener('pointerup', up);
+    };
+    addEventListener('pointermove', move);
+    addEventListener('pointerup', up);
+    e.preventDefault();
+  });
+
+  sketchWin = win;
+  return canvas;
+}
+
+/* route the sketch's print()/println() into the IDE console */
+Processing.logger = {
+  print: function () { print(Array.prototype.join.call(arguments, ' ')); },
+  println: function () { print(Array.prototype.join.call(arguments, ' ') + '\n'); }
+};
+
+function run() {
+  closeSketchWindow();
+  consoleEl.innerHTML = '';
+  setMessage('');
+  const canvas = openSketchWindow();
+  try {
+    instance = new Processing(canvas, cm.getValue());
+    runBtn.classList.add('running');
+    setMessage('Running — close the sketch window or press Stop to finish.');
+    canvas.focus();
+  } catch (err) {
+    closeSketchWindow();
+    const text = String(err && err.message || err);
+    setMessage(text, true);
+    print(text + '\n', 'err');
+  }
+}
+
+function stop() {
+  if (!instance && !sketchWin) return;
+  closeSketchWindow();
+  setMessage('Sketch stopped.');
+}
+
+/* runtime errors (thrown from the draw loop) surface as window errors */
+addEventListener('error', e => {
+  if (!instance) return;
+  const text = String(e.message || e.error || 'Runtime error');
+  setMessage(text, true);
+  print(text + '\n', 'err');
+});
+
+/* ---- files ---- */
+const fsAccess = 'showOpenFilePicker' in window;
+const pdeTypes = [{ description: 'Processing sketch', accept: { 'text/x-processing': ['.pde'] } }];
+const setFile = (name, h) => {
+  fileName = name;
+  handle = h || null;
+  dirty = false;
+  document.title = name.replace(/\.pde$/i, '') + ' — Processing — ClackOS';
+  renderTab();
+};
+
+const picker = document.createElement('input');
+picker.type = 'file';
+picker.accept = '.pde,text/plain';
+picker.addEventListener('change', async () => {
+  const f = picker.files[0];
+  picker.value = '';
+  if (!f) return;
+  cm.setValue(await f.text());
+  setFile(f.name);
+});
+
+async function openFile() {
+  if (!fsAccess) { picker.click(); return; }
+  try {
+    const [h] = await window.showOpenFilePicker({ types: pdeTypes });
+    const f = await h.getFile();
+    cm.setValue(await f.text());
+    setFile(f.name, h);
+  } catch {}
+}
+
+async function saveFile(as) {
+  if (fsAccess) {
+    try {
+      if (as || !handle)
+        handle = await window.showSaveFilePicker({ types: pdeTypes, suggestedName: fileName });
+      const w = await handle.createWritable();
+      await w.write(cm.getValue());
+      await w.close();
+      setFile((await handle.getFile()).name, handle);
+      setMessage(`Saved ${fileName}`);
+    } catch {}
+    return;
+  }
+  if (as) {
+    const n = prompt('Save as:', fileName);
+    if (!n) return;
+    fileName = /\.pde$/i.test(n) ? n : n + '.pde';
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([cm.getValue()], { type: 'text/x-processing' }));
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  setFile(fileName, null);
+  setMessage(`Saved ${fileName} (downloaded)`);
+}
+
+/* ---- menus / toolbar ---- */
+const rms = document.querySelectorAll('.rm');
+const closeRm = () => rms.forEach(m => m.classList.remove('open'));
+rms.forEach(m => {
+  m.querySelector(':scope > button').addEventListener('click', e => {
+    e.stopPropagation();
+    const was = m.classList.contains('open');
+    closeRm();
+    if (!was) m.classList.add('open');
+  });
+});
+document.addEventListener('click', closeRm);
+
+document.querySelector('.app').addEventListener('click', e => {
+  const ex = e.target.closest('[data-example]');
+  if (ex) {
+    closeRm();
+    cm.setValue(EXAMPLES[ex.dataset.example]);
+    setFile(defaultName + '.pde');
+    return;
+  }
+  const cmd = e.target.closest('[data-cmd]');
+  if (!cmd) return;
+  closeRm();
+  switch (cmd.dataset.cmd) {
+    case 'new': cm.setValue(''); setFile(defaultName + '.pde'); setMessage(''); break;
+    case 'open': openFile(); break;
+    case 'save': saveFile(false); break;
+    case 'saveas': saveFile(true); break;
+    case 'run': run(); break;
+    case 'stop': stop(); break;
+    case 'reference': window.open('https://processing.org/reference/', '_blank', 'noopener'); break;
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveFile(e.shiftKey); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'r') { e.preventDefault(); run(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === '.') { e.preventDefault(); stop(); }
+});
+
+setFile(fileName);
+print('Processing.js ' + '1.6.6' + ' — ready. Press Run to start the sketch.\n', 'sys');
+setMessage('Ready.');
+})();
+</script>
+</body>
+</html>
