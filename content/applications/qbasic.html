@@ -5,14 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark">
 <title>QBasic 1.1 — ClackOS</title>
-<link rel="stylesheet" href="../../vendor/js-dos/js-dos.css">
 <style>
 html, body, #qbasic {
   width: 100%; height: 100%; margin: 0; overflow: hidden; background: #000;
 }
 body { font-family: "IBM Plex Mono", Consolas, monospace; }
-#qbasic { position: absolute; inset: 0; }
-#qbasic canvas { image-rendering: pixelated; }
+#qbasic { display: block; image-rendering: pixelated; }
 .boot {
   position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
   background: #0000a8; color: #fff; transition: opacity 120ms linear;
@@ -35,7 +33,7 @@ body { font-family: "IBM Plex Mono", Consolas, monospace; }
 </style>
 </head>
 <body>
-<div id="qbasic" role="application" aria-label="QBasic 1.1"></div>
+<canvas id="qbasic" role="application" aria-label="QBasic 1.1"></canvas>
 <div class="boot" id="boot" role="status" aria-live="polite">
   <div class="boot-panel">
     <h1>QBasic 1.1</h1>
@@ -45,47 +43,20 @@ body { font-family: "IBM Plex Mono", Consolas, monospace; }
   </div>
 </div>
 
-<script src="../../vendor/js-dos/js-dos.js"></script>
+<script src="../../vendor/js-dos-6.22/js-dos.js"></script>
 <script>
 (() => {
-  const root = document.getElementById('qbasic');
+  const canvas = document.getElementById('qbasic');
   const boot = document.getElementById('boot');
   const status = document.getElementById('boot-status');
   const detail = document.getElementById('boot-detail');
   const retry = document.getElementById('retry');
-
-  const dosboxConf = `
-[sdl]
-autolock=false
-
-[dosbox]
-machine=svga_s3
-memsize=16
-
-[render]
-aspect=true
-scaler=none
-
-[cpu]
-core=auto
-cputype=auto
-cycles=fixed 12000
-
-[mixer]
-nosound=true
-
-[autoexec]
-@echo off
-mount c .
-c:
-QBASIC.EXE
-`;
-
   let revealed = false;
+  let failed = false;
   let startupTimer = 0;
 
   function reveal() {
-    if (revealed) return;
+    if (revealed || failed) return;
     revealed = true;
     window.clearTimeout(startupTimer);
     boot.classList.add('ready');
@@ -93,20 +64,29 @@ QBASIC.EXE
     window.setTimeout(() => boot.remove(), 150);
   }
 
-  function waitForQBasic(ci) {
+  function fail(error) {
+    if (failed) return;
+    failed = true;
+    window.clearTimeout(startupTimer);
+    boot.classList.add('error');
+    status.textContent = 'QBasic could not start.';
+    detail.textContent = error && error.message ? error.message : String(error);
+  }
+
+  function waitForQBasic() {
     const deadline = performance.now() + 15000;
-    const check = async () => {
+    const check = () => {
       try {
-        const frame = await ci.screenshot();
-        const pixels = frame.data;
+        const context = canvas.getContext('2d');
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        const stride = Math.max(4, Math.floor(pixels.length / 5000 / 4) * 4);
         let blue = 0;
-        const samples = Math.max(1, Math.floor(pixels.length / 4 / 5000));
         let total = 0;
-        for (let i = 0; i < pixels.length; i += 4 * samples) {
+        for (let i = 0; i < pixels.length; i += stride) {
           total++;
           if (pixels[i + 2] > 70 && pixels[i + 2] > pixels[i] + 25 && pixels[i + 2] > pixels[i + 1] + 25) blue++;
         }
-        if (blue / total > 0.12) return reveal();
+        if (total && blue / total > 0.12) return reveal();
       } catch {}
       if (performance.now() >= deadline) return reveal();
       window.setTimeout(check, 100);
@@ -123,36 +103,22 @@ QBASIC.EXE
       const executable = new Uint8Array(await response.arrayBuffer());
       detail.textContent = 'Launching QBasic.';
 
-      Dos(root, {
-        dosboxConf,
-        initFs: [{ path: 'QBASIC.EXE', contents: executable }],
-        pathPrefix: '../../vendor/js-dos/emulators/',
-        backend: 'dosbox',
-        backendLocked: true,
-        workerThread: true,
-        autoStart: true,
-        countDownStart: 0,
-        kiosk: true,
-        autoSave: true,
-        mouseCapture: false,
-        noCursor: false,
-        renderAspect: '4/3',
-        renderBackend: 'canvas',
-        imageRendering: 'pixelated',
-        onEvent(event, ci) {
-          if (event === 'ci-ready') waitForQBasic(ci);
-        }
-      });
+      Dos(canvas, {
+        wdosboxUrl: '../../vendor/js-dos-6.22/wdosbox.js',
+        cycles: 'fixed 12000',
+        autolock: false,
+        onprogress() {},
+        onerror: fail
+      }).ready((fs, main) => {
+        fs.createFile('QBASIC.EXE', executable);
+        main(['-c', 'QBASIC.EXE']).then(waitForQBasic).catch(fail);
+      }).catch(fail);
+
       startupTimer = window.setTimeout(() => {
-        if (revealed) return;
-        boot.classList.add('error');
-        status.textContent = 'QBasic is taking too long to start.';
-        detail.textContent = 'Check the browser console or retry the launch.';
+        if (!revealed) fail(new Error('QBasic is taking too long to start.'));
       }, 30000);
     } catch (error) {
-      boot.classList.add('error');
-      status.textContent = 'QBasic could not start.';
-      detail.textContent = error && error.message ? error.message : String(error);
+      fail(error);
     }
   }
 
