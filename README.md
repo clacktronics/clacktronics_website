@@ -236,7 +236,14 @@ registered applications, Markdown windows, and desktop actions.
   the repository. The same explorer powers File → Open from website in the
   Markdown Editor, ClackPaint, and PDF Reader. Markdown opens `.md` files and
   inserts links/media for other selections, Paint accepts images, and PDF
-  Reader accepts PDFs.
+  Reader accepts PDFs. The standalone File Manager opens recognised files in
+  their ClackOS application (including Paint, Markdown Editor, PDF Reader,
+  Video Lab, OpenSCAD, Pure Data, Web Browser, and Text Editor); unknown file
+  types show a confirmation before opening a browser tab.
+- `applications/text.html` (Applications → System → Text Editor) — a small plain
+  text editor with local open/save, File System Access support where available,
+  website-file browsing, and startup association for `.txt` and related text
+  files.
 
   The live `/assets/` directory intentionally cannot be enumerated over HTTP,
   so this drive reads `content/media-index.json`. After adding legacy media

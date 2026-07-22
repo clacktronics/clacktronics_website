@@ -18,6 +18,53 @@
   const kindFor = path => Object.entries(mediaKinds).find(([, pattern]) => pattern.test(path))?.[0] || 'file';
   const formatSize = bytes => !Number.isFinite(bytes) ? '—' : bytes < 1024 ? `${bytes} B` :
     bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
+  const itemSource = item => item.drive === 'github' ? item.path : item.url;
+  const extensionFor = item => (item.name.match(/\.([^.]+)$/)?.[1] || '').toLowerCase();
+
+  function associationFor(item) {
+    if (!item || item.type !== 'file') return null;
+    const source = itemSource(item); const encoded = encodeURIComponent(source); const ext = extensionFor(item);
+    if (item.kind === 'image') return { label: 'ClackPaint', id: `app:applications/paint.html?src=${encoded}` };
+    if (item.kind === 'markdown') return { label: 'Markdown Editor', id: `app:applications/markdown.html?repo=${encoded}` };
+    if (item.kind === 'pdf') return { label: 'PDF Reader', id: `app:applications/pdf-reader/index.html?file=${encoded}` };
+    if (item.kind === 'video') return { label: 'Video Lab', id: `app:applications/video/index.html?src=${encoded}` };
+    if (/^(?:txt|log|csv|json|css|js|mjs|xml|ya?ml|ini|conf)$/.test(ext))
+      return { label: 'Text Editor', id: `app:applications/text.html?repo=${encoded}` };
+    if (ext === 'scad' && item.drive === 'github')
+      return { label: 'OpenSCAD', id: `app:applications/openscad.html?src=${encoded}` };
+    if (ext === 'pd' && item.drive === 'github')
+      return { label: 'Pure Data', id: `app:applications/puredata.html?src=${encoded}` };
+    if (/^html?$/.test(ext))
+      return { label: 'Web Browser', id: `app:applications/browser.html?url=${encodeURIComponent(item.url)}` };
+    return null;
+  }
+
+  async function openItem(item) {
+    const association = associationFor(item);
+    if (!association) {
+      const ext = extensionFor(item); const type = ext ? `.${ext}` : 'this type of';
+      if (!window.confirm(`No ClackOS application is associated with ${type} file.\n\n${item.name} will open in a new browser tab. Continue?`)) return false;
+      window.open(item.url, '_blank', 'noopener');
+      return true;
+    }
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'clackos-open-app', id: association.id }, location.origin);
+    } else {
+      const appUrl = new URL(`content/${association.id.slice(4)}`, SITE_ROOT);
+      window.open(appUrl.href, '_blank', 'noopener');
+    }
+    return true;
+  }
+
+  function mediaUrl(value) {
+    try {
+      const url = new URL(value);
+      const isClackHost = host => /(^|\.)clacktronics\.co\.uk$/i.test(host);
+      if (isClackHost(location.hostname) && isClackHost(url.hostname))
+        return new URL(`${url.pathname}${url.search}${url.hash}`, location.origin).href;
+    } catch (_) {}
+    return value;
+  }
 
   async function config() {
     if (cache.config) return cache.config;
@@ -59,12 +106,15 @@
     const response = await fetch(new URL(indexPath, SITE_ROOT), { cache: 'no-store' });
     if (!response.ok) throw new Error(`Could not read the website media index (${response.status})`);
     const data = await response.json();
-    return (cache.media = (data.files || []).map(entry => ({
+    return (cache.media = (data.files || []).map(entry => {
+      const url = mediaUrl(entry.url);
+      return ({
       drive: 'media', type: 'file', name: entry.name || entry.url.split('/').pop(),
       path: `${entry.kind || kindFor(entry.url)}s/${entry.name || entry.url.split('/').pop()}`,
       kind: entry.kind || kindFor(entry.url), size: entry.size,
-      url: entry.url, downloadUrl: entry.url, source: entry.source
-    })).sort((a, b) => a.path.localeCompare(b.path)));
+      url, downloadUrl: url, source: entry.source
+    });
+    }).sort((a, b) => a.path.localeCompare(b.path)));
   }
 
   class Explorer {
@@ -100,7 +150,7 @@
         this.els.drives.appendChild(button);
       }
       this.els.up.addEventListener('click', () => this.navigate(this.path.split('/').slice(0, -1).join('/')));
-      this.els.search.addEventListener('input', () => this.render());
+      this.els.search.addEventListener('input', () => { this.selected = null; this.render(); });
       this.els.action.addEventListener('click', () => this.choose());
       this.els.cancel.addEventListener('click', () => this.modal ? this.close() : this.refresh());
       this.els.close.addEventListener('click', () => this.close());
@@ -174,7 +224,9 @@
       const item = this.selected; const box = this.els.preview.querySelector('.clack-fm-preview-box');
       const name = this.els.preview.querySelector('h3'); const meta = this.els.preview.querySelector('.clack-fm-meta');
       this.els.action.disabled = !item || !this.compatible(item);
-      this.els.action.textContent = item && this.options.actionFor ? this.options.actionFor(item) : (this.options.actionLabel || 'Open');
+      const association = associationFor(item);
+      this.els.action.textContent = item && this.options.actionFor ? this.options.actionFor(item) :
+        (item && !this.options.onSelect ? association ? `Open in ${association.label}` : 'Open in new tab' : (this.options.actionLabel || 'Open'));
       if (!item) { box.innerHTML = '<span class="clack-fm-preview-icon">▰</span>'; name.textContent = 'Select a file'; meta.textContent = 'Choose a file to see its details.'; return; }
       name.textContent = item.name;
       meta.textContent = `${item.drive === 'github' ? 'GitHub repository' : 'Live website'} · ${item.path}${Number.isFinite(item.size) ? ` · ${formatSize(item.size)}` : ''}`;
@@ -188,9 +240,14 @@
       if (!item || !this.compatible(item)) return;
       this.els.action.disabled = true; this.els.status.textContent = `${this.els.action.textContent} ${item.name}…`;
       try {
-        if (this.options.onSelect) await this.options.onSelect(item);
-        else window.open(item.url, '_blank', 'noopener');
+        const opened = this.options.onSelect ? (await this.options.onSelect(item), true) : await openItem(item);
+        if (!opened) { this.els.status.textContent = 'Open cancelled'; this.els.action.disabled = false; return; }
         if (this.modal && this.options.closeOnSelect !== false) this.close();
+        else {
+          const association = associationFor(item);
+          this.els.status.textContent = association ? `Opened ${item.name} in ${association.label}` : `Opened ${item.name} in a new tab`;
+          this.els.action.disabled = false;
+        }
       } catch (error) {
         this.els.status.textContent = error.message || String(error); this.els.action.disabled = false;
       }
@@ -211,6 +268,8 @@
       setTimeout(() => explorer.els.search.focus(), 0); return explorer;
     },
     mount(host, options = {}) { return new Explorer(host, options, false); },
-    kindFor
+    kindFor,
+    associationFor,
+    openItem
   };
 })();
