@@ -98,7 +98,11 @@ let entryIndex = -1;
 let currentUrl = '';
 
 function normaliseUrl(value) {
-  const raw = String(value || '').trim();
+  /* URLSearchParams decodes one query-string layer before this function sees
+     the nested URL. Re-escape source-code formatting characters because the
+     URL parser otherwise strips literal CR, LF and tab characters. */
+  const raw = String(value || '')
+    .replace(/\r/g, '%0D').replace(/\n/g, '%0A').replace(/\t/g, '%09').trim();
   if (!raw) return '';
   const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
   try {
