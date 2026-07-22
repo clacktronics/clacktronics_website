@@ -4,7 +4,7 @@
 The ClackOS desktop stays untouched; this walks content/file/ (plus the
 about page) and converts each markdown file to a standalone HTML page with
 ordinary links. window:<path> links become relative links between mirror
-pages, app:<page> links open the standalone application page in a new tab,
+pages, app:<page> links open the standalone application in a new tab,
 and the @[youtube] / @[video] / @[kicanvas] embed directives keep working
 inline. Run it after editing content:
 
@@ -21,16 +21,9 @@ import urllib.parse
 root = pathlib.Path(__file__).resolve().parent.parent
 content = root / 'content'
 out_root = root / 'plain'
-site = json.loads((content / 'site.json').read_text())
-
-NAV = [
-    ('index.html', 'Home', 'file/home.md'),
-    ('readme.html', 'README', 'file/readme.md'),
-    ('catalogue.html', 'Catalogue', 'file/catalogue.md'),
-    ('euroclack.html', 'EuroClack', 'file/euroclack.md'),
-    ('blog.html', 'Blog', 'file/blog.md'),
-    ('about.html', 'About', 'applications/about.md'),
-]
+site = json.loads((content / 'site.json').read_text(encoding='utf-8'))
+file_menu = json.loads((content / 'file' / 'menu.json').read_text(encoding='utf-8'))
+applications_menu = json.loads((content / 'applications' / 'menu.json').read_text(encoding='utf-8'))
 
 # ---------------------------------------------------------------- collect
 def collect_pages():
@@ -87,6 +80,66 @@ def fix_url(url, page_out):
         return url
     return resolve_site_url(url, page_out)
 
+def menu_link(href, label, new_tab=False):
+    target = ' target="_blank" rel="noopener noreferrer"' if new_tab else ''
+    return '<a href="%s"%s>%s</a>' % (esc(href), target, esc(label))
+
+def submenu(label, items):
+    if not items:
+        return ''
+    return ('<details class="plain-submenu"><summary>%s</summary>'
+            '<div class="plain-menu-panel">%s</div></details>'
+            % (esc(label), ''.join(items)))
+
+def application_items(items, page_out):
+    """Build the static Applications menu from the same JSON as ClackOS."""
+    out = []
+    for item in items:
+        kind = item.get('type')
+        if kind == 'submenu':
+            nested = application_items(item.get('items', []), page_out)
+            if nested:
+                out.append(submenu(item.get('label', ''), nested))
+        elif kind == 'app' and item.get('page'):
+            href = resolve_site_url('content/applications/' + item['page'], page_out)
+            out.append(menu_link(href, item.get('label', item['page']), new_tab=True))
+        elif kind == 'window' and item.get('md'):
+            target = 'applications/' + item['md']
+            if target in PAGES:
+                out.append(menu_link(rel_href(PAGES[target], page_out),
+                                     item.get('label', item['md'])))
+        elif kind == 'sep' and out and out[-1] != '<hr>':
+            out.append('<hr>')
+    while out and out[-1] == '<hr>':
+        out.pop()
+    return out
+
+def render_menu(md_rel, page_out):
+    open_items = []
+    for item in file_menu.get('items', []):
+        if item.get('type') != 'submenu' or item.get('label', '').lower() != 'open':
+            continue
+        for child in item.get('items', []):
+            target = 'file/' + child.get('md', '')
+            if child.get('type') == 'window' and target in PAGES:
+                open_items.append(menu_link(rel_href(PAGES[target], page_out),
+                                            child.get('label', child['md'])))
+
+    repo = site.get('repo', 'clacktronics/clacktronics_website')
+    bug_href = 'https://github.com/%s/issues/new' % repo
+    edit_href = resolve_site_url('content/applications/markdown.html', page_out)
+    edit_href += '?open=' + urllib.parse.quote('content/' + md_rel, safe='/')
+    file_items = [submenu('Open', open_items),
+                  menu_link(bug_href, 'Report bug…', new_tab=True),
+                  menu_link(edit_href, 'Edit…', new_tab=True)]
+    apps = application_items(applications_menu.get('items', []), page_out)
+    return ('<nav class="plain-menubar" aria-label="Site menu">'
+            '<details class="plain-menu"><summary>File</summary>'
+            '<div class="plain-menu-panel">%s</div></details>'
+            '<details class="plain-menu"><summary>Applications</summary>'
+            '<div class="plain-menu-panel">%s</div></details>'
+            '</nav>') % (''.join(file_items), ''.join(apps))
+
 # ---------------------------------------------------------------- inline
 def inline(s, page_out):
     s = esc(s)
@@ -111,8 +164,8 @@ def inline(s, page_out):
                 return '<a href="%s">%s</a>' % (esc(rel_href(PAGES[target], page_out)), text)
             return text
         if href.startswith('app:'):
-            # Apps are standalone pages under content/; open them plainly
-            # in a new window instead of a desktop window.
+            # Apps are standalone pages under content/; open the page itself
+            # in a new tab instead of putting it in a desktop window.
             page, sep, opts = href[len('app:'):].partition('?')
             url = resolve_site_url('content/' + page, page_out)
             if sep:
@@ -263,17 +316,12 @@ def md_to_html(body, meta, page_out, state):
 STYLE = 'style.css'
 
 def render_page(md_rel, page_out):
-    meta, body = parse_front_matter((content / md_rel).read_text())
+    meta, body = parse_front_matter((content / md_rel).read_text(encoding='utf-8'))
     state = {'kicanvas': False}
     article = md_to_html(body, meta, page_out, state)
     style_class = 'page' if meta.get('style') == 'page' else 'plain'
     title = meta.get('title', 'Clacktronics')
-    nav = ' · '.join(
-        '<a href="%s"%s>%s</a>'
-        % (esc(rel_href(out, page_out)),
-           ' class="current"' if out == page_out else '',
-           esc(label))
-        for out, label, _md in NAV)
+    menu = render_menu(md_rel, page_out)
     kicanvas = ('<script type="module" src="%s"></script>\n'
                 % esc(resolve_site_url('vendor/kicanvas/kicanvas.js', page_out))
                 if state['kicanvas'] else '')
@@ -295,13 +343,48 @@ def render_page(md_rel, page_out):
 <link rel="stylesheet" href="{esc(rel_href(STYLE, page_out))}">
 {kicanvas}</head>
 <body class="plain-mirror">
-<header id="plain-nav"><nav>{nav}</nav></header>
+<header id="plain-nav">{menu}</header>
 <main>
 <div class="{style_class}">
 {article}
 </div>
 </main>
-<div id="plain-site-footer"><a href="{esc(resolve_site_url('index.html', page_out))}">Switch to the ClackOS desktop version</a></div>
+<div id="plain-site-footer"><a href="{esc(resolve_site_url('index.html?desktop=1', page_out))}">Switch to the ClackOS desktop version</a></div>
+<script>
+(() => {{
+  const topMenus = [...document.querySelectorAll('.plain-menu')];
+  const submenus = [...document.querySelectorAll('.plain-submenu')];
+  const closeTree = menu => {{
+    menu.open = false;
+    menu.querySelectorAll('details[open]').forEach(child => {{ child.open = false; }});
+  }};
+
+  topMenus.forEach(menu => {{
+    menu.addEventListener('toggle', () => {{
+      if (menu.open)
+        topMenus.filter(other => other !== menu).forEach(closeTree);
+    }});
+    menu.addEventListener('mouseleave', () => closeTree(menu));
+  }});
+
+  submenus.forEach(menu => {{
+    menu.addEventListener('toggle', () => {{
+      if (!menu.open) return;
+      const siblings = menu.parentElement.querySelectorAll(':scope > .plain-submenu[open]');
+      siblings.forEach(other => {{ if (other !== menu) closeTree(other); }});
+    }});
+    if (matchMedia('(hover: hover)').matches)
+      menu.addEventListener('mouseenter', () => {{ menu.open = true; }});
+  }});
+
+  document.addEventListener('click', event => {{
+    if (!event.target.closest('.plain-menubar')) topMenus.forEach(closeTree);
+  }});
+  document.addEventListener('keydown', event => {{
+    if (event.key === 'Escape') topMenus.forEach(closeTree);
+  }});
+}})();
+</script>
 </body>
 </html>
 '''
@@ -321,15 +404,46 @@ body.plain-mirror main { flex: 1; width: 100%; }
 #plain-nav {
   background: var(--ink); color: var(--menu-text);
   font-size: 13px; font-weight: 500;
-  padding: 8px 16px;
+  min-height: 34px;
 }
-#plain-nav nav { max-width: 980px; margin: 0 auto; }
-#plain-nav a {
-  color: var(--menu-text); text-decoration: none;
-  padding: 3px 8px; border-radius: 5px;
+.plain-menubar {
+  max-width: 980px; margin: 0 auto; padding: 0 8px;
+  display: flex; align-items: stretch;
 }
-#plain-nav a:hover { background: var(--leaf-deep); }
-#plain-nav a.current { background: var(--leaf-deep); color: var(--accent-hover); }
+.plain-menu, .plain-submenu { position: relative; }
+.plain-menu summary, .plain-submenu summary {
+  list-style: none; cursor: pointer; user-select: none;
+}
+.plain-menu summary::-webkit-details-marker,
+.plain-submenu summary::-webkit-details-marker { display: none; }
+.plain-menu > summary { padding: 9px 12px 8px; }
+.plain-menu[open] > summary { background: var(--leaf-deep); color: var(--accent-hover); }
+.plain-menu-panel {
+  position: absolute; z-index: 20; top: 100%; left: 0;
+  min-width: 230px; padding: 5px 0;
+  background: var(--paper); color: var(--control-text);
+  border: 1px solid var(--ink); box-shadow: 3px 3px 0 var(--shadow);
+}
+.plain-menu-panel a, .plain-submenu > summary {
+  display: block; padding: 7px 14px; color: var(--control-text);
+  text-decoration: none; white-space: nowrap;
+}
+.plain-menu-panel a:hover, .plain-menu-panel a:focus,
+.plain-submenu[open] > summary { background: var(--ink); color: var(--menu-text); }
+.plain-submenu > summary::after { content: '\\203a'; float: right; margin-left: 20px; }
+.plain-submenu > .plain-menu-panel { top: -6px; left: 100%; }
+.plain-menu-panel hr { border: 0; border-top: 1px solid var(--paper-line); margin: 5px 0; }
+
+@media (max-width: 640px) {
+  .plain-menu { position: static; }
+  .plain-menu > .plain-menu-panel {
+    left: 8px; right: 8px; min-width: 0; max-height: calc(100vh - 48px); overflow: auto;
+  }
+  .plain-submenu > .plain-menu-panel {
+    position: static; border-width: 1px 0; box-shadow: none; margin: 0 8px 5px;
+  }
+  .plain-menu-panel a, .plain-submenu > summary { white-space: normal; }
+}
 
 #plain-site-footer {
   border-top: 1px solid var(--paper-line);
@@ -346,8 +460,8 @@ def main():
     for md_rel, page_out in PAGES.items():
         dest = out_root / page_out
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(render_page(md_rel, page_out))
-    (out_root / STYLE).write_text(CSS)
+        dest.write_text(render_page(md_rel, page_out), encoding='utf-8', newline='\n')
+    (out_root / STYLE).write_text(CSS, encoding='utf-8', newline='\n')
     print(f'wrote {len(PAGES)} pages to {out_root.relative_to(root)}/')
 
 if __name__ == '__main__':

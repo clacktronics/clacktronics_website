@@ -6,6 +6,19 @@
 <meta name="color-scheme" content="only light">
 <meta name="theme-color" content="#09140d">
 <title>Clacktronics — ClackOS</title>
+<script>
+/* Phones use the generated no-desktop site by default. ?desktop=1 is the
+   explicit escape hatch linked from every plain-HTML page. */
+(() => {
+  const params = new URLSearchParams(location.search);
+  const ua = navigator.userAgent || '';
+  const mobile = (navigator.userAgentData && navigator.userAgentData.mobile) ||
+    /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua) ||
+    (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+  if (mobile && !params.has('desktop'))
+    location.replace(`plain/index.html${location.hash}`);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">

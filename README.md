@@ -378,12 +378,15 @@ wallpapers.
 
 `plain/` is a no-desktop mirror of all the markdown content — ordinary HTML
 pages with standard links, for readers (and machines) that don't want the
-ClackOS window manager. `window:` links become normal page-to-page links,
-`app:` links open the standalone application page in a new tab, and the
+ClackOS window manager. Its menu contains File (Open, Report bug, and Edit)
+plus the same Applications hierarchy as ClackOS. `window:` links become normal
+page-to-page links in the current tab, while `app:` links open the standalone
+application as a full page in a new tab. The
 `@[youtube]` / `@[video]` / `@[kicanvas]` embeds still render inline. The
 pages reuse `assets/css/clackos.css` plus the active theme from `site.json`,
-so the mirror keeps the ClackOS typography and palette. Each page footer
-links back to the desktop version, and the taskbar links to the mirror.
+so the mirror keeps the ClackOS typography and palette. Mobile devices enter
+this version by default. Each page footer links back to the desktop version,
+and the taskbar links to the mirror.
 
 The mirror is generated — don't edit `plain/` by hand. A GitHub Actions
 workflow (`.github/workflows/plain-mirror.yml`) regenerates it automatically
