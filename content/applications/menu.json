@@ -12,6 +12,7 @@
     { "type": "submenu", "label": "Maths & Programming", "icon": "terminal", "items": [
       { "type": "app", "page": "graphing-calculator.html", "label": "Graphing Calculator", "title": "Graphing Calculator", "icon": "analytics", "width": 960, "height": 660, "multi": true },
       { "type": "app", "page": "python.html", "label": "Python", "title": "Python", "icon": "terminal", "multi": true },
+      { "type": "app", "page": "processing.html", "label": "Processing", "title": "Processing", "icon": "play", "width": 1000, "height": 720, "multi": true },
       { "type": "app", "page": "openscad.html", "label": "OpenSCAD", "title": "OpenSCAD", "icon": "box", "width": 1040, "height": 720, "multi": true }
     ] },
     { "type": "submenu", "label": "Electronics", "icon": "circuit-board", "items": [
