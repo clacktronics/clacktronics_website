@@ -29,9 +29,6 @@
 * Some kind of fun GAL/EEPROM tool
 * Serial Console for USB
 * File Manager
-* Games
-* Web based Pure data
-* Web based processing
 * Perf/Strip/Bread(board) layout app ;ike lochmaster
 * Midi controllable, downloadable, mono synth.
 * Waveacity
