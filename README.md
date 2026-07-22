@@ -239,7 +239,11 @@ registered applications, Markdown windows, and desktop actions.
   Reader accepts PDFs. The standalone File Manager opens recognised files in
   their ClackOS application (including Paint, Markdown Editor, PDF Reader,
   Video Lab, OpenSCAD, Pure Data, Web Browser, and Text Editor); unknown file
-  types show a confirmation before opening a browser tab.
+  types show a confirmation before opening a browser tab. Associations are
+  configured in `content/file-associations.json` rather than in the File
+  Manager code. Rules are checked from top to bottom and may match `kinds`,
+  `extensions`, and optional `drives`; each rule names the destination `app`,
+  query-string `parameter`, label, and optional `source: "url"`.
 - `applications/text.html` (Applications → System → Text Editor) — a small plain
   text editor with local open/save, File System Access support where available,
   website-file browsing, and startup association for `.txt` and related text

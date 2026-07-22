@@ -3,7 +3,7 @@
 
   const ownScript = document.currentScript;
   const SITE_ROOT = new URL('../../', ownScript ? ownScript.src : location.href);
-  const cache = { config: null, github: null, media: null };
+  const cache = { config: null, associations: null, github: null, media: null };
   const mediaKinds = {
     image: /\.(?:png|jpe?g|gif|webp|bmp|svg|avif)$/i,
     video: /\.(?:mp4|webm|mov|m4v|ogv|avi|mkv)$/i,
@@ -23,20 +23,15 @@
 
   function associationFor(item) {
     if (!item || item.type !== 'file') return null;
-    const source = itemSource(item); const encoded = encodeURIComponent(source); const ext = extensionFor(item);
-    if (item.kind === 'image') return { label: 'ClackPaint', id: `app:applications/paint.html?src=${encoded}` };
-    if (item.kind === 'markdown') return { label: 'Markdown Editor', id: `app:applications/markdown.html?repo=${encoded}` };
-    if (item.kind === 'pdf') return { label: 'PDF Reader', id: `app:applications/pdf-reader/index.html?file=${encoded}` };
-    if (item.kind === 'video') return { label: 'Video Lab', id: `app:applications/video/index.html?src=${encoded}` };
-    if (/^(?:txt|log|csv|json|css|js|mjs|xml|ya?ml|ini|conf)$/.test(ext))
-      return { label: 'Text Editor', id: `app:applications/text.html?repo=${encoded}` };
-    if (ext === 'scad' && item.drive === 'github')
-      return { label: 'OpenSCAD', id: `app:applications/openscad.html?src=${encoded}` };
-    if (ext === 'pd' && item.drive === 'github')
-      return { label: 'Pure Data', id: `app:applications/puredata.html?src=${encoded}` };
-    if (/^html?$/.test(ext))
-      return { label: 'Web Browser', id: `app:applications/browser.html?url=${encodeURIComponent(item.url)}` };
-    return null;
+    const ext = extensionFor(item);
+    const rule = (cache.associations || []).find(candidate =>
+      (!candidate.drives.length || candidate.drives.includes(item.drive)) &&
+      (!candidate.kinds.length || candidate.kinds.includes(item.kind)) &&
+      (!candidate.extensions.length || candidate.extensions.includes(ext))
+    );
+    if (!rule) return null;
+    const source = rule.source === 'url' ? item.url : itemSource(item);
+    return { label: rule.label, id: `app:${rule.app}?${rule.parameter}=${encodeURIComponent(source)}` };
   }
 
   async function openItem(item) {
@@ -71,6 +66,33 @@
     const response = await fetch(new URL('content/site.json', SITE_ROOT), { cache: 'no-store' });
     if (!response.ok) throw new Error(`Could not read site configuration (${response.status})`);
     return (cache.config = await response.json());
+  }
+
+  async function associations() {
+    if (cache.associations) return cache.associations;
+    try {
+      const site = await config();
+      const path = site.fileAssociations || 'content/file-associations.json';
+      const response = await fetch(new URL(path, SITE_ROOT), { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json(); const rules = Array.isArray(data) ? data : data.associations;
+      if (!Array.isArray(rules)) throw new Error('the file does not contain an associations array');
+      cache.associations = rules.filter(rule => rule && typeof rule.label === 'string' &&
+        /^applications\/[a-z0-9][a-z0-9._/-]*\.html$/i.test(rule.app || '') &&
+        /^[a-z][a-z0-9_-]*$/i.test(rule.parameter || '')).map(rule => ({
+          label: rule.label,
+          app: rule.app,
+          parameter: rule.parameter,
+          source: rule.source === 'url' ? 'url' : 'path-or-url',
+          drives: Array.isArray(rule.drives) ? rule.drives.map(value => String(value).toLowerCase()) : [],
+          kinds: Array.isArray(rule.kinds) ? rule.kinds.map(value => String(value).toLowerCase()) : [],
+          extensions: Array.isArray(rule.extensions) ? rule.extensions.map(value => String(value).replace(/^\./, '').toLowerCase()) : []
+        }));
+    } catch (error) {
+      console.warn(`File associations unavailable: ${error.message || error}`);
+      cache.associations = [];
+    }
+    return cache.associations;
   }
 
   async function githubFiles() {
@@ -164,6 +186,7 @@
       this.els.status.textContent = drive === 'github' ? 'Loading the GitHub repository…' : 'Loading the website media catalogue…';
       this.host.querySelectorAll('.clack-fm-drive').forEach(button => button.classList.toggle('active', button.dataset.drive === drive));
       try {
+        await associations();
         this.files = drive === 'github' ? await githubFiles() : await mediaFiles();
         this.render();
       } catch (error) {

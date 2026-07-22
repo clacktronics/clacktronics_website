@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "associations": [
+    {
+      "label": "ClackPaint",
+      "kinds": ["image"],
+      "app": "applications/paint.html",
+      "parameter": "src"
+    },
+    {
+      "label": "Markdown Editor",
+      "kinds": ["markdown"],
+      "app": "applications/markdown.html",
+      "parameter": "repo"
+    },
+    {
+      "label": "PDF Reader",
+      "kinds": ["pdf"],
+      "app": "applications/pdf-reader/index.html",
+      "parameter": "file"
+    },
+    {
+      "label": "Video Lab",
+      "kinds": ["video"],
+      "app": "applications/video/index.html",
+      "parameter": "src"
+    },
+    {
+      "label": "Text Editor",
+      "extensions": ["txt", "log", "csv", "json", "css", "js", "mjs", "xml", "yaml", "yml", "ini", "conf"],
+      "app": "applications/text.html",
+      "parameter": "repo"
+    },
+    {
+      "label": "OpenSCAD",
+      "extensions": ["scad"],
+      "drives": ["github"],
+      "app": "applications/openscad.html",
+      "parameter": "src"
+    },
+    {
+      "label": "Pure Data",
+      "extensions": ["pd"],
+      "drives": ["github"],
+      "app": "applications/puredata.html",
+      "parameter": "src"
+    },
+    {
+      "label": "Web Browser",
+      "extensions": ["html", "htm"],
+      "app": "applications/browser.html",
+      "parameter": "url",
+      "source": "url"
+    }
+  ]
+}

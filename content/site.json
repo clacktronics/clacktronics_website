@@ -45,6 +45,7 @@
   ],
   "repo": "clacktronics/clacktronics_website",
   "branch": "main",
+  "fileAssociations": "content/file-associations.json",
   "assetUpload": "assets/upload.php",
   "media": {
     "label": "Website Media",
