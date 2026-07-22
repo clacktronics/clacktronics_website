@@ -206,6 +206,12 @@ registered applications, Markdown windows, and desktop actions.
   fixed-size, classic minesweeper game with Beginner, Intermediate, Expert and
   custom boards; safe first reveal; flags and question marks; number chording;
   mouse and keyboard play; optional sound; and browser-saved best times.
+- `applications/solitaire.html` (Applications → Games → Solitaire) — a themed
+  Klondike Solitaire game adapted from Aashish Chakravarty's MIT-licensed
+  browser game. It supports drag/drop moves, double-click to foundation,
+  scoring and browser-saved high scores, persistent games, restart, undo,
+  hints and auto-complete. The upstream revision, adaptation notes and full
+  licence are retained under `vendor/solitaire/`.
 - `applications/video/index.html` (Applications → Video Lab…) — a
   browser-only video player and editor with native preview plus a version-pinned
   FFmpeg WebAssembly compatibility/export engine. Supports forward and
