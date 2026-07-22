@@ -13,15 +13,46 @@ body.plain-mirror main { flex: 1; width: 100%; }
 #plain-nav {
   background: var(--ink); color: var(--menu-text);
   font-size: 13px; font-weight: 500;
-  padding: 8px 16px;
+  min-height: 34px;
 }
-#plain-nav nav { max-width: 980px; margin: 0 auto; }
-#plain-nav a {
-  color: var(--menu-text); text-decoration: none;
-  padding: 3px 8px; border-radius: 5px;
+.plain-menubar {
+  max-width: 980px; margin: 0 auto; padding: 0 8px;
+  display: flex; align-items: stretch;
 }
-#plain-nav a:hover { background: var(--leaf-deep); }
-#plain-nav a.current { background: var(--leaf-deep); color: var(--accent-hover); }
+.plain-menu, .plain-submenu { position: relative; }
+.plain-menu summary, .plain-submenu summary {
+  list-style: none; cursor: pointer; user-select: none;
+}
+.plain-menu summary::-webkit-details-marker,
+.plain-submenu summary::-webkit-details-marker { display: none; }
+.plain-menu > summary { padding: 9px 12px 8px; }
+.plain-menu[open] > summary { background: var(--leaf-deep); color: var(--accent-hover); }
+.plain-menu-panel {
+  position: absolute; z-index: 20; top: 100%; left: 0;
+  min-width: 230px; padding: 5px 0;
+  background: var(--paper); color: var(--control-text);
+  border: 1px solid var(--ink); box-shadow: 3px 3px 0 var(--shadow);
+}
+.plain-menu-panel a, .plain-submenu > summary {
+  display: block; padding: 7px 14px; color: var(--control-text);
+  text-decoration: none; white-space: nowrap;
+}
+.plain-menu-panel a:hover, .plain-menu-panel a:focus,
+.plain-submenu[open] > summary { background: var(--ink); color: var(--menu-text); }
+.plain-submenu > summary::after { content: '\203a'; float: right; margin-left: 20px; }
+.plain-submenu > .plain-menu-panel { top: -6px; left: 100%; }
+.plain-menu-panel hr { border: 0; border-top: 1px solid var(--paper-line); margin: 5px 0; }
+
+@media (max-width: 640px) {
+  .plain-menu { position: static; }
+  .plain-menu > .plain-menu-panel {
+    left: 8px; right: 8px; min-width: 0; max-height: calc(100vh - 48px); overflow: auto;
+  }
+  .plain-submenu > .plain-menu-panel {
+    position: static; border-width: 1px 0; box-shadow: none; margin: 0 8px 5px;
+  }
+  .plain-menu-panel a, .plain-submenu > summary { white-space: normal; }
+}
 
 #plain-site-footer {
   border-top: 1px solid var(--paper-line);
