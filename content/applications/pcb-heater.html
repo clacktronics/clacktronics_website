@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="only light">
+    <title>PCB Heater Designer — ClackOS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: only light;
+            --bg: var(--paper, #f8f2dd); --panel: var(--paper-deep, #f3ecd1);
+            --panel-dark: color-mix(in srgb, var(--paper-deep, #f3ecd1) 82%, var(--ink, #09140d));
+            --text: var(--ink-soft, #14231a); --muted: var(--sage, #66755a);
+            --border: var(--paper-line, #d8cfa9);
+            --accent: var(--leaf-deep, #276b47); --accent-hover: var(--leaf, #4fae7d);
+            --ok: #27724b; --warn: #9a6500; --error: #a33b32;
+            --front: #fb923c; --back: #60a5fa; --via: #c084fc;
+            --pad: #facc15; --pcb: #064e3b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; overflow: hidden; display: flex;
+            background: var(--bg); color: var(--text);
+            font-family: "IBM Plex Mono", monospace;
+        }
+        .sidebar {
+            width: 330px; flex: 0 0 330px; height: 100vh; overflow-y: auto;
+            display: flex; flex-direction: column; background: var(--panel);
+            border-right: 1px solid var(--border);
+        }
+        .header { padding: 13px 15px; border-bottom: 1px solid var(--border); }
+        .header h1 { margin: 0; font-size: 1.08rem; }
+        .header p { margin: 6px 0 0; color: var(--muted); font-size: .78rem; line-height: 1.35; }
+        .controls { padding: 12px 15px; display: flex; flex-direction: column; gap: 9px; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .control-group { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        label { color: var(--muted); font-size: .74rem; line-height: 1.2; font-weight: 650; white-space: nowrap; }
+        input, select, button {
+            min-width: 0; border: 1px solid var(--border); border-radius: 5px;
+            background: var(--bg); color: var(--text); padding: 5px 7px; font: inherit; font-size: .8rem;
+        }
+        input:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+        input[type="range"] { padding: 4px 0; accent-color: var(--accent); }
+        input:disabled { opacity: .45; cursor: not-allowed; }
+        .control-help { margin-top: 1px; padding: 0; border-left: 2px solid var(--accent); border-radius: 3px; background: color-mix(in srgb, var(--panel) 72%, var(--border)); color: var(--muted); font-size: .7rem; line-height: 1.4; }
+        .control-help summary, .input-help summary { cursor: pointer; padding: 5px 8px; color: var(--text); font-weight: 650; }
+        .control-help .help-body, .input-help .help-body { padding: 1px 8px 7px 21px; }
+        .control-help div + div { margin-top: 4px; }
+        .control-help strong { color: var(--text); }
+        .control-note { margin: 1px 0 0; color: var(--muted); font-size: .66rem; line-height: 1.3; }
+        .input-help { margin: 0; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: .68rem; line-height: 1.4; }
+        .input-help dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; margin: 0; }
+        .input-help dt { color: var(--text); font-weight: 650; }
+        .input-help dd { margin: 0; }
+        .export-button {
+            width: 100%; margin-top: 2px; border-color: var(--accent); background: var(--accent);
+            cursor: pointer; font-weight: 750;
+        }
+        .export-button:hover:not(:disabled) { background: var(--accent-hover); }
+        .export-button:disabled { opacity: .45; cursor: not-allowed; }
+        .export-button.secondary { border-color: var(--accent); background: var(--panel); color: var(--accent); }
+        .export-button.secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--panel) 75%, var(--accent)); color: var(--text); }
+        .checkbox-control { flex-direction: row; align-items: center; gap: 8px; padding-top: 23px; }
+        .checkbox-control input { min-width: auto; margin: 0; accent-color: var(--accent); }
+        .dashboard { margin-top: auto; padding: 12px 15px; border-top: 1px solid var(--border); background: var(--panel-dark); }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .stat { min-width: 0; padding: 7px; border: 1px solid var(--border); border-radius: 5px; background: var(--panel); }
+        .stat-label { color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .03em; }
+        .stat-value { margin-top: 3px; font-size: 1rem; font-weight: 750; overflow-wrap: anywhere; }
+        .status-banner { margin-top: 10px; padding: 10px; border: 1px solid; border-radius: 5px; font-size: .82rem; line-height: 1.35; }
+        .status-ok { color: var(--ok); border-color: var(--ok); background: color-mix(in srgb, var(--panel) 88%, var(--ok)); }
+        .status-warn { color: var(--warn); border-color: var(--warn); background: color-mix(in srgb, var(--panel) 88%, var(--warn)); }
+        .status-error { color: var(--error); border-color: var(--error); background: color-mix(in srgb, var(--panel) 88%, var(--error)); }
+        .suggestion-banner { margin-top: 8px; padding: 9px 10px; border-left: 3px solid var(--accent); border-radius: 4px; background: color-mix(in srgb, var(--panel) 88%, var(--accent)); color: var(--text); font-size: .78rem; line-height: 1.4; }
+        details { margin-top: 10px; color: var(--muted); font-size: .75rem; line-height: 1.4; }
+        details ul { padding-left: 18px; margin: 7px 0 0; }
+        [hidden] { display: none !important; }
+        .main {
+            position: relative; flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
+            padding: 66px 36px 36px; overflow: hidden;
+            background-color: var(--desktop, #e3ddc6);
+            background-image: radial-gradient(color-mix(in srgb, var(--desktop, #e3ddc6) 65%, var(--ink, #09140d)) 1px, transparent 1px); background-size: 20px 20px;
+        }
+        #board-svg {
+            position: absolute; top: 66px; right: 36px; bottom: 36px; left: 36px;
+            width: calc(100% - 72px); height: calc(100% - 102px); background: transparent;
+            filter: drop-shadow(0 14px 24px rgb(0 0 0 / .45));
+        }
+        .toolbar {
+            position: absolute; z-index: 2; top: 14px; left: 50%; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 10px; padding: 7px 10px;
+            border: 1px solid var(--border); border-radius: 6px; background: color-mix(in srgb, var(--panel) 94%, transparent);
+            box-shadow: 0 4px 16px rgb(0 0 0 / .25); font-size: .76rem; white-space: nowrap;
+        }
+        .toolbar select { padding: 4px 8px; font-size: .76rem; }
+        .swatch { display: inline-block; width: 18px; height: 4px; margin-right: 4px; border-radius: 2px; vertical-align: middle; }
+        .front { background: var(--front); } .back { background: var(--back); } .via { background: var(--via); }
+        .empty-state { color: var(--error); padding: 20px; text-align: center; }
+        @media (max-width: 820px) {
+            body { display: block; overflow: auto; }
+            .sidebar { width: 100%; height: auto; }
+            .main { min-height: 65vh; }
+        }
+    </style>
+</head>
+<body>
+<aside class="sidebar">
+    <div class="header">
+        <h1>PCB Heater Designer</h1>
+        <p>PCB heater geometry, electrical checks and KiCad board export. Dimensions are finished-copper design values.</p>
+    </div>
+    <div class="controls">
+        <div class="control-group">
+            <label for="inp-board-shape">Board shape</label>
+            <select id="inp-board-shape">
+                <option value="rectangle" selected>Rectangular</option>
+                <option value="circle">Circular</option>
+            </select>
+        </div>
+        <div class="row">
+            <div class="control-group">
+                <label for="inp-voltage" title="Supply voltage">Voltage (V)</label>
+                <input type="number" id="inp-voltage" value="12" min="0.1" step="0.5">
+            </div>
+            <div class="control-group">
+                <label for="inp-power" title="Power at the selected copper design temperature">Power (W)</label>
+                <input type="number" id="inp-power" value="16" min="0.1" step="1">
+            </div>
+        </div>
+        <div class="control-group" id="group-circle-diameter" hidden>
+            <label for="inp-diameter" title="Finished board diameter">Diameter (mm)</label>
+            <input type="number" id="inp-diameter" value="100" min="15" step="1">
+        </div>
+        <div class="row" id="group-rect-dimensions">
+            <div class="control-group">
+                <label for="inp-width" title="Finished board width">Width (mm)</label>
+                <input type="number" id="inp-width" value="100" min="15" step="1">
+            </div>
+            <div class="control-group">
+                <label for="inp-height" title="Finished board height">Height (mm)</label>
+                <input type="number" id="inp-height" value="100" min="15" step="1">
+            </div>
+        </div>
+        <div class="row">
+            <div class="control-group">
+                <label for="inp-thickness" title="Finished copper weight">Copper</label>
+                <select id="inp-thickness">
+                    <option value="0.5">0.5 oz/ft²</option>
+                    <option value="1" selected>1.0 oz/ft²</option>
+                    <option value="2">2.0 oz/ft²</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="inp-temperature" title="Copper temperature used for the resistance calculation">Copper temp (°C)</label>
+                <input type="number" id="inp-temperature" value="100" min="-20" max="250" step="5">
+            </div>
+        </div>
+        <div class="control-group">
+            <label for="inp-pattern">Pattern type</label>
+            <select id="inp-pattern">
+                <option value="serpentine" selected>Serpentine</option>
+                <option value="spiral">Spiral (matches board shape)</option>
+                <option value="hilbert">Hilbert curve</option>
+                <option value="moore">Moore curve</option>
+                <option value="peano">Peano curve</option>
+                <option value="gosper">Gosper curve</option>
+                <option value="sierpinski">Sierpiński arrowhead curve</option>
+            </select>
+        </div>
+        <div class="control-group" id="group-iteration">
+            <label for="inp-iteration">Iteration depth: <span id="val-iteration">N/A</span></label>
+            <input type="range" id="inp-iteration" value="5" min="1" max="5" step="1">
+            <p class="control-note" id="iteration-note">Used by fractal curves only.</p>
+        </div>
+        <div class="control-group" id="group-pitch">
+            <label for="inp-pitch">Track pitch: <span id="val-pitch">3.0 mm</span></label>
+            <input type="range" id="inp-pitch" value="3" min="0.3" max="25" step="0.1">
+        </div>
+        <details class="control-help" id="pattern-help">
+            <summary>Pattern notes</summary>
+            <div class="help-body" aria-live="polite">
+                <div><strong>Advantage:</strong> <span id="pattern-advantage">Simple, predictable single-layer routing with accessible edge pads, straightforward length control and easy fabrication.</span></div>
+                <div><strong>Trade-off:</strong> <span id="pattern-tradeoff">Parallel runs can produce visible hot and cool bands, especially with wide pitch or poor heat spreading.</span></div>
+            </div>
+        </details>
+        <details class="input-help">
+            <summary>Input definitions</summary>
+            <div class="help-body">
+                <dl>
+                    <dt>Power</dt><dd>Target power at the selected copper temperature.</dd>
+                    <dt>Copper</dt><dd>Finished copper weight after fabrication.</dd>
+                    <dt>Pitch</dt><dd>Centre-to-centre spacing of adjacent serpentine or spiral tracks.</dd>
+                    <dt>Iteration</dt><dd>Recursive depth; each pattern receives a safe default when selected.</dd>
+                    <dt>Radius</dt><dd>Requested trace corner radius, reduced locally where needed.</dd>
+                    <dt>Drill</dt><dd>Used only for through-hole connection pads.</dd>
+                </dl>
+            </div>
+        </details>
+        <div class="row">
+            <div class="control-group">
+                <label for="inp-pad-style" title="Connection pad technology">Pads</label>
+                <select id="inp-pad-style">
+                    <option value="through_hole" selected>Through-hole</option>
+                    <option value="smd">Surface mount (F.Cu)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="inp-pad-shape">Pad shape</label>
+                <select id="inp-pad-shape">
+                    <option value="circle" selected>Circle</option>
+                    <option value="oval">Oval</option>
+                    <option value="rect">Rectangle</option>
+                    <option value="roundrect">Rounded rectangle</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="control-group">
+                <label for="inp-pad-width" title="Connection pad width">Pad W (mm)</label>
+                <input type="number" id="inp-pad-width" value="3.2" min="0.5" step="0.1">
+            </div>
+            <div class="control-group">
+                <label for="inp-pad-height" title="Connection pad height">Pad H (mm)</label>
+                <input type="number" id="inp-pad-height" value="3.2" min="0.5" step="0.1">
+            </div>
+        </div>
+        <div class="row">
+            <div class="control-group">
+                <label for="inp-pad-drill" title="Through-hole pad drill diameter">Drill (mm)</label>
+                <input type="number" id="inp-pad-drill" value="1.2" min="0.1" step="0.1">
+            </div>
+            <div class="control-group">
+                <label for="inp-corner-radius" title="Requested copper trace corner radius">Radius (mm)</label>
+                <input type="number" id="inp-corner-radius" value="1" min="0" step="0.1">
+            </div>
+        </div>
+        <button class="export-button" id="export-button" type="button">Export KiCad .kicad_pcb</button>
+        <div class="row">
+            <div class="control-group">
+                <label for="inp-png-layer" title="Copper layer exported to the etching image">Etch layer</label>
+                <select id="inp-png-layer">
+                    <option value="F.Cu" selected>Front copper (F.Cu)</option>
+                    <option value="B.Cu">Back copper (B.Cu)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="inp-png-resolution" title="Etching PNG resolution">PNG DPI</label>
+                <input type="number" id="inp-png-resolution" value="300" min="25" max="2400" step="25">
+            </div>
+        </div>
+        <div class="control-group checkbox-control">
+            <input type="checkbox" id="inp-png-mirror">
+            <label for="inp-png-mirror">Mirror image horizontally</label>
+        </div>
+        <p class="control-note">Exports black board with white copper, pads and a thin board outline; drill holes remain black. Export front and back separately for two-layer designs.</p>
+        <button class="export-button secondary" id="png-export-button" type="button">Export inverted etching PNG</button>
+    </div>
+    <div class="dashboard">
+        <div class="stat-grid">
+            <div class="stat"><div class="stat-label">Hot resistance</div><div class="stat-value" id="stat-res">-- Ω</div></div>
+            <div class="stat"><div class="stat-label">Hot / cold current</div><div class="stat-value" id="stat-cur">-- A</div></div>
+            <div class="stat"><div class="stat-label">Trace length</div><div class="stat-value" id="stat-len">-- mm</div></div>
+            <div class="stat"><div class="stat-label">Trace width</div><div class="stat-value" id="stat-wid">-- mm</div></div>
+            <div class="stat"><div class="stat-label">Min clearance</div><div class="stat-value" id="stat-clr">-- mm</div></div>
+            <div class="stat"><div class="stat-label">Power density</div><div class="stat-value" id="stat-den">-- W/cm²</div></div>
+            <div class="stat"><div class="stat-label">Crossovers</div><div class="stat-value" id="stat-xover">--</div></div>
+            <div class="stat"><div class="stat-label">Copper layers used</div><div class="stat-value" id="stat-layers">--</div></div>
+        </div>
+        <div id="status-banner" class="status-banner status-ok">Ready</div>
+        <div id="suggestion-banner" class="suggestion-banner" hidden></div>
+        <details>
+            <summary>Electrical assumptions and safety</summary>
+            <ul>
+                <li>Power is calculated for constant-voltage DC at the entered copper temperature.</li>
+                <li>Copper temperature coefficient is 0.00393/°C; cold inrush is therefore higher.</li>
+                <li>1 oz is modelled as 0.0348 mm finished copper. Etch width and plating tolerances are not included.</li>
+                <li>Via, pad and connector resistance are omitted from the width calculation.</li>
+                <li>5 W/cm² is only a conservative warning threshold, not a guaranteed FR-4 thermal limit.</li>
+                <li>Prototype with current limiting, a fuse and an independent temperature cutoff. Verify resistance before full power.</li>
+            </ul>
+        </details>
+    </div>
+</aside>
+
+<main class="main" id="canvas-container">
+    <div class="toolbar">
+        <label for="layer-view">View</label>
+        <select id="layer-view">
+            <option value="both">Both layers</option>
+            <option value="front">F.Cu only</option>
+            <option value="back">B.Cu only</option>
+        </select>
+        <span><i class="swatch front"></i>F.Cu</span>
+        <span><i class="swatch back"></i>B.Cu</span>
+        <span><i class="swatch via"></i>Vias</span>
+    </div>
+    <svg id="board-svg" role="img" aria-label="PCB heater copper preview"></svg>
+</main>
+
+<script>
+"use strict";
+
+const RHO_CU_20 = 1.724e-5;       // ohm·mm at 20 °C
+const TEMP_COEFF_CU = 0.00393;    // per °C near room temperature
+const OZ_TO_MM = 0.0348;
+const MIN_WIDTH = 0.15;
+const MIN_CLEARANCE = 0.15;
+const MAX_DENSITY = 5.0;          // W/cm² heuristic only
+const MIN_PAD_ANNULUS = 0.15;
+const VIA_MIN_DIAMETER = 0.8;
+const VIA_DRILL = 0.4;
+const BOARD_MARGIN = 5;
+const MAX_SEGMENTS = 12000;
+const CURVE_MAX_SAGITTA = 0.005; // mm: maximum arc-to-chord deviation
+const CURVE_MAX_ANGLE = Math.PI / 30; // 6° safety cap per chord
+const EPS = 1e-7;
+const SVG_NS = "http://www.w3.org/2000/svg";
+const SUPPORTED_PATTERNS = new Set(["serpentine", "spiral", "hilbert", "moore", "peano", "gosper", "sierpinski"]);
+const PATTERN_DEFAULTS = {
+    serpentine: { pitch: 3 },
+    spiral: { pitch: 3 },
+    hilbert: { iteration: 5, maxIteration: 5 },
+    moore: { iteration: 5, maxIteration: 5 },
+    peano: { iteration: 3, maxIteration: 4 },
+    gosper: { iteration: 4, maxIteration: 4 },
+    sierpinski: { iteration: 5, maxIteration: 5 }
+};
+
+const els = {
+    voltage: document.getElementById("inp-voltage"), power: document.getElementById("inp-power"),
+    width: document.getElementById("inp-width"), height: document.getElementById("inp-height"),
+    boardShape: document.getElementById("inp-board-shape"), diameter: document.getElementById("inp-diameter"),
+    groupRectDimensions: document.getElementById("group-rect-dimensions"), groupCircleDiameter: document.getElementById("group-circle-diameter"),
+    thickness: document.getElementById("inp-thickness"), temperature: document.getElementById("inp-temperature"),
+    pattern: document.getElementById("inp-pattern"), iteration: document.getElementById("inp-iteration"),
+    padStyle: document.getElementById("inp-pad-style"), padShape: document.getElementById("inp-pad-shape"),
+    padWidth: document.getElementById("inp-pad-width"), padHeight: document.getElementById("inp-pad-height"),
+    padDrill: document.getElementById("inp-pad-drill"), cornerRadius: document.getElementById("inp-corner-radius"),
+    pitch: document.getElementById("inp-pitch"), groupIteration: document.getElementById("group-iteration"),
+    groupPitch: document.getElementById("group-pitch"), valIteration: document.getElementById("val-iteration"),
+    valPitch: document.getElementById("val-pitch"), iterationNote: document.getElementById("iteration-note"),
+    patternAdvantage: document.getElementById("pattern-advantage"), patternTradeoff: document.getElementById("pattern-tradeoff"),
+    layerView: document.getElementById("layer-view"), exportButton: document.getElementById("export-button"),
+    pngLayer: document.getElementById("inp-png-layer"), pngResolution: document.getElementById("inp-png-resolution"),
+    pngMirror: document.getElementById("inp-png-mirror"), pngExportButton: document.getElementById("png-export-button"),
+    svg: document.getElementById("board-svg"), status: document.getElementById("status-banner"), suggestion: document.getElementById("suggestion-banner"),
+    statRes: document.getElementById("stat-res"), statCur: document.getElementById("stat-cur"),
+    statLen: document.getElementById("stat-len"), statWid: document.getElementById("stat-wid"),
+    statClr: document.getElementById("stat-clr"), statDen: document.getElementById("stat-den"),
+    statXover: document.getElementById("stat-xover"), statLayers: document.getElementById("stat-layers")
+};
+
+const L_SYSTEMS = {
+    hilbert: { axiom: "A", rules: { A: "-BF+AFA+FB-", B: "+AF-BFB-FA+" }, angle: 90, draw: "F" },
+    moore: { axiom: "LFL+F+LFL", rules: { L: "-RF+LFL+FR-", R: "+LF-RFR-FL+" }, angle: 90, draw: "F" },
+    peano: { axiom: "X", rules: { X: "XFYFX+F+YFXFY-F-XFYFX", Y: "YFXFY-F-XFYFX+F+YFXFY" }, angle: 90, draw: "F" },
+    gosper: { axiom: "A", rules: { A: "A-B--B+A++AA+B-", B: "+A-BB--B-A++A+B" }, angle: 60, draw: "AB" },
+    sierpinski: { axiom: "A", rules: { A: "B-A-B", B: "A+B+A" }, angle: 60, draw: "AB" }
+};
+
+let lastModel = null;
+
+function numberValue(el) { return Number.parseFloat(el.value); }
+function pointAt(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+function distance(a, b) { return Math.hypot(b[0] - a[0], b[1] - a[1]); }
+function cross(a, b) { return a[0] * b[1] - a[1] * b[0]; }
+function subtract(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function fmt(v, digits = 4) { return Number(v.toFixed(digits)).toString(); }
+
+function smoothArcSegmentCount(radius, sweep) {
+    if (!(radius > EPS) || !(Math.abs(sweep) > EPS)) return 1;
+    const ratio = clamp(1 - CURVE_MAX_SAGITTA / radius, -1, 1);
+    const sagittaAngle = 2 * Math.acos(ratio);
+    const angularStep = Math.min(CURVE_MAX_ANGLE, Number.isFinite(sagittaAngle) && sagittaAngle > EPS ? sagittaAngle : CURVE_MAX_ANGLE);
+    return Math.max(2, Math.ceil(Math.abs(sweep) / angularStep));
+}
+
+function polylineLength(points) {
+    let result = 0;
+    for (let i = 0; i < points.length - 1; i++) result += distance(points[i], points[i + 1]);
+    return result;
+}
+
+function generateLSystem(type, iterations) {
+    const sys = L_SYSTEMS[type];
+    let instructions = sys.axiom;
+    for (let i = 0; i < iterations; i++) {
+        let next = "";
+        for (const char of instructions) next += sys.rules[char] || char;
+        instructions = next;
+        if (instructions.length > 900000) break;
+    }
+    return { instructions, angle: sys.angle, draw: sys.draw };
+}
+
+function makeSerpentine(w, h, pitch) {
+    const m = BOARD_MARGIN, effW = w - 2 * m, effH = h - 2 * m;
+    const points = [];
+    const lineCount = Math.max(2, Math.floor(effH / pitch) + 1);
+    const actualPitch = effH / (lineCount - 1);
+    points.push([m, m], [w - m, m]);
+    let currentX = w - m;
+    for (let row = 1; row < lineCount; row++) {
+        const y = m + row * actualPitch;
+        points.push([currentX, y]);
+        currentX = currentX > w / 2 ? m : w - m;
+        points.push([currentX, y]);
+    }
+    return { points, step: actualPitch };
+}
+
+function makeRectangularSpiral(w, h, pitch) {
+    const m = BOARD_MARGIN;
+    let x = m, y = m, curW = w - 2 * m, curH = h - 2 * m;
+    const points = [[x, y]];
+    while (curW > pitch + EPS && curH > pitch + EPS && points.length < MAX_SEGMENTS) {
+        points.push([x + curW, y], [x + curW, y + curH], [x + pitch, y + curH], [x + pitch, y + pitch]);
+        x += pitch; y += pitch; curW -= 2 * pitch; curH -= 2 * pitch;
+    }
+    return { points, step: pitch };
+}
+
+function makeCircularSerpentine(diameter, pitch, margin) {
+    const centre = diameter / 2, radius = centre - margin;
+    const lineCount = Math.max(3, Math.floor((2 * radius) / pitch) + 1);
+    const actualPitch = 2 * radius / (lineCount - 1);
+    const points = [];
+    for (let row = 0; row < lineCount; row++) {
+        const y = centre - radius + row * actualPitch;
+        const offsetY = y - centre;
+        const halfChord = Math.sqrt(Math.max(0, radius * radius - offsetY * offsetY));
+        const left = [centre - halfChord, y], right = [centre + halfChord, y];
+        if (row % 2 === 0) {
+            pushUnique(points, left); pushUnique(points, right);
+        } else {
+            pushUnique(points, right); pushUnique(points, left);
+        }
+    }
+    return { points, step: actualPitch, circularCoverage: true };
+}
+
+function makeCircularSpiral(diameter, pitch, margin, innerRadius) {
+    const centre = diameter / 2, radius = centre - margin;
+    const finishRadius = clamp(innerRadius, 0, Math.max(0, radius - pitch));
+    const turns = (radius - finishRadius) / pitch;
+    const maxTheta = Math.PI * 2 * turns;
+    const angularStep = Math.min(CURVE_MAX_ANGLE, 2 * Math.acos(clamp(1 - CURVE_MAX_SAGITTA / Math.max(radius, EPS), -1, 1)));
+    const segmentCount = Math.max(24, Math.ceil(maxTheta / angularStep));
+    if (segmentCount > MAX_SEGMENTS) return { points: [], step: 0, error: `Pattern exceeds ${MAX_SEGMENTS.toLocaleString()} segments; increase pitch.` };
+    const spiralPoint = theta => {
+        const r = radius - (radius - finishRadius) * theta / maxTheta;
+        const angle = theta - Math.PI / 2;
+        return [centre + r * Math.cos(angle), centre + r * Math.sin(angle)];
+    };
+    const points = [];
+    for (let index = 0; index <= segmentCount; index++) {
+        const theta = maxTheta * index / segmentCount;
+        points.push(spiralPoint(theta));
+    }
+    pushUnique(points, [centre, centre]);
+    // Clearance analysis does not need the export-resolution chords; keeping a
+    // coarser analytical centreline avoids treating nearby chords on the same
+    // smooth turn as separate copper runs.
+    const analysisCount = Math.max(24, Math.ceil(maxTheta / (Math.PI / 15)));
+    const analysisPoints = [];
+    for (let index = 0; index <= analysisCount; index++) analysisPoints.push(spiralPoint(maxTheta * index / analysisCount));
+    pushUnique(analysisPoints, [centre, centre]);
+    return { points, analysisPoints, step: pitch, isCurvedSpiral: true };
+}
+
+function makeFractal(type, w, h, iterations) {
+    const { instructions, angle, draw } = generateLSystem(type, iterations);
+    const raw = [[0, 0]];
+    let x = 0, y = 0, direction = 0;
+    const radians = angle * Math.PI / 180;
+    for (const char of instructions) {
+        if (draw.includes(char)) {
+            x += Math.cos(direction); y += Math.sin(direction); raw.push([x, y]);
+            if (raw.length - 1 > MAX_SEGMENTS) return { points: [], step: 0, error: `Pattern exceeds ${MAX_SEGMENTS.toLocaleString()} segments; reduce iteration depth.` };
+        } else if (char === "+") direction -= radians;
+        else if (char === "-") direction += radians;
+    }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of raw) { minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]); minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); }
+    const boxW = Math.max(EPS, maxX - minX), boxH = Math.max(EPS, maxY - minY);
+    const effW = w - 2 * BOARD_MARGIN, effH = h - 2 * BOARD_MARGIN;
+    const scaleX = effW / boxW, scaleY = effH / boxH;
+    const offX = BOARD_MARGIN - minX * scaleX, offY = BOARD_MARGIN - minY * scaleY;
+    return { points: raw.map(p => [p[0] * scaleX + offX, p[1] * scaleY + offY]), step: Math.min(scaleX, scaleY) };
+}
+
+function calculatePath(type, w, h, iterations, pitch) {
+    if (![w, h, pitch].every(Number.isFinite) || w <= 2 * BOARD_MARGIN || h <= 2 * BOARD_MARGIN || pitch <= 0) {
+        return { points: [], length: 0, step: 0, error: "Board dimensions and pitch must be positive and leave a 5 mm copper margin." };
+    }
+    let result;
+    if (type === "serpentine") result = makeSerpentine(w, h, pitch);
+    else if (type === "spiral") result = makeRectangularSpiral(w, h, pitch);
+    else result = makeFractal(type, w, h, iterations);
+    if (!result.error) result.length = polylineLength(result.points);
+    return result;
+}
+
+function calculateBoardPath(type, w, h, iterations, pitch, boardShape, circularMargin = BOARD_MARGIN, circularInnerRadius = 0) {
+    if (boardShape !== "circle") return calculatePath(type, w, h, iterations, pitch);
+    const routeSpan = w - 2 * circularMargin;
+    if (routeSpan <= 0) return { points: [], length: 0, step: 0, error: "Diameter is too small to leave the required circular board-edge margin." };
+    if (type === "serpentine" || type === "spiral") {
+        const result = type === "serpentine" ? makeCircularSerpentine(w, pitch, circularMargin) : makeCircularSpiral(w, pitch, circularMargin, circularInnerRadius);
+        if (!result.error) result.length = polylineLength(result.points);
+        return result;
+    }
+    const result = calculatePath(type, w, w, iterations, pitch);
+    if (result.error) return result;
+    const centre = w / 2, sourceRadius = w / 2 - BOARD_MARGIN, radius = w / 2 - circularMargin;
+    result.points = result.points.map(point => {
+        const squareX = clamp((point[0] - centre) / sourceRadius, -1, 1);
+        const squareY = clamp((point[1] - centre) / sourceRadius, -1, 1);
+        if (Math.abs(squareX) < EPS && Math.abs(squareY) < EPS) return [centre, centre];
+        let diskRadius, angle;
+        if (Math.abs(squareX) > Math.abs(squareY)) {
+            diskRadius = squareX;
+            angle = (Math.PI / 4) * (squareY / squareX);
+        } else {
+            diskRadius = squareY;
+            angle = Math.PI / 2 - (Math.PI / 4) * (squareX / squareY);
+        }
+        return [centre + radius * diskRadius * Math.cos(angle), centre + radius * diskRadius * Math.sin(angle)];
+    });
+    result.length = polylineLength(result.points);
+    return result;
+}
+
+function pushUnique(points, point) {
+    const previous = points[points.length - 1];
+    if (!previous || distance(previous, point) > EPS) points.push(point);
+}
+
+function applyCornerRadius(basePath, requestedRadius) {
+    const source = basePath.points || [];
+    const radius = Math.max(0, requestedRadius || 0);
+    if (source.length < 3 || radius <= EPS) return { ...basePath, points: source.map(p => [...p]), analysisPoints: source.map(p => [...p]), length: polylineLength(source), cornerRadius: radius, roundedCorners: 0, limitedCorners: 0 };
+    const rounded = [[...source[0]]];
+    let roundedCorners = 0, limitedCorners = 0;
+    for (let i = 1; i < source.length - 1; i++) {
+        const previous = source[i - 1], corner = source[i], next = source[i + 1];
+        const incomingLength = distance(previous, corner), outgoingLength = distance(corner, next);
+        if (incomingLength < EPS || outgoingLength < EPS) { pushUnique(rounded, [...corner]); continue; }
+        const incoming = [(corner[0] - previous[0]) / incomingLength, (corner[1] - previous[1]) / incomingLength];
+        const outgoing = [(next[0] - corner[0]) / outgoingLength, (next[1] - corner[1]) / outgoingLength];
+        const turn = Math.acos(clamp(incoming[0] * outgoing[0] + incoming[1] * outgoing[1], -1, 1));
+        const turnSign = Math.sign(cross(incoming, outgoing));
+        if (turn < 1e-4 || Math.PI - turn < 1e-3 || turnSign === 0) { pushUnique(rounded, [...corner]); continue; }
+        const tangentFactor = Math.tan(turn / 2);
+        const desiredTangent = radius * tangentFactor;
+        const tangent = Math.min(desiredTangent, incomingLength * 0.45, outgoingLength * 0.45);
+        const actualRadius = tangent / tangentFactor;
+        if (actualRadius < radius - 0.001) limitedCorners++;
+        const start = [corner[0] - incoming[0] * tangent, corner[1] - incoming[1] * tangent];
+        const end = [corner[0] + outgoing[0] * tangent, corner[1] + outgoing[1] * tangent];
+        const leftNormal = [-incoming[1], incoming[0]];
+        const centre = [start[0] + leftNormal[0] * turnSign * actualRadius, start[1] + leftNormal[1] * turnSign * actualRadius];
+        let startAngle = Math.atan2(start[1] - centre[1], start[0] - centre[0]);
+        let endAngle = Math.atan2(end[1] - centre[1], end[0] - centre[0]);
+        if (turnSign > 0) while (endAngle <= startAngle) endAngle += 2 * Math.PI;
+        else while (endAngle >= startAngle) endAngle -= 2 * Math.PI;
+        const sweep = endAngle - startAngle;
+        const arcSegments = smoothArcSegmentCount(actualRadius, sweep);
+        pushUnique(rounded, start);
+        for (let segment = 1; segment <= arcSegments; segment++) {
+            const angle = startAngle + sweep * segment / arcSegments;
+            pushUnique(rounded, [centre[0] + Math.cos(angle) * actualRadius, centre[1] + Math.sin(angle) * actualRadius]);
+        }
+        roundedCorners++;
+    }
+    pushUnique(rounded, [...source[source.length - 1]]);
+    return {
+        ...basePath, points: rounded, analysisPoints: source.map(p => [...p]), length: polylineLength(rounded),
+        cornerRadius: radius, roundedCorners, limitedCorners
+    };
+}
+
+function provisionMooreTerminals(basePath, w, h, traceWidth, padEnvelope, boardShape) {
+    const points = basePath.points.map(p => [...p]);
+    const first = points[0], last = points[points.length - 1];
+    const separation = distance(first, last);
+    const required = padEnvelope + 2 * MIN_CLEARANCE + 2 * Math.max(MIN_WIDTH, traceWidth);
+    if (separation >= required - EPS) return { ...basePath, points, length: polylineLength(points), terminalProvisioned: false, requiredPadSpacing: required };
+    if (separation < EPS) return { ...basePath, points, terminalError: "Moore terminals coincide and cannot be separated automatically.", requiredPadSpacing: required };
+    if (boardShape === "circle") {
+        const centre = [w / 2, h / 2];
+        const padRadius = w / 2 - padEnvelope / 2 - MIN_CLEARANCE - 0.25;
+        if (padRadius <= 0 || required > 2 * padRadius) return { ...basePath, points, terminalError: `Not enough circular board-edge room to separate Moore pads to ${fmt(required, 2)} mm. Increase diameter or reduce trace width.`, requiredPadSpacing: required };
+        const midpoint = [(first[0] + last[0]) / 2, (first[1] + last[1]) / 2];
+        const baseAngle = Math.atan2(midpoint[1] - centre[1], midpoint[0] - centre[0]);
+        const halfAngle = Math.asin(clamp(required / (2 * padRadius), 0, 1));
+        const candidateA = [centre[0] + Math.cos(baseAngle - halfAngle) * padRadius, centre[1] + Math.sin(baseAngle - halfAngle) * padRadius];
+        const candidateB = [centre[0] + Math.cos(baseAngle + halfAngle) * padRadius, centre[1] + Math.sin(baseAngle + halfAngle) * padRadius];
+        const direct = distance(first, candidateA) + distance(last, candidateB);
+        const swapped = distance(first, candidateB) + distance(last, candidateA);
+        points.unshift(direct <= swapped ? candidateA : candidateB);
+        points.push(direct <= swapped ? candidateB : candidateA);
+        return { ...basePath, points, length: polylineLength(points), terminalProvisioned: true, requiredPadSpacing: required };
+    }
+    const padCenterMargin = padEnvelope / 2 + MIN_CLEARANCE + 0.25;
+    const midpoint = [(first[0] + last[0]) / 2, (first[1] + last[1]) / 2];
+    const edgeDistances = [midpoint[0], w - midpoint[0], midpoint[1], h - midpoint[1]];
+    const edge = edgeDistances.indexOf(Math.min(...edgeDistances)); // left, right, top, bottom
+    const verticalEdge = edge < 2;
+    const boardSpan = verticalEdge ? h : w;
+    if (required > boardSpan - 2 * padCenterMargin) return { ...basePath, points, terminalError: `Not enough board-edge room to separate Moore pads to ${fmt(required, 2)} mm. Increase the board size or reduce trace width.`, requiredPadSpacing: required };
+    const firstAxis = verticalEdge ? first[1] : first[0], lastAxis = verticalEdge ? last[1] : last[0];
+    const centreAxis = clamp((firstAxis + lastAxis) / 2, padCenterMargin + required / 2, boardSpan - padCenterMargin - required / 2);
+    const lowAxis = centreAxis - required / 2, highAxis = centreAxis + required / 2;
+    const firstGetsLow = firstAxis <= lastAxis;
+    const firstPadAxis = firstGetsLow ? lowAxis : highAxis, lastPadAxis = firstGetsLow ? highAxis : lowAxis;
+    let firstPad, lastPad;
+    if (edge === 0) { firstPad = [padCenterMargin, firstPadAxis]; lastPad = [padCenterMargin, lastPadAxis]; }
+    else if (edge === 1) { firstPad = [w - padCenterMargin, firstPadAxis]; lastPad = [w - padCenterMargin, lastPadAxis]; }
+    else if (edge === 2) { firstPad = [firstPadAxis, padCenterMargin]; lastPad = [lastPadAxis, padCenterMargin]; }
+    else { firstPad = [firstPadAxis, h - padCenterMargin]; lastPad = [lastPadAxis, h - padCenterMargin]; }
+    points.unshift(firstPad); points.push(lastPad);
+    return { ...basePath, points, length: polylineLength(points), terminalProvisioned: true, requiredPadSpacing: required };
+}
+
+function segmentIntersection(a, b, c, d) {
+    const r = subtract(b, a), s = subtract(d, c), qp = subtract(c, a);
+    const denom = cross(r, s);
+    if (Math.abs(denom) < EPS) {
+        if (Math.abs(cross(qp, r)) >= EPS) return { kind: "none" };
+        const rr = r[0] * r[0] + r[1] * r[1];
+        if (rr < EPS) return { kind: "touch" };
+        let t0 = (qp[0] * r[0] + qp[1] * r[1]) / rr;
+        let t1 = t0 + (s[0] * r[0] + s[1] * r[1]) / rr;
+        if (t0 > t1) [t0, t1] = [t1, t0];
+        const lo = Math.max(0, t0), hi = Math.min(1, t1);
+        if (hi < lo - EPS) return { kind: "none" };
+        return { kind: hi - lo > EPS ? "overlap" : "touch" };
+    }
+    const t = cross(qp, s) / denom, u = cross(qp, r) / denom;
+    if (t < -EPS || t > 1 + EPS || u < -EPS || u > 1 + EPS) return { kind: "none" };
+    const interior = t > EPS && t < 1 - EPS && u > EPS && u < 1 - EPS;
+    return { kind: interior ? "proper" : "touch", t, u, point: pointAt(a, b, t) };
+}
+
+function pointSegmentDistance(p, a, b) {
+    const ab = subtract(b, a), ap = subtract(p, a);
+    const length2 = ab[0] * ab[0] + ab[1] * ab[1];
+    const t = length2 < EPS ? 0 : clamp((ap[0] * ab[0] + ap[1] * ab[1]) / length2, 0, 1);
+    return distance(p, pointAt(a, b, t));
+}
+
+function segmentDistance(a, b, c, d) {
+    if (segmentIntersection(a, b, c, d).kind !== "none") return 0;
+    return Math.min(pointSegmentDistance(a, c, d), pointSegmentDistance(b, c, d), pointSegmentDistance(c, a, b), pointSegmentDistance(d, a, b));
+}
+
+function candidatePairs(points, cellSize, searchRadius) {
+    const grid = new Map(), pairs = new Set();
+    for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i], b = points[i + 1];
+        const x0 = Math.floor((Math.min(a[0], b[0]) - searchRadius) / cellSize);
+        const x1 = Math.floor((Math.max(a[0], b[0]) + searchRadius) / cellSize);
+        const y0 = Math.floor((Math.min(a[1], b[1]) - searchRadius) / cellSize);
+        const y1 = Math.floor((Math.max(a[1], b[1]) + searchRadius) / cellSize);
+        for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) {
+            const key = `${gx},${gy}`, bucket = grid.get(key) || [];
+            for (const j of bucket) if (Math.abs(i - j) > 1) pairs.add(j < i ? `${j}:${i}` : `${i}:${j}`);
+            bucket.push(i); grid.set(key, bucket);
+        }
+    }
+    return [...pairs].map(key => key.split(":").map(Number));
+}
+
+function analyzePath(path, traceWidth, padEnvelope) {
+    const points = path.points;
+    const cellSize = Math.max(1, path.step || 1);
+    const searchRadius = Math.max(cellSize * 1.1, traceWidth + MIN_CLEARANCE, padEnvelope);
+    const pairs = candidatePairs(points, cellSize, searchRadius);
+    const crossings = [], faults = [];
+    let minSpacing = Infinity;
+    for (const [i, j] of pairs) {
+        const hit = segmentIntersection(points[i], points[i + 1], points[j], points[j + 1]);
+        if (hit.kind === "proper") crossings.push({ i, j, t: hit.t, u: hit.u, point: hit.point });
+        else if (hit.kind === "touch") faults.push(`Non-adjacent copper segments touch near (${fmt(points[j][0], 1)}, ${fmt(points[j][1], 1)}) mm.`);
+        else if (hit.kind === "overlap") faults.push("Non-adjacent copper segments overlap collinearly and would bypass heater resistance.");
+        else minSpacing = Math.min(minSpacing, segmentDistance(points[i], points[i + 1], points[j], points[j + 1]));
+    }
+    if (!Number.isFinite(minSpacing)) minSpacing = path.step || Infinity;
+    const padSpacing = distance(points[0], points[points.length - 1]);
+    if (padSpacing < padEnvelope + MIN_CLEARANCE) faults.push("The two terminal pads are too close and may short; choose a different pattern or iteration.");
+    return { crossings, faults: [...new Set(faults)], minSpacing, padSpacing };
+}
+
+function makeLayerGeometry(points, crossings, traceWidth) {
+    const intervalMap = new Map(), faults = [];
+    const viaDiameter = Math.max(VIA_MIN_DIAMETER, traceWidth + 0.3);
+    for (const crossing of crossings) {
+        const underIndex = Math.max(crossing.i, crossing.j);
+        const overIndex = Math.min(crossing.i, crossing.j);
+        const underT = underIndex === crossing.i ? crossing.t : crossing.u;
+        const ua = points[underIndex], ub = points[underIndex + 1];
+        const oa = points[overIndex], ob = points[overIndex + 1];
+        const uvec = subtract(ub, ua), ovec = subtract(ob, oa);
+        const ulen = distance(ua, ub), olen = distance(oa, ob);
+        const sinAngle = Math.abs(cross(uvec, ovec)) / Math.max(EPS, ulen * olen);
+        const radialClearance = viaDiameter / 2 + traceWidth / 2 + MIN_CLEARANCE + 0.1;
+        const halfT = radialClearance / Math.max(EPS, ulen * sinAngle);
+        if (sinAngle < 0.15 || underT - halfT <= 0.02 || underT + halfT >= 0.98) {
+            faults.push(`Crossover ${crossing.i + 1}/${crossing.j + 1} has insufficient straight length for via clearances.`);
+            continue;
+        }
+        const intervals = intervalMap.get(underIndex) || [];
+        intervals.push([underT - halfT, underT + halfT]); intervalMap.set(underIndex, intervals);
+    }
+    const segments = [], vias = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i], b = points[i + 1];
+        const source = (intervalMap.get(i) || []).sort((x, y) => x[0] - y[0]);
+        const merged = [];
+        for (const interval of source) {
+            const last = merged[merged.length - 1];
+            if (last && interval[0] <= last[1] + EPS) last[1] = Math.max(last[1], interval[1]);
+            else merged.push([...interval]);
+        }
+        let cursor = 0;
+        for (const [start, end] of merged) {
+            if (start > cursor + EPS) segments.push({ start: pointAt(a, b, cursor), end: pointAt(a, b, start), layer: "F.Cu", source: i });
+            const viaStart = pointAt(a, b, start), viaEnd = pointAt(a, b, end);
+            segments.push({ start: viaStart, end: viaEnd, layer: "B.Cu", source: i });
+            vias.push(viaStart, viaEnd); cursor = end;
+        }
+        if (cursor < 1 - EPS) segments.push({ start: pointAt(a, b, cursor), end: b, layer: "F.Cu", source: i });
+    }
+    return { segments, vias, viaDiameter, faults };
+}
+
+function makeHintedLayerGeometry(points, layerHints, traceWidth, boardWidth, boardHeight, boardShape) {
+    const segments = [], vias = [], faults = [];
+    const viaDiameter = Math.max(VIA_MIN_DIAMETER, traceWidth + 0.3);
+    const requiredSpacing = traceWidth + MIN_CLEARANCE;
+    const boardInset = traceWidth / 2 + MIN_CLEARANCE;
+    const insideBoard = point => {
+        if (boardShape === "circle") return distance(point, [boardWidth / 2, boardHeight / 2]) <= boardWidth / 2 - boardInset + EPS;
+        return point[0] >= boardInset - EPS && point[0] <= boardWidth - boardInset + EPS &&
+            point[1] >= boardInset - EPS && point[1] <= boardHeight - boardInset + EPS;
+    };
+    const routeSegments = (route, source) => {
+        const result = [];
+        for (let index = 0; index < route.length - 1; index++) {
+            if (distance(route[index], route[index + 1]) > EPS) result.push({ start: route[index], end: route[index + 1], layer: "B.Cu", source });
+        }
+        return result;
+    };
+    const bottomRequests = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        const layer = layerHints[i] || "F.Cu";
+        if (layer === "B.Cu") bottomRequests.push({ start: points[i], end: points[i + 1], source: i, directLength: distance(points[i], points[i + 1]) });
+        else segments.push({ start: points[i], end: points[i + 1], layer, source: i });
+    }
+    const bottomSegments = [];
+    let detouredRoutes = 0, unroutedRoutes = 0, bottomMinSpacing = Infinity;
+    bottomRequests.sort((a, b) => b.directLength - a.directLength);
+    for (const request of bottomRequests) {
+        const a = request.start, b = request.end, vector = subtract(b, a), routeLength = Math.max(EPS, distance(a, b));
+        const normal = [-vector[1] / routeLength, vector[0] / routeLength];
+        const midpoint = pointAt(a, b, 0.5);
+        const candidates = [{ bottom: [a, b], frontLeads: [] }];
+        const laneStep = requiredSpacing + 0.2;
+        const maxLanes = Math.min(20, Math.ceil(Math.max(boardWidth, boardHeight) / laneStep));
+        for (let lane = 1; lane <= maxLanes; lane++) {
+            const offset = lane * laneStep;
+            for (const sign of [-1, 1]) {
+                const amount = sign * offset;
+                const shiftedA = [a[0] + normal[0] * amount, a[1] + normal[1] * amount];
+                const shiftedB = [b[0] + normal[0] * amount, b[1] + normal[1] * amount];
+                candidates.push({ bottom: [shiftedA, shiftedB], frontLeads: [[a, shiftedA], [shiftedB, b]] });
+                candidates.push({ bottom: [a, [midpoint[0] + normal[0] * amount, midpoint[1] + normal[1] * amount], b], frontLeads: [] });
+            }
+            const upperA = [a[0], Math.min(a[1], b[1]) - offset], upperB = [b[0], Math.min(a[1], b[1]) - offset];
+            const lowerA = [a[0], Math.max(a[1], b[1]) + offset], lowerB = [b[0], Math.max(a[1], b[1]) + offset];
+            const leftA = [Math.min(a[0], b[0]) - offset, a[1]], leftB = [Math.min(a[0], b[0]) - offset, b[1]];
+            const rightA = [Math.max(a[0], b[0]) + offset, a[1]], rightB = [Math.max(a[0], b[0]) + offset, b[1]];
+            candidates.push({ bottom: [upperA, upperB], frontLeads: [[a, upperA], [upperB, b]] });
+            candidates.push({ bottom: [lowerA, lowerB], frontLeads: [[a, lowerA], [lowerB, b]] });
+            candidates.push({ bottom: [leftA, leftB], frontLeads: [[a, leftA], [leftB, b]] });
+            candidates.push({ bottom: [rightA, rightB], frontLeads: [[a, rightA], [rightB, b]] });
+        }
+        let chosen = null, chosenCandidate = null;
+        for (const candidate of candidates) {
+            const candidatePoints = [...candidate.bottom, ...candidate.frontLeads.flat()];
+            if (!candidatePoints.every(insideBoard)) continue;
+            const pieces = routeSegments(candidate.bottom, request.source);
+            if (!pieces.length) continue;
+            let valid = true;
+            for (const piece of pieces) {
+                for (const existing of bottomSegments) {
+                    const spacing = segmentDistance(piece.start, piece.end, existing.start, existing.end);
+                    if (spacing < requiredSpacing - EPS) { valid = false; break; }
+                }
+                if (!valid) break;
+            }
+            if (valid) { chosen = pieces; chosenCandidate = candidate; break; }
+        }
+        if (!chosen) {
+            chosen = routeSegments([a, b], request.source);
+            chosenCandidate = { bottom: [a, b], frontLeads: [] };
+            unroutedRoutes++;
+        } else if (chosen.length > 1 || chosenCandidate.frontLeads.length) detouredRoutes++;
+        for (const lead of chosenCandidate.frontLeads) {
+            if (distance(lead[0], lead[1]) > EPS) segments.push({ start: lead[0], end: lead[1], layer: "F.Cu", source: request.source, transitionLead: true });
+        }
+        vias.push(chosenCandidate.bottom[0], chosenCandidate.bottom[chosenCandidate.bottom.length - 1]);
+        for (const piece of chosen) {
+            for (const existing of bottomSegments) bottomMinSpacing = Math.min(bottomMinSpacing, segmentDistance(piece.start, piece.end, existing.start, existing.end));
+            bottomSegments.push(piece);
+        }
+    }
+    segments.push(...bottomSegments);
+    segments.sort((a, b) => a.source - b.source || (a.layer === "F.Cu" ? -1 : 1));
+    const routedLength = segments.reduce((total, segment) => total + distance(segment.start, segment.end), 0);
+    if (unroutedRoutes) faults.push(`${unroutedRoutes} B.Cu returns cannot be routed with ${fmt(MIN_CLEARANCE, 2)} mm edge clearance; increase voltage, enlarge the board, or reduce iteration depth.`);
+    return { segments, vias, viaDiameter, faults: [...new Set(faults)], detouredRoutes, unroutedRoutes, bottomMinSpacing, requiredBottomSpacing: requiredSpacing, routedLength };
+}
+
+function analyzeLayeredGeometry(geometry, traceWidth, padSpacing, pathStep) {
+    const faults = [];
+    let minSpacing = Infinity;
+    for (const layer of ["F.Cu", "B.Cu"]) {
+        const layerSegments = geometry.segments.filter(segment => segment.layer === layer);
+        let layerFault = false;
+        for (let first = 0; first < layerSegments.length; first++) {
+            for (let second = first + 1; second < layerSegments.length; second++) {
+                const a = layerSegments[first], b = layerSegments[second];
+                if (a.source === b.source) continue;
+                const intentionalFrontJoin = layer === "F.Cu" && Math.abs(a.source - b.source) <= 1 &&
+                    [a.start, a.end].some(pointA => [b.start, b.end].some(pointB => distance(pointA, pointB) < EPS));
+                if (intentionalFrontJoin) continue;
+                const spacing = segmentDistance(a.start, a.end, b.start, b.end);
+                minSpacing = Math.min(minSpacing, spacing);
+                if (spacing < traceWidth + MIN_CLEARANCE - EPS) layerFault = true;
+            }
+        }
+        if (layerFault) faults.push(`${layer} routes cannot maintain ${fmt(MIN_CLEARANCE, 2)} mm copper-edge clearance.`);
+    }
+    if (!Number.isFinite(minSpacing)) minSpacing = pathStep || Infinity;
+    return { crossings: [], faults, minSpacing, padSpacing };
+}
+
+function circularGeometryFaults(modelPath, diameter, traceWidth, padEnvelope) {
+    const centre = [diameter / 2, diameter / 2];
+    const traceLimit = diameter / 2 - traceWidth / 2 - MIN_CLEARANCE;
+    const faults = [];
+    if (modelPath.points.some(point => distance(point, centre) > traceLimit + EPS)) faults.push("Copper exceeds the circular board-edge clearance.");
+    const padLimit = diameter / 2 - padEnvelope / 2;
+    const pads = [modelPath.points[0], modelPath.points[modelPath.points.length - 1]];
+    if (pads.some(point => distance(point, centre) > padLimit + EPS)) faults.push("A connection pad extends beyond the circular board outline.");
+    return faults;
+}
+
+function buildRecoverySuggestions({ errors, traceWidth, clearance, pattern, boardShape, path }) {
+    if (!errors.length) return [];
+    const suggestions = [];
+    if (traceWidth > 0 && traceWidth < MIN_WIDTH) {
+        suggestions.push("Reduce voltage or increase desired power/current to obtain a wider trace");
+        suggestions.push("Use a longer path (higher iteration) or thinner copper");
+    }
+    if ((Number.isFinite(clearance) && clearance < MIN_CLEARANCE) || errors.some(error => /too wide|overlap|board margin/i.test(error))) {
+        suggestions.push("Increase voltage or reduce desired power/current to narrow the trace");
+        suggestions.push(`Increase ${boardShape === "circle" ? "diameter" : "board dimensions"} or pattern pitch`);
+        if (!["serpentine", "spiral"].includes(pattern)) suggestions.push("Reduce iteration depth");
+        suggestions.push("Use thicker finished copper");
+    }
+    if (errors.some(error => /exceeds .*segments|complexity/i.test(error))) suggestions.push("Reduce iteration depth");
+    if (errors.some(error => /circular board|diameter|board outline/i.test(error))) suggestions.push("Increase board diameter or reduce corner radius/trace width");
+    if (errors.some(error => /terminal pads|connection pad|separate Moore pads/i.test(error))) suggestions.push(`Increase ${boardShape === "circle" ? "diameter" : "board dimensions"}, increase voltage, or reduce desired power/current`);
+    if (errors.some(error => /pad width|pad height|circular pad/i.test(error))) suggestions.push("Use positive pad dimensions, and make width equal height for a circular pad");
+    if (errors.some(error => /pad drill|copper annulus/i.test(error))) suggestions.push(`Reduce the drill or enlarge the pad to preserve at least ${MIN_PAD_ANNULUS} mm copper around the hole`);
+    if (errors.some(error => /dimensions|usable copper path/i.test(error))) suggestions.push(`Increase ${boardShape === "circle" ? "diameter" : "board dimensions"} and check pitch/iteration settings`);
+    if (!suggestions.length) suggestions.push("Increase voltage, reduce desired power/current, enlarge the board, or choose a less dense pattern");
+    return [...new Set(suggestions)];
+}
+
+function buildModel() {
+    const V = numberValue(els.voltage), P = numberValue(els.power);
+    const rectangularWidth = numberValue(els.width), rectangularHeight = numberValue(els.height), diameter = numberValue(els.diameter);
+    const boardShape = els.boardShape.value;
+    const W = boardShape === "circle" ? diameter : rectangularWidth;
+    const H = boardShape === "circle" ? diameter : rectangularHeight;
+    const copperOz = numberValue(els.thickness), temperature = numberValue(els.temperature), pitch = numberValue(els.pitch);
+    const cornerRadius = numberValue(els.cornerRadius), padStyle = els.padStyle.value, padShape = els.padShape.value;
+    const padWidth = numberValue(els.padWidth), padHeight = numberValue(els.padHeight), padDrill = numberValue(els.padDrill);
+    const padEnvelope = Math.max(padWidth, padHeight);
+    const iterations = Number.parseInt(els.iteration.value, 10), pattern = els.pattern.value;
+    const inputs = [V, P, W, H, copperOz, temperature, pitch, iterations, cornerRadius, padWidth, padHeight];
+    const errors = [], warnings = [];
+    if (!inputs.every(Number.isFinite) || V <= 0 || P <= 0 || W <= 0 || H <= 0 || copperOz <= 0) errors.push("All electrical and board inputs must be valid positive numbers.");
+    if (!["rectangle", "circle"].includes(boardShape)) errors.push("Choose a valid board shape.");
+    if (cornerRadius < 0) errors.push("Corner radius cannot be negative.");
+    if (!["through_hole", "smd"].includes(padStyle)) errors.push("Choose a valid connection pad style.");
+    if (!SUPPORTED_PATTERNS.has(pattern)) errors.push("Choose a supported pattern.");
+    if (!["circle", "oval", "rect", "roundrect"].includes(padShape)) errors.push("Choose a valid pad shape.");
+    if (!(padWidth > 0) || !(padHeight > 0)) errors.push("Pad width and height must be positive.");
+    if (padShape === "circle" && Math.abs(padWidth - padHeight) > EPS) errors.push("A circular pad requires equal pad width and height.");
+    if (padStyle === "through_hole") {
+        if (!(padDrill > 0)) errors.push("Through-hole pad drill must be positive.");
+        else if (padDrill + 2 * MIN_PAD_ANNULUS > Math.min(padWidth, padHeight) + EPS) {
+            errors.push(`Through-hole pad requires at least ${MIN_PAD_ANNULUS} mm copper annulus around the drill.`);
+        }
+    }
+    const circularMargin = padEnvelope / 2 + Math.max(MIN_CLEARANCE, 0.5);
+    const basePath = SUPPORTED_PATTERNS.has(pattern) ?
+        calculateBoardPath(pattern, W, H, iterations, pitch, boardShape, circularMargin, padEnvelope / 2) :
+        { points: [], length: 0, step: 0, error: "Unsupported pattern." };
+    let path = basePath.error ? basePath : basePath.isCurvedSpiral ?
+        { ...basePath, analysisPoints: (basePath.analysisPoints || basePath.points).map(point => [...point]), cornerRadius: 0, roundedCorners: 0, limitedCorners: 0 } :
+        applyCornerRadius(basePath, cornerRadius);
+    if (path.error) errors.push(path.error);
+    if (!path.points || path.points.length < 2 || !Number.isFinite(path.length) || path.length <= 0) errors.push("The selected geometry did not produce a usable copper path.");
+    const hotResistance = V * V / P;
+    const hotCurrent = P / V;
+    const tempFactor = 1 + TEMP_COEFF_CU * (temperature - 20);
+    if (tempFactor <= 0) errors.push("Copper temperature is outside the valid linear resistivity model.");
+    const thickness = copperOz * OZ_TO_MM;
+    const hotRho = RHO_CU_20 * tempFactor;
+    let traceWidth = path.length > 0 ? hotRho * path.length / (hotResistance * thickness) : 0;
+    if (pattern === "moore" && basePath.points && basePath.points.length > 1 && !basePath.error) {
+        for (let pass = 0; pass < 3; pass++) {
+            const provisionedPath = provisionMooreTerminals(basePath, W, H, traceWidth, padEnvelope, boardShape);
+            path = applyCornerRadius(provisionedPath, cornerRadius);
+            traceWidth = path.length > 0 ? hotRho * path.length / (hotResistance * thickness) : 0;
+        }
+        if (path.terminalError) errors.push(path.terminalError);
+    }
+    const coldResistance = traceWidth > 0 ? RHO_CU_20 * path.length / (traceWidth * thickness) : Infinity;
+    const coldCurrent = V / coldResistance;
+    const boardAreaMM2 = boardShape === "circle" ? Math.PI * (diameter / 2) ** 2 : W * H;
+    const density = P / (boardAreaMM2 / 100);
+    let analysis = { crossings: [], faults: [], minSpacing: Infinity, padSpacing: Infinity };
+    let geometry = { segments: [], vias: [], viaDiameter: VIA_MIN_DIAMETER, faults: [] };
+    if (!errors.length) {
+        const analysisPath = { ...path, points: path.analysisPoints || path.points };
+        analysis = analyzePath(analysisPath, traceWidth, padEnvelope);
+        const geometryPoints = analysis.crossings.length ? analysisPath.points : path.points;
+        geometry = makeLayerGeometry(geometryPoints, analysis.crossings, traceWidth);
+        errors.push(...analysis.faults, ...geometry.faults);
+        if (boardShape === "circle") errors.push(...circularGeometryFaults(path, diameter, traceWidth, padEnvelope));
+        if (traceWidth < MIN_WIDTH) errors.push(`Calculated width ${fmt(traceWidth, 3)} mm is below the ${MIN_WIDTH} mm fabrication rule.`);
+        const clearance = analysis.minSpacing - traceWidth;
+        if (clearance < MIN_CLEARANCE) errors.push(`Minimum same-layer edge clearance ${fmt(clearance, 3)} mm is below the ${MIN_CLEARANCE} mm rule.`);
+        if (traceWidth > Math.min(path.step, BOARD_MARGIN * 2) - MIN_CLEARANCE) errors.push("The required trace is too wide for this pattern pitch or board margin.");
+    }
+    if (path.limitedCorners > 0) warnings.push(`${path.limitedCorners} corner radii were reduced locally because the adjacent segments are too short for ${fmt(cornerRadius, 2)} mm.`);
+    if (analysis.crossings.length && cornerRadius > 0) warnings.push("Corner rounding is disabled on a self-crossing route so layer-transition locations remain exact.");
+    if (basePath.isCurvedSpiral && cornerRadius > 0) warnings.push("Corner radius is not applied to the circular spiral because it is already generated as a smooth curve.");
+    if (density > MAX_DENSITY) warnings.push(`High average power density (${fmt(density, 2)} W/cm²); laminate temperature must be validated.`);
+    if (temperature > 130) warnings.push("The entered copper temperature is above common FR-4 continuous-use ratings; check the exact laminate Tg and thermal rating.");
+    if (coldCurrent > hotCurrent * 1.2) warnings.push(`Cold-start current is ${fmt(coldCurrent, 2)} A versus ${fmt(hotCurrent, 2)} A hot.`);
+    const clearance = analysis.minSpacing - traceWidth;
+    const suggestions = buildRecoverySuggestions({ errors, traceWidth, clearance, pattern, boardShape, path });
+    return {
+        V, P, W, H, diameter, boardShape, copperOz, temperature, pitch, iterations, pattern,
+        padStyle, padShape, padWidth, padHeight, padDrill, padEnvelope, cornerRadius, path, analysis, geometry,
+        hotResistance, hotCurrent, coldResistance, coldCurrent, traceWidth, density,
+        clearance, errors: [...new Set(errors)], warnings: [...new Set(warnings)], suggestions
+    };
+}
+
+function svgElement(name, attrs = {}) {
+    const node = document.createElementNS(SVG_NS, name);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+    return node;
+}
+
+function svgPadShape(pad, model, attrs = {}) {
+    const [cx, cy] = pad, width = model.padWidth, height = model.padHeight;
+    if (model.padShape === "circle") return svgElement("circle", { cx, cy, r: width / 2, ...attrs });
+    const radius = model.padShape === "oval" ? Math.min(width, height) / 2 :
+        model.padShape === "roundrect" ? Math.min(width, height) * 0.2 : 0;
+    return svgElement("rect", { x: cx - width / 2, y: cy - height / 2, width, height, rx: radius, ...attrs });
+}
+
+function draw(model) {
+    const svg = els.svg;
+    svg.replaceChildren();
+    if (!model.path.points || model.path.points.length < 2) {
+        svg.setAttribute("viewBox", "0 0 100 100");
+        const text = svgElement("text", { x: 50, y: 50, fill: "#fecaca", "text-anchor": "middle", "font-size": 5 });
+        text.textContent = "Invalid geometry"; svg.append(text); return;
+    }
+    svg.setAttribute("viewBox", `0 0 ${model.W} ${model.H}`);
+    svg.setAttribute("width", "100%"); svg.setAttribute("height", "100%");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    if (model.boardShape === "circle") svg.append(svgElement("circle", { cx: model.W / 2, cy: model.H / 2, r: model.W / 2 - 0.1, fill: "#064e3b", stroke: "#e2e8f0", "stroke-width": 0.2 }));
+    else svg.append(svgElement("rect", { x: 0.1, y: 0.1, width: model.W - 0.2, height: model.H - 0.2, fill: "#064e3b", stroke: "#e2e8f0", "stroke-width": 0.2 }));
+    const view = els.layerView.value;
+    const drawLayer = (layer, color) => {
+        if ((view === "front" && layer !== "F.Cu") || (view === "back" && layer !== "B.Cu")) return;
+        const group = svgElement("g", { "data-layer": layer });
+        for (const segment of model.geometry.segments.filter(s => s.layer === layer)) {
+            group.append(svgElement("line", {
+                x1: segment.start[0], y1: segment.start[1], x2: segment.end[0], y2: segment.end[1],
+                stroke: color, "stroke-width": Math.max(model.traceWidth, 0.12), "stroke-linecap": "round", "stroke-linejoin": "round"
+            }));
+        }
+        svg.append(group);
+    };
+    drawLayer("B.Cu", "#60a5fa");
+    drawLayer("F.Cu", model.errors.length ? "#f87171" : "#fb923c");
+    if (view === "both") for (const crossing of model.analysis.crossings) {
+        svg.append(svgElement("circle", { cx: crossing.point[0], cy: crossing.point[1], r: Math.max(0.7, model.traceWidth * 2), fill: "none", stroke: "#bfdbfe", "stroke-width": 0.18, "stroke-dasharray": "0.35 0.25" }));
+    }
+    if (view === "both" || model.geometry.vias.length) for (const via of model.geometry.vias) {
+        svg.append(svgElement("circle", { cx: via[0], cy: via[1], r: model.geometry.viaDiameter / 2, fill: "#c084fc", stroke: "#f3e8ff", "stroke-width": 0.12 }));
+        svg.append(svgElement("circle", { cx: via[0], cy: via[1], r: VIA_DRILL / 2, fill: "#111827" }));
+    }
+    const pads = [model.path.points[0], model.path.points[model.path.points.length - 1]];
+    pads.forEach((pad, i) => {
+        svg.append(svgPadShape(pad, model, { fill: "#facc15", stroke: "#fef3c7", "stroke-width": 0.15 }));
+        if (model.padStyle === "through_hole") svg.append(svgElement("circle", { cx: pad[0], cy: pad[1], r: model.padDrill / 2, fill: "#111827" }));
+        const labelOffset = model.padHeight / 2 + 0.65;
+        const label = svgElement("text", { x: pad[0], y: pad[1] - labelOffset, fill: "#fef3c7", "text-anchor": "middle", "font-size": 1.6, "font-weight": 700 });
+        label.textContent = i === 0 ? "P1" : "P2"; svg.append(label);
+    });
+}
+
+function updateUI(model) {
+    const pitched = ["serpentine", "spiral"].includes(model.pattern);
+    const derivedPitch = Number.isFinite(model.path.step) && model.path.step > 0 ? model.path.step : NaN;
+    els.valIteration.textContent = pitched ? "N/A" : model.iterations;
+    els.iteration.disabled = pitched;
+    els.iterationNote.textContent = pitched ? "Used by fractal curves only." : "Recursive depth for the selected curve.";
+    els.pitch.disabled = !pitched;
+    if (!pitched && Number.isFinite(derivedPitch)) {
+        els.pitch.value = String(clamp(derivedPitch, Number.parseFloat(els.pitch.min), Number.parseFloat(els.pitch.max)));
+    }
+    els.valPitch.textContent = pitched ? `${fmt(model.pitch, 1)} mm` :
+        Number.isFinite(derivedPitch) ? `${fmt(derivedPitch, 1)} mm (derived)` : "--";
+    els.groupRectDimensions.hidden = model.boardShape === "circle";
+    els.groupCircleDiameter.hidden = model.boardShape !== "circle";
+    const help = {
+        serpentine: {
+            advantage: "Simple, predictable single-layer routing with accessible edge pads, straightforward length control and easy fabrication.",
+            tradeoff: "Parallel runs can produce visible hot and cool bands, especially with wide pitch or poor heat spreading."
+        },
+        spiral: {
+            advantage: "Matches the board outline: a rectangular spiral on rectangular boards and a smooth round spiral on circular boards, packing a long single-layer trace inward.",
+            tradeoff: "One pad finishes near the centre and the spacing and heat spreading of the innermost turns need particular attention."
+        },
+        hilbert: {
+            advantage: "Provides long trace length and uniform space-filling coverage, helping spread heat evenly across a rectangular board.",
+            tradeoff: "Higher iterations create many tight corners and may require fine fabrication clearances."
+        },
+        moore: {
+            advantage: "A near-closed Hilbert variant with excellent area coverage and less directional bias, useful for uniform heating.",
+            tradeoff: "Its natural endpoints are close together; this designer adds edge-margin lead-outs whose extra length is included in the resistance calculation."
+        },
+        peano: {
+            advantage: "Produces very high trace length and resistance per board area, useful when a wider, easier-to-fabricate heater trace is desired.",
+            tradeoff: "Segment count grows extremely quickly, increasing file size, corner count and clearance sensitivity."
+        },
+        gosper: {
+            advantage: "Uses several 60-degree directions, reducing strong horizontal/vertical heat bias and suiting hexagonal or rounded heater areas.",
+            tradeoff: "Rectangular stretching distorts its natural hexagonal form, and high iterations can exceed the preview/export complexity limit."
+        },
+        sierpinski: {
+            advantage: "Creates an open triangular space-filling route with clearly separated beginning and end pads and good multi-directional heat spreading.",
+            tradeoff: "It leaves deliberate triangular voids, so heat coverage is less uniform than Hilbert or Moore on a solid rectangular area."
+        }
+    };
+    const selectedHelp = help[model.pattern] || { advantage: "", tradeoff: "" };
+    els.patternAdvantage.textContent = selectedHelp.advantage;
+    els.patternTradeoff.textContent = selectedHelp.tradeoff;
+    els.statRes.textContent = Number.isFinite(model.hotResistance) ? `${fmt(model.hotResistance, 2)} Ω` : "--";
+    els.statCur.textContent = Number.isFinite(model.coldCurrent) ? `${fmt(model.hotCurrent, 2)} / ${fmt(model.coldCurrent, 2)} A` : "--";
+    els.statLen.textContent = model.path.length ? `${fmt(model.path.length, 0)} mm` : "--";
+    els.statWid.textContent = model.traceWidth ? `${fmt(model.traceWidth, 3)} mm` : "--";
+    els.statClr.textContent = Number.isFinite(model.clearance) ? `${fmt(model.clearance, 3)} mm` : "--";
+    els.statDen.textContent = Number.isFinite(model.density) ? `${fmt(model.density, 2)} W/cm²` : "--";
+    els.statXover.textContent = `${model.analysis.crossings.length} / ${model.geometry.vias.length} vias`;
+    els.statLayers.textContent = model.geometry.vias.length ? "F.Cu + B.Cu" : "F.Cu";
+    const messages = model.errors.length ? model.errors : model.warnings;
+    const statusClass = model.errors.length ? "status-error" : model.warnings.length ? "status-warn" : "status-ok";
+    els.status.className = `status-banner ${statusClass}`;
+    els.status.textContent = messages.length ? messages.join(" ") : "OK — geometry and fabrication-rule checks pass.";
+    els.suggestion.hidden = model.suggestions.length === 0;
+    els.suggestion.textContent = model.suggestions.length ? `Try: ${model.suggestions.join(" • ")}` : "";
+    els.exportButton.disabled = model.errors.length > 0;
+    els.exportButton.title = model.errors.length ? "Resolve geometry errors before exporting" : "Download a KiCad board file";
+    const pngDpi = numberValue(els.pngResolution);
+    const pngInvalid = model.errors.length > 0 || !Number.isFinite(pngDpi) || pngDpi < 25 || pngDpi > 2400;
+    els.pngExportButton.disabled = pngInvalid;
+    els.pngExportButton.title = model.errors.length ? "Resolve geometry errors before exporting" :
+        pngInvalid ? "Choose a PNG resolution from 25 to 2400 DPI" : "Download an inverted monochrome copper image";
+}
+
+function update() {
+    lastModel = buildModel(); updateUI(lastModel); draw(lastModel); return lastModel;
+}
+
+function applyPatternDefaults(pattern) {
+    const defaults = PATTERN_DEFAULTS[pattern];
+    if (!defaults) return;
+    if (Number.isFinite(defaults.pitch)) els.pitch.value = String(defaults.pitch);
+    if (Number.isInteger(defaults.maxIteration)) els.iteration.max = String(defaults.maxIteration);
+    if (Number.isInteger(defaults.iteration)) els.iteration.value = String(defaults.iteration);
+}
+
+function footprint(reference, pad, model, rotation = 0) {
+    const padType = model.padStyle === "smd" ? "smd" : "thru_hole";
+    const layers = model.padStyle === "smd" ? `"F.Cu" "F.Paste" "F.Mask"` : `"*.Cu" "*.Mask"`;
+    const drill = model.padStyle === "through_hole" ? ` (drill ${fmt(model.padDrill)})` : "";
+    const roundrect = model.padShape === "roundrect" ? " (roundrect_rratio 0.2)" : "";
+    const attr = model.padStyle === "smd" ? "smd" : "through_hole";
+    const silkX = model.padWidth / 2 + 0.3, silkY = model.padHeight / 2 + 0.3;
+    const textY = model.padHeight / 2 + 1.5;
+    return `  (footprint "PCBHeater_ConnectionPad_${model.padShape}_${fmt(model.padWidth, 2)}x${fmt(model.padHeight, 2)}mm"\n    (layer "F.Cu")\n    (at ${fmt(pad[0])} ${fmt(pad[1])} ${rotation})\n    (attr ${attr})\n    (fp_rect (start ${fmt(-silkX)} ${fmt(-silkY)}) (end ${fmt(silkX)} ${fmt(silkY)}) (stroke (width 0.2) (type default)) (fill none) (layer "F.SilkS"))\n    (fp_text reference "${reference}" (at 0 ${fmt(-textY)} 0) (layer "F.SilkS") (effects (font (size 1 1) (thickness 0.15))))\n    (fp_text value "HEATER" (at 0 ${fmt(textY)} 0) (layer "F.Fab") hide (effects (font (size 1 1) (thickness 0.15))))\n    (pad "1" ${padType} ${model.padShape} (at 0 0 0) (size ${fmt(model.padWidth)} ${fmt(model.padHeight)})${drill} (layers ${layers})${roundrect} (net 1 "HEATER"))\n  )`;
+}
+
+function generateKiCad(model = lastModel) {
+    if (!model || model.errors.length) throw new Error("The design must pass validation before export.");
+    const lines = [
+        `(kicad_pcb (version 20240108) (generator pcb_heater_designer)`,
+        `  (general (thickness 1.6))`,
+        `  (paper "A4")`,
+        `  (title_block`,
+        `    (title "PCB Heater - ${model.pattern}")`,
+        `    (comment 1 "${fmt(model.V, 2)} V, ${fmt(model.P, 2)} W at ${fmt(model.temperature, 0)} C copper")`,
+        `    (comment 2 "Trace ${fmt(model.traceWidth, 4)} mm; ${fmt(model.copperOz, 2)} oz copper; radius ${fmt(model.cornerRadius, 2)} mm")`,
+        `    (comment 3 "${model.padStyle === "smd" ? "SMD" : "through-hole"} ${model.padShape} pads ${fmt(model.padWidth, 2)} x ${fmt(model.padHeight, 2)} mm${model.padStyle === "through_hole" ? `, drill ${fmt(model.padDrill, 2)} mm` : ""}")`,
+        `    (comment 4 "Verify resistance, laminate rating, fuse and independent thermal cutoff before power"))`,
+        `  (layers`,
+        `    (0 "F.Cu" signal)`,
+        `    (31 "B.Cu" signal)`,
+        `    (36 "B.SilkS" user "b.Silkscreen")`,
+        `    (37 "F.SilkS" user "f.Silkscreen")`,
+        `    (44 "Edge.Cuts" user))`,
+        `  (setup (pad_to_mask_clearance 0))`,
+        `  (net 0 "")`,
+        `  (net 1 "HEATER")`,
+        `  (net_class "Default" "PCB heater fabrication rules" (clearance ${MIN_CLEARANCE}) (trace_width ${MIN_WIDTH}) (via_dia ${VIA_MIN_DIAMETER}) (via_drill ${VIA_DRILL}) (add_net "HEATER"))`,
+        footprint("P1", model.path.points[0], model),
+        footprint("P2", model.path.points[model.path.points.length - 1], model)
+    ];
+    for (const segment of model.geometry.segments) lines.push(`  (segment (start ${fmt(segment.start[0])} ${fmt(segment.start[1])}) (end ${fmt(segment.end[0])} ${fmt(segment.end[1])}) (width ${fmt(model.traceWidth)}) (layer "${segment.layer}") (net 1))`);
+    for (const via of model.geometry.vias) lines.push(`  (via (at ${fmt(via[0])} ${fmt(via[1])}) (size ${fmt(model.geometry.viaDiameter)}) (drill ${VIA_DRILL}) (layers "F.Cu" "B.Cu") (net 1))`);
+    if (model.boardShape === "circle") {
+        lines.push(`  (gr_circle (center ${fmt(model.diameter / 2)} ${fmt(model.diameter / 2)}) (end ${fmt(model.diameter)} ${fmt(model.diameter / 2)}) (stroke (width 0.05) (type default)) (fill none) (layer "Edge.Cuts"))`);
+    } else {
+        const edge = [[0, 0, model.W, 0], [model.W, 0, model.W, model.H], [model.W, model.H, 0, model.H], [0, model.H, 0, 0]];
+        for (const [x1, y1, x2, y2] of edge) lines.push(`  (gr_line (start ${fmt(x1)} ${fmt(y1)}) (end ${fmt(x2)} ${fmt(y2)}) (stroke (width 0.05) (type default)) (layer "Edge.Cuts"))`);
+    }
+    lines.push(`)`);
+    return lines.join("\n") + "\n";
+}
+
+function downloadKiCad() {
+    const content = generateKiCad();
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob), anchor = document.createElement("a");
+    anchor.href = url; anchor.download = "pcb_heater_default.kicad_pcb"; document.body.append(anchor); anchor.click(); anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function canvasPadPath(ctx, pad, model) {
+    const x = pad[0] - model.padWidth / 2, y = pad[1] - model.padHeight / 2;
+    const width = model.padWidth, height = model.padHeight;
+    ctx.beginPath();
+    if (model.padShape === "circle") {
+        ctx.arc(pad[0], pad[1], width / 2, 0, Math.PI * 2);
+        return;
+    }
+    const radius = model.padShape === "oval" ? Math.min(width, height) / 2 :
+        model.padShape === "roundrect" ? Math.min(width, height) * 0.2 : 0;
+    if (radius <= 0) {
+        ctx.rect(x, y, width, height);
+        return;
+    }
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y); ctx.arcTo(x + width, y, x + width, y + r, r);
+    ctx.lineTo(x + width, y + height - r); ctx.arcTo(x + width, y + height, x + width - r, y + height, r);
+    ctx.lineTo(x + r, y + height); ctx.arcTo(x, y + height, x, y + height - r, r);
+    ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+}
+
+function createEtchCanvas(model = lastModel, layer = els.pngLayer.value, dpi = numberValue(els.pngResolution), mirror = els.pngMirror.checked) {
+    if (!model || model.errors.length) throw new Error("The design must pass validation before PNG export.");
+    if (!["F.Cu", "B.Cu"].includes(layer)) throw new Error("Choose F.Cu or B.Cu for the PNG export.");
+    if (!Number.isFinite(dpi) || dpi < 25 || dpi > 2400) throw new Error("PNG resolution must be from 25 to 2400 DPI.");
+    const pixelsPerMM = dpi / 25.4;
+    const pixelWidth = Math.round(model.W * pixelsPerMM), pixelHeight = Math.round(model.H * pixelsPerMM);
+    if (pixelWidth < 1 || pixelHeight < 1 || pixelWidth > 16000 || pixelHeight > 16000 || pixelWidth * pixelHeight > 100000000) {
+        throw new Error("PNG size is too large; reduce board dimensions or PNG resolution.");
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = pixelWidth; canvas.height = pixelHeight;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) throw new Error("This browser cannot create the etching PNG.");
+    ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, pixelWidth, pixelHeight);
+    ctx.save();
+    ctx.scale(pixelsPerMM, pixelsPerMM);
+    if (mirror) {
+        ctx.translate(model.W, 0);
+        ctx.scale(-1, 1);
+    }
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = model.traceWidth;
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const segment of model.geometry.segments.filter(item => item.layer === layer)) {
+        ctx.beginPath();
+        ctx.moveTo(segment.start[0], segment.start[1]);
+        ctx.lineTo(segment.end[0], segment.end[1]);
+        ctx.stroke();
+    }
+    ctx.fillStyle = "#ffffff";
+    for (const via of model.geometry.vias) {
+        ctx.beginPath(); ctx.arc(via[0], via[1], model.geometry.viaDiameter / 2, 0, Math.PI * 2); ctx.fill();
+    }
+    const pads = [model.path.points[0], model.path.points[model.path.points.length - 1]];
+    if (model.padStyle === "through_hole" || layer === "F.Cu") {
+        for (const pad of pads) {
+            canvasPadPath(ctx, pad, model); ctx.fill();
+        }
+    }
+    ctx.fillStyle = "#000000";
+    for (const via of model.geometry.vias) {
+        ctx.beginPath(); ctx.arc(via[0], via[1], VIA_DRILL / 2, 0, Math.PI * 2); ctx.fill();
+    }
+    if (model.padStyle === "through_hole") {
+        for (const pad of pads) {
+            ctx.beginPath(); ctx.arc(pad[0], pad[1], model.padDrill / 2, 0, Math.PI * 2); ctx.fill();
+        }
+    }
+    const outlineWidth = 1 / pixelsPerMM;
+    const outlineInset = outlineWidth / 2;
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = outlineWidth;
+    ctx.beginPath();
+    if (model.boardShape === "circle") {
+        ctx.arc(model.W / 2, model.H / 2, model.W / 2 - outlineInset, 0, Math.PI * 2);
+    } else {
+        ctx.rect(outlineInset, outlineInset, model.W - outlineWidth, model.H - outlineWidth);
+    }
+    ctx.stroke();
+    ctx.restore();
+    const image = ctx.getImageData(0, 0, pixelWidth, pixelHeight);
+    for (let index = 0; index < image.data.length; index += 4) {
+        const mono = image.data[index] + image.data[index + 1] + image.data[index + 2] >= 384 ? 255 : 0;
+        image.data[index] = mono; image.data[index + 1] = mono; image.data[index + 2] = mono; image.data[index + 3] = 255;
+    }
+    ctx.putImageData(image, 0, 0);
+    canvas.dataset.layer = layer;
+    canvas.dataset.dpi = String(dpi);
+    canvas.dataset.pixelsPerMm = String(pixelsPerMM);
+    canvas.dataset.mirrored = String(Boolean(mirror));
+    canvas.dataset.boardOutline = "thin-white";
+    return canvas;
+}
+
+function downloadEtchPng() {
+    const layer = els.pngLayer.value, dpi = numberValue(els.pngResolution), mirror = els.pngMirror.checked;
+    const canvas = createEtchCanvas(lastModel, layer, dpi, mirror);
+    canvas.toBlob(blob => {
+        if (!blob) throw new Error("PNG encoding failed.");
+        const url = URL.createObjectURL(blob), anchor = document.createElement("a");
+        const layerName = layer === "F.Cu" ? "front" : "back";
+        anchor.href = url; anchor.download = `pcb_heater_${layerName}${mirror ? "_mirrored" : ""}_${dpi}dpi.png`;
+        document.body.append(anchor); anchor.click(); anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, "image/png");
+}
+
+document.querySelectorAll("input, select").forEach(control => {
+    if (control === els.pattern) return;
+    control.addEventListener("input", update); control.addEventListener("change", update);
+});
+els.pattern.addEventListener("change", () => {
+    applyPatternDefaults(els.pattern.value);
+    update();
+});
+els.layerView.addEventListener("change", () => lastModel && draw(lastModel));
+els.exportButton.addEventListener("click", downloadKiCad);
+els.pngExportButton.addEventListener("click", downloadEtchPng);
+window.__pcbHeaterApp = { update, getModel: () => lastModel, generateKiCad, downloadKiCad, createEtchCanvas, downloadEtchPng };
+update();
+</script>
+</body>
+</html>
