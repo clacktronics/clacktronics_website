@@ -236,7 +236,12 @@ registered applications, Markdown windows, and desktop actions.
   `vendor/js-dos-6.22/` (GPL-2.0); the v8 player was unsuitable because its
   DOSBox backend crashed on mouse input in QBasic. The startup curtain remains
   in place until the QBasic screen is rendered, so users see QBasic rather than
-  the DOS shell or emulator interface.
+  the DOS shell or emulator interface. `QBASIC.HLP` sits beside the executable
+  and is copied into the DOS filesystem at startup, so F1 and the Help menu
+  work; if it is ever missing QBasic still starts without help. Clicking the
+  screen claims keyboard focus for the frame (js-dos cancels the canvas
+  mousedown, which otherwise leaves the keystrokes with the desktop), and
+  Ctrl+V or the corner Paste button feeds clipboard text in as keystrokes.
 - `applications/video/index.html` (Applications → Video Lab…) — a
   browser-only video player and editor with native preview plus a version-pinned
   FFmpeg WebAssembly compatibility/export engine. Supports forward and

@@ -791,7 +791,12 @@ async function openWindow(id) {
         try {
           applyThemeToFrame(f);
           bindWebLinkRouting(f.contentDocument);
-          f.contentDocument.addEventListener('pointerdown', () => focusWindow(el));
+          /* clicking into an app also hands it the keyboard: apps that render
+           * to a canvas (emulators) never take focus on their own */
+          f.contentDocument.addEventListener('pointerdown', () => {
+            focusWindow(el);
+            try { f.contentWindow.focus(); } catch {}
+          });
         } catch {}
       });
       body.appendChild(f);
