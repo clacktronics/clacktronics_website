@@ -19,6 +19,16 @@
 .theme-head label { display: flex; flex: 1; flex-direction: column; gap: 5px; }
 .theme-head input, .theme-head select { width: 100%; }
 .palette { display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr)); gap: 8px; }
+.palette .group-head { grid-column: 1 / -1; margin-top: 6px; }
+.palette .group-head:first-child { margin-top: 0; }
+.sliders { display: grid; gap: 8px; margin-top: 10px; }
+.slider-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 9px; align-items: center;
+  padding: 8px 10px; border: 1px solid var(--paper-line); border-radius: 6px; background: var(--paper-deep);
+}
+.slider-row label { color: var(--control-text); font-size: 11.5px; font-weight: 500; }
+.slider-row code { color: var(--sage); font-size: 10px; text-align: right; }
+.slider-row input[type="range"] { grid-column: 1 / -1; width: 100%; }
 .colour-row {
   display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto;
   gap: 2px 9px; align-items: center; padding: 8px;
@@ -32,32 +42,86 @@
 .colour-row code { color: var(--sage); font-size: 10px; }
 .theme-preview-wrap { display: flex; flex-direction: column; gap: 8px; }
 .mock-desktop {
-  position: relative; flex: 1; min-height: 380px; overflow: hidden;
+  position: relative; flex: 1; min-height: 440px; overflow: hidden;
   border: 2px solid var(--ink); border-radius: 8px; background: var(--desktop);
+  font-size: 10px;
 }
 .mock-menu, .mock-taskbar {
   position: absolute; left: 0; right: 0; display: flex; align-items: center;
   background: var(--ink); color: var(--menu-text); font-size: 10px;
 }
-.mock-menu { top: 0; height: 28px; gap: 12px; padding: 0 10px; }
-.mock-menu .brand { width: 11px; height: 11px; border-radius: 3px; background: var(--leaf); }
+.mock-menu { top: 0; height: 28px; gap: 4px; padding: 0 10px; z-index: 4; }
+.mock-menu .brand { width: 11px; height: 11px; border-radius: 3px; background: var(--leaf); margin-right: 8px; }
+.mock-menu .item { padding: 0 7px; line-height: 28px; }
+.mock-menu .item.open { background: var(--leaf-deep); }
 .mock-menu .clock { margin-left: auto; color: var(--menu-dim); }
-.mock-taskbar { bottom: 0; height: 34px; gap: 8px; padding: 0 9px; border-top: 2px solid var(--leaf-deep); }
-.mock-task { padding: 5px 9px; border: 1px solid var(--leaf); border-radius: 5px; background: var(--leaf-deep); }
-.mock-window {
-  position: absolute; inset: 54px 36px 58px; display: flex; flex-direction: column;
-  border: 2px solid var(--ink); border-radius: 9px; background: var(--paper);
-  box-shadow: 7px 7px 0 color-mix(in srgb, var(--shadow) 35%, transparent);
+
+/* an open menu, so dropdown surface, dividers, icons, highlight, disabled and
+   check colours are all visible without interacting with the preview */
+.mock-dropdown {
+  position: absolute; top: 28px; left: 29px; z-index: 5; min-width: 150px; padding: 5px 2px;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 0 0 7px 7px;
+  color: var(--control-text);
+  box-shadow: calc(var(--shadow-distance) * .75) calc(var(--shadow-distance) * .75) 0
+    color-mix(in srgb, var(--shadow) var(--shadow-alpha), transparent);
 }
-.mock-title { padding: 8px 11px; border-radius: 6px 6px 0 0; background: var(--ink); color: var(--title-text); text-align: center; font-size: 11px; }
-.mock-body { padding: 22px; color: var(--ink-soft); overflow: auto; }
-.mock-body h1 { margin-bottom: 8px; color: var(--heading); font-family: 'Dosis', sans-serif; font-size: 28px; text-transform: uppercase; letter-spacing: .06em; }
-.mock-body .tagline { margin-bottom: 14px; color: var(--sage); font-size: 10px; }
-.mock-body p { margin-bottom: 14px; line-height: 1.7; }
+.mock-dropdown .mi {
+  display: flex; align-items: center; gap: 7px; padding: 5px 10px;
+}
+.mock-dropdown .mi .ico { width: 12px; height: 12px; flex: none; }
+.mock-dropdown .mi .check { margin-left: auto; color: var(--leaf-deep); }
+.mock-dropdown .mi.hot { background: var(--ink); color: var(--menu-text); }
+.mock-dropdown .mi.hot .check { color: var(--leaf); }
+.mock-dropdown .mi.off { color: var(--disabled-text); }
+.mock-dropdown .sep { height: 1px; margin: 4px 6px; background: var(--paper-line); }
+
+.mock-taskbar { bottom: 0; height: 34px; gap: 8px; padding: 0 9px; border-top: 2px solid var(--leaf-deep); z-index: 4; }
+.mock-task {
+  display: flex; align-items: center; gap: 6px; padding: 5px 9px;
+  border: 1px solid var(--leaf); border-radius: 5px; background: var(--leaf-deep);
+}
+.mock-task .ico { width: 11px; height: 11px; color: var(--leaf); }
+.mock-task.idle {
+  background: none; border-color: color-mix(in srgb, var(--menu-text) 35%, transparent);
+}
+.mock-task.idle .ico { color: var(--menu-text); }
+.mock-window {
+  position: absolute; display: flex; flex-direction: column;
+  border: 2px solid var(--window-border); border-radius: 9px; background: var(--paper);
+  box-shadow: var(--shadow-distance) var(--shadow-distance) 0 color-mix(in srgb, var(--shadow) var(--shadow-alpha), transparent);
+}
+.mock-window.active { inset: 64px 20px 56px 205px; z-index: 3; }
+.mock-window.behind {
+  top: 226px; left: 24px; width: 178px; height: 116px; z-index: 2;
+  border-color: var(--window-border-inactive); overflow: hidden;
+}
+.mock-title {
+  display: flex; align-items: center; gap: 6px; padding: 7px 10px;
+  border-radius: 6px 6px 0 0; background: var(--titlebar); color: var(--title-text); font-size: 11px;
+}
+.mock-window.behind .mock-title { background: var(--window-inactive); }
+.mock-title .ico { width: 12px; height: 12px; color: var(--leaf); flex: none; }
+.mock-title .dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--menu-text); box-sizing: border-box; flex: none; }
+.mock-title .dot.close { background: var(--leaf); border-color: var(--leaf); }
+.mock-title .label { margin-left: 2px; }
+.mock-body { padding: 18px; color: var(--ink-soft); overflow: auto; }
+.mock-body h1 { margin-bottom: 6px; color: var(--heading); font-family: 'Dosis', sans-serif; font-size: 24px; text-transform: uppercase; letter-spacing: .06em; }
+.mock-body .tagline { margin-bottom: 10px; color: var(--sage); font-size: 10px; }
+.mock-body .rule { height: 1px; margin-bottom: 12px; background: var(--paper-line); }
+.mock-body p { margin-bottom: 12px; line-height: 1.7; }
+.mock-body b { color: var(--strong-text); font-weight: 600; }
 .mock-body .eyebrow { margin-bottom: 8px; color: var(--leaf-deep); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
+.mock-list {
+  margin-bottom: 12px; border: 1px solid var(--ink); border-radius: 6px;
+  background: var(--paper-deep); overflow: hidden;
+}
+.mock-list div { padding: 6px 10px; border-bottom: 1px solid var(--paper-line); }
+.mock-list div:last-child { border-bottom: 0; }
+.mock-body .behind-note { color: var(--sage); font-size: 9.5px; line-height: 1.6; }
 .mock-actions { display: flex; gap: 8px; }
 .mock-button { padding: 7px 10px; border: 1px solid var(--ink); border-radius: 5px; background: var(--ink); color: var(--button-text); }
 .mock-button.alt { background: var(--paper-deep); color: var(--control-text); }
+.mock-button.off { background: var(--paper-deep); color: var(--disabled-text); border-color: var(--paper-line); }
 .status-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
 .status-row .app-status { flex: 1; }
 .status-actions { display: flex; gap: 8px; flex: none; }
@@ -105,22 +169,47 @@
         <button class="btn" id="resetButton">Defaults</button>
       </div>
       <div class="palette" id="palette"></div>
+      <div class="sliders" id="sliders"></div>
     </section>
     <section class="theme-preview-wrap">
       <span class="app-lbl">Live preview</span>
       <div class="mock-desktop">
-        <div class="mock-menu"><span class="brand"></span><span>File</span><span>Edit</span><span>Applications</span><span class="clock">12:34</span></div>
-        <div class="mock-window">
-          <div class="mock-title">Theme preview</div>
+        <div class="mock-menu">
+          <span class="brand"></span><span class="item open">File</span>
+          <span class="item">View</span><span class="item">Applications</span>
+          <span class="clock">12:34</span>
+        </div>
+        <div class="mock-dropdown">
+          <div class="mi"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 5h7l2 2h9v12H3z"/></svg><span>Open…</span></div>
+          <div class="mi hot"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M4 4h16v3H4zm0 6h16v3H4zm0 6h10v3H4z"/></svg><span>Menu item</span><span class="check">✓</span></div>
+          <div class="mi"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M5 3h14v18l-7-4-7 4z"/></svg><span>Bookmarks</span></div>
+          <div class="sep"></div>
+          <div class="mi off"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M7 10V7a5 5 0 0 1 10 0v3h2v11H5V10h2zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg><span>Unavailable</span></div>
+        </div>
+        <div class="mock-window behind">
+          <div class="mock-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 4h18v16H3zm2 4h14v10H5z"/></svg><span class="label">Inactive window</span></div>
+          <div class="mock-body"><p class="behind-note">Inactive title bar and inactive window border.</p></div>
+        </div>
+        <div class="mock-window active">
+          <div class="mock-title">
+            <span class="dot close"></span><span class="dot"></span>
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 4h18v16H3zm2 4h14v10H5z"/></svg>
+            <span class="label">Theme preview</span>
+          </div>
           <div class="mock-body">
             <h1>Clacktronics</h1>
             <p class="tagline">Hardware, sound and useful experiments.</p>
+            <div class="rule"></div>
             <p class="eyebrow">// Palette in context</p>
-            <p>Change a colour to update this sample. Use Apply to send the palette to the desktop.</p>
-            <div class="mock-actions"><span class="mock-button">Primary</span><span class="mock-button alt">Secondary</span></div>
+            <p>Change a colour to update this sample. <b>Strong text</b> sits alongside body text.</p>
+            <div class="mock-list"><div>Dividers between rows</div><div>Raised surface behind them</div></div>
+            <div class="mock-actions"><span class="mock-button">Primary</span><span class="mock-button alt">Secondary</span><span class="mock-button off">Disabled</span></div>
           </div>
         </div>
-        <div class="mock-taskbar"><span class="mock-task">Theme Editor</span></div>
+        <div class="mock-taskbar">
+          <span class="mock-task"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 4h18v16H3zm2 4h14v10H5z"/></svg>Theme Editor</span>
+          <span class="mock-task idle"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 4h18v16H3zm2 4h14v10H5z"/></svg>Inactive window</span>
+        </div>
       </div>
       <div class="status-row">
         <p class="app-status" id="status">Loading the active website theme…</p>
@@ -162,29 +251,46 @@ const sendToClackOS = data => {
     appRoot.host.dispatchEvent(new CustomEvent('clackos-message', { detail: data, bubbles: true, composed: true }));
   else if (window.parent !== window) window.parent.postMessage(data, location.origin);
 };
+/* Colour fields, grouped by the part of the desktop they paint. A string entry
+   starts a new group. */
 const FIELDS = [
-  ['--ink', 'Chrome'], ['--heading', 'Headings'], ['--ink-soft', 'Body text'],
-  ['--control-text', 'Controls / labels'], ['--strong-text', 'Strong text'],
-  ['--shadow', 'Drop shadow'],
-  ['--paper', 'Window surface'], ['--paper-deep', 'Raised surface'],
-  ['--paper-line', 'Dividers'], ['--sage', 'Muted text'],
-  ['--leaf', 'Accent'], ['--leaf-deep', 'Deep accent'],
+  'Windows',
+  ['--titlebar', 'Active title bar'], ['--window-border', 'Active window border'],
+  ['--window-inactive', 'Inactive title bar'], ['--window-border-inactive', 'Inactive window border'],
+  ['--title-text', 'Title text'], ['--paper', 'Window surface'],
+  ['--paper-deep', 'Raised surface'], ['--paper-line', 'Dividers'],
+  'Chrome & desktop',
+  ['--ink', 'Chrome (menu bar, taskbar)'], ['--desktop', 'Desktop'],
   ['--menu-text', 'Menu text'], ['--menu-dim', 'Dim menu text'],
-  ['--desktop', 'Desktop'], ['--window-inactive', 'Inactive titlebar'],
-  ['--title-text', 'Title text'], ['--accent-hover', 'Accent hover'],
-  ['--button-text', 'Button text'], ['--disabled-text', 'Disabled text']
+  'Text',
+  ['--heading', 'Headings'], ['--ink-soft', 'Body text'],
+  ['--control-text', 'Controls / labels'], ['--strong-text', 'Strong text'],
+  ['--sage', 'Muted text'], ['--button-text', 'Button text'],
+  ['--disabled-text', 'Disabled text'],
+  'Accents & shadow',
+  ['--leaf', 'Accent'], ['--leaf-deep', 'Deep accent'],
+  ['--accent-hover', 'Accent hover'], ['--shadow', 'Drop shadow']
+];
+const COLOURS = FIELDS.filter(field => Array.isArray(field));
+/* Non-colour theme values, edited with sliders. */
+const SLIDERS = [
+  ['--shadow-distance', 'Drop shadow distance', 0, 24, 1, 'px'],
+  ['--shadow-alpha', 'Drop shadow opacity', 0, 100, 5, '%']
 ];
 const DEFAULTS = {
   '--ink':'#09140d', '--heading':'#09140d', '--ink-soft':'#14231a',
   '--control-text':'#09140d', '--strong-text':'#09140d', '--paper':'#f8f2dd',
-  '--shadow':'#09140d',
+  '--shadow':'#09140d', '--shadow-distance':'8px', '--shadow-alpha':'40%',
   '--paper-deep':'#f3ecd1', '--paper-line':'#d8cfa9', '--sage':'#66755a',
   '--leaf':'#4fae7d', '--leaf-deep':'#276b47', '--menu-text':'#f5efdb',
-  '--menu-dim':'#8fcaa8', '--desktop':'#e3ddc6', '--window-inactive':'#2a3b2f',
+  '--menu-dim':'#8fcaa8', '--desktop':'#e3ddc6',
+  '--titlebar':'#09140d', '--window-border':'#09140d',
+  '--window-inactive':'#2a3b2f', '--window-border-inactive':'#2a3b2f',
   '--title-text':'#c8e3d2', '--accent-hover':'#6fcf9a', '--button-text':'#f2ecd6',
   '--disabled-text':'#b3ab8d'
 };
 const palette = byId('palette');
+const sliders = byId('sliders');
 const themeTemplate = byId('themeTemplate');
 const themeName = byId('themeName');
 const status = byId('status');
@@ -223,7 +329,14 @@ function populateTemplateMenu(site, selected = themeTemplate.value) {
 
 function renderPalette() {
   palette.textContent = '';
-  for (const [variable, label] of FIELDS) {
+  for (const field of FIELDS) {
+    if (!Array.isArray(field)) {
+      const head = document.createElement('span');
+      head.className = 'app-lbl group-head'; head.textContent = field;
+      palette.appendChild(head);
+      continue;
+    }
+    const [variable, label] = field;
     const row = document.createElement('div');
     row.className = 'colour-row';
     const input = document.createElement('input');
@@ -236,6 +349,28 @@ function renderPalette() {
       updateLivePreview();
     });
     row.append(input, title, code); palette.appendChild(row);
+  }
+}
+
+function renderSliders() {
+  sliders.textContent = '';
+  for (const [variable, label, min, max, step, unit] of SLIDERS) {
+    const row = document.createElement('div');
+    row.className = 'slider-row';
+    const title = document.createElement('label'); title.textContent = label;
+    const code = document.createElement('code');
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = min; input.max = max; input.step = step;
+    input.value = parseFloat(values[variable]) || 0;
+    input.dataset.variable = variable;
+    title.htmlFor = input.id = `slider${variable}`;
+    const show = () => { code.textContent = `${variable} · ${values[variable]}`; };
+    input.addEventListener('input', () => {
+      values[variable] = `${input.value}${unit}`;
+      show(); updateLivePreview();
+    });
+    show();
+    row.append(title, code, input); sliders.appendChild(row);
   }
 }
 
@@ -253,13 +388,13 @@ function applyToDesktop() {
 
 function restoreDesktopTheme() {
   if (appRoot === document && window.parent === window) {
-    for (const [name] of FIELDS) document.documentElement.style.removeProperty(name);
+    for (const [name] of [...COLOURS, ...SLIDERS]) document.documentElement.style.removeProperty(name);
   } else sendToClackOS({ type: 'clackos-theme-preview', variables: null });
   status.textContent = 'Desktop restored to its active theme.';
 }
 
 function makeCss() {
-  const lines = FIELDS.map(([name]) => `  ${name}: ${values[name]};`);
+  const lines = [...COLOURS, ...SLIDERS].map(([name]) => `  ${name}: ${values[name]};`);
   return `/* ${safeName(themeName.value)} — generated by the ClackOS Theme Editor */\n:root {\n${lines.join('\n')}\n}\n`;
 }
 
@@ -272,14 +407,24 @@ function loadCss(css, name) {
       seen.add(match[1]);
     }
   }
+  for (const [name, , min, max, , unit] of SLIDERS) {
+    const match = new RegExp(`${name}\\s*:\\s*(-?[0-9.]+)\\s*${unit === '%' ? '%' : 'px'}`, 'i').exec(css);
+    if (!match) continue;
+    next[name] = `${Math.min(max, Math.max(min, parseFloat(match[1])))}${unit}`;
+    seen.add(name);
+  }
   /* Themes made before these roles existed remain readable on both light and
      dark surfaces by inheriting their body-text colour. */
   for (const name of ['--heading', '--control-text', '--strong-text'])
     if (!seen.has(name)) next[name] = next['--ink-soft'];
   if (!seen.has('--shadow')) next['--shadow'] = next['--ink'];
+  /* Window chrome used to be painted with the single chrome colour. */
+  for (const name of ['--titlebar', '--window-border'])
+    if (!seen.has(name)) next[name] = next['--ink'];
+  if (!seen.has('--window-border-inactive')) next['--window-border-inactive'] = next['--window-inactive'];
   values = next; themeName.value = safeName(name);
   themeTemplate.value = [...themeTemplate.options].some(option => option.value === themeName.value) ? themeName.value : '';
-  renderPalette(); updateLivePreview();
+  renderPalette(); renderSliders(); updateLivePreview();
   status.textContent = `${themeName.value} — loaded`;
 }
 
@@ -317,7 +462,7 @@ async function showWebsiteThemes() {
 }
 
 function newTheme() {
-  values = { ...DEFAULTS }; themeTemplate.value = ''; themeName.value = 'custom-theme.css'; renderPalette(); updateLivePreview();
+  values = { ...DEFAULTS }; themeTemplate.value = ''; themeName.value = 'custom-theme.css'; renderPalette(); renderSliders(); updateLivePreview();
   status.textContent = 'New theme — choose colours, then save or commit it.';
 }
 
@@ -403,7 +548,7 @@ themeTemplate.addEventListener('change', async () => {
   catch (error) { status.textContent = error.message; }
 });
 themeName.addEventListener('change', () => { themeName.value = safeName(themeName.value); });
-byId('resetButton').addEventListener('click', () => { values = { ...DEFAULTS }; renderPalette(); updateLivePreview(); });
+byId('resetButton').addEventListener('click', () => { values = { ...DEFAULTS }; renderPalette(); renderSliders(); updateLivePreview(); });
 byId('applyButton').addEventListener('click', applyToDesktop);
 byId('commitButton').addEventListener('click', openCommit);
 byId('commitGo').addEventListener('click', commitTheme);
@@ -430,6 +575,7 @@ appRoot.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); saveTheme(); }
 });
 renderPalette();
+renderSliders();
 (async () => {
   try {
     const site = await getSiteConfig();

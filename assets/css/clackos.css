@@ -6,6 +6,8 @@
   --control-text: var(--ink-soft);
   --strong-text: var(--ink-soft);
   --shadow: var(--ink);
+  --shadow-distance: 8px;
+  --shadow-alpha: 40%;
   --paper: #f8f2dd;
   --paper-deep: #f3ecd1;
   --paper-line: #d8cfa9;
@@ -15,7 +17,13 @@
   --menu-text: #f5efdb;
   --menu-dim: #8fcaa8;
   --desktop: #e3ddc6;
+  /* Window chrome. These default to --ink so themes written before the roles
+     existed keep their original look; set them to split window frames from
+     the menu bar and taskbar. */
+  --titlebar: var(--ink);
+  --window-border: var(--ink);
   --window-inactive: #2a3b2f;
+  --window-border-inactive: var(--window-inactive);
   --title-text: #c8e3d2;
   --accent-hover: #6fcf9a;
   --button-text: #f2ecd6;
@@ -57,8 +65,9 @@ body {
 }
 .dropdown::before {
   content: ''; position: absolute; inset: 0; z-index: -2;
-  transform: translate(6px, 6px); border-radius: 0 0 8px 8px;
-  background-image: repeating-conic-gradient(color-mix(in srgb, var(--shadow) 40%, transparent) 0 25%, transparent 0 50%);
+  transform: translate(calc(var(--shadow-distance) * 0.75), calc(var(--shadow-distance) * 0.75));
+  border-radius: 0 0 8px 8px;
+  background-image: repeating-conic-gradient(color-mix(in srgb, var(--shadow) var(--shadow-alpha), transparent) 0 25%, transparent 0 50%);
   background-size: 2px 2px;
 }
 .dropdown::after {
@@ -130,8 +139,8 @@ body {
 }
 .window::before {
   content: ''; position: absolute; inset: 0; z-index: -2;
-  transform: translate(8px, 8px); border-radius: 10px;
-  background-image: repeating-conic-gradient(color-mix(in srgb, var(--shadow) 40%, transparent) 0 25%, transparent 0 50%);
+  transform: translate(var(--shadow-distance), var(--shadow-distance)); border-radius: 10px;
+  background-image: repeating-conic-gradient(color-mix(in srgb, var(--shadow) var(--shadow-alpha), transparent) 0 25%, transparent 0 50%);
   background-size: 2px 2px;
 }
 .window::after {
@@ -140,14 +149,15 @@ body {
 }
 .frame {
   position: absolute; inset: 0; z-index: 6; pointer-events: none;
-  border: 2px solid var(--ink); border-radius: 10px;
+  border: 2px solid var(--window-border); border-radius: 10px;
 }
 @media (prefers-reduced-motion: reduce) { .window { transition: none; } }
 .window.fixed { min-width: 0; min-height: 0; }
 .window.closing { opacity: 0; transform: scale(0.97); }
 .window.inactive .titlebar { background: var(--window-inactive); }
+.window.inactive .frame { border-color: var(--window-border-inactive); }
 .titlebar {
-  background: var(--ink); color: var(--menu-text);
+  background: var(--titlebar); color: var(--menu-text);
   padding: 9px 14px; display: flex; align-items: center; gap: 8px;
   border-radius: 8px 8px 0 0; cursor: grab; flex: none; touch-action: none;
 }
