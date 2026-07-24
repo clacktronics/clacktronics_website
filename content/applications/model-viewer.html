@@ -14,18 +14,13 @@
 html, body, .viewer-app { height: 100%; min-height: 0; }
 body { overflow: hidden; }
 .viewer-app { display: flex; flex-direction: column; }
-.viewer-head {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 10px 14px; border-bottom: 1px solid var(--paper-line);
-  background: var(--paper);
+.viewer-file-name {
+  margin-left: auto; align-self: center; max-width: 260px; padding: 0 8px;
+  overflow: hidden; color: var(--sage); font-size: 11px;
+  text-overflow: ellipsis; white-space: nowrap;
 }
-.viewer-open { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; }
-.viewer-open .pixel-icon { width: 17px; height: 17px; }
-.viewer-file-name { min-width: 120px; max-width: 240px; overflow: hidden; color: var(--sage); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
-.viewer-tools { display: flex; align-items: center; gap: 7px; margin-left: auto; }
-.viewer-tools .btn { padding: 7px 10px; font-size: 11.5px; }
-.viewer-tools .pixel-icon { width: 16px; height: 16px; }
-.viewer-tools .btn.active { color: var(--menu-text); background: var(--leaf-deep); }
+.rm-dd .mi-check { margin-left: auto; padding-left: 18px; color: var(--leaf-deep); }
+.rm-dd button:hover .mi-check { color: var(--leaf); }
 .viewer-stage {
   position: relative; flex: 1; min-height: 260px; overflow: hidden;
   background: var(--paper-deep); outline: none;
@@ -58,12 +53,32 @@ body { overflow: hidden; }
 .viewer-credit { margin-left: auto; white-space: nowrap; }
 .viewer-credit a { color: var(--leaf-deep); }
 @media (max-width: 620px) {
-  .viewer-head { align-items: stretch; }
-  .viewer-file-name { max-width: none; }
-  .viewer-tools { margin-left: 0; }
+  .viewer-file-name { max-width: 40vw; }
   .viewer-credit { width: 100%; margin-left: 0; }
 }
 </style>
+<script>
+/* Menu behaviour is deliberately outside the module below: that module imports
+   three.js over the network, and the menus should still open without it. */
+document.addEventListener('DOMContentLoaded', () => {
+  const menus = document.querySelectorAll('.rm');
+  const closeMenus = () => menus.forEach(menu => menu.classList.remove('open'));
+  menus.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
+    event.stopPropagation();
+    const open = menu.classList.contains('open');
+    closeMenus();
+    if (!open) menu.classList.add('open');
+  }));
+  document.querySelector('.rm-bar').addEventListener('click', event => {
+    const command = event.target.closest('[data-cmd]')?.dataset.cmd;
+    if (!command) return;
+    closeMenus();
+    document.dispatchEvent(new CustomEvent('viewer-command', { detail: command }));
+  });
+  document.addEventListener('click', closeMenus);
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenus(); });
+});
+</script>
 <script type="importmap">
 {
   "imports": {
@@ -75,15 +90,25 @@ body { overflow: hidden; }
 </head>
 <body>
 <div class="viewer-app">
-  <header class="viewer-head">
-    <label class="btn primary viewer-open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open model<input id="model-file" type="file" accept=".stl,.step,.stp" aria-label="Open an STL or STEP model" hidden></label>
-    <span class="viewer-file-name" id="viewer-file-name">Demo assembly</span>
-    <div class="viewer-tools" aria-label="Viewer controls">
-      <button class="btn ghost" id="fit-view" type="button"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span> Fit</button>
-      <button class="btn ghost" id="reset-view" type="button"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span> Reset</button>
-      <button class="btn ghost" id="wireframe" type="button" aria-pressed="false"><span class="pixel-icon" data-icon="eye" aria-hidden="true"></span> Wire</button>
+  <nav class="rm-bar" aria-label="Model Viewer menu">
+    <div class="rm">
+      <button type="button">File</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open model&hellip;</button>
+      </div>
     </div>
-  </header>
+    <div class="rm">
+      <button type="button">View</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="fit"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Fit to view</button>
+        <button type="button" data-cmd="reset"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Reset view</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="wireframe" id="wireframe" aria-pressed="false"><span class="pixel-icon" data-icon="eye" aria-hidden="true"></span>Wireframe<span class="mi-check"></span></button>
+      </div>
+    </div>
+    <span class="viewer-file-name" id="viewer-file-name">Demo assembly</span>
+    <input id="model-file" type="file" accept=".stl,.step,.stp" aria-label="Open an STL or STEP model" hidden>
+  </nav>
 
   <main class="viewer-stage" id="viewer-stage" aria-label="Interactive 3D model viewport">
     <div class="viewer-prompt" id="viewer-prompt">
@@ -118,8 +143,6 @@ const busy = document.getElementById('viewer-busy');
 const nameEl = document.getElementById('model-name');
 const statsEl = document.getElementById('model-stats');
 const messageEl = document.getElementById('viewer-message');
-const fitButton = document.getElementById('fit-view');
-const resetButton = document.getElementById('reset-view');
 const wireButton = document.getElementById('wireframe');
 
 const themeColor = (name, fallback) =>
@@ -173,6 +196,10 @@ function applyViewerTheme() {
   const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material];
   gridMaterials[0]?.color.set(themeColor('--leaf-deep', '#276b47'));
   gridMaterials[1]?.color.set(themeColor('--paper-line', '#d8cfa9'));
+  modelRoot?.traverse(object => {
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    materials.filter(entry => entry?.userData.themed).forEach(entry => entry.color.set(modelColour()));
+  });
   render();
 }
 
@@ -191,9 +218,13 @@ function resize() {
   render();
 }
 
-function material(color = 0x4fae7d, options = {}) {
-  return new THREE.MeshStandardMaterial({
-    color,
+/* Models render in the chrome colour. Passing no colour marks the material as
+   themed, so applyViewerTheme can re-tint it when the palette changes. */
+const modelColour = () => new THREE.Color(themeColor('--ink', '#09140d'));
+
+function material(color = null, options = {}) {
+  const entry = new THREE.MeshStandardMaterial({
+    color: color === null ? modelColour() : color,
     roughness: 0.62,
     metalness: options.metalness || 0,
     side: THREE.DoubleSide,
@@ -201,35 +232,37 @@ function material(color = 0x4fae7d, options = {}) {
     transparent: Boolean(options.transparent),
     opacity: options.opacity ?? 1
   });
+  entry.userData.themed = color === null;
+  return entry;
 }
 
 function buildDemo() {
   const root = new THREE.Group();
-  const board = new THREE.Mesh(new THREE.BoxGeometry(72, 3, 44), material(0x276b47));
+  const board = new THREE.Mesh(new THREE.BoxGeometry(72, 3, 44), material());
   board.castShadow = true;
   board.receiveShadow = true;
   root.add(board);
 
-  const chip = new THREE.Mesh(new THREE.BoxGeometry(22, 5, 16), material(0x14231a));
+  const chip = new THREE.Mesh(new THREE.BoxGeometry(22, 5, 16), material());
   chip.position.set(4, 4, 0);
   chip.castShadow = true;
   root.add(chip);
 
   [[-27, -14], [-27, 14], [27, -14], [27, 14]].forEach(([x, z]) => {
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.2, 6, 24), material(0xc6a85e, { metalness: 0.5 }));
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.2, 6, 24), material(null, { metalness: 0.5 }));
     post.position.set(x, 4.5, z);
     post.castShadow = true;
     root.add(post);
   });
 
   [-12, 12].forEach(z => {
-    const connector = new THREE.Mesh(new THREE.BoxGeometry(12, 8, 7), material(0x36493c));
+    const connector = new THREE.Mesh(new THREE.BoxGeometry(12, 8, 7), material());
     connector.position.set(28, 5.5, z);
     connector.castShadow = true;
     root.add(connector);
   });
 
-  const socket = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 7, 32), material(0xb8b8ad, { metalness: 0.75 }));
+  const socket = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 7, 32), material(null, { metalness: 0.75 }));
   socket.position.set(-15, 5, 0);
   socket.castShadow = true;
   root.add(socket);
@@ -302,7 +335,7 @@ function setWireframe(enabled) {
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     materials.filter(Boolean).forEach(entry => { entry.wireframe = enabled; });
   });
-  wireButton.classList.toggle('active', enabled);
+  wireButton.querySelector('.mi-check').textContent = enabled ? '\u2713' : '';
   wireButton.setAttribute('aria-pressed', String(enabled));
   render();
 }
@@ -351,7 +384,7 @@ async function parseStl(buffer) {
   if (!geometry.getAttribute('normal')) geometry.computeVertexNormals();
   const hasColors = Boolean(geometry.hasColors);
   const root = new THREE.Group();
-  root.add(new THREE.Mesh(geometry, material(0x4fae7d, {
+  root.add(new THREE.Mesh(geometry, material(null, {
     vertexColors: hasColors,
     transparent: hasColors && geometry.alpha < 1,
     opacity: hasColors ? geometry.alpha : 1
@@ -376,9 +409,11 @@ async function parseStep(buffer) {
   let triangles = 0;
   result.meshes.forEach(stepMesh => {
     const geometry = geometryFromStepMesh(stepMesh);
-    const color = stepMesh.color || [79, 174, 125];
-    const rgb = color.map(value => value > 1 ? value / 255 : value);
-    root.add(new THREE.Mesh(geometry, material(new THREE.Color(rgb[0], rgb[1], rgb[2]))));
+    /* STEP files may carry their own part colours; anything without one is
+       rendered in the theme colour like the rest of the viewer. */
+    const rgb = stepMesh.color?.map(value => value > 1 ? value / 255 : value);
+    const colour = rgb ? new THREE.Color(rgb[0], rgb[1], rgb[2]) : null;
+    root.add(new THREE.Mesh(geometry, material(colour)));
     triangles += geometry.index ? geometry.index.count / 3 : geometry.getAttribute('position').count / 3;
   });
   return { root, triangles: Math.floor(triangles), parts: result.meshes.length };
@@ -437,9 +472,12 @@ stage.addEventListener('drop', event => {
   if (file) openFile(file);
 });
 
-fitButton.addEventListener('click', () => fitView(false));
-resetButton.addEventListener('click', () => fitView(true));
-wireButton.addEventListener('click', () => setWireframe(wireButton.getAttribute('aria-pressed') !== 'true'));
+document.addEventListener('viewer-command', event => {
+  ({ open: () => fileInput.click(),
+     fit: () => fitView(false),
+     reset: () => fitView(true),
+     wireframe: () => setWireframe(wireButton.getAttribute('aria-pressed') !== 'true') })[event.detail]?.();
+});
 
 new ResizeObserver(resize).observe(stage);
 setModel(buildDemo());

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="clack">
+<html lang="en" data-palette="clack">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,18 +11,21 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
 <style>
+/* The default palette is the desktop theme; the two alternatives below are
+   drawing surfaces the calculator offers in its View menu. They hang off
+   data-palette because ClackOS owns data-theme on this element. */
 :root {
-  --calc-bg: #f8f2dd;
-  --calc-panel: #f3ecd1;
-  --calc-border: #09140d;
-  --calc-text: #14231a;
-  --calc-muted: #66755a;
-  --calc-accent: #276b47;
-  --graph-bg: #f8f2dd;
-  --graph-grid-minor: #e3dcc2;
-  --graph-grid-major: #c7bea0;
-  --graph-axis: #52604d;
-  --graph-label: #52604d;
+  --calc-bg: var(--paper);
+  --calc-panel: var(--paper-deep);
+  --calc-border: var(--ink);
+  --calc-text: var(--ink-soft);
+  --calc-muted: var(--sage);
+  --calc-accent: var(--leaf-deep);
+  --graph-bg: var(--paper);
+  --graph-grid-minor: color-mix(in srgb, var(--paper-line) 50%, var(--paper));
+  --graph-grid-major: var(--paper-line);
+  --graph-axis: var(--sage);
+  --graph-label: var(--sage);
   --curve-1: #258657;
   --curve-2: #c5683a;
   --curve-3: #4c68a8;
@@ -30,7 +33,7 @@
   --curve-5: #b58b24;
   --curve-6: #2f8b91;
 }
-:root[data-theme="scope"] {
+:root[data-palette="scope"] {
   color-scheme: dark;
   --calc-bg: #07110b;
   --calc-panel: #0d1d13;
@@ -50,7 +53,7 @@
   --curve-5: #f58163;
   --curve-6: #9f9bff;
 }
-:root[data-theme="blueprint"] {
+:root[data-palette="blueprint"] {
   color-scheme: dark;
   --calc-bg: #0b2a45;
   --calc-panel: #103654;
@@ -95,23 +98,18 @@ body {
   --keyboard-border: 1px solid var(--calc-border);
 }
 .graph-app { display: flex; flex-direction: column; background: var(--calc-bg); }
-.graph-toolbar {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  min-height: 48px; padding: 8px 12px;
-  border-bottom: 1px solid var(--calc-border); background: var(--calc-panel);
-}
-.graph-toolbar .btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 10px; color: var(--calc-text); background: var(--calc-bg);
-  border-color: var(--calc-border); font-size: 11.5px;
-}
-.graph-toolbar .pixel-icon { width: 16px; height: 16px; }
-.graph-toolbar .btn.primary { color: var(--calc-bg); background: var(--calc-text); }
-.theme-label { display: flex; align-items: center; gap: 7px; margin-left: auto; color: var(--calc-muted); }
-.theme-label select {
-  color: var(--calc-text); background: var(--calc-bg); border-color: var(--calc-border);
-  padding: 6px 9px; font-size: 11.5px;
-}
+/* The menu bar follows the calculator's own drawing palette, so it stays
+   readable when the graph surface is switched to Oscilloscope or Blueprint. */
+.rm-bar { background: var(--calc-panel); border-bottom: 1px solid var(--calc-border); }
+.rm > button { color: var(--calc-text); }
+.rm > button:hover, .rm.open > button { color: var(--calc-panel); background: var(--calc-text); }
+.rm-dd { color: var(--calc-text); background: var(--calc-bg); border-color: var(--calc-border); }
+.rm-dd button { color: var(--calc-text); }
+.rm-dd button:hover:not(:disabled) { color: var(--calc-bg); background: var(--calc-text); }
+.rm-dd .sep { background: var(--calc-border); opacity: .35; }
+.rm-dd .pixel-icon { width: 16px; height: 16px; }
+.rm-dd .mi-check { margin-left: auto; padding-left: 18px; color: var(--calc-accent); }
+.rm-dd button:hover .mi-check { color: var(--calc-bg); }
 .graph-workspace { display: flex; flex: 1; min-height: 0; }
 .expression-panel {
   width: 300px; min-width: 240px; display: flex; flex-direction: column;
@@ -176,27 +174,57 @@ math-field::part(virtual-keyboard-toggle) { display: none; }
   .expression-list { padding: 4px 8px; }
   .expression-row { padding: 5px; }
   .expression-message { display: none; }
-  .theme-label { margin-left: 0; }
   .graph-stage { min-height: 250px; }
 }
 </style>
 <script defer src="https://cdn.jsdelivr.net/npm/mathlive@0.110.0"></script>
+<script>
+/* Kept out of the module below, which imports the compute engine over the
+   network: the menus should open whether or not that import succeeds. */
+document.addEventListener('DOMContentLoaded', () => {
+  const menus = document.querySelectorAll('.rm');
+  const closeMenus = () => menus.forEach(menu => menu.classList.remove('open'));
+  menus.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
+    event.stopPropagation();
+    const open = menu.classList.contains('open');
+    closeMenus();
+    if (!open) menu.classList.add('open');
+  }));
+  document.querySelector('.rm-bar').addEventListener('click', event => {
+    const item = event.target.closest('[data-cmd]');
+    if (!item) return;
+    closeMenus();
+    document.dispatchEvent(new CustomEvent('graph-command', {
+      detail: { command: item.dataset.cmd, palette: item.dataset.palette }
+    }));
+  });
+  document.addEventListener('click', closeMenus);
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenus(); });
+});
+</script>
 </head>
 <body>
 <div class="graph-app">
-  <header class="graph-toolbar">
-    <button class="btn primary" id="add-expression" type="button"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Add expression</button>
-    <button class="btn ghost" id="home-view" type="button"><span class="pixel-icon" data-icon="home" aria-hidden="true"></span>Home</button>
-    <button class="btn ghost" id="show-keyboard" type="button" aria-pressed="false"><span class="pixel-icon" data-icon="keyboard-music" aria-hidden="true"></span>Keyboard</button>
-    <label class="theme-label" for="theme-select">
-      <span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span>Theme
-      <select id="theme-select">
-        <option value="clack">Clack paper</option>
-        <option value="scope">Oscilloscope</option>
-        <option value="blueprint">Blueprint</option>
-      </select>
-    </label>
-  </header>
+  <nav class="rm-bar" aria-label="Graphing Calculator menu">
+    <div class="rm">
+      <button type="button">Graph</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="add"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Add expression</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="home"><span class="pixel-icon" data-icon="home" aria-hidden="true"></span>Home view</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">View</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="keyboard" id="show-keyboard" aria-pressed="false"><span class="pixel-icon" data-icon="keyboard-music" aria-hidden="true"></span>Maths keyboard<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="palette" data-palette="clack"><span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span>Desktop theme<span class="mi-check"></span></button>
+        <button type="button" data-cmd="palette" data-palette="scope"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Oscilloscope<span class="mi-check"></span></button>
+        <button type="button" data-cmd="palette" data-palette="blueprint"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Blueprint<span class="mi-check"></span></button>
+      </div>
+    </div>
+  </nav>
 
   <div class="graph-workspace">
     <aside class="expression-panel" aria-label="Expressions">
@@ -231,10 +259,7 @@ const stage = document.getElementById('graph-stage');
 const canvas = document.getElementById('graph-canvas');
 const ctx = canvas.getContext('2d');
 const readout = document.getElementById('coordinate-readout');
-const addButton = document.getElementById('add-expression');
-const homeButton = document.getElementById('home-view');
 const keyboardButton = document.getElementById('show-keyboard');
-const themeSelect = document.getElementById('theme-select');
 
 const colourVars = ['--curve-1', '--curve-2', '--curve-3', '--curve-4', '--curve-5', '--curve-6'];
 const expressions = [];
@@ -500,13 +525,23 @@ function homeView() {
   queueRender();
 }
 
-function applyTheme(theme) {
-  root.dataset.theme = theme;
-  themeSelect.value = theme;
-  try { localStorage.setItem('clack-graph-theme', theme); } catch {}
+function applyPalette(palette) {
+  root.dataset.palette = palette;
+  try { localStorage.setItem('clack-graph-theme', palette); } catch {}
+  document.querySelectorAll('[data-cmd="palette"]').forEach(item => {
+    const active = item.dataset.palette === palette;
+    item.querySelector('.mi-check').textContent = active ? '\u2713' : '';
+    item.setAttribute('aria-pressed', String(active));
+  });
   expressions.forEach(updateRowColour);
   queueRender();
 }
+
+/* On the desktop palette, a theme change repaints the graph surface too. */
+window.addEventListener('clackos-themechange', () => {
+  expressions.forEach(updateRowColour);
+  queueRender();
+});
 
 canvas.addEventListener('pointerdown', event => {
   dragging = true;
@@ -547,26 +582,33 @@ canvas.addEventListener('wheel', event => {
   queueRender();
 }, { passive: false });
 
-addButton.addEventListener('click', () => {
+document.addEventListener('graph-command', event => {
+  const { command, palette } = event.detail;
+  if (command === 'add') addFromMenu();
+  else if (command === 'home') homeView();
+  else if (command === 'keyboard') toggleKeyboard();
+  else if (command === 'palette') applyPalette(palette);
+});
+
+function addFromMenu() {
   const expression = addExpression('');
   if (expression) expression.field.focus();
-});
-homeButton.addEventListener('click', homeView);
-keyboardButton.addEventListener('click', () => {
+}
+
+function toggleKeyboard() {
   const field = expressions.find(expression => expression.field.matches(':focus-within'))?.field || expressions[0]?.field;
   if (!field) return;
   field.focus();
   field.executeCommand('toggleVirtualKeyboard');
   keyboardVisible = !keyboardVisible;
   keyboardButton.setAttribute('aria-pressed', String(keyboardVisible));
-  keyboardButton.textContent = keyboardVisible ? 'Hide keyboard' : 'Keyboard';
-});
-themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
+  keyboardButton.querySelector('.mi-check').textContent = keyboardVisible ? '\u2713' : '';
+}
 
-let savedTheme = 'clack';
-try { savedTheme = localStorage.getItem('clack-graph-theme') || 'clack'; } catch {}
-if (!['clack', 'scope', 'blueprint'].includes(savedTheme)) savedTheme = 'clack';
-applyTheme(savedTheme);
+let savedPalette = 'clack';
+try { savedPalette = localStorage.getItem('clack-graph-theme') || 'clack'; } catch {}
+if (!['clack', 'scope', 'blueprint'].includes(savedPalette)) savedPalette = 'clack';
+applyPalette(savedPalette);
 new ResizeObserver(resize).observe(stage);
 addExpression('\\sin(x)');
 addExpression('\\frac{x^2}{8}-2');

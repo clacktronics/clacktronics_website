@@ -367,7 +367,7 @@ function resize() {
 
 function meshMaterial() {
   return new THREE.MeshStandardMaterial({
-    color: new THREE.Color(themeColor('--leaf', '#4fae7d')),
+    color: new THREE.Color(themeColor('--ink', '#09140d')),
     roughness: 0.6, metalness: 0.05, side: THREE.DoubleSide, wireframe
   });
 }
@@ -430,7 +430,7 @@ function applyTheme() {
   const gm = Array.isArray(grid.material) ? grid.material : [grid.material];
   gm[0]?.color.set(themeColor('--leaf-deep', '#276b47'));
   gm[1]?.color.set(themeColor('--paper-line', '#d8cfa9'));
-  if (modelRoot) modelRoot.traverse(o => { if (o.isMesh) o.material.color.set(themeColor('--leaf', '#4fae7d')); });
+  if (modelRoot) modelRoot.traverse(o => { if (o.isMesh) o.material.color.set(themeColor('--ink', '#09140d')); });
   draw();
 }
 window.addEventListener('clackos-themechange', applyTheme);

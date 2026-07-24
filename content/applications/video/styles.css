@@ -4,6 +4,7 @@
   color-scheme: only light;
   --ink: #09140d;
   --ink-soft: #14231a;
+  --control-text: var(--ink-soft);
   --paper: #f8f2dd;
   --paper-deep: #f3ecd1;
   --paper-line: #d8cfa9;
@@ -42,7 +43,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 .rm { position: relative; }
 .rm > button {
-  all: unset; cursor: pointer; padding: 8px 12px; font: inherit; font-size: 12px; color: var(--ink);
+  all: unset; cursor: pointer; padding: 8px 12px; font: inherit; font-size: 12px; color: var(--control-text);
 }
 .rm > button:hover, .rm.open > button { background: var(--ink); color: var(--menu-text); }
 .rm > button:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
@@ -56,7 +57,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .rm-dd button {
   all: unset; box-sizing: border-box; display: flex; justify-content: space-between; gap: 18px;
   width: 100%; cursor: pointer; padding: 7px 14px; font: inherit; font-size: 12px;
-  color: var(--ink); white-space: nowrap;
+  color: var(--control-text); white-space: nowrap;
 }
 .rm-dd button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
 .rm-dd .pixel-icon { width: 16px; height: 16px; }
