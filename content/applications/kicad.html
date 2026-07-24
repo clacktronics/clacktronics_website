@@ -10,12 +10,12 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
 <style>
-.kv-bar {
+.kv-status {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  padding: 12px 16px; border-bottom: 1px solid var(--paper-line);
+  min-height: 32px; padding: 6px 16px; border-bottom: 1px solid var(--paper-line);
   background: var(--paper-deep);
 }
-.kv-bar .app-status { flex: 1; min-width: 200px; }
+.kv-status .app-status { flex: 1; min-width: 200px; }
 #viewer { flex: 1; min-height: 0; background: var(--paper); }
 .kv-credit {
   padding: 6px 16px; font-size: 10.5px; color: var(--sage);
@@ -29,9 +29,17 @@ body.dragging #viewer { outline: 3px dashed var(--leaf-deep); outline-offset: -8
 </head>
 <body>
 <div class="app">
-  <div class="kv-bar">
-    <button class="btn ghost" id="open">Open KiCAD file…</button>
-    <button class="btn ghost" id="example">Example schematic</button>
+  <nav class="rm-bar" aria-label="KiCAD Viewer menu">
+    <div class="rm">
+      <button type="button">File</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open KiCAD file&hellip;</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="example"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>Example schematic</button>
+      </div>
+    </div>
+  </nav>
+  <div class="kv-status">
     <span class="app-status" id="status">Open or drop .kicad_sch / .kicad_pcb files (several at once is fine).</span>
   </div>
   <div id="viewer"></div>
@@ -90,8 +98,22 @@ picker.accept = '.kicad_sch,.kicad_pcb,.kicad_wks';
 picker.multiple = true;
 picker.addEventListener('change', () => { showPicked(picker.files); picker.value = ''; });
 
-document.getElementById('open').addEventListener('click', () => picker.click());
-document.getElementById('example').addEventListener('click', () => showNamed('example.kicad_sch'));
+const menus = document.querySelectorAll('.rm');
+const closeMenus = () => menus.forEach(menu => menu.classList.remove('open'));
+menus.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
+  event.stopPropagation();
+  const open = menu.classList.contains('open');
+  closeMenus();
+  if (!open) menu.classList.add('open');
+}));
+document.querySelector('.rm-bar').addEventListener('click', event => {
+  const command = event.target.closest('[data-cmd]')?.dataset.cmd;
+  if (!command) return;
+  closeMenus();
+  ({ open: () => picker.click(), example: () => showNamed('example.kicad_sch') })[command]?.();
+});
+document.addEventListener('click', closeMenus);
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenus(); });
 
 document.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
 document.addEventListener('dragleave', () => document.body.classList.remove('dragging'));

@@ -398,7 +398,7 @@
         --card-border-radius: 6px;
         --board-gap: clamp(6px, 1.25vw, 12px);
         --tableau-step: clamp(22px, 3.8vw, 30px);
-        --felt-green: var(--paper-deep);
+        --felt-green: var(--paper);
         --felt-green-dark: var(--ink);
         --card-back: var(--leaf-deep);
         --card-back-pattern: color-mix(in srgb, var(--ink) 34%, transparent);
@@ -436,12 +436,13 @@
       }
       .game-board {
         align-self: center; width: auto; max-width: none; min-height: 535px; padding: 15px 18px 80px;
-        border: 0; background: var(--paper-deep);
+        border: 0; background: var(--paper);
       }
       .pile { box-sizing: border-box; border: 1px dashed var(--sage); color: var(--sage); }
       .pile.foundation::before { opacity: .45; font-size: calc(var(--card-width) * .55); }
-      .pile.foundation.hearts::before, .pile.foundation.diamonds::before, .card.red { color: #a5362f; }
-      .pile.foundation.clubs::before, .pile.foundation.spades::before, .card.black { color: var(--ink); }
+      /* Suit colours are chosen from the palette at runtime; see pickSuitColours. */
+      .pile.foundation.hearts::before, .pile.foundation.diamonds::before, .card.red { color: var(--card-red, var(--ink-soft)); }
+      .pile.foundation.clubs::before, .pile.foundation.spades::before, .card.black { color: var(--card-black, var(--leaf-deep)); }
       .card {
         border: 1px solid var(--ink); color: var(--ink); background: var(--paper);
         box-shadow: 2px 2px 0 color-mix(in srgb, var(--shadow) 22%, transparent);
@@ -556,6 +557,82 @@
     </div>
 
     <script>
+      /* Card faces sit on the window surface, so the two suit colours have to be
+       * picked per theme rather than hardcoded: a theme has no guaranteed red.
+       * Black suits take the deep accent when it is legible; red suits take
+       * whichever remaining palette colour reads clearly on a card and looks
+       * least like the black one. A monochrome theme has nothing to offer, so
+       * both may resolve to the same colour — as that theme intends. */
+      (() => {
+        const CARD_FACE = '--paper';
+        const BLACK_SUIT = '--leaf-deep';
+        const CANDIDATES = [
+          '--leaf-deep', '--ink', '--ink-soft', '--heading', '--strong-text',
+          '--sage', '--leaf', '--accent-hover', '--window-inactive', '--menu-dim',
+          '--title-text', '--desktop', '--paper-line'
+        ];
+
+        const rgbOf = value => {
+          const text = String(value || '').trim();
+          const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(text);
+          if (hex) {
+            const digits = hex[1].length === 3 ? [...hex[1]].map(c => c + c).join('') : hex[1];
+            return [0, 2, 4].map(i => parseInt(digits.slice(i, i + 2), 16));
+          }
+          const parts = /^rgba?\(([^)]+)\)$/i.exec(text);
+          if (parts) return parts[1].split(/[,\s/]+/).slice(0, 3).map(Number);
+          return null;
+        };
+        const luminance = rgb => {
+          const [r, g, b] = rgb.map(channel => {
+            const value = channel / 255;
+            return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const contrast = (a, b) => {
+          const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+          return (high + 0.05) / (low + 0.05);
+        };
+        /* Redmean distance: cheap, and closer to perceived difference than plain RGB. */
+        const distance = (a, b) => {
+          const mean = (a[0] + b[0]) / 2;
+          const [dr, dg, db] = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+          return Math.sqrt((2 + mean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - mean) / 256) * db * db);
+        };
+
+        function pickSuitColours() {
+          const styles = getComputedStyle(document.documentElement);
+          const read = name => rgbOf(styles.getPropertyValue(name));
+          const face = read(CARD_FACE);
+          if (!face) return;
+
+          const options = [];
+          for (const name of CANDIDATES) {
+            const rgb = read(name);
+            if (rgb && !options.some(option => distance(option.rgb, rgb) < 1)) options.push({ name, rgb });
+          }
+          if (!options.length) return;
+          const legible = options.filter(option => contrast(option.rgb, face) >= 4)
+            .sort((a, b) => contrast(b.rgb, face) - contrast(a.rgb, face));
+          const usable = legible.length ? legible
+            : [...options].sort((a, b) => contrast(b.rgb, face) - contrast(a.rgb, face));
+
+          const deepAccent = options.find(option => option.name === BLACK_SUIT);
+          const black = deepAccent && contrast(deepAccent.rgb, face) >= 4 ? deepAccent : usable[0];
+          /* Prefer a red that is both legible and clearly not the black colour. */
+          const red = usable.filter(option => option !== black)
+            .sort((a, b) => distance(b.rgb, black.rgb) - distance(a.rgb, black.rgb))[0] || black;
+
+          const css = rgb => `rgb(${rgb.map(Math.round).join(' ')})`;
+          document.documentElement.style.setProperty('--card-black', css(black.rgb));
+          document.documentElement.style.setProperty('--card-red', css(red.rgb));
+        }
+
+        pickSuitColours();
+        window.addEventListener('clackos-themechange', pickSuitColours);
+      })();
+
       /*
        * Solitaire game logic adapted from Aashish Chakravarty's solitaire.
        * Copyright (c) 2025 Aashish Chakravarty. MIT licensed; the complete

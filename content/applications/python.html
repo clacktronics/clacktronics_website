@@ -12,11 +12,9 @@
 <link rel="stylesheet" href="../../vendor/codemirror5/codemirror.css">
 <style>
 .app { height: 100%; }
-.py-bar { display: flex; align-items: center; gap: 10px; }
-.py-bar .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; }
 .py-bar .pixel-icon { width: 16px; height: 16px; }
-.py-run { color: var(--leaf-deep); }
-.py-stop { color: #a04a3a; }
+.py-bar kbd { margin-left: auto; padding-left: 20px; font: inherit; color: var(--sage); }
+.py-bar .rm-dd button:hover kbd { color: var(--leaf); }
 .py-main {
   flex: 1; min-height: 0; display: grid; gap: 10px; padding: 10px 12px;
   grid-template-columns: 1fr 230px;
@@ -38,16 +36,16 @@
   font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.6;
 }
 .CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
-.CodeMirror-selected { background: rgba(79, 174, 125, 0.25) !important; }
+.CodeMirror-selected { background: color-mix(in srgb, var(--leaf) 25%, transparent) !important; }
 .CodeMirror-gutters { background: var(--paper-deep) !important; border-right: 1px solid var(--paper-line) !important; }
 .CodeMirror-linenumber { color: var(--sage) !important; }
-.cm-s-default .cm-keyword { color: #276b47; font-weight: 600; }
-.cm-s-default .cm-def { color: #09140d; font-weight: 600; }
-.cm-s-default .cm-string { color: #8a3d2e; }
-.cm-s-default .cm-comment { color: #66755a; font-style: italic; }
-.cm-s-default .cm-number { color: #a8841f; }
-.cm-s-default .cm-builtin { color: #276b47; }
-.cm-s-default .cm-operator { color: #14231a; }
+.cm-s-default .cm-keyword { color: var(--leaf-deep); font-weight: 600; }
+.cm-s-default .cm-def { color: var(--strong-text); font-weight: 600; }
+.cm-s-default .cm-string { color: color-mix(in srgb, var(--leaf-deep) 55%, var(--ink-soft)); }
+.cm-s-default .cm-comment { color: var(--sage); font-style: italic; }
+.cm-s-default .cm-number { color: color-mix(in srgb, var(--sage) 55%, var(--ink-soft)); }
+.cm-s-default .cm-builtin { color: var(--leaf-deep); }
+.cm-s-default .cm-operator { color: var(--ink-soft); }
 
 .py-shell-out {
   flex: 1; min-height: 0; overflow-y: auto;
@@ -58,8 +56,8 @@
   user-select: text;
 }
 .py-shell-out .err { color: #e8927c; }
-.py-shell-out .sys { color: #8fcaa8; }
-.py-shell-out .echo { color: #8fcaa8; }
+.py-shell-out .sys { color: var(--menu-dim); }
+.py-shell-out .echo { color: var(--menu-dim); }
 .py-shell-in {
   display: flex; align-items: center; gap: 8px;
   border: 1px solid var(--ink); border-top: none; border-radius: 0 0 8px 8px;
@@ -88,16 +86,19 @@
 </head>
 <body>
 <div class="app">
-  <div class="rm-bar py-bar">
-    <div class="rm"><button>File</button><div class="rm-dd">
-      <button data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New</button>
-      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open&hellip;</button>
-      <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save</button>
-      <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As&hellip;</button>
+  <nav class="rm-bar py-bar" aria-label="Python menu">
+    <div class="rm"><button type="button">File</button><div class="rm-dd">
+      <button type="button" data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New</button>
+      <button type="button" data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open&hellip;</button>
+      <button type="button" data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save<kbd>Ctrl+S</kbd></button>
+      <button type="button" data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As&hellip;<kbd>Ctrl+Shift+S</kbd></button>
     </div></div>
-    <button class="btn ghost py-run" data-cmd="run"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Run</button>
-    <button class="btn ghost py-stop" data-cmd="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop / Restart</button>
-  </div>
+    <div class="rm"><button type="button">Run</button><div class="rm-dd">
+      <button type="button" data-cmd="run"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Run script<kbd>F5</kbd></button>
+      <div class="sep"></div>
+      <button type="button" data-cmd="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop / Restart</button>
+    </div></div>
+  </nav>
   <div class="py-main">
     <div class="py-editor">
       <div class="py-pane-title"><span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span><span class="py-pane-label">script.py</span></div>
