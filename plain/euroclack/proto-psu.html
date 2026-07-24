@@ -17,22 +17,22 @@
 <header id="plain-nav"><nav class="plain-menubar" aria-label="Site menu"><details class="plain-menu"><summary>File</summary><div class="plain-menu-panel"><details class="plain-submenu"><summary>Open</summary><div class="plain-menu-panel"><a href="../index.html">Open Clacktronics</a><a href="../readme.html">Open README.txt</a><a href="../catalogue.html">Open Catalogue</a><a href="../euroclack.html">Open EuroClack</a><a href="../blog.html">Open Blog</a><a href="../markdown-test.html">Open Markdown test</a></div></details><a href="https://github.com/clacktronics/clacktronics_website/issues/new" target="_blank" rel="noopener noreferrer">Report bug…</a><a href="../../content/applications/markdown.html?open=content/file/euroclack/proto-psu.md" target="_blank" rel="noopener noreferrer">Edit…</a></div></details><details class="plain-menu"><summary>Applications</summary><div class="plain-menu-panel"><details class="plain-submenu"><summary>Games</summary><div class="plain-menu-panel"><a href="../../content/applications/clacksweeper.html" target="_blank" rel="noopener noreferrer">Clacksweeper</a><a href="../../content/applications/solitaire.html" target="_blank" rel="noopener noreferrer">Solitaire</a></div></details><details class="plain-submenu"><summary>Emulation</summary><div class="plain-menu-panel"><a href="../../content/applications/qbasic.html" target="_blank" rel="noopener noreferrer">QBasic 1.1</a></div></details><details class="plain-submenu"><summary>Multimedia</summary><div class="plain-menu-panel"><a href="../../content/applications/clackbase.html" target="_blank" rel="noopener noreferrer">Clackbase MIDI Sequencer</a><a href="../../content/applications/puredata.html" target="_blank" rel="noopener noreferrer">Pure Data</a><a href="../../content/applications/video/index.html" target="_blank" rel="noopener noreferrer">Video Lab</a><a href="../../content/applications/recorder.html" target="_blank" rel="noopener noreferrer">Sound Recorder</a><a href="../../content/applications/paint.html" target="_blank" rel="noopener noreferrer">ClackPaint</a><a href="../../content/applications/model-viewer.html" target="_blank" rel="noopener noreferrer">3D Model Viewer</a></div></details><details class="plain-submenu"><summary>Maths &amp; Programming</summary><div class="plain-menu-panel"><a href="../../content/applications/graphing-calculator.html" target="_blank" rel="noopener noreferrer">Graphing Calculator</a><a href="../../content/applications/python.html" target="_blank" rel="noopener noreferrer">Python</a><a href="../../content/applications/processing.html" target="_blank" rel="noopener noreferrer">Processing</a><a href="../../content/applications/openscad.html" target="_blank" rel="noopener noreferrer">OpenSCAD</a></div></details><details class="plain-submenu"><summary>Electronics</summary><div class="plain-menu-panel"><a href="../../content/applications/circuit.html" target="_blank" rel="noopener noreferrer">Circuit Simulator</a><a href="../../content/applications/eecircuit.html" target="_blank" rel="noopener noreferrer">EEcircuit (SPICE)</a><a href="../../content/applications/kicad.html" target="_blank" rel="noopener noreferrer">KiCAD Viewer</a><a href="../../content/applications/eurorack-panel.html" target="_blank" rel="noopener noreferrer">Eurorack Panel Generator</a><a href="../../content/applications/pcb-heater.html" target="_blank" rel="noopener noreferrer">PCB Heater Designer</a><a href="../../content/applications/resistor.html" target="_blank" rel="noopener noreferrer">Resistor Calculator</a></div></details><details class="plain-submenu"><summary>Internet</summary><div class="plain-menu-panel"><a href="../../content/applications/browser.html" target="_blank" rel="noopener noreferrer">Web Browser</a><a href="../../content/applications/pdf-reader/index.html" target="_blank" rel="noopener noreferrer">PDF Reader</a><a href="../../content/applications/markdown.html" target="_blank" rel="noopener noreferrer">Markdown Editor</a><a href="../../content/applications/chat.html" target="_blank" rel="noopener noreferrer">ClackChat</a></div></details><details class="plain-submenu"><summary>System</summary><div class="plain-menu-panel"><a href="../../content/applications/files.html" target="_blank" rel="noopener noreferrer">File Manager</a><a href="../../content/applications/text.html" target="_blank" rel="noopener noreferrer">Text Editor</a><a href="../../content/applications/appearance.html" target="_blank" rel="noopener noreferrer">Appearance</a><a href="../../content/applications/theme.html" target="_blank" rel="noopener noreferrer">Theme Editor</a></div></details><hr><a href="../about.html">About ClackOS</a></div></details></nav></header>
 <main>
 <div class="plain">
-<h1>Proto-PSU kit</h1>
+<h1 id="proto-psu-kit">Proto-PSU kit</h1>
 <p class="tagline">EuroClack — prototyping power supply</p>
 <div class="rule"></div>
 <p>Part of <a href="../euroclack.html">EuroClack</a>.</p>
-<p class="eyebrow">Description and specs</p>
+<p class="eyebrow" id="description-and-specs">Description and specs</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/07a_final_assembled_in_breadboard.jpg" alt="Proto-PSU assembled in a breadboard" loading="lazy"></p>
 <p>Proto-PSU is an easy-to-assemble DIY kit that is designed to make it easier and cheaper to have a dual-rail power supply, typical of DIY synths, for prototyping purposes. Its 4-layer PCB design uses through-hole components that are clear and easy to solder. It is versatile: it can be a breadboard-attached supply, an internal case supply or a module-style power supply depending on how you configure it. There is no need for a specialist AC supply or to use mains electricity — it runs off a 15VDC adaptor. It comes with two resistors for R1 so you can either keep the PSU cool at a limited 80mA for -12V or drive it a little harder, keeping an eye on how hot it gets. I recommend keeping to 1Ω for R1 and then replacing it with the smaller resistor if you need more.</p>
-<p class="eyebrow">Take care!</p>
+<p class="eyebrow" id="take-care">Take care!</p>
 <p>This module uses no dangerous parts, but if not built properly or is over-driven even very slightly it will get very hot and burn your fingers. Make sure the core components are all properly installed in the right place and polarities are correct. The polyfuses are for protecting against shorts but not for over-currents; if, for example, the -12V rail is driven over 100mA but below 500mA, the MC34063 will get very hot and so will the 7912 regulator.</p>
 <ul class="list"><li><p>Width: 6HP</p></li><li><p>Height: 3U</p></li><li><p>Depth: 50mm</p></li><li><p>12V and 5V shared current: 300mA</p></li><li><p>-12V: 80mA</p></li><li><p>100mV ripple</p></li></ul>
-<p class="eyebrow">Available to buy from</p>
+<p class="eyebrow" id="available-to-buy-from">Available to buy from</p>
 <ul class="list"><li><p>Thonk (coming soon)</p></li></ul>
-<p class="eyebrow">Caveats and warnings</p>
+<p class="eyebrow" id="caveats-and-warnings">Caveats and warnings</p>
 <p>It is not only called &quot;proto&quot; because it is for prototyping but also because it is just a test PSU you use before you attach your design to a bigger, nicer one. There are a few limitations that you need to be aware of just so it meets your expectations.</p>
 <ul class="list"><li><p>Current is limited to 80mA for -12V (if using 1Ω for R1) and 300mA for both 5/12V. The polyfuses will blow if this is greatly exceeded (a short) — don&#x27;t worry, they will reset.</p></li><li><p>If you use the 0.22Ω resistor, be cautious that there is a gap between the MCP34063 and LM7912 getting really hot and the polyfuse actually blowing. This is why the 1Ω is recommended.</p></li><li><p>The switching supply IC MCP34063 is supposedly an 80s design; that&#x27;s how it was possible to get a DIP-8 part — it is probably the closest to a jellybean DC converter you can get. It switches at approximately 100kHz which will be audible at higher loads near 100mA of the -12V rail. You must follow some good design practices (that you should be doing anyway!) such as not directly connecting voltage references to the rail — for example with op-amps when you need an offset voltage or pot reference. Or you might not give a damn as you are hacking away!</p></li><li><p>The nature of polyfuses means that if you only slightly exceed the 300mA current the fuse might not open completely; it could cause the voltage to droop but not go low. This may cause frustration if you are unaware — keep measuring rails. Also, if using the 1Ω resistor, the -12V rail will just drop (rise, as it is negative!) in volts the more you go above 80mA. This keeps the device very cool but could also confuse you if you are looking at a design.</p></li><li><p>When using it in Eurorack module configuration, take care to notice that the tab of the regulators is bare and may touch something.</p></li><li><p>Another issue with the polyfuses is they have a resistance; any circuit that pulls power in pulses will make the line noisy. If this is an issue, either short them or remedy with a capacitor.</p></li></ul>
-<p class="eyebrow">Bill of Materials</p>
+<p class="eyebrow" id="bill-of-materials">Bill of Materials</p>
 <pre class="code">Part                     Value                       Designators             Notes
 -----------------------  --------------------------  ----------------------  -----------------------------
 Capacitor, electrolytic  100uF                       C1, C3, C4, C5          pin pitch 2mm
@@ -56,49 +56,49 @@ Breadboard header        2x2 pin header              J6, J7                  pla
 Pillars                  M3 x 12mm                   4 pcs                   panel version only
 Black screws             M3 x 6mm                    10 pcs                  pillars and rack mounting
 PCBs                     Black 1.6mm                 2 pcs                   main PCB and panel (optional)</pre>
-<p class="eyebrow">Assembly Video</p>
+<p class="eyebrow" id="assembly-video">Assembly Video</p>
 <div class="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/9yssRi2fjQk" title="Proto-PSU kit assembly" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
 <div class="ctas"><a class="btn primary" href="https://www.youtube.com/watch?v=9yssRi2fjQk" target="_blank" rel="noopener noreferrer">Open the assembly video on YouTube</a></div>
-<p class="eyebrow">Assembly</p>
+<p class="eyebrow" id="assembly">Assembly</p>
 <p>The assembly instructions are shown for the complete kit that is for sale. If you source your own components the parts may look different. Sometimes it is hard to convey in text and image the exact details of assembly so some information may be a bit confusing especially if you are starting out. A video is also available that may be more helpful to follow along.</p>
-<p class="eyebrow">Components in bag</p>
+<p class="eyebrow" id="components-in-bag">Components in bag</p>
 <p>You should have the following components.</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/kit_componetns.jpg" alt="Kit components" loading="lazy"></p>
-<p class="eyebrow">Hardware</p>
+<p class="eyebrow" id="hardware">Hardware</p>
 <p>All the hardware, PCB and panel.</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/kit_hardware.jpg" alt="Kit hardware" loading="lazy"></p>
-<p class="eyebrow">01 — Mount capacitors</p>
+<p class="eyebrow" id="01-mount-capacitors">01 — Mount capacitors</p>
 <p>Make sure you get them the right way around. Also note there is 100uF and 10uF — get them in the right place.</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/01_add_capacitors.jpg" alt="Add capacitors" loading="lazy"></p>
-<p class="eyebrow">02 — Mount resistors</p>
+<p class="eyebrow" id="02-mount-resistors">02 — Mount resistors</p>
 <p>Next resistors. Note the colour values; if you are unsure, use a multimeter to check the values.</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/02_add_resistors.jpg" alt="Add resistors" loading="lazy"></p>
-<p class="eyebrow">03 — Diodes and fuses</p>
+<p class="eyebrow" id="03-diodes-and-fuses">03 — Diodes and fuses</p>
 <p>Diodes are polarised — stripe goes to stripe on the PCB. Fuses are not polarised and can go either way around.</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/03_add_ceramic_diodes_and_fuses.jpg" alt="Add ceramic, diodes and fuses" loading="lazy"></p>
-<p class="eyebrow">04 — Inductor and regulators</p>
+<p class="eyebrow" id="04-inductor-and-regulators">04 — Inductor and regulators</p>
 <p>There are three regulators — make sure you put the right ones in the right places: 7812, 7912 and 7805.</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/04_socket_inductor_and_regulators.jpg" alt="Socket, inductor and regulators" loading="lazy"></p>
-<p class="eyebrow">05 — Connectors and terminal</p>
+<p class="eyebrow" id="05-connectors-and-terminal">05 — Connectors and terminal</p>
 <p>Hold the connectors in with a ball of blu-tack or your hand and tack it in place with a blob of solder on your iron to make sure it is all in place before committing to soldering all the pins.</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/05_idc-connectors_screw_terminal.jpg" alt="IDC connectors and screw terminal" loading="lazy"></p>
-<p class="eyebrow">Wait, stop! The assembly now diverges depending on how you want it built</p>
+<p class="eyebrow" id="wait-stop-the-assembly-now-diverges-depending-on-how-you-want-it-built">Wait, stop! The assembly now diverges depending on how you want it built</p>
 <p>Go to 06A to build the breadboard version, or 06B to complete it as a panel version.</p>
-<p class="eyebrow">06A — Fit socket and LED</p>
+<p class="eyebrow" id="06a-fit-socket-and-led">06A — Fit socket and LED</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/06a_dc_scoket_and_led.jpg" alt="DC socket and LED" loading="lazy"></p>
-<p class="eyebrow">07A — Breadboard version finished!</p>
+<p class="eyebrow" id="07a-breadboard-version-finished">07A — Breadboard version finished!</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/07a_final_assembled_in_breadboard.jpg" alt="Final assembled in breadboard" loading="lazy"></p>
-<p class="eyebrow">06B — Add spacers</p>
+<p class="eyebrow" id="06b-add-spacers">06B — Add spacers</p>
 <p>Screw in the spacers to the PCB. We want to attach the panel first, so the panel-dependent components will fit nicely. Solder in the LED at the height you like — I like them sticking out, but you could do them flush.</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/06b_add_spacers.jpg" alt="Add spacers" loading="lazy"></p>
-<p class="eyebrow">07B — Put on the panel and fit DC and LED</p>
+<p class="eyebrow" id="07b-put-on-the-panel-and-fit-dc-and-led">07B — Put on the panel and fit DC and LED</p>
 <p>Put the panel on with the LEDs and align it all so that it will look nice.</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/07b_add_panel_led_and_barrelt_socket.jpg" alt="Add panel, LED and barrel socket" loading="lazy"></p>
-<p class="eyebrow">08B — Double check alignment before soldering</p>
+<p class="eyebrow" id="08b-double-check-alignment-before-soldering">08B — Double check alignment before soldering</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/08b_check_socket_alignment.jpg" alt="Check socket alignment" loading="lazy"></p>
-<p class="eyebrow">09B — Finished!</p>
+<p class="eyebrow" id="09b-finished">09B — Finished!</p>
 <p><img src="https://clacktronics.co.uk/euroclack/proto_PSU/images/panel_slant.jpg" alt="Panel, slanted view" loading="lazy"></p>
-<p class="eyebrow">Downloads and Resources</p>
+<p class="eyebrow" id="downloads-and-resources">Downloads and Resources</p>
 <ul class="list"><li><p><a href="https://clacktronics.co.uk/euroclack/proto_PSU/ibom.html" target="_blank" rel="noopener noreferrer">iBOM</a> (right click to save)</p></li><li><p><a href="https://raw.githubusercontent.com/clacktronics/Euroclack_proto_PSU/main/Documentation/Euroclack_proto_psu_schematic_V1.pdf" target="_blank" rel="noopener noreferrer">Schematic</a> (right click to save)</p></li><li><p><a href="https://github.com/clacktronics/Euroclack_proto_PSU" target="_blank" rel="noopener noreferrer">GitHub page</a></p></li><li><p><a href="https://www.ti.com/product/LM7800?keyMatch=LM7800" target="_blank" rel="noopener noreferrer">Texas Instruments LM7800 series product page</a></p></li><li><p><a href="https://www.ti.com/product/LM79" target="_blank" rel="noopener noreferrer">Texas Instruments LM7900 series product page</a></p></li><li><p><a href="https://www.ti.com/product/MC34063A" target="_blank" rel="noopener noreferrer">Texas Instruments MC34063 product page</a></p></li><li><p><a href="https://clacktronics.co.uk/euroclack/proto_PSU/images/HIRES_final_assembled_in_breadboard.jpg" target="_blank" rel="noopener noreferrer">JPEG front view</a> (796KB)</p></li></ul>
 </div>
 </main>
