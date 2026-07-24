@@ -853,6 +853,14 @@ async function openWindow(id) {
 
   const titlebar = el.querySelector('.titlebar');
 
+  /* Apps that know their own natural size can ask the window to wrap around
+   * them: dispatch a composed, bubbling `clackos-resize` carrying the window
+   * body size they want in `detail.width` / `detail.height`. */
+  el.addEventListener('clackos-resize', event => {
+    const { width, height } = event.detail || {};
+    fitWindowToContent(rec, width, height);
+  });
+
   el.addEventListener('pointerdown', () => focusWindow(el));
 
   el.querySelector('.dot.close').addEventListener('click', e => { e.stopPropagation(); closeWindow(id); });
@@ -929,6 +937,26 @@ async function openWindow(id) {
 
   focusWindow(el);
   updateTaskbar();
+}
+
+/* Grow or shrink a window so its body is exactly the requested size, keeping
+ * the window inside the desktop and under the desktop's own bounds. Either
+ * dimension may be omitted to leave it alone. */
+function fitWindowToContent(rec, contentWidth, contentHeight) {
+  const el = rec.el, winbody = el.querySelector('.winbody');
+  if (!winbody || rec.maxed) return;
+  const dw = desktop.clientWidth, dh = desktop.clientHeight;
+  /* frame = titlebar, borders and window padding; measured, not assumed */
+  const frameW = el.offsetWidth - winbody.offsetWidth;
+  const frameH = el.offsetHeight - winbody.offsetHeight;
+  const w = contentWidth == null ? el.offsetWidth
+    : Math.min(Math.round(contentWidth) + frameW, dw - 16);
+  const h = contentHeight == null ? el.offsetHeight
+    : Math.min(Math.round(contentHeight) + frameH, dh - 16);
+  el.style.width = w + 'px';
+  el.style.height = h + 'px';
+  el.style.left = Math.max(8, Math.min(el.offsetLeft, dw - w - 8)) + 'px';
+  el.style.top = Math.max(8, Math.min(el.offsetTop, dh - h - 8)) + 'px';
 }
 
 function focusWindow(el) {

@@ -178,7 +178,22 @@ are discovered automatically and given a readable name. `"app"` items open the g
 page from the same menu folder in a desktop window; `multi: true` opens a
 fresh instance every time it's picked from the menu. `integrated: true` is
 reserved for in-desktop system utilities; all other app entries remain iframe
-loadable. Current apps:
+loadable.
+
+An app that knows its own natural size can make the window wrap around it
+instead of taking the `width`/`height` from `menu.json` as final: dispatch a
+bubbling, composed `clackos-resize` event carrying the window body size it
+wants, and ClackOS resizes the frame around it, clamped to the desktop.
+
+```js
+host.dispatchEvent(new CustomEvent('clackos-resize', {
+  bubbles: true, composed: true, detail: { width: 320, height: 420 }
+}));
+```
+
+The `menu.json` size still applies while the app loads, so keep it close to the
+app's usual size to avoid a visible jump. Clacksweeper uses this to fit its
+window to the board. Current apps:
 
 Application links may include a query string. Only pages already registered as
 `"type": "app"` in a menu can be launched, so Markdown cannot turn the desktop
@@ -203,9 +218,12 @@ registered applications, Markdown windows, and desktop actions.
   Position. Effects: Increase/Decrease Volume, Increase/Decrease Speed
   (pitch shifts, like the original), Add Echo, Reverse. Multi-instance.
 - `applications/clacksweeper.html` (Applications → Games → Clacksweeper) — a
-  fixed-size, classic minesweeper game with Beginner, Intermediate, Expert and
+  classic minesweeper game with Beginner, Intermediate, Expert and
   custom boards; safe first reveal; flags and question marks; number chording;
-  mouse and keyboard play; optional sound; and browser-saved best times.
+  mouse and keyboard play; optional sound; and browser-saved best times. Its
+  window has no resize handles because it sizes itself: whenever the board
+  changes the app measures its layout and shrinks or grows the window to wrap
+  it exactly (see `clackos-resize` below).
 - `applications/solitaire.html` (Applications → Games → Solitaire) — a themed
   Klondike Solitaire game adapted from Aashish Chakravarty's MIT-licensed
   browser game. It supports drag/drop moves, double-click to foundation,

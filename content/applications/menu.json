@@ -2,7 +2,7 @@
   "label": "Applications",
   "items": [
     { "type": "submenu", "label": "Games", "icon": "target", "items": [
-      { "type": "app", "page": "clacksweeper.html", "label": "Clacksweeper", "title": "Clacksweeper", "icon": "grid-3x3", "width": 680, "height": 525, "fixed": true, "multi": true, "integrated": true },
+      { "type": "app", "page": "clacksweeper.html", "label": "Clacksweeper", "title": "Clacksweeper", "icon": "grid-3x3", "width": 320, "height": 460, "fixed": true, "multi": true, "integrated": true },
       { "type": "app", "page": "solitaire.html", "label": "Solitaire", "title": "Solitaire", "icon": "copy", "width": 850, "height": 720, "multi": true }
     ] },
     { "type": "submenu", "label": "Emulation", "icon": "cpu", "items": [

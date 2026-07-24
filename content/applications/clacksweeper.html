@@ -25,10 +25,13 @@
   color: var(--accent-hover); background: var(--ink); font-size: 19px; font-weight: 600;
   line-height: 1; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: .08em;
 }
-.sweeper-reset { padding: 7px 10px; line-height: 0; background: var(--paper); }
-.sweeper-reset .pixel-icon { width: 20px; height: 20px; }
-.sweeper-reset[data-face="won"] { color: var(--leaf-deep); }
-.sweeper-reset[data-face="lost"] { color: #a04a3a; }
+.sweeper-reset { padding: 5px 9px; line-height: 1; background: var(--paper); }
+/* the classic faces, mines and flags are Unicode rather than pixel icons */
+.sweeper-glyph {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', sans-serif;
+  line-height: 1; font-weight: 400;
+}
+.sweeper-reset .sweeper-glyph { display: block; font-size: 20px; }
 .sweeper-board-wrap {
   flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
   overflow: hidden; padding: 3px;
@@ -62,7 +65,10 @@
 .sweeper-cell[data-near="7"] { color: #3b3b3b; }
 .sweeper-cell[data-near="8"] { color: #747474; }
 .sweeper-cell .pixel-icon { width: 72%; height: 72%; }
-.sweeper-status { min-height: 18px; line-height: 1.45; text-align: center; }
+.sweeper-cell .sweeper-glyph { font-size: calc(var(--cell) * .58); }
+.sweeper-counter .sweeper-glyph { font-size: 17px; }
+/* two lines are always reserved so a longer hint never resizes the window */
+.sweeper-status { height: 2.9em; line-height: 1.45; text-align: center; }
 .sweeper-modal {
   position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center;
   padding: 18px; background: color-mix(in srgb, var(--ink) 40%, transparent); user-select: text;
@@ -93,7 +99,7 @@
 @media (max-width: 520px) {
   .sweeper-main { padding-inline: 7px; }
   .sweeper-head { gap: 6px; padding-inline: 7px; }
-  .sweeper-counter > .pixel-icon { display: none; }
+  .sweeper-counter > .pixel-icon, .sweeper-counter > .sweeper-glyph { display: none; }
 }
 </style>
 </head>
@@ -122,11 +128,11 @@
   <main class="app-main sweeper-main">
     <section class="sweeper-head" aria-label="Game status">
       <div class="sweeper-counter" title="Mines remaining">
-        <span class="pixel-icon" data-icon="target" aria-hidden="true"></span>
+        <span class="sweeper-glyph" aria-hidden="true">&#128163;</span>
         <span class="sweeper-digits sweeper-mines" aria-label="Mines remaining">010</span>
       </div>
       <button class="btn ghost sweeper-reset" data-face="ready" aria-label="Start a new game" title="New game (F2)">
-        <span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>
+        <span class="sweeper-glyph" aria-hidden="true">&#128578;</span>
       </button>
       <div class="sweeper-counter" title="Elapsed time">
         <span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>
@@ -156,6 +162,10 @@ const timeEl = appRoot.querySelector('.sweeper-time');
 const statusEl = appRoot.querySelector('.sweeper-status');
 const resetEl = appRoot.querySelector('.sweeper-reset');
 const modal = appRoot.querySelector('.sweeper-modal');
+const barEl = appRoot.querySelector('.rm-bar');
+const mainEl = appRoot.querySelector('.sweeper-main');
+const headEl = appRoot.querySelector('.sweeper-head');
+const wrapEl = appRoot.querySelector('.sweeper-board-wrap');
 const dialogTitle = appRoot.querySelector('#sweeper-dialog-title');
 const dialogBody = appRoot.querySelector('.sweeper-dialog-body');
 
@@ -222,13 +232,22 @@ function beep(kind) {
   } catch {}
 }
 
+/* classic Minesweeper glyphs, as Unicode rather than pixel icons */
+const GLYPH = { mine: '\u{1F4A3}', flag: '\u{1F6A9}', wrong: '❌' };
+const FACE = { ready: '\u{1F642}', won: '\u{1F60E}', lost: '\u{1F635}' };
+const glyph = name => `<span class="sweeper-glyph" aria-hidden="true">${GLYPH[name]}</span>`;
+
 function cellContents(cell) {
-  if (cell.open && cell.mine) return '<span class="pixel-icon" data-icon="target" aria-hidden="true"></span>';
+  if (cell.open && cell.mine) return glyph('mine');
   if (cell.open) return cell.near ? String(cell.near) : '';
-  if (cell.wrong) return '<span class="pixel-icon" data-icon="close" aria-hidden="true"></span>';
-  if (cell.mark === 'flag') return '<span class="pixel-icon" data-icon="target" aria-hidden="true"></span>';
+  if (cell.wrong) return glyph('wrong');
+  if (cell.mark === 'flag') return glyph('flag');
   if (cell.mark === 'question') return '?';
   return '';
+}
+function setFace(face) {
+  resetEl.dataset.face = face;
+  resetEl.querySelector('.sweeper-glyph').textContent = FACE[face];
 }
 function renderCell(index) {
   const cell = cells[index], el = cell.el;
@@ -246,13 +265,53 @@ function renderCell(index) {
   el.setAttribute('aria-pressed', cell.open ? 'true' : 'false');
 }
 
+/* Cells keep a comfortable size and the window grows to suit; they only shrink
+ * when the board would otherwise not fit on screen at all. */
+const CELL_IDEAL = 26, CELL_MIN = 14;
+function cellSizeFor(rows, cols) {
+  /* rough allowance for the window frame, menu bar, status line and padding */
+  const roomW = Math.max(220, (window.innerWidth || 1024) - 90);
+  const roomH = Math.max(180, (window.innerHeight || 768) - 210);
+  return Math.max(CELL_MIN, Math.min(CELL_IDEAL, Math.floor(roomW / cols) - 1, Math.floor(roomH / rows) - 1));
+}
+
+const cssPx = (style, prop) => parseFloat(style.getPropertyValue(prop)) || 0;
+/* width an element wants when nothing is stretching it */
+function naturalWidth(el) {
+  const previous = el.style.width;
+  el.style.width = 'max-content';
+  const width = el.getBoundingClientRect().width;
+  el.style.width = previous;
+  return Math.ceil(width);
+}
+/* The board sets the window size rather than the other way round: measure what
+ * this layout needs and ask ClackOS to wrap its frame around it. */
+function fitWindow() {
+  const host = appRoot === document ? null : appRoot.host;
+  if (!host || !boardEl.offsetWidth) return;
+  const main = getComputedStyle(mainEl), wrap = getComputedStyle(wrapEl);
+  const mainX = cssPx(main, 'padding-left') + cssPx(main, 'padding-right');
+  const mainY = cssPx(main, 'padding-top') + cssPx(main, 'padding-bottom');
+  const wrapX = cssPx(wrap, 'padding-left') + cssPx(wrap, 'padding-right');
+  const wrapY = cssPx(wrap, 'padding-top') + cssPx(wrap, 'padding-bottom');
+  const gaps = cssPx(main, 'row-gap') * 2;
+  const width = Math.max(
+    naturalWidth(barEl),
+    mainX + Math.max(boardEl.offsetWidth + wrapX, naturalWidth(headEl))
+  );
+  const height = barEl.offsetHeight + mainY + gaps
+    + headEl.offsetHeight + boardEl.offsetHeight + wrapY + statusEl.offsetHeight;
+  host.dispatchEvent(new CustomEvent('clackos-resize', {
+    bubbles: true, composed: true, detail: { width, height }
+  }));
+}
+
 function newGame() {
   stopTimer();
   config = currentConfig();
   state = 'ready'; opened = 0; flags = 0; elapsed = 0; focusIndex = 0;
   boardEl.innerHTML = '';
-  const cellSize = Math.max(18, Math.min(28, Math.floor(606 / config.cols), Math.floor(340 / config.rows)));
-  boardEl.style.setProperty('--cell', cellSize + 'px');
+  boardEl.style.setProperty('--cell', cellSizeFor(config.rows, config.cols) + 'px');
   boardEl.style.gridTemplateColumns = `repeat(${config.cols}, var(--cell))`;
   boardEl.setAttribute('aria-rowcount', config.rows);
   boardEl.setAttribute('aria-colcount', config.cols);
@@ -267,10 +326,10 @@ function newGame() {
     el.setAttribute('aria-label', `Row ${row + 1}, column ${col + 1}, covered`);
     return cell;
   });
-  resetEl.dataset.face = 'ready';
-  resetEl.querySelector('.pixel-icon').dataset.icon = 'reload';
+  setFace('ready');
   updateCounters(); updateMenuChecks();
   setStatus(`${config.label}: ${config.cols} × ${config.rows}, ${config.mines} mines.`);
+  fitWindow();
 }
 
 function layMines(safeIndex) {
@@ -337,13 +396,13 @@ function chord(index) {
 function lose(index) {
   state = 'lost'; stopTimer(); cells[index].exploded = true;
   cells.forEach((cell, i) => { if (cell.mine) cell.open = true; else if (cell.mark === 'flag') cell.wrong = true; renderCell(i); });
-  resetEl.dataset.face = 'lost'; resetEl.querySelector('.pixel-icon').dataset.icon = 'close';
+  setFace('lost');
   setStatus('Clack! A mine got you. Press F2 to try again.'); beep('lose');
 }
 function win() {
   state = 'won'; stopTimer(); flags = config.mines;
   cells.forEach((cell, i) => { if (cell.mine) cell.mark = 'flag'; renderCell(i); });
-  resetEl.dataset.face = 'won'; resetEl.querySelector('.pixel-icon').dataset.icon = 'target';
+  setFace('won');
   updateCounters(); setStatus(`Board cleared in ${elapsed} second${elapsed === 1 ? '' : 's'}!`); beep('win');
   if (settings.level !== 'custom' && (!bestTimes[settings.level] || elapsed < bestTimes[settings.level])) {
     bestTimes[settings.level] = elapsed; saveTimes();
@@ -471,6 +530,8 @@ keyTarget.addEventListener('keydown', event => {
 });
 if (appRoot !== document) appRoot.host.addEventListener('clackos-disconnect', stopTimer, { once: true });
 newGame();
+/* the first measure runs before the webfont lands, so take it again after */
+document.fonts?.ready.then(fitWindow).catch(() => {});
 })();
 </script>
 </body>
