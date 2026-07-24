@@ -1,12 +1,7 @@
 # todo
 
-### To make it functioally complete for information
-
-* mobile modification, maybe even just forwarding to desktopless
-
 ### Aesthetic Tweaks and experience improvements
 
-* Need links that are not like buttons and are inline
 * Make entire site downloadable
 * Consistent theme in in apps
 
@@ -32,4 +27,5 @@
 * Waveacity
 * SSTV encoder and decoder
 * AFSK encoder and decoder
+* Kicad panel designer
 
