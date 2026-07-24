@@ -10,6 +10,8 @@
   --control-text: var(--ink-soft);
   --strong-text: var(--ink-soft);
   --shadow: var(--ink);
+  --shadow-distance: 8px;
+  --shadow-alpha: 40%;
   --paper: #f8f2dd;
   --paper-deep: #f3ecd1;
   --paper-line: #d8cfa9;
@@ -19,7 +21,10 @@
   --menu-text: #f5efdb;
   --menu-dim: #8fcaa8;
   --desktop: #e3ddc6;
+  --titlebar: var(--ink);
+  --window-border: var(--ink);
   --window-inactive: #2a3b2f;
+  --window-border-inactive: var(--window-inactive);
   --title-text: #c8e3d2;
   --accent-hover: #6fcf9a;
   --button-text: #f2ecd6;
@@ -179,12 +184,12 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 .paint-modal.open { display: flex; }
 .paint-modal-box {
   width: min(520px, 92vw); max-height: 82vh; display: flex; flex-direction: column;
-  border: 2px solid var(--ink); border-radius: 9px; background: var(--paper);
-  box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 35%, transparent);
+  border: 2px solid var(--window-border); border-radius: 9px; background: var(--paper);
+  box-shadow: var(--shadow-distance) var(--shadow-distance) 0 color-mix(in srgb, var(--shadow) var(--shadow-alpha), transparent);
 }
 .paint-modal-box > header {
   display: flex; justify-content: space-between; padding: 9px 13px;
-  border-radius: 6px 6px 0 0; background: var(--ink); color: var(--menu-text);
+  border-radius: 6px 6px 0 0; background: var(--titlebar); color: var(--menu-text);
 }
 .paint-modal-box > header button { all: unset; cursor: pointer; padding: 0 3px; }
 .paint-site-list { overflow: auto; padding: 8px; color: var(--sage); }

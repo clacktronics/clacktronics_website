@@ -14,9 +14,12 @@ const THEME_VARS = [
   '--ink', '--heading', '--ink-soft', '--control-text', '--strong-text', '--shadow',
   '--paper', '--paper-deep', '--paper-line', '--sage',
   '--leaf', '--leaf-deep', '--menu-text', '--menu-dim', '--desktop',
-  '--window-inactive', '--title-text', '--accent-hover', '--button-text',
+  '--titlebar', '--window-border', '--window-inactive', '--window-border-inactive',
+  '--title-text', '--accent-hover', '--button-text',
   '--disabled-text'
 ];
+/* Colours are hex; the two drop-shadow controls are a length and a percentage. */
+const THEME_UNIT_VARS = { '--shadow-distance': /^\d{1,2}(\.\d+)?px$/, '--shadow-alpha': /^\d{1,3}(\.\d+)?%$/ };
 let activeTheme = 'clackos.css';
 let themePreview = null;
 let availableThemes = new Set(['clackos.css']);
@@ -50,6 +53,12 @@ function setPreviewOnDocument(doc, variables) {
     else
       doc.documentElement.style.removeProperty(name);
   }
+  for (const [name, pattern] of Object.entries(THEME_UNIT_VARS)) {
+    if (variables && pattern.test(String(variables[name] || '').trim()))
+      doc.documentElement.style.setProperty(name, String(variables[name]).trim());
+    else
+      doc.documentElement.style.removeProperty(name);
+  }
 }
 
 function revealThemedFrame(frame, link) {
@@ -63,7 +72,8 @@ function revealThemedFrame(frame, link) {
 
 function themeVariablesForDocument(doc) {
   const styles = doc.defaultView.getComputedStyle(doc.documentElement);
-  return Object.fromEntries(THEME_VARS.map(name => [name, styles.getPropertyValue(name).trim()]));
+  return Object.fromEntries([...THEME_VARS, ...Object.keys(THEME_UNIT_VARS)]
+    .map(name => [name, styles.getPropertyValue(name).trim()]));
 }
 
 function dispatchThemeChange(doc) {
