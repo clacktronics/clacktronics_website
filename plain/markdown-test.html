@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
+<title>Markdown test page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/icons.css">
+<link rel="stylesheet" href="../assets/css/clackos.css">
+<link rel="stylesheet" href="../assets/themes/monochrome.css">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="../vendor/kicanvas/kicanvas.js"></script>
+</head>
+<body class="plain-mirror">
+<header id="plain-nav"><nav class="plain-menubar" aria-label="Site menu"><details class="plain-menu"><summary>File</summary><div class="plain-menu-panel"><details class="plain-submenu"><summary>Open</summary><div class="plain-menu-panel"><a href="index.html">Open Clacktronics</a><a href="readme.html">Open README.txt</a><a href="catalogue.html">Open Catalogue</a><a href="euroclack.html">Open EuroClack</a><a href="blog.html">Open Blog</a><a href="markdown-test.html">Open Markdown test</a></div></details><a href="https://github.com/clacktronics/clacktronics_website/issues/new" target="_blank" rel="noopener noreferrer">Report bug…</a><a href="../content/applications/markdown.html?open=content/file/markdown-test.md" target="_blank" rel="noopener noreferrer">Edit…</a></div></details><details class="plain-menu"><summary>Applications</summary><div class="plain-menu-panel"><details class="plain-submenu"><summary>Games</summary><div class="plain-menu-panel"><a href="../content/applications/clacksweeper.html" target="_blank" rel="noopener noreferrer">Clacksweeper</a><a href="../content/applications/solitaire.html" target="_blank" rel="noopener noreferrer">Solitaire</a></div></details><details class="plain-submenu"><summary>Emulation</summary><div class="plain-menu-panel"><a href="../content/applications/qbasic.html" target="_blank" rel="noopener noreferrer">QBasic 1.1</a></div></details><details class="plain-submenu"><summary>Multimedia</summary><div class="plain-menu-panel"><a href="../content/applications/clackbase.html" target="_blank" rel="noopener noreferrer">Clackbase MIDI Sequencer</a><a href="../content/applications/puredata.html" target="_blank" rel="noopener noreferrer">Pure Data</a><a href="../content/applications/video/index.html" target="_blank" rel="noopener noreferrer">Video Lab</a><a href="../content/applications/recorder.html" target="_blank" rel="noopener noreferrer">Sound Recorder</a><a href="../content/applications/paint.html" target="_blank" rel="noopener noreferrer">ClackPaint</a><a href="../content/applications/model-viewer.html" target="_blank" rel="noopener noreferrer">3D Model Viewer</a></div></details><details class="plain-submenu"><summary>Maths &amp; Programming</summary><div class="plain-menu-panel"><a href="../content/applications/graphing-calculator.html" target="_blank" rel="noopener noreferrer">Graphing Calculator</a><a href="../content/applications/python.html" target="_blank" rel="noopener noreferrer">Python</a><a href="../content/applications/processing.html" target="_blank" rel="noopener noreferrer">Processing</a><a href="../content/applications/openscad.html" target="_blank" rel="noopener noreferrer">OpenSCAD</a></div></details><details class="plain-submenu"><summary>Electronics</summary><div class="plain-menu-panel"><a href="../content/applications/circuit.html" target="_blank" rel="noopener noreferrer">Circuit Simulator</a><a href="../content/applications/eecircuit.html" target="_blank" rel="noopener noreferrer">EEcircuit (SPICE)</a><a href="../content/applications/kicad.html" target="_blank" rel="noopener noreferrer">KiCAD Viewer</a><a href="../content/applications/eurorack-panel.html" target="_blank" rel="noopener noreferrer">Eurorack Panel Generator</a><a href="../content/applications/pcb-heater.html" target="_blank" rel="noopener noreferrer">PCB Heater Designer</a><a href="../content/applications/resistor.html" target="_blank" rel="noopener noreferrer">Resistor Calculator</a></div></details><details class="plain-submenu"><summary>Internet</summary><div class="plain-menu-panel"><a href="../content/applications/browser.html" target="_blank" rel="noopener noreferrer">Web Browser</a><a href="../content/applications/pdf-reader/index.html" target="_blank" rel="noopener noreferrer">PDF Reader</a><a href="../content/applications/markdown.html" target="_blank" rel="noopener noreferrer">Markdown Editor</a><a href="../content/applications/chat.html" target="_blank" rel="noopener noreferrer">ClackChat</a></div></details><details class="plain-submenu"><summary>System</summary><div class="plain-menu-panel"><a href="../content/applications/files.html" target="_blank" rel="noopener noreferrer">File Manager</a><a href="../content/applications/text.html" target="_blank" rel="noopener noreferrer">Text Editor</a><a href="../content/applications/appearance.html" target="_blank" rel="noopener noreferrer">Appearance</a><a href="../content/applications/theme.html" target="_blank" rel="noopener noreferrer">Theme Editor</a></div></details><hr><a href="about.html">About ClackOS</a></div></details></nav></header>
+<main>
+<div class="page">
+<h1 id="markdown-test">Markdown test</h1>
+<p class="tagline">Every renderer feature on one page — if something here looks wrong, the renderer is wrong.</p>
+<div class="rule"></div>
+<p class="eyebrow" id="contents">// Contents</p>
+<p>This page exercises every construct <span class="k">mdToHtml()</span> understands, in the order the<br>renderer checks them. Each section says what it should look like, so a broken<br>build is visible without reading the source.</p>
+<p><a href="#text">Text</a> · <a href="#lists">Lists</a> · <a href="#links-and-buttons">Links and buttons</a> · <a href="#code-and-quotes">Code and quotes</a> · <a href="#embeds">Embeds</a> · <a href="#raw-html">Raw HTML</a> · <a href="#edge-cases">Edge cases</a></p>
+<div class="rule"></div>
+<p class="eyebrow" id="frontmatter">// Frontmatter</p>
+<p>The window this opens in should be titled <b>Markdown test</b>, use the rich<br><span class="k">page</span> style, be 760px wide and 80% of the desktop tall, and show the tagline<br>plus a rule directly under the <span class="k">h1</span> above.</p>
+<p class="eyebrow" id="text">// Text</p>
+<p>Every heading gets an anchor id from its text. This paragraph shows<br><b>bold text</b>, <i>italic text</i>, **bold with <i>italic</i> inside**, and <span class="k">inline<br>keywords</span> — the last should be a green highlight, which is how prices like<br><span class="k">£45</span>, part numbers like <span class="k">RP2350</span> and colours like <span class="k">#00ff88</span> are marked up.</p>
+<p>A single line break inside a paragraph<br>should stay a line break,<br>so these three lines stack without a blank line between them.</p>
+<p class="eyebrow" id="eyebrow-headings">// Eyebrow headings</p>
+<p>A <span class="k">##</span> heading is not an <span class="k">h2</span> — it renders as a small green eyebrow label, and<br>is meant for section markers like the <span class="k">// What we make</span> style used on the home<br>page.</p>
+<p class="eyebrow" id="lists">// Lists</p>
+<ol class="list"><li><p><b>Numbered lists become the bordered box.</b> The list should render as the    <span class="k">01/02/03</span> feature panel, not as a plain ordered list. Wrapped lines in an    item are joined into one paragraph.</p></li><li><p><b>Second item.</b> Inline markup still works here: <span class="k">code</span>, <i>italic</i>, and a    <a href="index.html">link back home</a>.</p></li><li><p><b>Third item</b> so the numbering has somewhere to go.</p></li></ol>
+<ul class="list"><li><p>A bullet list renders as a plain <span class="k">ul.list</span>.</p></li><li><p>Items also support <b>inline</b> <span class="k">markup</span>.</p></li><li><p>Wrapping a bullet across two lines   joins it into a single paragraph.</p></li></ul>
+<ul class="list"><li><p>Asterisk bullets are accepted too.</p></li><li><p>Both markers produce the same list.</p></li></ul>
+<p class="eyebrow" id="links-and-buttons">// Links and buttons</p>
+<p>Inline links come in six flavours: an <a href="https://clacktronics.co.uk" target="_blank" rel="noopener noreferrer">external link</a><br>(opens in the Web Browser app), a <a href="https://example.com/manual.pdf" target="_blank" rel="noopener noreferrer">PDF link</a><br>(routed to PDF Reader), a <a href="catalogue.html">window link</a>, an<br><a href="../content/applications/paint.html" target="_blank" rel="noopener noreferrer">app link</a> (shown with its app icon), an<br>action link that runs a desktop action, and an<br><a href="#edge-cases">anchor link</a> that scrolls within this window.</p>
+<p>A paragraph containing <b>only</b> links becomes the call-to-action button row —<br>first solid, the rest ghosts:</p>
+<div class="ctas"><a class="btn primary" href="catalogue.html">Open the catalogue</a><a class="btn ghost" href="../content/applications/paint.html" target="_blank" rel="noopener noreferrer">Launch ClackPaint</a>Tidy the desktop<a class="btn ghost" href="https://clacktronics.co.uk" target="_blank" rel="noopener noreferrer">clacktronics.co.uk</a></div>
+<p>An app link may carry a query string, including one whose value contains<br>parentheses — the link parser counts nesting rather than stopping at the first<br><span class="k">)</span>:</p>
+<div class="ctas"><a class="btn primary" href="../content/applications/openscad.html?code=%24fn%3D64%3B%0Adifference%28%29%20%7B%0A%20%20cylinder%28d%3D30%2C%20h%3D5%2C%20center%3Dtrue%29%3B%0A%20%20cylinder%28d%3D20%2C%20h%3D6%2C%20center%3Dtrue%29%3B%0A%7D&amp;render=1" target="_blank" rel="noopener noreferrer">Open a ring in OpenSCAD</a></div>
+<p class="eyebrow" id="images">// Images</p>
+<p>A plain image:</p>
+<p><img src="../assets/backgrounds/circuit-trace.png" alt="Circuit trace tile" loading="lazy"></p>
+<p>A linked image (thumbnail that opens the full file) — clicking it should open<br>the image, not follow a broken link:</p>
+<p><a href="../assets/backgrounds/cracked-earth.png" target="_blank" rel="noopener noreferrer"><img src="../assets/backgrounds/cracked-earth.png" alt="Cracked earth tile" loading="lazy"></a></p>
+<p>An image with an unsafe source is dropped entirely, leaving nothing behind:</p>
+<p></p>
+<p class="eyebrow" id="code-and-quotes">// Code and quotes</p>
+<pre class="code">Fenced code keeps    its   spacing,
+  its indentation,
+and its &lt;angle brackets&gt; unescaped-looking but safely escaped.</pre>
+<pre class="code"># a language tag is accepted and ignored — no highlighting, just monospace
+def blink(pin, ms=250):
+    while True:
+        pin.toggle()
+        sleep_ms(ms)</pre>
+<blockquote>A blockquote renders in the quote style.<br>Continuation lines stay inside the same quote as line breaks,<br>and <b>inline markup</b> with <span class="k">code</span> still works here.</blockquote>
+<p class="eyebrow" id="embeds">// Embeds</p>
+<p>A YouTube embed, responsive, cookie-less domain:</p>
+<div class="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/PFA5VV02D28" title="Mini-Speaker kit assembly" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+<p>Short links and Shorts/embed URLs are accepted by the same directive:</p>
+<div class="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/9yssRi2fjQk" title="Proto-PSU kit assembly" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+<p>An inline video — default playback is looping with no controls:</p>
+<div class="video-embed"><video src="https://clacktronics.co.uk/assets/flipdots.mp4" aria-label="Flipdots flipping" preload="metadata" playsinline loop></video></div>
+<p>The same video with both options, so it plays once and shows controls:</p>
+<div class="video-embed"><video src="https://clacktronics.co.uk/assets/flipdots.mp4" aria-label="Flipdots with controls" preload="metadata" playsinline controls></video></div>
+<p>An interactive KiCad schematic viewer:</p>
+<figure class="kicanvas-embed"><kicanvas-embed controls="full" aria-label="Example schematic"><kicanvas-source src="../content/applications/kicad/example.kicad_sch"></kicanvas-source></kicanvas-embed><figcaption>Example schematic</figcaption></figure>
+<p>The build stamp, filled in from <span class="k">version.json</span> after the window mounts (reads<br>&quot;dev&quot; on a raw checkout):</p>
+<p class="build-stamp">Build: dev (unversioned)</p>
+<p>An embed directive with a bad target is not treated as an embed — this line<br>should render as ordinary paragraph text:</p>
+<p>@<a href="https://example.com/not-a-video" target="_blank" rel="noopener noreferrer">youtube</a></p>
+<p class="eyebrow" id="raw-html">// Raw HTML</p>
+<p>A block starting with an HTML tag is passed through the sanitiser:</p>
+<div class="html-block"><table>
+  <thead><tr><th>Module</th><th>HP</th><th>Price</th></tr></thead>
+  <tbody>
+    <tr><td>Green Screen 2350</td><td>12</td><td>£120</td></tr>
+    <tr><td>Proto-PSU</td><td>4</td><td>£45</td></tr>
+  </tbody>
+</table></div>
+<div class="html-block"><details>
+  <summary>Structural tags survive</summary>
+  <p>Lists, <kbd>kbd</kbd>, <mark>mark</mark>, <sub>sub</sub>, <sup>sup</sup>,
+  <abbr title="Voltage Controlled Oscillator">VCO</abbr> and
+  <a href="https://clacktronics.co.uk" target="_blank" rel="noopener noreferrer">links</a> are all allowed.</p>
+</details></div>
+<div class="html-block"><a id="explicit-anchor"></a>
+<p>Raw HTML can define an explicit anchor, so
+<a href="#explicit-anchor">this link</a> has a target that no heading created.</p></div>
+<div class="html-block"><div>
+  
+  <p>Event handlers, <code>script</code>, <code>style</code>, <code>iframe</code>,
+  <code>form</code>, <code>svg</code> and <code>data-action</code> are stripped.
+  This paragraph should survive with no way to run anything.</p>
+  
+</div></div>
+<p class="eyebrow" id="edge-cases">// Edge cases</p>
+<p class="eyebrow" id="duplicate-headings">// Duplicate headings</p>
+<p class="eyebrow" id="text-2">// Text</p>
+<p>The heading directly above repeats <span class="k">// Text</span> from earlier in the page, so it<br>gets the id <span class="k">text-2</span> and the contents link at the top still lands on the first<br>one.</p>
+<p>Only one <span class="k"># </span> heading is used on this page, at the very top: in <span class="k">page</span> style<br>every <span class="k"># </span> heading re-emits the frontmatter tagline and rule underneath itself,<br>so a second one would print the tagline twice.</p>
+<p class="eyebrow" id="rules-and-footers">// Rules and footers</p>
+<p>A <span class="k">---</span> on its own line is a horizontal rule (there is one below). A <span class="k">---</span><br>immediately before the <i>final</i> block of the file is different: it turns that<br>last block into the window footer, with one <span class="k">&lt;span&gt;</span> per line. That is why this<br>page ends the way it does.</p>
+<div class="rule"></div>
+<p>Escaping check: <span class="k">&lt;script&gt;alert(1)&lt;/script&gt;</span> inside inline code, and a bare<br>&amp;amp; ampersand, must both come out as visible text rather than as markup.</p>
+<footer><span>Clacktronics — markdown renderer test page</span>
+<span>Every feature above should render; nothing should execute</span>
+<span><a href="index.html">Back to Clacktronics</a></span></footer>
+</div>
+</main>
+<div id="plain-site-footer"><a href="../index.html?desktop=1">Switch to the ClackOS desktop version</a></div>
+<script>
+(() => {
+  const topMenus = [...document.querySelectorAll('.plain-menu')];
+  const submenus = [...document.querySelectorAll('.plain-submenu')];
+  const closeTree = menu => {
+    menu.open = false;
+    menu.querySelectorAll('details[open]').forEach(child => { child.open = false; });
+  };
+
+  topMenus.forEach(menu => {
+    menu.addEventListener('toggle', () => {
+      if (menu.open)
+        topMenus.filter(other => other !== menu).forEach(closeTree);
+    });
+    menu.addEventListener('mouseleave', () => closeTree(menu));
+  });
+
+  submenus.forEach(menu => {
+    menu.addEventListener('toggle', () => {
+      if (!menu.open) return;
+      const siblings = menu.parentElement.querySelectorAll(':scope > .plain-submenu[open]');
+      siblings.forEach(other => { if (other !== menu) closeTree(other); });
+    });
+    if (matchMedia('(hover: hover)').matches)
+      menu.addEventListener('mouseenter', () => { menu.open = true; });
+  });
+
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.plain-menubar')) topMenus.forEach(closeTree);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') topMenus.forEach(closeTree);
+  });
+})();
+</script>
+</body>
+</html>

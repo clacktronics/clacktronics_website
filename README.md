@@ -407,7 +407,9 @@ ClackOS window manager. Its menu contains File (Open, Report bug, and Edit)
 plus the same Applications hierarchy as ClackOS. `window:` links become normal
 page-to-page links in the current tab, while `app:` links open the standalone
 application as a full page in a new tab. The
-`@[youtube]` / `@[video]` / `@[kicanvas]` embeds still render inline. The
+`@[youtube]` / `@[video]` / `@[kicanvas]` embeds still render inline, raw HTML
+blocks go through the same sanitiser policy as ClackOS, and headings get the
+same generated anchor ids so `[jump](#heading)` links work. The
 pages reuse `assets/css/clackos.css` plus the active theme from `site.json`,
 so the mirror keeps the ClackOS typography and palette. Mobile devices enter
 this version by default. Each page footer links back to the desktop version,

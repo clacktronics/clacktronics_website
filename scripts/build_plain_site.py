@@ -11,11 +11,13 @@ inline. Run it after editing content:
     python3 scripts/build_plain_site.py
 """
 import html
+import html.parser
 import json
 import os
 import posixpath
 import re
 import pathlib
+import unicodedata
 import urllib.parse
 
 root = pathlib.Path(__file__).resolve().parent.parent
@@ -44,6 +46,12 @@ PAGES = collect_pages()
 # ---------------------------------------------------------------- helpers
 def esc(s):
     return html.escape(str(s), quote=True)
+
+def esc_inline_attr(s):
+    """inline() escapes its whole source before parsing, so an attribute built
+    from that source only still needs its quotes escaped — running esc() again
+    would turn an '&' in a query string into '&amp;amp;'."""
+    return str(s).replace('"', '&quot;').replace("'", '&#x27;')
 
 def parse_front_matter(text):
     meta = {}
@@ -75,7 +83,26 @@ def resolve_site_url(url, page_out):
         path = path[3:]
     return '../' * (1 + page_out.count('/')) + path
 
-def fix_url(url, page_out):
+def safe_web_url(url, allow_fragment=True):
+    """Mirror of safeWebUrl() in assets/js/clackos.js.
+
+    Accepts fragments, http(s)/mailto/tel, and ordinary relative paths;
+    rejects anything else (javascript:, data:, …) by returning ''.
+    """
+    url = str(url or '').strip()
+    if allow_fragment and url.startswith('#'):
+        return url
+    if re.match(r'^(?:https?:|mailto:|tel:)', url, re.I):
+        return url
+    if re.match(r'^(?:\.\.?/|/)?[a-z0-9][^\s:]*$', url, re.I):
+        return url
+    return ''
+
+def fix_url(url, page_out, allow_fragment=True):
+    """Resolve a markdown URL for this mirror page, or '' if it is unsafe."""
+    url = safe_web_url(url, allow_fragment)
+    if not url:
+        return ''
     if re.match(r'^(?:https?:|mailto:|tel:|#)', url, re.I):
         return url
     return resolve_site_url(url, page_out)
@@ -147,8 +174,9 @@ def inline(s, page_out):
 
     def img_sub(m):
         alt, src = m.group(1), m.group(2)
+        src = fix_url(src, page_out, allow_fragment=False)
         imgs.append('<img src="%s" alt="%s" loading="lazy">'
-                    % (esc(fix_url(src, page_out)), esc(alt)))
+                    % (esc_inline_attr(src), esc_inline_attr(alt)) if src else '')
         return '\x00%d\x00' % (len(imgs) - 1)
 
     s = re.sub(r'!\[([^\]]*)\]\(([^)\s]+)\)', img_sub, s)
@@ -161,7 +189,7 @@ def inline(s, page_out):
         if href.startswith('window:'):
             target = href[len('window:'):]
             if target in PAGES:
-                return '<a href="%s">%s</a>' % (esc(rel_href(PAGES[target], page_out)), text)
+                return '<a href="%s">%s</a>' % (esc_inline_attr(rel_href(PAGES[target], page_out)), text)
             return text
         if href.startswith('app:'):
             # Apps are standalone pages under content/; open the page itself
@@ -171,17 +199,170 @@ def inline(s, page_out):
             if sep:
                 url += '?' + opts
             return ('<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>'
-                    % (esc(url), text))
+                    % (esc_inline_attr(url), text))
         if href.startswith('action:'):
             return text
+        safe = fix_url(href, page_out)
+        if not safe:
+            return text
         return ('<a href="%s"%s>%s</a>'
-                % (esc(fix_url(href, page_out)),
+                % (esc_inline_attr(safe),
                    '' if href.startswith('#') else ' target="_blank" rel="noopener noreferrer"',
                    text))
 
     s = re.sub(r'\[([^\]]+)\]\(([^)\s]+)\)', link_sub, s)
     s = re.sub('\x00(\\d+)\x00', lambda m: imgs[int(m.group(1))], s)
     return s
+
+# ---------------------------------------------------------------- headings
+def heading_slug(text):
+    """Mirror of headingSlug() in assets/js/clackos.js."""
+    slug = re.sub(r'[`*_~\[\]]', '', str(text))
+    slug = unicodedata.normalize('NFKD', slug)
+    slug = ''.join(c for c in slug if not unicodedata.combining(c))
+    slug = re.sub(r'[^a-z0-9]+', '-', slug.lower()).strip('-')
+    return slug or 'section'
+
+def unique_heading_id(text, state):
+    """Same de-duplication as ClackOS: the second 'Text' heading is text-2."""
+    base = heading_slug(text)
+    count = state['headings'].get(base, 0) + 1
+    state['headings'][base] = count
+    return base if count == 1 else '%s-%d' % (base, count)
+
+# ---------------------------------------------------------------- raw HTML
+# Same policy as sanitizeHtmlBlock() in assets/js/clackos.js: keep structural
+# and content tags, drop active elements entirely, unwrap anything unknown, and
+# strip event handlers, unsafe URLs and the desktop's own data-action hooks.
+HTML_ALLOWED = set((
+    'a abbr article aside b blockquote br caption code col colgroup details div em figcaption '
+    'figure h1 h2 h3 h4 h5 h6 hr i img kbd li mark ol p pre q s samp section small span strong '
+    'sub summary sup table tbody td tfoot th thead tr u ul var').split())
+HTML_REMOVED = set('script style iframe object embed link meta base form input button textarea select option svg math'.split())
+HTML_VOID = set('br col hr img'.split())
+# Tags that implicitly close an open sibling, as the browser's parser does for
+# the DOM that sanitizeHtmlBlock() works on. Without this, '<td>a<td>b' would
+# come out nested instead of side by side.
+HTML_IMPLIED_CLOSE = {
+    'li': {'li'},
+    'td': {'td', 'th'},
+    'th': {'td', 'th'},
+    'tr': {'td', 'th', 'tr'},
+    'thead': {'td', 'th', 'tr', 'thead', 'tbody', 'tfoot'},
+    'tbody': {'td', 'th', 'tr', 'thead', 'tbody', 'tfoot'},
+    'tfoot': {'td', 'th', 'tr', 'thead', 'tbody', 'tfoot'},
+    'p': {'p'},
+}
+
+class HtmlBlockSanitizer(html.parser.HTMLParser):
+    def __init__(self, page_out):
+        super().__init__(convert_charrefs=True)
+        self.page_out = page_out
+        self.out = []
+        self.drop_depth = 0          # inside a removed element
+        self.drop_tag = None
+        self.open_tags = []          # kept tags, so end tags can be matched up
+
+    # -- attributes ----------------------------------------------------
+    def _attrs(self, tag, attrs):
+        kept = []
+        for name, value in attrs:
+            name = name.lower()
+            value = '' if value is None else value
+            generally_safe = (
+                name in ('id', 'class', 'title', 'role', 'width', 'height', 'colspan', 'rowspan')
+                or name.startswith('aria-')
+                or (name.startswith('data-') and name not in ('data-action', 'data-anchor')))
+            tag_safe = ((tag == 'img' and name in ('src', 'alt', 'loading'))
+                        or (tag == 'a' and name in ('href', 'target', 'rel')))
+            if name.startswith('on') or not (generally_safe or tag_safe):
+                continue
+            kept.append((name, value))
+        return dict(kept)
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        if self.drop_depth:
+            if tag == self.drop_tag and tag not in HTML_VOID:
+                self.drop_depth += 1
+            return
+        if tag in HTML_REMOVED:
+            if tag not in HTML_VOID:
+                self.drop_depth, self.drop_tag = 1, tag
+            return
+        if tag not in HTML_ALLOWED:
+            return                                   # unwrap: children survive
+        closes = HTML_IMPLIED_CLOSE.get(tag, ())
+        while self.open_tags and self.open_tags[-1] in closes:
+            self.out.append('</%s>' % self.open_tags.pop())
+        attributes = self._attrs(tag, attrs)
+
+        if tag == 'img':
+            src = fix_url(attributes.get('src', ''), self.page_out, allow_fragment=False)
+            if not src:
+                return
+            attributes['src'] = src
+            attributes['loading'] = 'lazy'
+        if tag == 'a':
+            href = attributes.pop('href', '')
+            safe = safe_web_url(href)
+            if not safe:
+                attributes.pop('target', None)
+                attributes.pop('rel', None)
+            elif safe.startswith('#'):
+                attributes['href'] = safe
+                attributes.pop('target', None)
+                attributes.pop('rel', None)
+            else:
+                attributes['href'] = fix_url(href, self.page_out)
+                attributes['target'] = '_blank'
+                attributes['rel'] = 'noopener noreferrer'
+
+        rendered = ''.join(' %s="%s"' % (name, esc(value)) for name, value in attributes.items())
+        if tag in HTML_VOID:
+            self.out.append('<%s%s>' % (tag, rendered))
+            return
+        self.out.append('<%s%s>' % (tag, rendered))
+        self.open_tags.append(tag)
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+        if tag.lower() not in HTML_VOID:
+            self.handle_endtag(tag)
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if self.drop_depth:
+            if tag == self.drop_tag:
+                self.drop_depth -= 1
+                if not self.drop_depth:
+                    self.drop_tag = None
+            return
+        if tag in HTML_VOID or tag not in self.open_tags:
+            return
+        while self.open_tags:                        # close anything left open
+            open_tag = self.open_tags.pop()
+            self.out.append('</%s>' % open_tag)
+            if open_tag == tag:
+                break
+
+    def handle_data(self, data):
+        if not self.drop_depth:
+            self.out.append(esc(data))
+
+    def handle_comment(self, data):
+        pass
+
+    def result(self):
+        self.close()
+        while self.open_tags:
+            self.out.append('</%s>' % self.open_tags.pop())
+        return ''.join(self.out)
+
+def sanitize_html_block(block, page_out):
+    parser = HtmlBlockSanitizer(page_out)
+    parser.feed(block)
+    return parser.result()
 
 # ---------------------------------------------------------------- embeds
 def youtube_embed(block):
@@ -216,9 +397,12 @@ def video_embed(block, page_out):
     opts.discard('')
     if opts - {'noloop', 'controls'}:
         return None
+    src = fix_url(m.group(1), page_out, allow_fragment=False)
+    if not src:
+        return None
     return ('<div class="video-embed"><video src="%s" aria-label="%s" preload="metadata" '
             'playsinline%s%s></video></div>'
-            % (esc(fix_url(m.group(1), page_out)), esc(m.group(2) or 'Video'),
+            % (esc(src), esc(m.group(2) or 'Video'),
                ' controls' if 'controls' in opts else '',
                '' if 'noloop' in opts else ' loop'))
 
@@ -226,12 +410,15 @@ def kicanvas_embed(block, page_out, state):
     m = re.match(r'^@\[kicanvas\]\((\S+?)(?:\s+["\']([^"\']+)["\'])?\)$', block, re.I)
     if not m or not re.search(r'\.(?:kicad_sch|kicad_pcb|kicad_wks)(?:[?#].*)?$', m.group(1), re.I):
         return None
+    src = fix_url(m.group(1), page_out, allow_fragment=False)
+    if not src:
+        return None
     state['kicanvas'] = True
     title = m.group(2) or 'KiCad design'
     return ('<figure class="kicanvas-embed"><kicanvas-embed controls="full" aria-label="%s">'
             '<kicanvas-source src="%s"></kicanvas-source></kicanvas-embed>'
             '<figcaption>%s</figcaption></figure>'
-            % (esc(title), esc(fix_url(m.group(1), page_out)), esc(title)))
+            % (esc(title), esc(src), esc(title)))
 
 def build_embed(block):
     """@[build] -> a small stamp of the deployed commit. The values come from
@@ -277,14 +464,21 @@ def md_to_html(body, meta, page_out, state):
             out.append(fences[int(fence.group(1))])
         elif embed:
             out.append(embed)
+        elif re.search(r'^<[/!A-Za-z][\s\S]*>$', block, re.M):
+            out.append('<div class="html-block">%s</div>'
+                       % sanitize_html_block(block, page_out))
         elif re.match(r'^>\s?', block):
             text = re.sub(r'^>\s?', '', block, flags=re.M)
             out.append('<blockquote>%s</blockquote>'
                        % inline(text, page_out).replace('\n', '<br>'))
         elif re.match(r'^##\s+', block):
-            out.append('<p class="eyebrow">%s</p>' % inline(re.sub(r'^##\s+', '', block), page_out))
+            heading = re.sub(r'^##\s+', '', block)
+            out.append('<p class="eyebrow" id="%s">%s</p>'
+                       % (esc(unique_heading_id(heading, state)), inline(heading, page_out)))
         elif re.match(r'^#\s+', block):
-            out.append('<h1>%s</h1>' % inline(re.sub(r'^#\s+', '', block), page_out))
+            heading = re.sub(r'^#\s+', '', block)
+            out.append('<h1 id="%s">%s</h1>'
+                       % (esc(unique_heading_id(heading, state)), inline(heading, page_out)))
             if meta.get('tagline'):
                 out.append('<p class="tagline">%s</p>' % esc(meta['tagline']))
                 out.append('<div class="rule"></div>')
@@ -317,7 +511,7 @@ STYLE = 'style.css'
 
 def render_page(md_rel, page_out):
     meta, body = parse_front_matter((content / md_rel).read_text(encoding='utf-8'))
-    state = {'kicanvas': False}
+    state = {'kicanvas': False, 'headings': {}}
     article = md_to_html(body, meta, page_out, state)
     style_class = 'page' if meta.get('style') == 'page' else 'plain'
     title = meta.get('title', 'Clacktronics')
