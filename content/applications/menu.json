@@ -26,6 +26,7 @@
       { "type": "app", "page": "circuit.html", "label": "Circuit Simulator", "title": "Circuit Simulator", "icon": "circuit-board", "multi": true },
       { "type": "app", "page": "eecircuit.html", "label": "EEcircuit (SPICE)", "title": "EEcircuit", "icon": "zap", "multi": true },
       { "type": "app", "page": "kicad.html", "label": "KiCAD Viewer", "title": "KiCAD Viewer", "icon": "cpu", "multi": true },
+      { "type": "app", "page": "eurorack-panel.html", "label": "Eurorack Panel Generator", "title": "Eurorack Panel Generator", "icon": "circuit-board", "width": 1180, "height": 760, "multi": true, "integrated": true },
       { "type": "app", "page": "pcb-heater.html", "label": "PCB Heater Designer", "title": "PCB Heater Designer", "icon": "circuit-board", "width": 1180, "height": 760, "multi": true },
       { "type": "app", "page": "resistor.html", "label": "Resistor Calculator", "title": "Resistor Calculator", "icon": "calculator", "width": 760, "height": 620 }
     ] },

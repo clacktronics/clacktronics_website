@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="only light">
+<title>Eurorack Panel Generator — ClackOS</title>
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+:host,html,body{height:100%;min-height:0} body{overflow:hidden} button,input,select{font:inherit}
+.generator{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);background:var(--paper);color:var(--control-text)}
+.generator-bar{min-height:46px;padding:7px 10px 7px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--ink);background:var(--paper-deep)}
+.generator-title{min-width:0}.generator-title h1{font-size:13px;color:var(--heading);line-height:1.2}.generator-title p{font-size:10px;color:var(--sage);margin-top:2px}.dimensions-badge{margin-left:auto;padding:4px 7px;border:1px solid var(--paper-line);border-radius:4px;color:var(--sage);font-size:10px;white-space:nowrap}
+.preview-controls{display:flex;align-items:center;gap:6px;white-space:nowrap}.preview-controls label,.check{display:flex;align-items:center;gap:5px;cursor:pointer}.segmented{display:flex;border:1px solid var(--ink);border-radius:5px;overflow:hidden}.segmented button{all:unset;cursor:pointer;padding:5px 7px;color:var(--control-text);font-size:10px}.segmented button+button{border-left:1px solid var(--ink)}.segmented button:hover{background:var(--paper)}.segmented button.bg-gray-700{background:var(--ink);color:var(--button-text)}
+.generator-main{min-height:0;display:grid;grid-template-columns:330px minmax(0,1fr)}.controls{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;border-right:1px solid var(--ink);background:var(--paper-deep)}.controls-scroll{overflow:auto;padding:10px}.section{border:1px solid var(--paper-line);border-radius:6px;background:var(--paper);padding:9px;margin-bottom:8px}.section h2{margin:0 0 7px;color:var(--leaf-deep);font-size:10px;letter-spacing:.12em;text-transform:uppercase}.field{display:grid;grid-template-columns:minmax(0,1fr) 128px;align-items:center;gap:8px;margin:6px 0}.field>label{font-size:11px;line-height:1.25}.control-unit{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px}.unit{font-size:9px;color:var(--sage);white-space:nowrap}.field input[type=number],.field select{width:100%;min-width:0;height:28px;padding:4px 7px;border:1px solid var(--ink);border-radius:5px;background:var(--paper-deep);color:var(--control-text);font:inherit;font-size:11px}.field input:focus-visible,.field select:focus-visible{outline:2px solid var(--leaf);outline-offset:1px}.field.wide{grid-template-columns:1fr}.field.wide select{margin-top:2px}.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 9px}.check{font-size:10.5px;line-height:1.2}.check input,.preview-controls input{accent-color:var(--leaf-deep)}.guide-matrix{display:grid;grid-template-columns:24px repeat(5,1fr);gap:5px 4px;align-items:center;text-align:center}.guide-matrix .fraction{color:var(--control-text);font-size:16px;font-weight:700;line-height:1.15}.guide-matrix .axis{color:var(--leaf-deep);font-size:11px;font-weight:700;text-align:left}.guide-matrix label{display:grid;place-items:center;min-height:18px;cursor:pointer}.guide-matrix input{margin:0;accent-color:var(--leaf-deep)}.warning{grid-column:1/-1;font-size:9px;color:var(--sage);margin-top:-3px}.text-red-400{color:#a53628!important}.border-red-500{border-color:#a53628!important}
+.downloads{padding:9px 10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;border-top:1px solid var(--paper-line);background:var(--paper-deep)}.downloads .btn{padding:7px 8px;text-align:center;font-size:10.5px}.downloads .svg-download{grid-column:1/-1}.preview{position:relative;min-width:0;min-height:0;overflow:hidden;background-color:var(--desktop,#e3ddc6);background-image:radial-gradient(color-mix(in srgb,var(--desktop,#e3ddc6) 65%,var(--ink,#09140d)) 1px,transparent 1px);background-size:20px 20px}.preview-note{position:absolute;z-index:2;left:9px;bottom:7px;color:var(--sage);font-size:9px;pointer-events:none}.preview-caution{position:absolute;z-index:3;top:9px;right:9px;display:grid;place-items:center;width:24px;height:22px;border:1px solid var(--ink);border-radius:5px;background:#f2c94c;color:var(--ink);font-size:14px;line-height:1;box-shadow:2px 2px 0 color-mix(in srgb,var(--shadow) 25%,transparent)}.preview-caution[hidden]{display:none}.preview svg{width:100%;height:100%;cursor:grab;filter:drop-shadow(0 14px 24px color-mix(in srgb,var(--shadow) 32%,transparent))}.preview svg.cursor-grabbing{cursor:grabbing!important}.preview text{font-family:"IBM Plex Mono",monospace}.preview .fill-kicad-hole{fill:var(--ink)}
+.tip{cursor:help}.hint{display:inline-grid;place-items:center;width:13px;height:13px;margin-left:3px;border:1px solid var(--sage);border-radius:50%;color:var(--sage);font-size:9px;vertical-align:1px;cursor:help}
+@media(max-width:780px){.generator-main{grid-template-columns:290px minmax(320px,1fr)}.generator-title p{display:none}.dimensions-badge{display:none}}@media(max-width:620px){body{overflow:auto}.generator{height:auto;min-height:100%}.generator-bar{flex-wrap:wrap}.generator-main{grid-template-columns:1fr}.controls{border-right:0}.controls-scroll{max-height:none}.preview{height:420px}.check-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="generator">
+<header class="generator-bar">
+  <div class="generator-title"><h1>Eurorack Panel Generator</h1><p>KiCad-ready faceplates, PCBs and 1:1 SVG references</p></div>
+  <div class="dimensions-badge" id="dimensions-badge"></div>
+  <div class="preview-controls" aria-label="Live preview controls">
+    <label title="Show or hide the front faceplate in the live preview."><input type="checkbox" id="show-panel-toggle" checked>Panel</label>
+    <label title="Show or hide the internal circuit board in the live preview."><input type="checkbox" id="show-pcb-toggle" checked>PCB</label>
+    <div class="segmented">
+      <button id="layout-overlaid" class="bg-gray-700 text-white" title="Stack the PCB directly behind the panel to check edge tolerances.">Overlaid</button>
+      <button id="layout-sidebyside" class="bg-transparent text-gray-400" title="Display the panel and PCB next to each other.">Side-by-side</button>
+    </div>
+  </div>
+</header>
+<main class="generator-main">
+  <aside class="controls">
+    <div class="controls-scroll">
+      <section class="section"><h2>Dimensions &amp; tolerances</h2>
+        <div class="field"><label for="hp-input" title="Set the panel width in Eurorack Horizontal Pitch (1 HP = 5.08mm).">Panel width <span class="hint">?</span></label><div class="control-unit"><input type="number" id="hp-input" value="10" min="1" max="168"><span class="unit">HP</span></div></div>
+        <div class="field wide"><label for="format-select" title="Choose standard 3U (Doepfer) or 1U formats (Intellijel/Pulp Logic).">Rack format <span class="hint">?</span></label><select id="format-select"><option value="128.5">Standard 3U · 128.5 mm</option><option value="39.65">Intellijel 1U · 39.65 mm</option><option value="43.2">Pulp Logic 1U · 43.2 mm</option></select></div>
+        <div class="field wide"><label for="hole-select" title="Oval slots allow for slight mounting adjustments in the case. Circular holes require high precision.">Mounting hole style <span class="hint">?</span></label><select id="hole-select"><option value="oval">M3 oval slot · 3.2 × 4.2 mm</option><option value="circle">M3 round · 3.2 mm</option></select></div>
+        <div class="field wide"><label for="hole-count-select" title="Auto assigns 2 holes for ≤8HP and 4 holes for >8HP. Override here for custom configurations.">Mounting hole count <span class="hint">?</span></label><select id="hole-count-select"><option value="auto">Auto · 2 ≤8HP, 4 >8HP</option><option value="2">2 holes · centre</option><option value="4">4 holes · corners</option><option value="6">6 holes · corners + centre</option></select></div>
+        <div class="field"><label for="tolerance-input" title="Subtracts from the physical panel width so modules fit easily side-by-side (0.3mm is the Doepfer standard).">Panel allowance <span class="hint">?</span></label><div class="control-unit"><input type="number" id="tolerance-input" value="0.3" min="0" max="2" step="0.1"><span class="unit">mm</span></div></div>
+        <div class="field"><label for="pcb-height-input" title="Vertical size of the generated internal circuit board. Maximum recommended heights are 110mm for 3U, 22.15mm for Intellijel 1U, and 25.68mm for Pulp Logic 1U.">Main PCB height <span class="hint">?</span></label><div class="control-unit"><input type="number" id="pcb-height-input" value="100" min="10" max="128.5" step="0.01"><span class="unit">mm</span></div><p class="warning" id="pcb-height-warning">Maximum for 3U: 110 mm.</p></div>
+        <div class="field"><label for="pcb-tolerance-input" title="Inward offset from the panel edge to prevent adjacent circuit boards from colliding.">PCB allowance <span class="hint">?</span></label><div class="control-unit"><input type="number" id="pcb-tolerance-input" value="0.5" min="0" max="10" step="0.1"><span class="unit">mm/side</span></div></div>
+      </section>
+      <section class="section"><h2>Panel plating · KiCad export</h2>
+        <div class="check-grid">
+          <label class="check tip" title="Adds conductive copper barrels inside the mounting holes to bond the metal screws to the PCB."><input type="checkbox" id="plating-pth" checked>PTH holes</label>
+          <label class="check tip" title="Fills empty space on the front copper layer (helps block EMF noise)."><input type="checkbox" id="plating-fill-front" checked>Front copper fill</label>
+          <label class="check tip" title="Fills empty space on the back copper layer."><input type="checkbox" id="plating-fill-back" checked>Back copper fill</label>
+          <label class="check tip" title="Removes the solder mask at the top and bottom 10mm on the back, allowing the panel to ground directly to metal case rails."><input type="checkbox" id="plating-rails-exposed" checked>Exposed back rails</label>
+          <label class="check tip" title="Assigns the copper fills and plated holes to the 'GND' net in KiCad."><input type="checkbox" id="plating-connect-gnd" checked>Connect to GND</label>
+        </div>
+      </section>
+      <section class="section"><h2>Design guides · User.2</h2>
+        <div class="guide-matrix" title="Generates alignment lines on the 'User.2' layer in KiCad to perfectly center and space your jacks/pots.">
+          <span aria-hidden="true"></span><span class="fraction">½</span><span class="fraction">⅓</span><span class="fraction">¼</span><span class="fraction">⅙</span><span class="fraction">⅛</span>
+          <span class="axis">X</span><label aria-label="X centre guide"><input type="checkbox" data-guide-axis="x" value="center" checked></label><label aria-label="X thirds guides"><input type="checkbox" data-guide-axis="x" value="thirds"></label><label aria-label="X quarters guides"><input type="checkbox" data-guide-axis="x" value="quarters"></label><label aria-label="X sixths guides"><input type="checkbox" data-guide-axis="x" value="sixths"></label><label aria-label="X eighths guides"><input type="checkbox" data-guide-axis="x" value="eighths"></label>
+          <span class="axis">Y</span><label aria-label="Y centre guide"><input type="checkbox" data-guide-axis="y" value="center" checked></label><label aria-label="Y thirds guides"><input type="checkbox" data-guide-axis="y" value="thirds"></label><label aria-label="Y quarters guides"><input type="checkbox" data-guide-axis="y" value="quarters"></label><label aria-label="Y sixths guides"><input type="checkbox" data-guide-axis="y" value="sixths"></label><label aria-label="Y eighths guides"><input type="checkbox" data-guide-axis="y" value="eighths"></label>
+        </div>
+      </section>
+    </div>
+    <div class="downloads">
+      <button class="btn primary" id="download-panel-btn" title="Download the front faceplate as a ready-to-use .kicad_pcb file.">Panel · KiCad</button>
+      <button class="btn primary" id="download-pcb-btn" title="Download the internal circuit board as a .kicad_pcb file with matching outlines and guides.">PCB · KiCad</button>
+      <button class="btn ghost svg-download" id="download-svg-btn" title="Download a 1:1 scale vector graphic of the panel for designing graphics in Inkscape or Illustrator.">Reference SVG · 1:1</button>
+    </div>
+  </aside>
+  <section id="preview-container" class="preview" aria-label="Live panel and PCB preview">
+    <span class="preview-caution" id="preview-caution" role="img" aria-label="PCB height warning" hidden>▲</span>
+    <span class="preview-note">Scroll to zoom · drag to pan · double-click to reset</span>
+    <svg id="preview-svg" class="cursor-grab" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--ink)"/></marker>
+        <pattern id="copper-hatch" width="2" height="2" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="2" stroke="#b87333" stroke-width=".5" opacity=".6"/></pattern>
+      </defs>
+      <g id="master-group" transform="translate(0,0) scale(1)"><g id="pcb-group" style="transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .3s ease"></g><g id="panel-group" style="transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .3s ease"></g></g>
+    </svg>
+  </section>
+</main>
+</div>
+    <script>
+    (() => {
+        const appRoot = window.ClackOSMountRoot || document.currentScript?.getRootNode() || document;
+        const byId = id => appRoot.querySelector('#' + id);
+        // --- State Management ---
+        const state = {
+            hp: 10,
+            heightFormat: 128.5,
+            tolerance: 0.3,
+            holeStyle: 'oval',
+            holeCountMode: 'auto',
+            pcbHeight: 100,
+            pcbTolerance: 0.5,
+            showPanel: true,
+            showPCB: true,
+            layoutMode: 'overlaid', // 'overlaid' or 'sidebyside'
+            plating: {
+                pth: true,
+                fillFront: true,
+                fillBack: true,
+                railsExposed: true,
+                connectGnd: true
+            },
+            guides: {
+                x: { center: true, thirds: false, quarters: false, sixths: false, eighths: false },
+                y: { center: true, thirds: false, quarters: false, sixths: false, eighths: false }
+            }
+        };
+
+        // Pan/Zoom State
+        let panX = 0, panY = 0, zoom = 1;
+        let isDragging = false, startX, startY;
+        let viewBoxAnimation = 0;
+        let animateNextViewBox = false;
+
+        // --- Math Helpers ---
+        function getIrreducibleFractions(divisors) {
+            const fractions = [];
+            divisors.forEach(div => {
+                for (let num = 1; num < div; num++) {
+                    let isReducible = false;
+                    for (let i = 2; i <= num; i++) {
+                        if (num % i === 0 && div % i === 0) isReducible = true;
+                    }
+                    if (!isReducible) fractions.push(num / div);
+                }
+            });
+            return [...new Set(fractions)].sort();
+        }
+
+        function getActiveGuideFractions(axisState) {
+            let fractions = [];
+            if (axisState.center) fractions.push(1/2);
+            if (axisState.quarters) fractions.push(...getIrreducibleFractions([4]));
+            if (axisState.thirds) fractions.push(...getIrreducibleFractions([3]));
+            if (axisState.sixths) fractions.push(...getIrreducibleFractions([6]));
+            if (axisState.eighths) fractions.push(...getIrreducibleFractions([8]));
+            return fractions;
+        }
+
+        // --- Panel Math ---
+        function calculatePanel() {
+            const width = (state.hp * 5.08) - state.tolerance;
+            const height = state.heightFormat;
+            const holes = [];
+
+            // Y positions (Doepfer standard is 3mm from top and bottom)
+            const yTop = 3.0;
+            const yBot = height - 3.0;
+
+            let targetCount = 4;
+            if (state.holeCountMode === 'auto') {
+                targetCount = state.hp <= 8 ? 2 : 4;
+            } else {
+                targetCount = parseInt(state.holeCountMode);
+            }
+
+            const edgeOffset = 7.5;
+
+            if (targetCount === 2) {
+                let leftPoint = edgeOffset;
+                if (state.hp <= 2) {
+                    leftPoint = width / 2;
+                }
+                holes.push({ x: leftPoint, y: yTop });
+                holes.push({ x: leftPoint, y: yBot });
+            } else {
+                holes.push({ x: edgeOffset, y: yTop });
+                holes.push({ x: edgeOffset, y: yBot });
+
+                let maxGridSteps = Math.floor((width - edgeOffset - 4) / 5.08);
+                let rightHoleX = edgeOffset + (maxGridSteps * 5.08);
+
+                holes.push({ x: rightHoleX, y: yTop });
+                holes.push({ x: rightHoleX, y: yBot });
+
+                if (targetCount === 6) {
+                    let stepsToCenter = Math.round(((width / 2) - edgeOffset) / 5.08);
+                    let xMid = edgeOffset + (stepsToCenter * 5.08);
+
+                    if (xMid > edgeOffset + 1 && xMid < rightHoleX - 1) {
+                        holes.push({ x: xMid, y: yTop });
+                        holes.push({ x: xMid, y: yBot });
+                    }
+                }
+            }
+
+            return { width, height, holes };
+        }
+
+        // --- STREAMING_CHUNK: Pan, Zoom & Render... ---
+        function applyTransform() {
+            const masterGroup = byId('master-group');
+            if (masterGroup) {
+                masterGroup.setAttribute('transform', `translate(${panX}, ${panY}) scale(${zoom})`);
+            }
+        }
+
+        function applyViewBox(svg, target) {
+            const targetValue = target.join(' ');
+            const current = (svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
+            if (!animateNextViewBox || current.length !== 4 || current.some(value => !Number.isFinite(value))) {
+                animateNextViewBox = false;
+                svg.setAttribute('viewBox', targetValue);
+                return;
+            }
+
+            animateNextViewBox = false;
+            cancelAnimationFrame(viewBoxAnimation);
+            const start = [...current];
+            const startedAt = performance.now();
+            const duration = 700;
+            const frame = now => {
+                const progress = Math.min(1, (now - startedAt) / duration);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const values = start.map((value, index) => value + ((target[index] - value) * eased));
+                svg.setAttribute('viewBox', values.join(' '));
+                if (progress < 1) viewBoxAnimation = requestAnimationFrame(frame);
+            };
+            viewBoxAnimation = requestAnimationFrame(frame);
+        }
+
+        function updatePreview() {
+            const metrics = calculatePanel();
+            const pw = metrics.width;
+            const ph = metrics.height;
+
+            const pcbW = pw - (state.pcbTolerance * 2.0);
+            const pcbH = state.pcbHeight;
+
+            const dimBadge = byId('dimensions-badge');
+            if (dimBadge) dimBadge.innerText = `Panel: ${pw.toFixed(1)}×${ph.toFixed(1)} | PCB: ${pcbW.toFixed(1)}×${pcbH.toFixed(1)}`;
+
+            // Validate PCB height against the usable depth for the selected format.
+            const heightInput = byId('pcb-height-input');
+            const heightWarning = byId('pcb-height-warning');
+            const previewCaution = byId('preview-caution');
+            const maxPCBHeight = state.heightFormat === 39.65 ? 22.15 : (state.heightFormat === 43.2 ? 25.68 : 110);
+            const formatName = state.heightFormat === 39.65 ? 'Intellijel 1U' : (state.heightFormat === 43.2 ? 'Pulp Logic 1U' : '3U');
+            const heightTooLarge = state.pcbHeight > maxPCBHeight;
+            if (heightInput && heightWarning) {
+                heightWarning.textContent = heightTooLarge
+                    ? `Too tall for ${formatName}; maximum ${maxPCBHeight.toFixed(2)} mm.`
+                    : `Maximum for ${formatName}: ${maxPCBHeight.toFixed(2)} mm.`;
+                if (heightTooLarge) {
+                    heightInput.classList.add('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+                    heightInput.classList.remove('border-gray-600', 'focus:ring-blue-500', 'focus:border-blue-500');
+                    heightWarning.classList.add('text-red-400');
+                    heightWarning.classList.remove('text-gray-500');
+                } else {
+                    heightInput.classList.remove('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+                    heightInput.classList.add('border-gray-600', 'focus:ring-blue-500', 'focus:border-blue-500');
+                    heightWarning.classList.remove('text-red-400');
+                    heightWarning.classList.add('text-gray-500');
+                }
+            }
+            if (previewCaution) {
+                previewCaution.hidden = !heightTooLarge;
+                previewCaution.title = heightTooLarge
+                    ? `PCB is ${state.pcbHeight.toFixed(2)} mm tall; ${formatName} supports up to ${maxPCBHeight.toFixed(2)} mm.`
+                    : '';
+            }
+
+            let panelOffsetX = 0;
+            let panelOffsetY = 0;
+            let pcbOffsetX = 0;
+            let pcbOffsetY = 0;
+            let viewBoxW = 0;
+            let viewBoxH = 0;
+
+            if (state.layoutMode === 'sidebyside') {
+                const gap = 15;
+                if (state.showPanel && state.showPCB) {
+                    panelOffsetX = 0;
+                    panelOffsetY = Math.max(0, (pcbH - ph) / 2);
+                    pcbOffsetX = pw + gap;
+                    pcbOffsetY = Math.max(0, (ph - pcbH) / 2);
+                    viewBoxW = pw + gap + pcbW;
+                    viewBoxH = Math.max(ph, pcbH);
+                } else if (state.showPanel) {
+                    viewBoxW = pw; viewBoxH = ph;
+                } else if (state.showPCB) {
+                    viewBoxW = pcbW; viewBoxH = pcbH;
+                }
+            } else {
+                if (state.showPanel && state.showPCB) {
+                    panelOffsetX = 0;
+                    panelOffsetY = Math.max(0, (pcbH - ph) / 2);
+                    pcbOffsetX = (pw - pcbW) / 2;
+                    pcbOffsetY = Math.max(0, (ph - pcbH) / 2);
+                    viewBoxW = Math.max(pw, pcbW);
+                    viewBoxH = Math.max(ph, pcbH);
+                } else if (state.showPanel) {
+                    viewBoxW = pw; viewBoxH = ph;
+                } else if (state.showPCB) {
+                    viewBoxW = pcbW; viewBoxH = pcbH;
+                }
+            }
+
+            const panelGroup = byId('panel-group');
+            const pcbGroup = byId('pcb-group');
+            if (panelGroup) panelGroup.style.transform = `translate(${panelOffsetX}px, ${panelOffsetY}px)`;
+            if (pcbGroup) pcbGroup.style.transform = `translate(${pcbOffsetX}px, ${pcbOffsetY}px)`;
+
+            let panelOpacity = state.showPanel ? ((state.layoutMode === 'overlaid' && state.showPCB) ? 0.75 : 1.0) : 0;
+            if (panelGroup) panelGroup.style.opacity = panelOpacity;
+            if (pcbGroup) pcbGroup.style.opacity = state.showPCB ? 1.0 : 0;
+
+            // Base ViewBox centering
+            const padding = Math.max(viewBoxW, viewBoxH) * 0.15 + 15;
+            const vX = -padding;
+            const vY = -padding;
+            const vW = viewBoxW + padding * 2;
+            const vH = viewBoxH + padding * 2;
+            const svgEl = byId('preview-svg');
+            if (svgEl) applyViewBox(svgEl, [vX, vY, vW, vH]);
+
+            // Panel Rendering
+            let holesSVG = '';
+            metrics.holes.forEach(hole => {
+                const hx = hole.x;
+                const hy = hole.y;
+                if (state.plating.pth) {
+                    if (state.holeStyle === 'oval') {
+                        holesSVG += `<rect x="${hx - 2.3}" y="${hy - 1.8}" width="4.6" height="3.6" rx="1.8" fill="#b87333" />`;
+                    } else {
+                        holesSVG += `<circle cx="${hx}" cy="${hy}" r="1.8" fill="#b87333" />`;
+                    }
+                }
+                if (state.holeStyle === 'oval') {
+                    holesSVG += `<rect x="${hx - 2.1}" y="${hy - 1.6}" width="4.2" height="3.2" rx="1.6" class="fill-kicad-hole" />`;
+                } else {
+                    holesSVG += `<circle cx="${hx}" cy="${hy}" r="1.6" class="fill-kicad-hole" />`;
+                }
+            });
+
+            const xFracs = getActiveGuideFractions(state.guides.x);
+            const yFracs = getActiveGuideFractions(state.guides.y);
+
+            let svgGuides = '';
+            xFracs.forEach(f => {
+                const gx = pw * f;
+                svgGuides += `<line x1="${gx}" y1="0" x2="${gx}" y2="${ph}" stroke="#ec4899" stroke-width="0.3" stroke-dasharray="2,2" opacity="0.8" />`;
+            });
+            yFracs.forEach(f => {
+                const gy = ph * f;
+                svgGuides += `<line x1="0" y1="${gy}" x2="${pw}" y2="${gy}" stroke="#ec4899" stroke-width="0.3" stroke-dasharray="2,2" opacity="0.8" />`;
+            });
+
+            let frontFillSVG = '';
+            if (state.plating.fillFront) {
+                frontFillSVG = `<rect x="0.5" y="0.5" width="${pw - 1}" height="${ph - 1}" fill="none" stroke="#b87333" stroke-width="0.3" stroke-dasharray="1 1" opacity="0.7" />`;
+            }
+
+            // In overlaid mode, the panel width sits below the PCB width.
+            const panelDimOffset = (state.layoutMode === 'overlaid' && state.showPCB) ? 18 : 7;
+            const panelDimTextOffset = 5;
+            let panelHtml = `
+                <text x="${pw/2}" y="-3" fill="var(--ink)" font-size="3" font-weight="600" text-anchor="middle">${state.hp} HP PANEL</text>
+                <rect x="0" y="0" width="${pw}" height="${ph}" fill="var(--paper)" stroke="var(--ink)" stroke-width="0.5" rx="1" />
+                ${frontFillSVG}
+                ${svgGuides}
+                ${holesSVG}
+                <line x1="0" y1="${ph + panelDimOffset}" x2="${pw}" y2="${ph + panelDimOffset}" stroke="var(--ink)" stroke-width="0.3" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+                <line x1="0" y1="${ph}" x2="0" y2="${ph + panelDimOffset + 2}" stroke="var(--ink)" stroke-width="0.3" />
+                <line x1="${pw}" y1="${ph}" x2="${pw}" y2="${ph + panelDimOffset + 2}" stroke="var(--ink)" stroke-width="0.3" />
+                <text x="${pw/2}" y="${ph + panelDimOffset + panelDimTextOffset}" fill="var(--ink)" font-size="3.5" text-anchor="middle">${pw.toFixed(2)}</text>
+                <line x1="${-panelDimOffset}" y1="0" x2="${-panelDimOffset}" y2="${ph}" stroke="var(--ink)" stroke-width="0.3" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+                <line x1="${-panelDimOffset - 2}" y1="0" x2="0" y2="0" stroke="var(--ink)" stroke-width="0.3" />
+                <line x1="${-panelDimOffset - 2}" y1="${ph}" x2="0" y2="${ph}" stroke="var(--ink)" stroke-width="0.3" />
+                <text x="${-panelDimOffset - panelDimTextOffset}" y="${ph/2}" fill="var(--ink)" font-size="3.5" text-anchor="middle" transform="rotate(-90 ${-panelDimOffset - panelDimTextOffset} ${ph/2})">${ph.toFixed(2)}</text>
+            `;
+            if (panelGroup) panelGroup.innerHTML = panelHtml;
+
+            // PCB Rendering
+            const pcbTextOpacity = state.layoutMode === 'overlaid' ? 0 : 0.5;
+            let pcbSvgGuides = '';
+            const pcbOffsetXInside = state.pcbTolerance;
+            const pcbOffsetYInside = (ph - pcbH) / 2;
+
+            xFracs.forEach(f => {
+                const localX = (pw * f) - pcbOffsetXInside;
+                if (localX >= 0 && localX <= pcbW) {
+                    pcbSvgGuides += `<line x1="${localX}" y1="0" x2="${localX}" y2="${pcbH}" stroke="#ec4899" stroke-width="0.3" stroke-dasharray="2,2" opacity="0.6" />`;
+                }
+            });
+            yFracs.forEach(f => {
+                const localY = (ph * f) - pcbOffsetYInside;
+                if (localY >= 0 && localY <= pcbH) {
+                    pcbSvgGuides += `<line x1="0" y1="${localY}" x2="${pcbW}" y2="${localY}" stroke="#ec4899" stroke-width="0.3" stroke-dasharray="2,2" opacity="0.6" />`;
+                }
+            });
+
+            const pcbDimOffset = 7;
+            const pcbDimTextOffset = 5;
+            // In overlaid mode, keep the PCB width closer to the boards.
+            const pcbDimYOffset = (state.layoutMode === 'overlaid' && state.showPanel) ? ((ph - pcbH)/2 + 7) : pcbDimOffset;
+            // Put PCB height on the right so it remains distinct from the panel height.
+            const pcbDimX = pcbW + pcbDimOffset;
+
+            let pcbHtml = `
+                <rect x="0" y="0" width="${pcbW}" height="${pcbH}" fill="#064e3b" stroke="var(--ink)" stroke-width="0.5" />
+                ${pcbSvgGuides}
+                <line x1="0" y1="${pcbH + pcbDimYOffset}" x2="${pcbW}" y2="${pcbH + pcbDimYOffset}" stroke="var(--ink)" stroke-width="0.3" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+                <line x1="0" y1="${pcbH}" x2="0" y2="${pcbH + pcbDimYOffset + 2}" stroke="var(--ink)" stroke-width="0.3" />
+                <line x1="${pcbW}" y1="${pcbH}" x2="${pcbW}" y2="${pcbH + pcbDimYOffset + 2}" stroke="var(--ink)" stroke-width="0.3" />
+                <text x="${pcbW/2}" y="${pcbH + pcbDimYOffset + pcbDimTextOffset}" fill="var(--ink)" font-size="3.5" text-anchor="middle">${pcbW.toFixed(2)}</text>
+                <line x1="${pcbDimX}" y1="0" x2="${pcbDimX}" y2="${pcbH}" stroke="var(--ink)" stroke-width="0.3" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+                <line x1="${pcbW}" y1="0" x2="${pcbDimX + 2}" y2="0" stroke="var(--ink)" stroke-width="0.3" />
+                <line x1="${pcbW}" y1="${pcbH}" x2="${pcbDimX + 2}" y2="${pcbH}" stroke="var(--ink)" stroke-width="0.3" />
+                <text x="${pcbDimX + pcbDimTextOffset}" y="${pcbH/2}" fill="var(--ink)" font-size="3.5" text-anchor="middle" transform="rotate(-90 ${pcbDimX + pcbDimTextOffset} ${pcbH/2})">${pcbH.toFixed(2)}</text>
+
+                <text x="${pcbW/2}" y="${pcbH/2}" fill="var(--ink)" opacity="${pcbTextOpacity}" font-size="5" font-weight="600" text-anchor="middle" dominant-baseline="middle" style="transition: opacity 0.5s ease;">MAIN PCB</text>
+            `;
+            if (pcbGroup) pcbGroup.innerHTML = pcbHtml;
+        }
+
+        // --- STREAMING_CHUNK: KiCAD Generation... ---
+        function generateUUID() {
+            return crypto.randomUUID();
+        }
+
+        function generateKiCAD() {
+            const metrics = calculatePanel();
+
+            const pageCenterX = 148.5;
+            const pageCenterY = 105.0;
+            const offsetX = pageCenterX - (metrics.width / 2);
+            const offsetY = pageCenterY - (metrics.height / 2);
+
+            const isPTH = state.plating.pth;
+            const padShape = state.holeStyle === 'oval' ? 'oval' : 'circle';
+            let padSize = state.holeStyle === 'oval' ? '4.6 3.6' : '3.6 3.6';
+            if (!isPTH) {
+                padSize = state.holeStyle === 'oval' ? '4.2 3.2' : '3.2 3.2';
+            }
+
+            const drillDef = state.holeStyle === 'oval' ? 'oval 4.2 3.2' : '3.2';
+            const padType = isPTH ? 'thru_hole' : 'np_thru_hole';
+            const gndNetStr = state.plating.connectGnd ? '(net 1 "GND") (zone_connect 2)' : '';
+
+            const footprints = metrics.holes.map(hole => `
+  (footprint "MountingHole:MountingHole_3.2mm_M3" (layer "F.Cu")
+    (uuid "${generateUUID()}")
+    (at ${(hole.x + offsetX).toFixed(4)} ${(hole.y + offsetY).toFixed(4)})
+    (attr exclude_from_pos_files exclude_from_bom)
+    (pad "1" ${padType} ${padShape} (at 0 0) (size ${padSize}) (drill ${drillDef}) (layers "*.Cu" "*.Mask") ${gndNetStr} (uuid "${generateUUID()}"))
+  )`).join("");
+
+            const dimLayer = 'Eco2.User';
+            const dimensions = `
+  (dimension (type aligned) (layer "${dimLayer}") (uuid "${generateUUID()}")
+    (pts (xy ${offsetX.toFixed(4)} ${offsetY.toFixed(4)}) (xy ${(metrics.width + offsetX).toFixed(4)} ${offsetY.toFixed(4)}))
+    (height -5)
+    (gr_text "${metrics.width.toFixed(2)} mm" (at ${(offsetX + metrics.width/2).toFixed(4)} ${(offsetY - 5).toFixed(4)}) (layer "${dimLayer}") (uuid "${generateUUID()}")
+      (effects (font (size 1.5 1.5) (thickness 0.3)))
+    )
+    (format (units 3) (units_format 1) (precision 2))
+    (style (thickness 0.15))
+  )`;
+
+            let kicadGuides = "";
+            const xFracs = getActiveGuideFractions(state.guides.x);
+            const yFracs = getActiveGuideFractions(state.guides.y);
+
+            xFracs.forEach(f => {
+                const x = offsetX + (metrics.width * f);
+                kicadGuides += `\n  (gr_line (start ${x.toFixed(4)} ${offsetY.toFixed(4)}) (end ${x.toFixed(4)} ${(metrics.height + offsetY).toFixed(4)}) (layer "User.2") (uuid "${generateUUID()}") (stroke (width 0.15) (type solid)))`;
+            });
+            yFracs.forEach(f => {
+                const y = offsetY + (metrics.height * f);
+                kicadGuides += `\n  (gr_line (start ${offsetX.toFixed(4)} ${y.toFixed(4)}) (end ${(metrics.width + offsetX).toFixed(4)} ${y.toFixed(4)}) (layer "User.2") (uuid "${generateUUID()}") (stroke (width 0.15) (type solid)))`;
+            });
+
+            let kicadZones = "";
+            const zoneLayers = [];
+            if (state.plating.fillFront) zoneLayers.push('"F.Cu"');
+            if (state.plating.fillBack) zoneLayers.push('"B.Cu"');
+
+            if (zoneLayers.length > 0) {
+                const netNum = state.plating.connectGnd ? '1' : '0';
+                const netName = state.plating.connectGnd ? 'GND' : '';
+                kicadZones = `
+  (zone (net ${netNum}) (net_name "${netName}") (layers ${zoneLayers.join(" ")}) (uuid "${generateUUID()}")
+    (hatch edge 0.5)
+    (connect_pads (clearance 0.5))
+    (min_thickness 0.25)
+    (fill yes (thermal_gap 0.5) (thermal_bridge_width 0.5))
+    (polygon
+      (pts
+        (xy ${(offsetX - 1).toFixed(4)} ${(offsetY - 1).toFixed(4)})
+        (xy ${(offsetX + metrics.width + 1).toFixed(4)} ${(offsetY - 1).toFixed(4)})
+        (xy ${(offsetX + metrics.width + 1).toFixed(4)} ${(offsetY + metrics.height + 1).toFixed(4)})
+        (xy ${(offsetX - 1).toFixed(4)} ${(offsetY + metrics.height + 1).toFixed(4)})
+      )
+    )
+  )`;
+            }
+
+            let maskRects = "";
+            if (state.plating.railsExposed) {
+                const topMaskY = offsetY + 10.0;
+                const botMaskY = offsetY + metrics.height - 10.0;
+                maskRects = `
+  (gr_poly (pts (xy ${offsetX.toFixed(4)} ${offsetY.toFixed(4)}) (xy ${(offsetX + metrics.width).toFixed(4)} ${offsetY.toFixed(4)}) (xy ${(offsetX + metrics.width).toFixed(4)} ${topMaskY.toFixed(4)}) (xy ${offsetX.toFixed(4)} ${topMaskY.toFixed(4)})) (layer "B.Mask") (uuid "${generateUUID()}") (stroke (width 0) (type solid)) (fill solid))
+  (gr_poly (pts (xy ${offsetX.toFixed(4)} ${botMaskY.toFixed(4)}) (xy ${(offsetX + metrics.width).toFixed(4)} ${botMaskY.toFixed(4)}) (xy ${(offsetX + metrics.width).toFixed(4)} ${(offsetY + metrics.height).toFixed(4)}) (xy ${offsetX.toFixed(4)} ${(offsetY + metrics.height).toFixed(4)})) (layer "B.Mask") (uuid "${generateUUID()}") (stroke (width 0) (type solid)) (fill solid))`;
+            }
+
+            const kicadPCB = `(kicad_pcb (version 20240108) (generator "EurorackFaceplateGen")
+  (general
+    (thickness 1.6)
+  )
+  (paper "A4")
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+    (36 "B.SilkS" user "B.Silkscreen")
+    (37 "F.SilkS" user "F.Silkscreen")
+    (38 "B.Mask" user)
+    (39 "F.Mask" user)
+    (44 "Edge.Cuts" user)
+    (48 "B.Fab" user)
+    (49 "F.Fab" user)
+    (43 "Eco2.User" user "Dimensions")
+    (42 "User.2" user "Guides")
+  )
+  (net 0 "")
+  (net 1 "GND")
+  ${footprints}${dimensions}${kicadGuides}${kicadZones}${maskRects}
+  (gr_line (start ${offsetX.toFixed(4)} ${offsetY.toFixed(4)}) (end ${(metrics.width + offsetX).toFixed(4)} ${offsetY.toFixed(4)}) (layer "Edge.Cuts") (uuid "${generateUUID()}") (stroke (width 0.1) (type solid)))
+  (gr_line (start ${(metrics.width + offsetX).toFixed(4)} ${offsetY.toFixed(4)}) (end ${(metrics.width + offsetX).toFixed(4)} ${(metrics.height + offsetY).toFixed(4)}) (layer "Edge.Cuts") (uuid "${generateUUID()}") (stroke (width 0.1) (type solid)))
+  (gr_line (start ${(metrics.width + offsetX).toFixed(4)} ${(metrics.height + offsetY).toFixed(4)}) (end ${offsetX.toFixed(4)} ${(metrics.height + offsetY).toFixed(4)}) (layer "Edge.Cuts") (uuid "${generateUUID()}") (stroke (width 0.1) (type solid)))
+  (gr_line (start ${offsetX.toFixed(4)} ${(metrics.height + offsetY).toFixed(4)}) (end ${offsetX.toFixed(4)} ${offsetY.toFixed(4)}) (layer "Edge.Cuts") (uuid "${generateUUID()}") (stroke (width 0.1) (type solid)))
+)`;
+            return kicadPCB;
+        }
+
+        function generateMainPCBKiCAD() {
+            const metrics = calculatePanel();
+            const pageCenterX = 148.5;
+            const pageCenterY = 105.0;
+            const panelOriginX = pageCenterX - (metrics.width / 2);
+            const panelOriginY = pageCenterY - (metrics.height / 2);
+            const pcbWidth = metrics.width - (state.pcbTolerance * 2.0);
+            const pcbHeight = state.pcbHeight;
+            const pcbOriginX = panelOriginX + state.pcbTolerance;
+            const pcbOriginY = pageCenterY - (pcbHeight / 2);
+
+            const edgeCuts = `
+  (gr_line (start ${pcbOriginX.toFixed(4)} ${pcbOriginY.toFixed(4)}) (end ${(pcbOriginX + pcbWidth).toFixed(4)} ${pcbOriginY.toFixed(4)}) (layer "Edge.Cuts") (uuid "${generateUUID()}") (stroke (width 0.1) (type solid)))
+  (gr_line (start ${(pcbOriginX + pcbWidth).toFixed(4)} ${pcbOriginY.toFixed(4)}) (end ${(pcbOriginX + pcbWidth).toFixed(4)} ${(pcbOriginY + pcbHeight).toFixed(4)}) (layer "Edge.Cuts") (uuid "${generateUUID()}") (stroke (width 0.1) (type solid)))
+  (gr_line (start ${(pcbOriginX + pcbWidth).toFixed(4)} ${(pcbOriginY + pcbHeight).toFixed(4)}) (end ${pcbOriginX.toFixed(4)} ${(pcbOriginY + pcbHeight).toFixed(4)}) (layer "Edge.Cuts") (uuid "${generateUUID()}") (stroke (width 0.1) (type solid)))
+  (gr_line (start ${pcbOriginX.toFixed(4)} ${(pcbOriginY + pcbHeight).toFixed(4)}) (end ${pcbOriginX.toFixed(4)} ${pcbOriginY.toFixed(4)}) (layer "Edge.Cuts") (uuid "${generateUUID()}") (stroke (width 0.1) (type solid)))`;
+
+            let ffab = `
+  (gr_line (start ${panelOriginX.toFixed(4)} ${panelOriginY.toFixed(4)}) (end ${(panelOriginX + metrics.width).toFixed(4)} ${panelOriginY.toFixed(4)}) (layer "F.Fab") (uuid "${generateUUID()}") (stroke (width 0.15) (type dash)))
+  (gr_line (start ${(panelOriginX + metrics.width).toFixed(4)} ${panelOriginY.toFixed(4)}) (end ${(panelOriginX + metrics.width).toFixed(4)} ${(panelOriginY + metrics.height).toFixed(4)}) (layer "F.Fab") (uuid "${generateUUID()}") (stroke (width 0.15) (type dash)))
+  (gr_line (start ${(panelOriginX + metrics.width).toFixed(4)} ${(panelOriginY + metrics.height).toFixed(4)}) (end ${panelOriginX.toFixed(4)} ${(panelOriginY + metrics.height).toFixed(4)}) (layer "F.Fab") (uuid "${generateUUID()}") (stroke (width 0.15) (type dash)))
+  (gr_line (start ${panelOriginX.toFixed(4)} ${(panelOriginY + metrics.height).toFixed(4)}) (end ${panelOriginX.toFixed(4)} ${panelOriginY.toFixed(4)}) (layer "F.Fab") (uuid "${generateUUID()}") (stroke (width 0.15) (type dash)))`;
+
+            metrics.holes.forEach(hole => {
+                const hx = panelOriginX + hole.x;
+                const hy = panelOriginY + hole.y;
+                if (state.holeStyle === 'oval') {
+                    ffab += `
+  (gr_line (start ${(hx - 0.5).toFixed(4)} ${(hy - 1.6).toFixed(4)}) (end ${(hx + 0.5).toFixed(4)} ${(hy - 1.6).toFixed(4)}) (layer "F.Fab") (uuid "${generateUUID()}") (stroke (width 0.15) (type solid)))
+  (gr_line (start ${(hx - 0.5).toFixed(4)} ${(hy + 1.6).toFixed(4)}) (end ${(hx + 0.5).toFixed(4)} ${(hy + 1.6).toFixed(4)}) (layer "F.Fab") (uuid "${generateUUID()}") (stroke (width 0.15) (type solid)))
+  (gr_arc (start ${(hx - 0.5).toFixed(4)} ${(hy - 1.6).toFixed(4)}) (mid ${(hx - 2.1).toFixed(4)} ${hy.toFixed(4)}) (end ${(hx - 0.5).toFixed(4)} ${(hy + 1.6).toFixed(4)}) (layer "F.Fab") (uuid "${generateUUID()}") (stroke (width 0.15) (type solid)))
+  (gr_arc (start ${(hx + 0.5).toFixed(4)} ${(hy + 1.6).toFixed(4)}) (mid ${(hx + 2.1).toFixed(4)} ${hy.toFixed(4)}) (end ${(hx + 0.5).toFixed(4)} ${(hy - 1.6).toFixed(4)}) (layer "F.Fab") (uuid "${generateUUID()}") (stroke (width 0.15) (type solid)))`;
+                } else {
+                    ffab += `\n  (gr_circle (center ${hx.toFixed(4)} ${hy.toFixed(4)}) (end ${(hx+1.6).toFixed(4)} ${hy.toFixed(4)}) (layer "F.Fab") (uuid "${generateUUID()}") (stroke (width 0.15) (type solid)))`;
+                }
+            });
+
+            const dimLayer = 'Eco2.User';
+            const pcbDimensions = `
+  (dimension (type aligned) (layer "${dimLayer}") (uuid "${generateUUID()}")
+    (pts (xy ${pcbOriginX.toFixed(4)} ${pcbOriginY.toFixed(4)}) (xy ${(pcbOriginX + pcbWidth).toFixed(4)} ${pcbOriginY.toFixed(4)}))
+    (height -5)
+    (gr_text "${pcbWidth.toFixed(2)} mm" (at ${(pcbOriginX + pcbWidth/2).toFixed(4)} ${(pcbOriginY - 5).toFixed(4)}) (layer "${dimLayer}") (uuid "${generateUUID()}")
+      (effects (font (size 1.5 1.5) (thickness 0.3)))
+    )
+    (format (units 3) (units_format 1) (precision 2))
+    (style (thickness 0.15))
+  )`;
+
+            let kicadGuides = "";
+            const xFracs = getActiveGuideFractions(state.guides.x);
+            const yFracs = getActiveGuideFractions(state.guides.y);
+
+            xFracs.forEach(f => {
+                const x = panelOriginX + (metrics.width * f);
+                kicadGuides += `\n  (gr_line (start ${x.toFixed(4)} ${pcbOriginY.toFixed(4)}) (end ${x.toFixed(4)} ${(pcbOriginY + pcbHeight).toFixed(4)}) (layer "User.2") (uuid "${generateUUID()}") (stroke (width 0.15) (type solid)))`;
+            });
+            yFracs.forEach(f => {
+                const y = panelOriginY + (metrics.height * f);
+                kicadGuides += `\n  (gr_line (start ${pcbOriginX.toFixed(4)} ${y.toFixed(4)}) (end ${(pcbOriginX + pcbWidth).toFixed(4)} ${y.toFixed(4)}) (layer "User.2") (uuid "${generateUUID()}") (stroke (width 0.15) (type solid)))`;
+            });
+
+            return `(kicad_pcb (version 20240108) (generator "EurorackMainPCBGen")
+  (general
+    (thickness 1.6)
+  )
+  (paper "A4")
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+    (36 "B.SilkS" user "B.Silkscreen")
+    (37 "F.SilkS" user "F.Silkscreen")
+    (38 "B.Mask" user)
+    (39 "F.Mask" user)
+    (44 "Edge.Cuts" user)
+    (48 "B.Fab" user)
+    (49 "F.Fab" user)
+    (43 "Eco2.User" user "Dimensions")
+    (42 "User.2" user "Guides")
+  )${ffab}${edgeCuts}${pcbDimensions}${kicadGuides}
+)`;
+        }
+
+        function triggerDownload() {
+            const content = generateKiCAD();
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            let formatStr = state.heightFormat === 39.65 ? "1U_Intellijel" : (state.heightFormat === 43.2 ? "1U_PulpLogic" : "3U");
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Panel_${state.hp}HP_${formatStr}.kicad_pcb`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        function triggerSVGDownload() {
+            const metrics = calculatePanel();
+            let holesSVG = '';
+            metrics.holes.forEach(hole => {
+                if (state.holeStyle === 'oval') {
+                    holesSVG += `<rect x="${(hole.x - 2.1).toFixed(4)}" y="${(hole.y - 1.6).toFixed(4)}" width="4.2" height="3.2" rx="1.6" fill="black" />`;
+                } else {
+                    holesSVG += `<circle cx="${hole.x.toFixed(4)}" cy="${hole.y.toFixed(4)}" r="1.6" fill="black" />`;
+                }
+            });
+            const svgContent = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<svg width="${metrics.width}mm" height="${metrics.height}mm" viewBox="0 0 ${metrics.width} ${metrics.height}" xmlns="http://www.w3.org/2000/svg">\n<rect x="0" y="0" width="${metrics.width}" height="${metrics.height}" fill="none" stroke="black" stroke-width="0.1" />\n${holesSVG}\n</svg>`;
+            const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Panel_${state.hp}HP.svg`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        function triggerMainPCBDownload() {
+            const content = generateMainPCBKiCAD();
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            let formatStr = state.heightFormat === 39.65 ? "1U_Intellijel" : (state.heightFormat === 43.2 ? "1U_PulpLogic" : "3U");
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `MainPCB_${state.hp}HP_${formatStr}.kicad_pcb`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
+        // --- STREAMING_CHUNK: Events Binding... ---
+        function safeBind(id, event, handler) {
+            const el = byId(id);
+            if (el) el.addEventListener(event, handler);
+        }
+
+        function setupEventListeners() {
+            appRoot.querySelectorAll('input[data-guide-axis]').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    state.guides[e.target.dataset.guideAxis][e.target.value] = e.target.checked;
+                    updatePreview();
+                });
+            });
+
+            safeBind('hp-input', 'input', e => { if (parseInt(e.target.value) > 0) { state.hp = parseInt(e.target.value); updatePreview(); } });
+            safeBind('format-select', 'change', e => {
+                state.heightFormat = parseFloat(e.target.value);
+                if (state.heightFormat === 39.65) state.pcbHeight = 22.15;
+                else if (state.heightFormat === 43.2) state.pcbHeight = 25.68;
+                const heightInput = byId('pcb-height-input');
+                if (heightInput) heightInput.value = state.pcbHeight;
+                updatePreview();
+            });
+            safeBind('hole-select', 'change', e => { state.holeStyle = e.target.value; updatePreview(); });
+            safeBind('hole-count-select', 'change', e => { state.holeCountMode = e.target.value; updatePreview(); });
+            safeBind('tolerance-input', 'input', e => { if (!isNaN(parseFloat(e.target.value))) { state.tolerance = parseFloat(e.target.value); updatePreview(); } });
+            safeBind('pcb-height-input', 'input', e => { if (!isNaN(parseFloat(e.target.value))) { state.pcbHeight = parseFloat(e.target.value); updatePreview(); } });
+            safeBind('pcb-tolerance-input', 'input', e => { if (!isNaN(parseFloat(e.target.value))) { state.pcbTolerance = parseFloat(e.target.value); updatePreview(); } });
+
+            safeBind('plating-pth', 'change', e => { state.plating.pth = e.target.checked; updatePreview(); });
+            safeBind('plating-fill-front', 'change', e => { state.plating.fillFront = e.target.checked; updatePreview(); });
+            safeBind('plating-fill-back', 'change', e => { state.plating.fillBack = e.target.checked; updatePreview(); });
+            safeBind('plating-rails-exposed', 'change', e => { state.plating.railsExposed = e.target.checked; updatePreview(); });
+            safeBind('plating-connect-gnd', 'change', e => { state.plating.connectGnd = e.target.checked; updatePreview(); });
+
+            safeBind('show-panel-toggle', 'change', e => { state.showPanel = e.target.checked; updatePreview(); });
+            safeBind('show-pcb-toggle', 'change', e => { state.showPCB = e.target.checked; updatePreview(); });
+
+            safeBind('layout-overlaid', 'click', () => {
+                state.layoutMode = 'overlaid';
+                animateNextViewBox = true;
+                byId('layout-overlaid')?.classList.replace('bg-transparent', 'bg-gray-700');
+                byId('layout-overlaid')?.classList.replace('text-gray-400', 'text-white');
+                byId('layout-sidebyside')?.classList.replace('bg-gray-700', 'bg-transparent');
+                byId('layout-sidebyside')?.classList.replace('text-white', 'text-gray-400');
+                updatePreview();
+            });
+
+            safeBind('layout-sidebyside', 'click', () => {
+                state.layoutMode = 'sidebyside';
+                animateNextViewBox = true;
+                byId('layout-sidebyside')?.classList.replace('bg-transparent', 'bg-gray-700');
+                byId('layout-sidebyside')?.classList.replace('text-gray-400', 'text-white');
+                byId('layout-overlaid')?.classList.replace('bg-gray-700', 'bg-transparent');
+                byId('layout-overlaid')?.classList.replace('text-white', 'text-gray-400');
+                updatePreview();
+            });
+
+            safeBind('download-panel-btn', 'click', triggerDownload);
+            safeBind('download-svg-btn', 'click', triggerSVGDownload);
+            safeBind('download-pcb-btn', 'click', triggerMainPCBDownload);
+
+            // Pan and Zoom
+            const container = byId('preview-container');
+            const svgEl = byId('preview-svg');
+
+            if (container && svgEl) {
+                container.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const zoomFactor = 1.1;
+                    if (e.deltaY < 0) zoom *= zoomFactor;
+                    else zoom /= zoomFactor;
+                    applyTransform();
+                });
+
+                container.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    startX = e.clientX - panX;
+                    startY = e.clientY - panY;
+                    svgEl.classList.replace('cursor-grab', 'cursor-grabbing');
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    panX = e.clientX - startX;
+                    panY = e.clientY - startY;
+                    applyTransform();
+                });
+
+                window.addEventListener('mouseup', () => {
+                    isDragging = false;
+                    svgEl.classList.replace('cursor-grabbing', 'cursor-grab');
+                });
+
+                container.addEventListener('dblclick', () => {
+                    panX = 0; panY = 0; zoom = 1;
+                    applyTransform();
+                });
+            }
+        }
+
+        setupEventListeners();
+        updatePreview();
+    })();
+    </script>
+</body>
+</html>
