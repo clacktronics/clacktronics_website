@@ -1122,40 +1122,6 @@ function arrangeColumns() {
   wins.forEach((rec, i) => placeWindow(rec, GAP + i * (w + GAP), GAP, w, dh - GAP * 2));
 }
 
-/* The opening desktop: the boot windows as full-height columns, left to right in
- * the order site.json lists them, so the landing page and the upcoming events
- * sit side by side rather than stacked. An entry may ask for a share of the
- * width ("38%" or a pixel count); whatever is left is split evenly between the
- * rest. Too narrow a desktop to tile — a phone — keeps the ordinary centred
- * windows, where they are at least usable. */
-const BOOT_TILE_MIN_WIDTH = 900;
-
-function layoutBootWindows(entries, recs) {
-  const dw = desktop.clientWidth, dh = desktop.clientHeight;
-  if (recs.length < 2 || dw < BOOT_TILE_MIN_WIDTH) return;
-  const avail = dw - GAP * (recs.length + 1);
-
-  const asked = entries.map(entry => {
-    const want = String(entry.width ?? '').trim();
-    if (want.endsWith('%')) return Math.round(avail * parseFloat(want) / 100) || 0;
-    return parseInt(want, 10) || 0;
-  });
-  const claimed = asked.reduce((total, width) => total + width, 0);
-  const shares = asked.filter(width => !width).length;
-  /* an over-eager set of widths gets scaled back rather than pushed off-screen */
-  const scale = claimed > avail ? avail / claimed : 1;
-  const spare = Math.max(0, avail - claimed * scale);
-  const even = shares ? spare / shares : 0;
-
-  let left = GAP;
-  recs.forEach((rec, i) => {
-    const width = Math.max(280, asked[i] ? asked[i] * scale : even);
-    placeWindow(rec, left, GAP, width, dh - GAP * 2);
-    left += width + GAP;
-  });
-  /* the first entry is the one to read first */
-  focusWindow(recs[0].el);
-}
 
 function minimiseAll() {
   [...windows.keys()].forEach(id => { if (!windows.get(id).minimised) minimiseWindow(id); });
@@ -1746,6 +1712,19 @@ function openEventsPanel() {
   loadEventsPanel();
 }
 
+/* Opening the desktop with the events showing, once the list is in place rather
+ * than mid-load, so it arrives filled instead of flashing "Loading…". A visitor
+ * who has already started clicking is left alone: a panel that appears late,
+ * over whatever they just opened, is a surprise rather than a welcome. */
+let visitorHasClicked = false;
+document.addEventListener('pointerdown', () => { visitorHasClicked = true; },
+  { once: true, capture: true });
+
+async function greetWithEvents() {
+  await loadEventsPanel();
+  if (!visitorHasClicked) openEventsPanel();
+}
+
 eventsPill.addEventListener('click', event => {
   event.stopPropagation();
   if (eventsPanel.hidden) openEventsPanel(); else closeEventsPanel();
@@ -1889,22 +1868,13 @@ async function boot() {
     try { saved = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch {}
     restored = await restoreSession(saved);
   }
-  if (!restored) {
-    /* A boot entry is a window id, or that id with layout for the opening
-     * desktop: { "window": "app:…", "width": "38%" } */
-    const entries = (site.boot || [])
-      .map(entry => (typeof entry === 'string' ? { window: entry } : entry))
-      .filter(entry => typeof entry?.window === 'string');
-    const opened = [];
-    for (const entry of entries) {
-      await openWindow(entry.window);
-      /* multi-instance apps land under a suffixed id, so take what arrived last */
-      const rec = windows.get(entry.window) || [...windows.values()].pop();
-      if (rec) opened.push(rec);
-    }
-    if (opened.length === entries.length) layoutBootWindows(entries, opened);
-  }
+  if (!restored) for (const id of site.boot || []) await openWindow(id);
   saveSession();
+
+  /* The desktop opens with the events showing. This is a calendar of what is
+   * coming up as much as it is a website, and the pull-down says so without
+   * taking a window or moving anything the visitor came for. */
+  greetWithEvents();
 }
 
 boot().catch(err => console.error('ClackOS failed to boot:', err));
