@@ -67,8 +67,30 @@
 
 <nav id="menubar" aria-label="System menu">
   <div class="logo" aria-hidden="true"><span></span></div>
-  <!-- Menus are built from content/site.json + content/<menu>/menu.json -->
-  <div id="clock" aria-live="off">--:--</div>
+  <!-- Menus are built from content/site.json + content/<menu>/menu.json, and
+       inserted before #menubar-right so they stay left of the date and clock -->
+  <div id="menubar-right">
+    <button id="events-pill" type="button" aria-expanded="false" aria-controls="events-panel">
+      <span class="pill-date">&nbsp;</span><span class="pill-arrow" aria-hidden="true">▾</span>
+    </button>
+    <div id="clock" aria-live="off">
+      <span class="hh">--</span><span class="tick">:</span><span class="mm">--</span>
+    </div>
+  </div>
+
+  <!-- Upcoming events, pulled down from the date. Filled by clackos.js from
+       assets/js/events.js — the same reader the Calendar app uses. -->
+  <section id="events-panel" role="dialog" aria-label="Upcoming events" hidden>
+    <header>
+      <h2>Upcoming events</h2>
+      <span id="events-count"></span>
+    </header>
+    <div id="events-list"></div>
+    <footer>
+      <button type="button" id="events-open-app">Open Calendar</button>
+      <a id="events-source" href="#" target="_blank" rel="noopener noreferrer" hidden>Luma</a>
+    </footer>
+  </section>
 </nav>
 
 <main id="desktop">
@@ -96,6 +118,7 @@
 </div>
 
 <script src="assets/js/backgrounds.js"></script>
+<script src="assets/js/events.js"></script>
 <script src="assets/js/clackos.js"></script>
 </body>
 </html>

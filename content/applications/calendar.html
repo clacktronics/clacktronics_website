@@ -13,7 +13,13 @@
 <style>
 html, body { height: 100%; overflow: hidden; }
 [hidden] { display: none !important; }
-.cal-app { height: 100%; display: grid; grid-template-rows: auto auto 1fr auto; min-height: 0; }
+/* minmax(0, 1fr) rather than a bare auto column: an auto track never shrinks
+   below its content's min-content width, and the menu bar's dropdowns are wide
+   enough to push the whole app past a narrow window and get clipped. */
+.cal-app {
+  height: 100%; min-height: 0;
+  display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: minmax(0, 1fr);
+}
 
 .cal-bar {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -47,7 +53,7 @@ html, body { height: 100%; overflow: hidden; }
 
 /* ---- month view ---- */
 .cal-month { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 316px; }
-.cal-sheet { min-width: 0; display: grid; grid-template-rows: auto 1fr; min-height: 0; padding: 12px 0 14px 16px; }
+.cal-sheet { min-width: 0; display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr); min-height: 0; padding: 12px 0 14px 16px; }
 .cal-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding-bottom: 6px; }
 .cal-weekdays span {
   font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
@@ -90,7 +96,8 @@ html, body { height: 100%; overflow: hidden; }
 .cal-more { font-size: 10px; color: var(--sage); padding-left: 4px; }
 
 .cal-side {
-  min-width: 0; min-height: 0; display: grid; grid-template-rows: auto 1fr;
+  min-width: 0; min-height: 0; display: grid;
+  grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr);
   border-left: 1px solid var(--paper-line);
 }
 .cal-side-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; }
@@ -160,9 +167,11 @@ html, body { height: 100%; overflow: hidden; }
 
 .cal-empty { padding: 18px; border: 1px dashed var(--paper-line); border-radius: 7px; color: var(--sage); font-size: 11.5px; line-height: 1.8; }
 .cal-status {
-  display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
+  display: flex; justify-content: space-between; gap: 12px; align-items: center;
   padding: 6px 16px; border-top: 1px solid var(--paper-line); font-size: 11px; color: var(--sage);
 }
+/* one line, however narrow the window: the full text stays in the title */
+.cal-status > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal-status .dirty { color: var(--leaf-deep); font-weight: 600; }
 .cal-status a { color: var(--leaf-deep); }
 .cal-status > span:last-child { flex: none; white-space: nowrap; }
@@ -202,6 +211,15 @@ html, body { height: 100%; overflow: hidden; }
   .cal-sheet { padding: 12px 16px; }
   .cal-grid { grid-template-rows: repeat(var(--cal-rows, 6), minmax(62px, auto)); }
   .cal-side { border-left: 0; border-top: 1px solid var(--paper-line); }
+}
+/* Narrow enough to be a column beside something else — the desktop opens the
+   calendar this way. The bar wraps deliberately instead of raggedly. */
+@media (max-width: 620px) {
+  .cal-bar { gap: 8px 10px; padding: 9px 12px; }
+  .cal-period { order: -1; flex-basis: 100%; font-size: 18px; }
+  .cal-bar .btn { padding: 6px 11px; }
+  .cal-list { padding: 12px; }
+  .cal-status { padding: 6px 12px; }
 }
 </style>
 </head>
@@ -311,6 +329,7 @@ html, body { height: 100%; overflow: hidden; }
   </div>
 </div>
 
+<script src="../../assets/js/events.js"></script>
 <script src="../../assets/js/app-state.js"></script>
 <script>
 (() => {
@@ -326,9 +345,6 @@ html, body { height: 100%; overflow: hidden; }
  * and never written into events.csv. */
 const byId = id => document.getElementById(id);
 const appBase = new URL('.', location.href);          /* content/applications/ */
-const CSV_PATH = 'content/applications/calendar/events.csv';
-const LUMA_PATH = 'calendar/luma.json';               /* relative to appBase */
-const COLUMNS = ['title', 'date', 'end', 'location', 'map', 'notes'];
 
 const grid = byId('grid');
 const monthView = byId('monthView');
@@ -343,15 +359,9 @@ const commitModal = byId('commitModal');
 const includePast = byId('includePast');
 const picker = byId('picker');
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'];
-const SHORT_MONTHS = MONTHS.map(name => name.slice(0, 3));
-const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 let events = [];                         /* both sources, merged for display */
 let lumaEvents = [];                     /* the mirror, kept so a reload of one source keeps the other */
 let lumaSource = '';                     /* the profile the mirror came from */
-let eventSeq = 0;
 let view = 'month';
 let cursor = new Date();                 /* any day inside the month on show */
 let selectedIso = null;
@@ -361,100 +371,19 @@ let deleteArmed = false;
 let siteConfig = null;
 let ghToken = '';                        /* in memory only, never persisted */
 
-/* ---------------- dates ----------------
- * Everything is a local YYYY-MM-DD string, so comparing days is a string
- * compare and no timezone can shift an event onto the wrong date. */
-const pad = n => String(n).padStart(2, '0');
-const isoOf = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-const dateOf = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
-const todayIso = () => isoOf(new Date());
-const shiftIso = (iso, days) => {
-  const date = dateOf(iso);
-  date.setDate(date.getDate() + days);
-  return isoOf(date);
-};
+/* ---------------- shared reader ----------------
+ * The dates, the CSV and the Luma mirror are read by assets/js/events.js, which
+ * the desktop's upcoming-events pull-down uses too, so both agree on what an
+ * event is. Everything below is this app's own: writing the CSV back, rendering
+ * the notes, and the editor. */
+const E = window.ClackOSEvents;
+const { MONTHS, SHORT_MONTHS, isOwn, mergeSources, mapLink, safeUrl,
+  isoOf, dateOf, todayIso, shiftIso, pad, parseStamp, parseTime,
+  startStamp, endStamp, byWhen, formatDay, describeWhen } = E;
 
-const STAMP_RE = /^(\d{4})-(\d{2})-(\d{2})(?:[T ]+(\d{1,2}):(\d{2}))?$/;
-const TIME_RE = /^(\d{1,2}):(\d{2})$/;
-
-/* "2026-08-14", "2026-08-14 19:30" and "2026-08-14T19:30" all parse; anything
- * else (including 31 February) does not. */
-function parseStamp(value) {
-  const match = STAMP_RE.exec(String(value ?? '').trim());
-  if (!match) return null;
-  const [, year, month, day, hour, minute] = match;
-  const date = new Date(+year, +month - 1, +day);
-  if (date.getMonth() !== +month - 1 || date.getDate() !== +day) return null;
-  if (hour !== undefined && +hour > 23) return null;
-  return { iso: `${year}-${month}-${day}`, time: hour === undefined ? '' : `${pad(+hour)}:${minute}` };
-}
-
-function parseTime(value) {
-  const match = TIME_RE.exec(String(value ?? '').trim());
-  if (!match || +match[1] > 23) return '';
-  return `${pad(+match[1])}:${match[2]}`;
-}
-
-const startStamp = event => event.date + (event.time ? ' ' + event.time : '');
-const endStamp = event => {
-  if (event.endDate === event.date && !event.endTime) return '';
-  return event.endDate + (event.endTime ? ' ' + event.endTime : '');
-};
-const sortKey = event => event.date + 'T' + (event.time || '00:00') + ' ' + event.title.toLowerCase();
-const byWhen = (a, b) => (sortKey(a) < sortKey(b) ? -1 : sortKey(a) > sortKey(b) ? 1 : 0);
-
-function formatDay(iso, withYear = true) {
-  const date = dateOf(iso);
-  return `${SHORT_DAYS[date.getDay()]} ${date.getDate()} ${SHORT_MONTHS[date.getMonth()]}`
-    + (withYear ? ` ${date.getFullYear()}` : '');
-}
-
-/* "Fri 14 Aug 2026, 19:30", "Fri 14 Aug 2026, 19:30 – 22:00",
- * "Fri 14 Aug – Sun 16 Aug 2026" */
-function describeWhen(event) {
-  const sameYear = event.date.slice(0, 4) === event.endDate.slice(0, 4);
-  if (event.endDate === event.date) {
-    const times = [event.time, event.endTime].filter(Boolean).join(' – ');
-    return formatDay(event.date) + (times ? `, ${times}` : '');
-  }
-  const from = formatDay(event.date, !sameYear) + (event.time ? ` ${event.time}` : '');
-  const to = formatDay(event.endDate) + (event.endTime ? ` ${event.endTime}` : '');
-  return `${from} – ${to}`;
-}
-
-/* ---------------- CSV ----------------
- * RFC 4180: quoted fields may hold commas, quotes ("") and newlines, which is
- * what lets a whole markdown note live in one cell. */
-function parseCsv(text) {
-  const source = String(text).replace(/^\uFEFF/, '');
-  const rows = [];
-  let row = [];
-  let field = '';
-  let quoted = false;
-  let started = false;                   /* this row has at least one cell */
-  for (let i = 0; i < source.length; i++) {
-    const char = source[i];
-    if (quoted) {
-      if (char !== '"') { field += char; continue; }
-      if (source[i + 1] === '"') { field += '"'; i++; continue; }
-      quoted = false;
-      continue;
-    }
-    if (char === '"' && field === '') { quoted = true; started = true; continue; }
-    if (char === ',') { row.push(field); field = ''; started = true; continue; }
-    if (char === '\r') continue;
-    if (char === '\n') {
-      if (started || field) { row.push(field); rows.push(row); }
-      row = []; field = ''; started = false;
-      continue;
-    }
-    field += char;
-    started = true;
-  }
-  if (started || field) { row.push(field); rows.push(row); }
-  return rows;
-}
-
+/* ---------------- writing the CSV back ----------------
+ * RFC 4180 again, on the way out: quote anything holding a comma, a quote, a
+ * newline or edge whitespace. */
 function csvCell(value) {
   const text = String(value ?? '').replace(/\r\n?/g, '\n');
   return /[",\n]/.test(text) || text !== text.trim() ? `"${text.replace(/"/g, '""')}"` : text;
@@ -463,81 +392,11 @@ function csvCell(value) {
 /* Only the website's own events are ever written back: the Luma ones belong to
  * their mirror and would come straight back on the next fetch. */
 function toCsv(list) {
-  const rows = [COLUMNS.join(',')];
+  const rows = [E.COLUMNS.join(',')];
   for (const event of list.filter(isOwn).sort(byWhen))
     rows.push([event.title, startStamp(event), endStamp(event), event.location, event.map, event.notes]
       .map(csvCell).join(','));
   return rows.join('\n') + '\n';
-}
-
-/* Columns are matched by header name, so the file can carry them in any order
- * and gain extra ones without upsetting the app. */
-function eventsFromCsv(text) {
-  const rows = parseCsv(text).filter(row => row.some(cell => cell.trim()));
-  if (!rows.length) return { list: [], skipped: 0 };
-  const header = rows[0].map(cell => cell.trim().toLowerCase());
-  const index = {};
-  for (const name of COLUMNS) index[name] = header.indexOf(name);
-  if (index.date === -1 || index.title === -1)
-    throw new Error('The CSV needs at least a "title" and a "date" column.');
-  const list = [];
-  let skipped = 0;
-  for (const row of rows.slice(1)) {
-    const cell = name => (index[name] === -1 ? '' : (row[index[name]] ?? '')).trim();
-    const start = parseStamp(cell('date'));
-    if (!start) { skipped++; continue; }
-    const event = fromRecord({
-      title: cell('title'), date: cell('date'), end: cell('end'),
-      location: cell('location'), map: cell('map'),
-      notes: (index.notes === -1 ? '' : (row[index.notes] ?? '')).replace(/\r\n?/g, '\n').trim()
-    }, 'csv');
-    if (event) list.push(event); else skipped++;
-  }
-  return { list, skipped };
-}
-
-/* The Luma mirror written by scripts/fetch_luma_events.py. Its stamps are
- * already local wall-clock in the event's own timezone, the same shape the CSV
- * uses, so both sources go through fromRecord. */
-function eventsFromLuma(payload) {
-  const list = [];
-  let skipped = 0;
-  for (const record of Array.isArray(payload?.events) ? payload.events : []) {
-    const event = fromRecord(record, 'luma');
-    if (event) list.push(event); else skipped++;
-  }
-  return { list, skipped, source: safeUrl(payload?.source) };
-}
-
-/* One record — a CSV row or a mirror entry — as the event shape the app uses.
- * Null when there is no usable date, which is the one thing an event needs. */
-function fromRecord(record, source) {
-  const start = parseStamp(record.date);
-  if (!start) return null;
-  const rawEnd = String(record.end ?? '').trim();
-  const end = parseStamp(rawEnd) || (parseTime(rawEnd) ? { iso: start.iso, time: parseTime(rawEnd) } : null);
-  return {
-    id: ++eventSeq,
-    source,
-    title: String(record.title ?? '').trim() || 'Untitled event',
-    date: start.iso,
-    time: start.time,
-    endDate: end && end.iso >= start.iso ? end.iso : start.iso,
-    endTime: end ? end.time : '',
-    location: String(record.location ?? '').trim(),
-    map: String(record.map ?? '').trim(),
-    notes: String(record.notes ?? '').trim(),
-    url: safeUrl(record.url)
-  };
-}
-
-const isOwn = event => event.source !== 'luma';
-
-/* The CSV wins a clash: a hand-written entry for the same day and title is
- * there to say more than the mirror does. */
-function mergeSources(own, mirrored) {
-  const claimed = new Set(own.map(event => `${event.date} ${event.title.toLowerCase()}`));
-  return [...own, ...mirrored.filter(event => !claimed.has(`${event.date} ${event.title.toLowerCase()}`))];
 }
 
 /* ---------------- markdown ----------------
@@ -549,18 +408,6 @@ const esc = text => String(text).replace(/[&<>"']/g, char =>
 const unesc = text => String(text)
   .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
   .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
-
-/* http(s) and mailto links only, plus site-relative paths for images. Anything
- * with another scheme — javascript:, data: — is dropped. */
-function safeUrl(value, allowRelative = false) {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  if (/^(?:https?|mailto):/i.test(raw)) {
-    try { return new URL(raw).href; } catch { return ''; }
-  }
-  if (allowRelative && !/^[a-z][a-z0-9+.-]*:/i.test(raw) && !raw.startsWith('//')) return raw;
-  return '';
-}
 
 const BLOCK_START = /^\s*(?:```|~~~|#{1,6}\s|>|[-*+]\s|\d+[.)]\s)/;
 const RULE = /^\s*(?:[-*_]\s*){3,}$/;
@@ -647,13 +494,6 @@ function markdownToHtml(source) {
 }
 
 /* ---------------- events → DOM ---------------- */
-function mapLink(event) {
-  const explicit = safeUrl(event.map);
-  if (explicit) return explicit;
-  if (!event.location.trim()) return '';
-  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(event.location.trim());
-}
-
 /* A Luma event is a mirror of somebody else's record, so it gets a tag linking
  * back to its page instead of the pencil that edits the CSV. */
 function eventCard(event, { badge = false } = {}) {
@@ -767,9 +607,11 @@ function renderUpcoming() {
   upcomingView.textContent = '';
 
   if (!upcoming.length) {
+    /* the calendar opens on the desktop, so this is read by visitors as much as
+     * by whoever keeps it */
     upcomingView.appendChild(emptyNote(events.length
-      ? 'No events left on the calendar. Add one, or show past events below.'
-      : 'No events yet. Use New event to add the first one, then commit the calendar to the website.'));
+      ? 'Nothing coming up just yet. Tick Show past events to look back over the finished ones.'
+      : 'No events on the calendar yet — New event adds the first one.'));
   } else {
     for (const event of upcoming) upcomingView.appendChild(eventCard(event, { badge: true }));
   }
@@ -818,42 +660,24 @@ function setView(next) {
 function setStatus(text, isDirty = dirty) {
   dirty = isDirty;
   statusEl.innerHTML = esc(text) + (dirty ? ' <span class="dirty">— not committed yet</span>' : '');
+  statusEl.title = text;                 /* the line is clipped in a narrow window */
 }
 
-/* ---------------- loading and saving ---------------- */
-/* The mirror is a bonus, not a dependency: it is missing until the workflow has
+/* ---------------- loading and saving ----------------
+ * The mirror is a bonus, not a dependency: it is missing until the workflow has
  * run once, and the calendar must work either way. */
-async function loadLuma() {
-  try {
-    const res = await fetch(new URL(`${LUMA_PATH}?_clack=${Date.now()}`, appBase), { cache: 'no-store' });
-    if (res.status === 404) return '';
-    if (!res.ok) throw new Error(`Could not load the Luma mirror (${res.status}).`);
-    const { list, source } = eventsFromLuma(await res.json());
-    lumaEvents = list;
-    lumaSource = source;
-    return list.length ? ` and ${list.length} from Luma` : '';
-  } catch (error) {
-    lumaEvents = [];
-    lumaSource = '';
-    console.warn(error);
-    return ' — the Luma events could not be read';
-  }
-}
-
-async function loadFromWebsite(quiet = false) {
-  const luma = await loadLuma();
-  try {
-    const res = await fetch(new URL(`calendar/events.csv?_clack=${Date.now()}`, appBase), { cache: 'no-store' });
-    if (!res.ok) throw new Error(`Could not load the events CSV (${res.status}).`);
-    const { list, skipped } = eventsFromCsv(await res.text());
-    events = mergeSources(list, lumaEvents);
-    setStatus(`Loaded ${list.length} event${list.length === 1 ? '' : 's'} from ${CSV_PATH}${luma}`
-      + (skipped ? ` — ${skipped} row${skipped === 1 ? '' : 's'} had no usable date` : ''), false);
-  } catch (error) {
-    events = [...lumaEvents];
-    setStatus(error.message, false);
-    if (!quiet) console.warn(error);
-  }
+async function loadFromWebsite() {
+  const loaded = await E.load();
+  events = loaded.events;
+  lumaEvents = loaded.mirrored;
+  lumaSource = loaded.lumaSource;
+  const luma = loaded.lumaError ? ` — ${loaded.lumaError}`
+    : (loaded.mirrored.length ? ` and ${loaded.mirrored.length} from Luma` : '');
+  setStatus(loaded.csvError
+    ? loaded.csvError
+    : `Loaded ${loaded.own.length} event${loaded.own.length === 1 ? '' : 's'} from ${E.CSV_PATH}${luma}`
+      + (loaded.skipped ? ` — ${loaded.skipped} row${loaded.skipped === 1 ? '' : 's'} had no usable date` : ''),
+    false);
   render();
 }
 
@@ -870,7 +694,7 @@ function saveCsvFile() {
  * part of that file and stays where it is. */
 async function openCsvFile(file) {
   try {
-    const { list, skipped } = eventsFromCsv(await file.text());
+    const { list, skipped } = E.eventsFromCsv(await file.text());
     events = mergeSources(list, lumaEvents);
     setStatus(`Opened ${file.name} — ${list.length} event${list.length === 1 ? '' : 's'}`
       + (skipped ? `, ${skipped} row${skipped === 1 ? '' : 's'} skipped` : ''), true);
@@ -928,7 +752,7 @@ function saveEditor() {
     return;
   }
   if (editing) Object.assign(editing, draft);
-  else events.push({ id: ++eventSeq, source: 'csv', url: '', ...draft });
+  else events.push({ id: E.nextId(), source: 'csv', url: '', ...draft });
   selectedIso = draft.date;
   cursor = dateOf(draft.date);
   editModal.classList.remove('open');
@@ -973,7 +797,7 @@ const b64utf8 = text => {
 async function openCommit() {
   try {
     const cfg = await getSiteConfig();
-    byId('commitPath').value = CSV_PATH;
+    byId('commitPath').value = E.CSV_PATH;
     byId('commitMessage').value = 'Update the events calendar';
     byId('commitToken').value = '';
     byId('commitToken').closest('label').hidden = !!ghToken;
@@ -991,7 +815,7 @@ async function commitEvents() {
   if (!token) { commitStatus.textContent = 'A token is needed.'; return; }
   let cfg;
   try { cfg = await getSiteConfig(); } catch (error) { commitStatus.textContent = error.message; return; }
-  const api = `https://api.github.com/repos/${cfg.repo}/contents/${CSV_PATH}`;
+  const api = `https://api.github.com/repos/${cfg.repo}/contents/${E.CSV_PATH}`;
   const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
   commitStatus.textContent = 'Committing…';
   try {
