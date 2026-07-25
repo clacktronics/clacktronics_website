@@ -843,8 +843,10 @@ async function openWindow(id, restore = null) {
   const h = sizeOf(meta.height, dh);
   el.style.width = w + 'px';
   el.style.height = h + 'px';
-  el.style.left = Math.max(12, (dw - w) / 2 + spawnOffset) + 'px';
-  el.style.top = Math.max(12, (dh - h) / 2 - 20 + spawnOffset) + 'px';
+  /* centred, stepped along for the next one, but never stepped off the desktop:
+     a window as wide as the desktop would otherwise hang over the right edge */
+  el.style.left = Math.max(12, Math.min((dw - w) / 2 + spawnOffset, dw - w - 12)) + 'px';
+  el.style.top = Math.max(12, Math.min((dh - h) / 2 - 20 + spawnOffset, dh - h - 12)) + 'px';
   spawnOffset = (spawnOffset + 28) % 112;
 
   /* fixed windows keep their exact size: no resize handles, no maximise */
@@ -1118,6 +1120,41 @@ function arrangeColumns() {
   const dw = desktop.clientWidth, dh = desktop.clientHeight;
   const w = (dw - GAP * (n + 1)) / n;
   wins.forEach((rec, i) => placeWindow(rec, GAP + i * (w + GAP), GAP, w, dh - GAP * 2));
+}
+
+/* The opening desktop: the boot windows as full-height columns, left to right in
+ * the order site.json lists them, so the landing page and the upcoming events
+ * sit side by side rather than stacked. An entry may ask for a share of the
+ * width ("38%" or a pixel count); whatever is left is split evenly between the
+ * rest. Too narrow a desktop to tile — a phone — keeps the ordinary centred
+ * windows, where they are at least usable. */
+const BOOT_TILE_MIN_WIDTH = 900;
+
+function layoutBootWindows(entries, recs) {
+  const dw = desktop.clientWidth, dh = desktop.clientHeight;
+  if (recs.length < 2 || dw < BOOT_TILE_MIN_WIDTH) return;
+  const avail = dw - GAP * (recs.length + 1);
+
+  const asked = entries.map(entry => {
+    const want = String(entry.width ?? '').trim();
+    if (want.endsWith('%')) return Math.round(avail * parseFloat(want) / 100) || 0;
+    return parseInt(want, 10) || 0;
+  });
+  const claimed = asked.reduce((total, width) => total + width, 0);
+  const shares = asked.filter(width => !width).length;
+  /* an over-eager set of widths gets scaled back rather than pushed off-screen */
+  const scale = claimed > avail ? avail / claimed : 1;
+  const spare = Math.max(0, avail - claimed * scale);
+  const even = shares ? spare / shares : 0;
+
+  let left = GAP;
+  recs.forEach((rec, i) => {
+    const width = Math.max(280, asked[i] ? asked[i] * scale : even);
+    placeWindow(rec, left, GAP, width, dh - GAP * 2);
+    left += width + GAP;
+  });
+  /* the first entry is the one to read first */
+  focusWindow(recs[0].el);
 }
 
 function minimiseAll() {
@@ -1451,9 +1488,12 @@ function updateTaskbar() {
 /* ---------------- Menu bar (built from content/) ---------------- */
 let menuOpen = false;
 
+/* The events pull-down is dismissed like a menu — outside click, Escape, or
+ * opening a menu — so it closes here rather than growing its own handlers. */
 function closeMenus() {
   menubar.querySelectorAll('.menu').forEach(m => m.classList.remove('open'));
   menubar.querySelectorAll('.submenu').forEach(s => s.classList.remove('open'));
+  closeEventsPanel();
   menuOpen = false;
 }
 
@@ -1615,11 +1655,128 @@ document.addEventListener('click', e => {
 });
 bindWebLinkRouting(document);
 
-/* ---------------- Clock ---------------- */
+/* ---------------- Upcoming events pull-down ----------------
+ * A small read-only view of the two files the Calendar app reads, hung under
+ * the date in the menu bar: enough to see what is on without opening a window.
+ * Nothing is fetched until it is first opened, so a visitor who never touches
+ * it pays nothing; after that every open refreshes, which keeps a calendar
+ * committed from the app from going stale behind a long-lived desktop. */
+const eventsPill = document.getElementById('events-pill');
+const eventsPanel = document.getElementById('events-panel');
+const eventsList = document.getElementById('events-list');
+const eventsCount = document.getElementById('events-count');
+const eventsSource = document.getElementById('events-source');
+/* One window: the same id the boot list uses, so the pull-down and the menu
+ * raise the calendar that is already open rather than opening a second. */
+const CALENDAR_APP = 'app:applications/calendar.html?view=upcoming';
+const PANEL_ROWS = 8;
+let eventsLoading = null;
+
+function closeEventsPanel() {
+  eventsPanel.hidden = true;
+  eventsPill.setAttribute('aria-expanded', 'false');
+}
+
+function showCalendarApp() {
+  closeEventsPanel();
+  openWindow(CALENDAR_APP);
+}
+
+function eventRow(event) {
+  const row = document.createElement('button');
+  row.type = 'button';
+  const mirrored = !ClackOSEvents.isOwn(event);
+  row.className = 'event-row' + (mirrored ? ' from-luma' : '');
+  const date = ClackOSEvents.dateOf(event.date);
+  row.innerHTML = `
+    <span class="when">
+      <span class="d">${date.getDate()}</span>
+      <span class="m">${ClackOSEvents.SHORT_MONTHS[date.getMonth()]}</span>
+    </span>
+    <span class="what">
+      <strong>${esc(event.title)}</strong>
+      <span>${esc(ClackOSEvents.describeWhen(event))}</span>
+      ${event.location ? `<span>${esc(event.location)}</span>` : ''}
+    </span>
+    ${mirrored ? '<span class="tag">Luma</span>' : ''}`;
+  row.addEventListener('click', showCalendarApp);
+  return row;
+}
+
+function renderEventsPanel(loaded) {
+  const upcoming = ClackOSEvents.upcoming(loaded.events);
+  const shown = upcoming.slice(0, PANEL_ROWS);
+  eventsList.textContent = '';
+
+  if (!shown.length) {
+    const note = document.createElement('p');
+    note.className = 'empty';
+    note.textContent = loaded.csvError
+      ? loaded.csvError
+      : 'Nothing coming up just yet. Open the Calendar to look back over past events.';
+    eventsList.appendChild(note);
+  } else {
+    for (const event of shown) eventsList.appendChild(eventRow(event));
+  }
+
+  eventsCount.textContent = upcoming.length > shown.length
+    ? `next ${shown.length} of ${upcoming.length}`
+    : (upcoming.length ? `${upcoming.length} to come` : '');
+  eventsSource.hidden = !loaded.lumaSource;
+  if (loaded.lumaSource) eventsSource.href = loaded.lumaSource;
+}
+
+function loadEventsPanel() {
+  if (eventsLoading) return eventsLoading;
+  eventsLoading = ClackOSEvents.load()
+    .then(renderEventsPanel)
+    .catch(error => {
+      console.warn(error);
+      eventsList.innerHTML = '<p class="empty">The events could not be loaded.</p>';
+    })
+    .finally(() => { eventsLoading = null; });
+  return eventsLoading;
+}
+
+function openEventsPanel() {
+  closeMenus();                       /* also closes this panel, so open after */
+  eventsPanel.hidden = false;
+  eventsPill.setAttribute('aria-expanded', 'true');
+  if (!eventsList.childElementCount) eventsList.innerHTML = '<p class="empty">Loading…</p>';
+  loadEventsPanel();
+}
+
+eventsPill.addEventListener('click', event => {
+  event.stopPropagation();
+  if (eventsPanel.hidden) openEventsPanel(); else closeEventsPanel();
+});
+/* clicks inside the panel are its own business, not a click on the desktop */
+eventsPanel.addEventListener('click', event => event.stopPropagation());
+document.getElementById('events-open-app').addEventListener('click', showCalendarApp);
+
+/* ---------------- Clock and date ----------------
+ * The colon blinks once a second. That is a CSS animation rather than a timer,
+ * so it costs nothing and stops under prefers-reduced-motion; the only thing
+ * done here is to line its phase up with the wall clock. */
+const clockEl = document.getElementById('clock');
+const clockHours = clockEl.querySelector('.hh');
+const clockMinutes = clockEl.querySelector('.mm');
+const clockTick = clockEl.querySelector('.tick');
+const pillDate = document.querySelector('#events-pill .pill-date');
+let shownDate = '';
+
 function tick() {
-  const d = new Date();
-  document.getElementById('clock').textContent =
-    String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const now = new Date();
+  clockHours.textContent = String(now.getHours()).padStart(2, '0');
+  clockMinutes.textContent = String(now.getMinutes()).padStart(2, '0');
+  clockEl.setAttribute('aria-label', `${clockHours.textContent}:${clockMinutes.textContent}`);
+  clockTick.style.animationDelay = `-${now.getMilliseconds()}ms`;
+
+  const today = ClackOSEvents.todayIso();
+  if (today !== shownDate) {
+    shownDate = today;
+    pillDate.textContent = ClackOSEvents.formatLongDay(today);
+  }
 }
 tick();
 setInterval(tick, 15000);
@@ -1709,9 +1866,10 @@ async function boot() {
     site.menus.map(folder => loadJSON(`content/${folder}/menu.json`))
   );
 
-  const clock = document.getElementById('clock');
+  /* menus fill the bar from the left; the date and clock keep the right-hand end */
+  const rightSide = document.getElementById('menubar-right');
   site.menus.forEach((folder, i) => {
-    menubar.insertBefore(buildMenu(folder, defs[i]), clock);
+    menubar.insertBefore(buildMenu(folder, defs[i]), rightSide);
   });
 
   bindDesktopIcons();
@@ -1731,7 +1889,21 @@ async function boot() {
     try { saved = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch {}
     restored = await restoreSession(saved);
   }
-  if (!restored) for (const id of site.boot || []) await openWindow(id);
+  if (!restored) {
+    /* A boot entry is a window id, or that id with layout for the opening
+     * desktop: { "window": "app:…", "width": "38%" } */
+    const entries = (site.boot || [])
+      .map(entry => (typeof entry === 'string' ? { window: entry } : entry))
+      .filter(entry => typeof entry?.window === 'string');
+    const opened = [];
+    for (const entry of entries) {
+      await openWindow(entry.window);
+      /* multi-instance apps land under a suffixed id, so take what arrived last */
+      const rec = windows.get(entry.window) || [...windows.values()].pop();
+      if (rec) opened.push(rec);
+    }
+    if (opened.length === entries.length) layoutBootWindows(entries, opened);
+  }
   saveSession();
 }
 

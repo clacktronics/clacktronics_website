@@ -14,6 +14,7 @@ assets/
     midnight.css            ← example dark palette
   js/clackos.js             ← window manager, menu builder, markdown renderer
   js/app-state.js           ← opt-in state persistence for application pages
+  js/events.js              ← shared events reader (Calendar app + menu-bar pull-down)
 content/
   site.json                 ← menu order + which windows open at boot
   file/                     ← FILE menu
@@ -34,7 +35,7 @@ content/
     appearance.html         ← background + theme chooser
     paint.html              ← ClackPaint app
     recorder.html           ← Sound Recorder app
-    calendar.html           ← Calendar app
+    calendar.html           ← Calendar app (also opens on the desktop at boot)
     calendar/events.csv     ← the upcoming events it shows
     calendar/luma.json      ← mirror of the Luma events (generated)
     video/                  ← browser-only Video Lab app + FFmpeg core
@@ -125,9 +126,11 @@ listing every post newest-first, grouped by year.
 ### The events calendar
 
 Upcoming events live in one CSV, `content/applications/calendar/events.csv`,
-read at runtime by Applications → System → Calendar. Ordinary RFC 4180 rules
-apply, which is what lets a whole markdown note sit in one cell: quote the
-field and double any `"` inside it.
+read at runtime by Applications → System → Calendar — which also opens on the
+desktop at boot — and by the menu bar's date pull-down. Both go through
+`assets/js/events.js`, so they agree on what an event is. Ordinary RFC 4180
+rules apply, which is what lets a whole markdown note sit in one cell: quote
+the field and double any `"` inside it.
 
 ```csv
 title,date,end,location,map,notes
@@ -237,6 +240,26 @@ same date and title: a CSV entry wins over the mirrored one.
 - `---` — horizontal rule; a `---` before the final paragraph turns that
   paragraph into the window footer (one `<span>` per line)
 - Single line breaks inside a paragraph are kept as `<br>`
+
+### The right-hand end of the menu bar
+
+Two fixtures live to the right of the menus, outside `menu.json` because they
+are part of the shell rather than content:
+
+- **The date**, as `25th July`, with a ▾. Clicking it pulls down the next
+  eight upcoming events — date, title, when and where, with a **Luma** tag on
+  the mirrored ones — and **Open Calendar** at the foot raises the Calendar
+  window itself, as does clicking any row. It reads the same two files the app
+  does through `assets/js/events.js`, nothing is fetched until it is first
+  opened, and it refreshes on every open so a calendar committed from the app
+  shows up without a reload. It closes the way a menu does: outside click,
+  Escape, or opening a menu.
+- **The clock**, whose colon blinks once a second. That is a CSS animation
+  rather than a timer, phase-aligned to the wall clock by `clackos.js` and
+  stopped under `prefers-reduced-motion`.
+
+Menus are inserted before `#menubar-right`, so they always fill the bar from
+the left however many there are.
 
 ### Menu items (`menu.json`)
 
@@ -530,6 +553,29 @@ wallpapers.
 
 1. Create `content/<name>/` with a `menu.json`.
 2. Add `<name>` to the `menus` array in `content/site.json`.
+
+## The opening desktop (`boot`)
+
+`boot` in `content/site.json` is what a first-time visitor gets. An entry is a
+window id — a markdown path, or `app:<page>` with an optional query string —
+or that id with a width for the opening layout:
+
+```json
+"boot": [
+  "file/home.md",
+  { "window": "app:applications/calendar.html?view=upcoming", "width": "36%" }
+]
+```
+
+With two or more entries the desktop lays them out as full-height columns,
+left to right in the order listed, so the landing page and the upcoming events
+sit side by side rather than stacked. A `width` may be a percentage or a pixel
+count; whatever is left over is split evenly between the entries without one.
+Below 900px of desktop the columns are dropped and the windows open centred,
+which is the only thing that fits on a phone.
+
+This applies to the first visit only. After that the saved desktop below wins,
+so a visitor who closes the calendar does not get it back every time.
 
 ## Saved desktops and shareable links
 

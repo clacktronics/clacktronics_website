@@ -5,7 +5,11 @@
     "applications"
   ],
   "boot": [
-    "file/home.md"
+    "file/home.md",
+    {
+      "window": "app:applications/calendar.html?view=upcoming",
+      "width": "36%"
+    }
   ],
   "theme": "monochrome.css",
   "themes": [
