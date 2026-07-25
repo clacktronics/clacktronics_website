@@ -22,8 +22,10 @@
   const mobile = (navigator.userAgentData && navigator.userAgentData.mobile) ||
     /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua) ||
     (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+  /* a saved-desktop link (#desktop=…) means nothing to the plain mirror */
+  const hash = location.hash.startsWith('#desktop=') ? '' : location.hash;
   if (mobile && !params.has('desktop'))
-    location.replace(`plain/index.html${location.hash}`);
+    location.replace(`plain/index.html${hash}`);
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">

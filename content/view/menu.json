@@ -11,6 +11,9 @@
       { "type": "action", "action": "restore-all", "label": "Restore all", "icon": "plus-box" }
     ] },
     { "type": "sep" },
+    { "type": "action", "action": "copy-desktop-link", "label": "Copy link to this desktop", "icon": "link" },
+    { "type": "action", "action": "forget-desktop", "label": "Forget saved desktop", "icon": "undo" },
+    { "type": "sep" },
     { "type": "action", "action": "plain-html", "label": "Plain HTML", "icon": "file-text" }
   ]
 }

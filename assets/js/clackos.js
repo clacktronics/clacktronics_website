@@ -749,7 +749,10 @@ async function mountIntegratedApp(body, launchPage, title, onClose) {
   }
 }
 
-async function openWindow(id) {
+/* `restore` is a saved window entry (see the Session section): it carries the
+ * geometry, stacking and app state a window had when the desktop was last
+ * saved or shared as a link. */
+async function openWindow(id, restore = null) {
   const existing = windows.get(id);
   if (existing) {
     existing.el.style.display = 'flex';
@@ -761,12 +764,16 @@ async function openWindow(id) {
 
   let meta, contentHtml, mount = null;
   if (id.startsWith('app:')) {
-    const launchPage = id.slice(4);
+    /* a restored multi-instance window keeps the id it was saved under, so its
+     * "#instance-2" suffix is not part of the page to load */
+    const instance = /#instance-(\d+)$/.exec(id);
+    const launchPage = id.slice(4).replace(/#instance-\d+$/, '');
     const page = launchPage.split(/[?#]/)[0];
     const def = appDefs.get(page);
     if (!def) return;
     /* multi-instance apps get a fresh window id on every open */
-    if (def.multi) id = `${id}#instance-${++appInstances}`;
+    if (instance) appInstances = Math.max(appInstances, parseInt(instance[1], 10));
+    else if (def.multi) id = `${id}#instance-${++appInstances}`;
     meta = {
       title: def.title || def.label || page,
       icon: safeIconName(def.icon) || 'app-windows',
@@ -860,6 +867,8 @@ async function openWindow(id) {
 
   desktop.appendChild(el);
   const rec = { id, el, icon: meta.icon, minimised: false, maxed: null, cleanups: [] };
+  /* Held before the app mounts: apps ask for their state as they start up. */
+  if (restore && restore.state !== undefined) rec.state = restore.state;
   windows.set(id, rec);
 
   const winbody = el.querySelector('.winbody');
@@ -944,6 +953,7 @@ async function openWindow(id) {
         document.body.classList.remove('win-drag');
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
+        scheduleSessionSave();
       };
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
@@ -951,6 +961,7 @@ async function openWindow(id) {
   });
 
   focusWindow(el);
+  if (restore) applyWindowEntry(rec, restore);
   updateTaskbar();
 }
 
@@ -1064,6 +1075,7 @@ function placeWindow(rec, left, top, width, height) {
   s.top = Math.round(top) + 'px';
   if (width != null) s.width = Math.round(width) + 'px';
   if (height != null) s.height = Math.round(height) + 'px';
+  scheduleSessionSave();
 }
 
 /* Cascade: uniform size, stepped down from the top-left, front-to-back */
@@ -1118,6 +1130,262 @@ function restoreAll() {
   updateTaskbar();
 }
 
+/* ---------------- Session ----------------
+ * The desktop remembers itself without a server: which windows are open,
+ * where they sit, which one is in front, how far each document is scrolled and
+ * whatever state an app chooses to report (see assets/js/app-state.js). The
+ * snapshot is kept in localStorage and restored at boot; the same snapshot
+ * encodes into the URL hash, so a desktop can be handed to someone else — or
+ * to another browser — as a link.
+ *
+ * Nothing here needs a server: localStorage is per-origin browser storage and
+ * a hash is never sent to the host. */
+const SESSION_KEY = 'clackos-session';
+const SESSION_VERSION = 1;
+const SESSION_PARAM = 'desktop';
+/* Guard rails. localStorage is a few megabytes per origin and a URL stops
+ * being shareable long before that, so app state is dropped rather than
+ * silently truncated when it runs over. */
+const MAX_APP_STATE = 64 * 1024;
+const MAX_LINK_PAYLOAD = 12 * 1024;
+let sessionRestoring = false;
+let sessionRemembering = true;
+let sessionSaveTimer = 0;
+
+/* Ids arriving from a shared link are untrusted: an application id must name a
+ * page registered in a menu (openWindow enforces that), and a document id must
+ * be a markdown path under content/ with no traversal. */
+function safeWindowId(id) {
+  id = String(id || '');
+  if (id.startsWith('app:'))
+    return /^app:[a-z0-9][a-z0-9._/-]*\.html(?:\?[^\s#]*)?(?:#instance-\d+)?$/i.test(id) && !id.includes('..') ? id : '';
+  return /^[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)+\.md$/i.test(id) && !id.includes('..') ? id : '';
+}
+
+function captureSession() {
+  const px = value => Math.round(parseFloat(value) || 0);
+  const list = [];
+  windows.forEach(rec => {
+    const el = rec.el;
+    /* a maximised window is stored at the size it will return to, plus a flag */
+    const box = rec.maxed || el.style;
+    const entry = {
+      id: rec.id,
+      x: px(box.left), y: px(box.top), w: px(box.width), h: px(box.height),
+      z: parseInt(el.style.zIndex || 0, 10)
+    };
+    if (rec.minimised) entry.min = 1;
+    if (rec.maxed) entry.max = 1;
+    const scroll = Math.round(el.querySelector('.winbody')?.scrollTop || 0);
+    if (scroll) entry.scroll = scroll;
+    if (rec.state !== undefined) entry.state = rec.state;
+    list.push(entry);
+  });
+  list.sort((a, b) => a.z - b.z);   /* replayed back to front, so focus lands right */
+  return { v: SESSION_VERSION, theme: activeTheme, wallpaper: currentWallpaper, windows: list };
+}
+
+function saveSession() {
+  if (sessionRestoring || !sessionRemembering) return;
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify(captureSession())); } catch {}
+}
+
+function scheduleSessionSave() {
+  if (sessionRestoring || !sessionRemembering) return;
+  clearTimeout(sessionSaveTimer);
+  sessionSaveTimer = setTimeout(saveSession, 400);
+}
+
+/* Clear the saved desktop and stop saving for the rest of this visit —
+ * otherwise the next click would write it straight back. Remembering resumes
+ * on the next load. */
+function forgetSession() {
+  sessionRemembering = false;
+  clearTimeout(sessionSaveTimer);
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
+}
+
+/* Put a restored window back exactly where it was, clamped to the desktop it
+ * is being restored onto — which may be a different size from the one it was
+ * saved on, especially when the snapshot arrived as a link. */
+function applyWindowEntry(rec, entry) {
+  const el = rec.el;
+  const dw = desktop.clientWidth, dh = desktop.clientHeight;
+  if (entry.w > 0 && !el.classList.contains('fixed')) {
+    el.style.width = Math.min(entry.w, dw - 16) + 'px';
+    el.style.height = Math.min(entry.h, dh - 16) + 'px';
+  }
+  if (Number.isFinite(entry.x)) {
+    el.style.left = Math.max(0, Math.min(entry.x, dw - 80)) + 'px';
+    el.style.top = Math.max(0, Math.min(entry.y, dh - 40)) + 'px';
+  }
+  if (entry.max) toggleMax(rec.id);
+  if (entry.scroll) {
+    const winbody = el.querySelector('.winbody');
+    if (winbody) winbody.scrollTop = entry.scroll;
+  }
+  if (entry.min) minimiseWindow(rec.id);
+}
+
+async function restoreSession(snapshot) {
+  if (!snapshot || snapshot.v !== SESSION_VERSION || !Array.isArray(snapshot.windows)) return false;
+  const entries = snapshot.windows
+    .filter(entry => entry && typeof entry === 'object')
+    .map(entry => ({ ...entry, id: safeWindowId(entry.id) }))
+    .filter(entry => entry.id);
+  if (!entries.length) return false;
+
+  if (snapshot.theme && availableThemes.has(safeThemeName(snapshot.theme))) applyTheme(snapshot.theme);
+  if (snapshot.wallpaper && getWallpaper(snapshot.wallpaper)) applyWallpaper(snapshot.wallpaper);
+
+  sessionRestoring = true;
+  try {
+    for (const entry of entries) await openWindow(entry.id, entry);
+  } finally {
+    sessionRestoring = false;
+  }
+  return windows.size > 0;
+}
+
+/* --- link encoding ---
+ * A snapshot travels in the URL hash as deflate-compressed JSON in base64url,
+ * tagged "z"; browsers without CompressionStream fall back to plain JSON,
+ * tagged "j". The hash is a fragment, so the snapshot never leaves the
+ * browser until someone chooses to send the link. */
+function toBase64Url(bytes) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromBase64Url(text) {
+  const padded = text.replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(padded + '='.repeat((4 - padded.length % 4) % 4));
+  return Uint8Array.from(binary, char => char.charCodeAt(0));
+}
+
+async function packSession(snapshot) {
+  const bytes = new TextEncoder().encode(JSON.stringify(snapshot));
+  if (typeof CompressionStream === 'function') {
+    try {
+      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+      return 'z' + toBase64Url(new Uint8Array(await new Response(stream).arrayBuffer()));
+    } catch {}
+  }
+  return 'j' + toBase64Url(bytes);
+}
+
+async function unpackSession(payload) {
+  const tag = payload.slice(0, 1), body = fromBase64Url(payload.slice(1));
+  if (tag === 'j') return JSON.parse(new TextDecoder().decode(body));
+  if (tag !== 'z' || typeof DecompressionStream !== 'function') return null;
+  const stream = new Blob([body]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return JSON.parse(await new Response(stream).text());
+}
+
+/* Prefer a link that carries everything; fall back to window layout alone when
+ * app state makes the URL unreasonable. */
+async function desktopLink() {
+  const snapshot = captureSession();
+  let payload = await packSession(snapshot);
+  let complete = true;
+  if (payload.length > MAX_LINK_PAYLOAD) {
+    complete = false;
+    snapshot.windows = snapshot.windows.map(({ state, ...rest }) => rest);
+    payload = await packSession(snapshot);
+  }
+  const url = new URL(location.href);
+  url.hash = `${SESSION_PARAM}=${payload}`;
+  return { url: url.href, complete, oversize: payload.length > MAX_LINK_PAYLOAD };
+}
+
+async function sessionFromHash() {
+  const hash = location.hash.slice(1);
+  if (!hash.startsWith(SESSION_PARAM + '=')) return null;
+  const payload = hash.slice(SESSION_PARAM.length + 1);
+  try {
+    return await unpackSession(payload);
+  } catch (error) {
+    console.warn('Ignoring an unreadable desktop link:', error);
+    return null;
+  }
+}
+
+async function copyDesktopLink() {
+  let link;
+  try {
+    link = await desktopLink();
+  } catch (error) {
+    console.error(error);
+    showToast('Could not build a link for this desktop.');
+    return;
+  }
+  if (link.oversize) {
+    showToast('This desktop is too large to fit in a link.');
+    return;
+  }
+  const note = link.complete
+    ? 'Link to this desktop copied'
+    : 'Link copied — window layout only, app contents were too large';
+  try {
+    await navigator.clipboard.writeText(link.url);
+    showToast(note);
+  } catch {
+    /* clipboard permission denied, or no user activation left after awaiting */
+    window.prompt('Copy this link to your desktop:', link.url);
+  }
+}
+
+/* A short-lived message above the taskbar; the desktop has no other notion of
+ * a notification and this is the only thing that needs one. */
+let toastTimer = 0;
+function showToast(message) {
+  let toast = document.getElementById('system-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'system-toast';
+    toast.setAttribute('role', 'status');
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 3200);
+}
+
+/* Apps report their own state (slider positions, document contents, whatever
+ * they choose) and ask for it back as they start. Both directions carry the
+ * app's own JSON, which the desktop stores without interpreting. */
+function windowStateFor(rec) {
+  return rec.state === undefined ? null : rec.state;
+}
+
+function deliverAppState(rec, source) {
+  const message = { type: 'clackos-state-restore', state: windowStateFor(rec) };
+  const frame = rec.el.querySelector('iframe.appframe');
+  if (frame && frame.contentWindow === source) {
+    frame.contentWindow.postMessage(message, location.origin);
+  } else if (source instanceof Node) {
+    source.dispatchEvent(new CustomEvent('clackos-state-restore', { detail: message }));
+  }
+}
+
+function recordAppState(rec, state) {
+  let encoded;
+  try { encoded = JSON.stringify(state ?? null); } catch { return; }
+  if (encoded.length > MAX_APP_STATE) return;   /* too big to remember */
+  rec.state = JSON.parse(encoded);
+  scheduleSessionSave();
+}
+
+/* Last chance to save: a debounced write may still be pending when the tab
+ * goes away. */
+window.addEventListener('pagehide', saveSession);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveSession(); });
+/* scroll does not bubble, so reading position is picked up in the capture phase */
+desktop.addEventListener('scroll', scheduleSessionSave, true);
+
 /* ---------------- Taskbar ---------------- */
 function updateTaskbar() {
   tasksEl.innerHTML = '';
@@ -1141,6 +1409,9 @@ function updateTaskbar() {
     });
     tasksEl.appendChild(b);
   });
+  /* every open, close, focus and minimise ends here, which makes this the one
+   * place the session needs to be marked dirty */
+  scheduleSessionSave();
 }
 
 /* ---------------- Menu bar (built from content/) ---------------- */
@@ -1266,6 +1537,12 @@ function runAction(action) {
     case 'minimise-all': minimiseAll(); break;
     case 'restore-all': restoreAll(); break;
     case 'plain-html': window.open('plain/index.html', '_blank', 'noopener'); break;
+    case 'copy-desktop-link': copyDesktopLink(); break;
+    case 'forget-desktop': {
+      forgetSession();
+      showToast('Saved desktop cleared — this visit will not be remembered');
+      break;
+    }
     case 'report-bug': window.open(`https://github.com/${siteRepo}/issues/new`, '_blank', 'noopener'); break;
     case 'copy': {
       const sel = String(document.getSelection() || '');
@@ -1287,6 +1564,7 @@ function runAction(action) {
         localStorage.removeItem('clackos-wallpaper');
         localStorage.removeItem(CUSTOM_BG_KEY);
       } catch {}
+      forgetSession();
       document.body.style.transition = 'opacity 0.4s ease';
       document.body.style.opacity = '0';
       setTimeout(() => location.reload(), 420);
@@ -1413,7 +1691,24 @@ async function boot() {
   });
 
   bindDesktopIcons();
-  for (const id of site.boot || []) await openWindow(id);
+
+  /* A desktop arrives from one of three places, in order of authority: a
+   * shared link, this browser's saved desktop, or site.json's boot list. */
+  const shared = await sessionFromHash();
+  let restored = shared ? await restoreSession(shared) : false;
+  if (shared) {
+    /* the link has been consumed — from here the desktop is this browser's
+     * again, and further changes belong in its own saved session */
+    history.replaceState(null, '', location.pathname + location.search);
+    if (!restored) showToast('That desktop link could not be opened');
+  }
+  if (!restored && !shared) {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch {}
+    restored = await restoreSession(saved);
+  }
+  if (!restored) for (const id of site.boot || []) await openWindow(id);
+  saveSession();
 }
 
 boot().catch(err => console.error('ClackOS failed to boot:', err));
@@ -1454,6 +1749,14 @@ function handleAppMessage(data, source) {
   } else if (data?.type === 'clackos-open-app') {
     const id = String(data.id || '');
     if (/^app:applications\/[a-z0-9][a-z0-9._/-]*(?:[?#].*)?$/i.test(id)) openWindow(id);
+  } else if (data?.type === 'clackos-state') {
+    /* an app reporting the state it wants remembered */
+    const rec = windows.get(windowIdFor(source));
+    if (rec) recordAppState(rec, data.state);
+  } else if (data?.type === 'clackos-request-state') {
+    /* an app asking for the state it was restored with */
+    const rec = windows.get(windowIdFor(source));
+    if (rec) deliverAppState(rec, source);
   } else if (data?.type === 'clackos-close-window') {
     /* apps that can quit on their own (QBasic's File > Exit) close their window */
     const id = windowIdFor(source);
