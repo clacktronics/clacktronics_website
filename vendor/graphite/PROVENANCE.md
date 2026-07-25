@@ -69,7 +69,19 @@ cd frontend && CARGO_TARGET_DIR=../target node node_modules/vite/bin/vite.js bui
 ```
 
 Then copy `frontend/dist/` over this directory, copy `LICENSE.txt` from the
-repository root, and re-apply deviations 3 and 4.
+repository root, re-apply deviations 3 and 4, drop `demo-artwork/`, and
+regenerate the precompressed module:
+
+```sh
+gzip -9 -k -f assets/graphite_wasm_wrapper_bg-*.wasm
+```
+
+That `.wasm.gz` is what the site actually serves to browsers (see the root
+`.htaccess`). Forgetting it is not dangerous but is expensive: Vite gives the
+rebuilt module a new content-hashed name, so no `.gz` matches it and every
+visitor downloads the full 34 MB instead of 7.6 MB. Delete the old
+`.wasm`/`.wasm.gz` pair at the same time — the deploy runs `rsync` without
+`--delete`, so anything left behind lingers on the host forever.
 
 ## Size
 
