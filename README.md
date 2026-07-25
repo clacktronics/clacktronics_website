@@ -34,6 +34,9 @@ content/
     appearance.html         ← background + theme chooser
     paint.html              ← ClackPaint app
     recorder.html           ← Sound Recorder app
+    calendar.html           ← Calendar app
+    calendar/events.csv     ← the upcoming events it shows
+    calendar/luma.json      ← mirror of the Luma events (generated)
     video/                  ← browser-only Video Lab app + FFmpeg core
     about.md
 ```
@@ -118,6 +121,83 @@ python3 scripts/build_blog_index.py
 
 This rewrites `content/file/blog.md` (the window behind File → Open Blog),
 listing every post newest-first, grouped by year.
+
+### The events calendar
+
+Upcoming events live in one CSV, `content/applications/calendar/events.csv`,
+read at runtime by Applications → System → Calendar. Ordinary RFC 4180 rules
+apply, which is what lets a whole markdown note sit in one cell: quote the
+field and double any `"` inside it.
+
+```csv
+title,date,end,location,map,notes
+Workshop night,2026-07-29 19:00,2026-07-29 22:00,"The Shed, Clacton-on-Sea",,"Bring a **soldering iron**.
+
+- Solder practice boards
+- Panel drilling"
+Open studio,2026-08-14,2026-08-16,"Colchester Arts Centre",https://maps.app.goo.gl/example,Three days of open studio.
+```
+
+| Column | |
+| --- | --- |
+| `title` | required |
+| `date` | required — `YYYY-MM-DD`, or `YYYY-MM-DD HH:MM` for a start time |
+| `end` | optional — a later date for a multi-day event, a full stamp, or just `HH:MM` for an end time on the same day |
+| `location` | optional free text, shown on the event |
+| `map` | optional `http(s)` link; when empty the app builds a Google Maps search from `location` |
+| `notes` | optional markdown |
+
+Columns are matched by header name, so their order in the file does not matter
+and extra columns are left alone. A row without a usable date is skipped and
+counted in the status bar. Rows may be in any order — the app sorts by date
+and rewrites the file sorted whenever it saves or commits.
+
+Edit the file by hand and refresh, or use the Calendar app: it can add, change
+and delete events and then commit the regenerated CSV straight to GitHub with
+a fine-grained token, the same way the Markdown and Theme editors publish.
+Nothing about the calendar is generated at build time, so a committed change is
+live as soon as the deploy finishes.
+
+#### Events hosted on Luma
+
+Events from the Luma profile in `content/site.json` are shown alongside the CSV
+ones, tagged **Luma** and linking back to their Luma page. They are a mirror,
+kept in `content/applications/calendar/luma.json`, so the app treats them as
+read-only: they have no pencil, and committing the calendar never writes them
+into `events.csv`.
+
+Luma sends no `Access-Control-Allow-Origin` header, so the browser cannot fetch
+the profile itself. `scripts/fetch_luma_events.py` does it instead and
+`.github/workflows/luma-events.yml` runs it every six hours (and on demand from
+the Actions tab), committing `luma.json` only when the events have actually
+changed — the timestamp alone never makes a commit. Scheduled workflows only
+run on the default branch, so the mirror starts refreshing once this is on
+`main`.
+
+```json
+"luma": {
+  "username": "clacktronics",
+  "userApiId": "usr-...",
+  "pastMonths": 24
+}
+```
+
+`username` is the profile at `https://luma.com/user/<username>`. `userApiId` is
+optional — the script reads it from the profile page when it is missing, and the
+committed value just saves a request. `pastMonths` bounds how far back finished
+events are kept for the Show past events toggle.
+
+Only events Luma reports as `public` are mirrored, so unlisted ones stay
+unlisted. Times are written as wall-clock in each event's own timezone, the way
+Luma shows them and the way `events.csv` records them, so both sources read the
+same in the app. Run it by hand with:
+
+```sh
+python3 scripts/fetch_luma_events.py            # or --dry-run to just look
+```
+
+To show a Luma event with your own wording, add a row to `events.csv` with the
+same date and title: a CSV entry wins over the mirrored one.
 
 ### Markdown that the renderer understands
 
@@ -306,6 +386,26 @@ registered applications, Markdown windows, and desktop actions.
   so this drive reads `content/media-index.json`. After adding legacy media
   references to site content, refresh the catalogue with
   `python3 scripts/build_media_index.py`.
+- `applications/calendar.html` (Applications → System → Calendar) — the
+  website's upcoming events, in a **Month** grid and an **Upcoming** list. The
+  calendar is one CSV file, `content/applications/calendar/events.csv`, plus a
+  read-only mirror of the events hosted on Luma (see “The events calendar”
+  below); there is no database and nothing is stored server-side. Weeks start on Monday, today is marked, and selecting a day
+  fills the sidebar with that day's events in full. The Upcoming view lists
+  everything from today onwards, newest last, with a Show past events
+  checkbox. Event notes are markdown, rendered by a small built-in renderer
+  (headings, emphasis, lists, quotes, code, rules, links and images) that
+  escapes everything first, so a note can never inject markup. Locations link
+  out to Google Maps: the `map` column is used when it holds an `http(s)` URL,
+  otherwise the app builds a Maps search from the location text. Event → New
+  event…, the + in the sidebar, or the pencil on any event opens the editor
+  (title, date, optional start time, optional end date and time, location, map
+  link, notes); Delete needs a second click to confirm. File → Commit to
+  website… publishes the regenerated CSV through GitHub's contents API with the
+  same in-memory fine-grained token approach as the Markdown and Theme
+  editors, and File → Open/Save CSV file… works on a local copy — in both cases
+  only the CSV's own events, never the Luma mirror. It can be launched from a
+  Markdown link with `?view=upcoming` or `?date=YYYY-MM-DD`.
 - `applications/browser.html` (Applications → Internet → Web Browser) — a
   lightweight iframe-based browser with an address bar, local navigation
   history, reload, home, and external-tab fallback. HTTP(S) links across

@@ -45,6 +45,11 @@
   ],
   "repo": "clacktronics/clacktronics_website",
   "branch": "main",
+  "luma": {
+    "username": "clacktronics",
+    "userApiId": "usr-slTRp0kPQrIYvWF",
+    "pastMonths": 24
+  },
   "siteUrl": "https://clacktronics.co.uk/",
   "fileAssociations": "content/file-associations.json",
   "assetUpload": "assets/upload.php",
