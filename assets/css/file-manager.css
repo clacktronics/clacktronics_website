@@ -92,6 +92,16 @@
 }
 .clack-fm-status { flex: 1; min-width: 0; color: var(--sage); font-size: 10.5px; }
 .clack-fm-action { min-width: 74px; text-align: center; }
+.clack-fm-openwith-row {
+  flex: none; display: flex; align-items: center; gap: 6px;
+  font-size: 10.5px; color: var(--sage);
+}
+.clack-fm-openwith-row[hidden] { display: none; }
+.clack-fm-openwith {
+  max-width: 170px; font-family: inherit; font-size: 10.5px; padding: 4px 6px;
+  border: 1px solid var(--ink); border-radius: 6px;
+  background: var(--paper); color: var(--control-text);
+}
 @media (max-width: 760px) {
   .clack-fm-body { grid-template-columns: 140px minmax(240px, 1fr); }
   .clack-fm-preview { display: none; }
@@ -105,4 +115,7 @@
   .clack-fm-drive { flex: 1; }
   .clack-fm-head, .clack-fm-row { grid-template-columns: 1fr 72px; }
   .clack-fm-size { display: none; }
+  /* the footer runs out of room, so the menu keeps the select and drops the words */
+  .clack-fm-openwith-row { font-size: 0; gap: 0; }
+  .clack-fm-openwith { font-size: 10.5px; max-width: 118px; }
 }

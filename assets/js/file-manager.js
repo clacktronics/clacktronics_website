@@ -21,24 +21,35 @@
   const itemSource = item => item.drive === 'github' ? item.path : item.url;
   const extensionFor = item => (item.name.match(/\.([^.]+)$/)?.[1] || '').toLowerCase();
 
-  function associationFor(item) {
-    if (!item || item.type !== 'file') return null;
+  /* Every rule that can open this file, in the order the associations file
+   * lists them: the first is what Open uses, the rest fill the "Open with"
+   * menu (a .md file, say, opens rendered or in the Markdown Editor). */
+  function associationsFor(item) {
+    if (!item || item.type !== 'file') return [];
     const ext = extensionFor(item);
-    const rule = (cache.associations || []).find(candidate =>
-      (!candidate.drives.length || candidate.drives.includes(item.drive)) &&
-      (!candidate.kinds.length || candidate.kinds.includes(item.kind)) &&
-      (!candidate.extensions.length || candidate.extensions.includes(ext))
-    );
-    if (!rule) return null;
-    const source = rule.source === 'url' ? item.url : itemSource(item);
-    return { label: rule.label, id: `app:${rule.app}?${rule.parameter}=${encodeURIComponent(source)}` };
+    return (cache.associations || []).filter(rule =>
+      (!rule.drives.length || rule.drives.includes(item.drive)) &&
+      (!rule.kinds.length || rule.kinds.includes(item.kind)) &&
+      (!rule.extensions.length || rule.extensions.includes(ext))
+    ).map(rule => {
+      const source = rule.source === 'url' ? item.url : itemSource(item);
+      const query = [[rule.parameter, source], ...Object.entries(rule.params)]
+        .map(([name, value]) => `${name}=${encodeURIComponent(value)}`).join('&');
+      return { label: rule.label, id: `app:${rule.app}?${query}` };
+    });
   }
 
-  async function openItem(item) {
-    const association = associationFor(item);
+  function associationFor(item) { return associationsFor(item)[0] || null; }
+
+  /* `choice` is an association from associationsFor, or the string 'tab' when
+   * the browser was picked explicitly; without one the default rule applies. */
+  async function openItem(item, choice) {
+    const association = choice === 'tab' ? null : (choice || associationFor(item));
     if (!association) {
-      const ext = extensionFor(item); const type = ext ? `.${ext}` : 'this type of';
-      if (!window.confirm(`No ClackOS application is associated with ${type} file.\n\n${item.name} will open in a new browser tab. Continue?`)) return false;
+      if (choice !== 'tab') {
+        const ext = extensionFor(item); const type = ext ? `.${ext}` : 'this type of';
+        if (!window.confirm(`No ClackOS application is associated with ${type} file.\n\n${item.name} will open in a new browser tab. Continue?`)) return false;
+      }
       window.open(item.url, '_blank', 'noopener');
       return true;
     }
@@ -84,6 +95,10 @@
           app: rule.app,
           parameter: rule.parameter,
           source: rule.source === 'url' ? 'url' : 'path-or-url',
+          /* fixed extras appended to the app's query, e.g. { view: "rendered" } */
+          params: Object.entries(rule.params || {}).filter(([name, value]) =>
+            /^[a-z][a-z0-9_-]*$/i.test(name) && typeof value !== 'object').reduce((all, [name, value]) =>
+              Object.assign(all, { [name]: String(value) }), {}),
           drives: Array.isArray(rule.drives) ? rule.drives.map(value => String(value).toLowerCase()) : [],
           kinds: Array.isArray(rule.kinds) ? rule.kinds.map(value => String(value).toLowerCase()) : [],
           extensions: Array.isArray(rule.extensions) ? rule.extensions.map(value => String(value).replace(/^\./, '').toLowerCase()) : []
@@ -148,6 +163,8 @@
       this.path = '';
       this.files = [];
       this.selected = null;
+      this.choices = [];      /* the "Open with" entries for the selected file */
+      this.choiceIndex = 0;
       this.build();
       this.loadDrive(this.drive);
     }
@@ -158,10 +175,10 @@
         <header class="clack-fm-titlebar"><span aria-hidden="true">▰</span><span class="clack-fm-title"></span><button class="clack-fm-close" type="button" aria-label="Close">×</button></header>
         <div class="clack-fm-toolbar"><button class="clack-fm-tool clack-fm-up" type="button" title="Up one folder">↑</button><div class="clack-fm-path"></div><input class="clack-fm-search" type="text" placeholder="Search this drive…" aria-label="Search files"></div>
         <div class="clack-fm-body"><nav class="clack-fm-drives" aria-label="Drives"></nav><main class="clack-fm-list-wrap"><div class="clack-fm-head"><span>Name</span><span>Type</span><span>Size</span></div><div class="clack-fm-list"></div></main><aside class="clack-fm-preview"><div class="clack-fm-preview-box"><span class="clack-fm-preview-icon">▰</span></div><h3>Select a file</h3><p class="clack-fm-meta">Choose a drive and browse folders.</p></aside></div>
-        <footer class="clack-fm-footer"><span class="clack-fm-status">Ready</span><button type="button" class="btn ghost clack-fm-cancel">${this.modal ? 'Cancel' : 'Refresh'}</button><button type="button" class="btn primary clack-fm-action" disabled>Open</button></footer>
+        <footer class="clack-fm-footer"><span class="clack-fm-status">Ready</span><label class="clack-fm-openwith-row" hidden>Open with <select class="clack-fm-openwith"></select></label><button type="button" class="btn ghost clack-fm-cancel">${this.modal ? 'Cancel' : 'Refresh'}</button><button type="button" class="btn primary clack-fm-action" disabled>Open</button></footer>
       </section>`;
       const $ = selector => this.host.querySelector(selector);
-      this.els = { title: $('.clack-fm-title'), close: $('.clack-fm-close'), up: $('.clack-fm-up'), path: $('.clack-fm-path'), search: $('.clack-fm-search'), drives: $('.clack-fm-drives'), list: $('.clack-fm-list'), preview: $('.clack-fm-preview'), status: $('.clack-fm-status'), cancel: $('.clack-fm-cancel'), action: $('.clack-fm-action') };
+      this.els = { title: $('.clack-fm-title'), close: $('.clack-fm-close'), up: $('.clack-fm-up'), path: $('.clack-fm-path'), search: $('.clack-fm-search'), drives: $('.clack-fm-drives'), list: $('.clack-fm-list'), preview: $('.clack-fm-preview'), status: $('.clack-fm-status'), openWith: $('.clack-fm-openwith'), openWithRow: $('.clack-fm-openwith-row'), cancel: $('.clack-fm-cancel'), action: $('.clack-fm-action') };
       this.els.title.textContent = this.options.title || 'File Manager';
       if (!this.modal) this.els.close.hidden = true;
       for (const drive of [{ id: 'github', name: 'GitHub', detail: 'Repository files', glyph: '◫' }, { id: 'media', name: 'Website Media', detail: 'Images, video & audio', glyph: '●' }]) {
@@ -173,6 +190,10 @@
       }
       this.els.up.addEventListener('click', () => this.navigate(this.path.split('/').slice(0, -1).join('/')));
       this.els.search.addEventListener('input', () => { this.selected = null; this.render(); });
+      this.els.openWith.addEventListener('change', () => {
+        this.choiceIndex = Number(this.els.openWith.value) || 0;
+        this.els.action.textContent = this.choices[this.choiceIndex]?.label || 'Open';
+      });
       this.els.action.addEventListener('click', () => this.choose());
       this.els.cancel.addEventListener('click', () => this.modal ? this.close() : this.refresh());
       this.els.close.addEventListener('click', () => this.close());
@@ -238,18 +259,38 @@
 
     select(item, row) {
       if (item.type === 'folder') { this.navigate(item.path); return; }
-      this.selected = item;
+      this.selected = item; this.choiceIndex = 0;
       this.host.querySelectorAll('.clack-fm-row').forEach(entry => entry.classList.remove('selected'));
       row.classList.add('selected'); this.updateSelection();
+    }
+
+    /* The Open button follows the "Open with" menu, which only appears when a
+     * file really has more than one way in — and never when the manager is
+     * picking a file on another application's behalf. */
+    buildChoices(item) {
+      const picking = !!(this.options.onSelect || this.options.actionFor);
+      this.choices = !item || picking || !this.compatible(item) ? [] :
+        [...associationsFor(item).map(association => ({ name: association.label, value: association })),
+          { name: 'New browser tab', value: 'tab' }].map(choice =>
+            ({ ...choice, label: choice.value === 'tab' ? 'Open in new tab' : `Open in ${choice.name}` }));
+      if (this.choiceIndex >= this.choices.length) this.choiceIndex = 0;
+      const select = this.els.openWith;
+      this.els.openWithRow.hidden = this.choices.length < 2;
+      select.replaceChildren(...this.choices.map((choice, index) => {
+        const option = document.createElement('option');
+        option.value = String(index); option.textContent = choice.name;
+        return option;
+      }));
+      if (this.choices.length) select.value = String(this.choiceIndex);
     }
 
     updateSelection() {
       const item = this.selected; const box = this.els.preview.querySelector('.clack-fm-preview-box');
       const name = this.els.preview.querySelector('h3'); const meta = this.els.preview.querySelector('.clack-fm-meta');
       this.els.action.disabled = !item || !this.compatible(item);
-      const association = associationFor(item);
+      this.buildChoices(item);
       this.els.action.textContent = item && this.options.actionFor ? this.options.actionFor(item) :
-        (item && !this.options.onSelect ? association ? `Open in ${association.label}` : 'Open in new tab' : (this.options.actionLabel || 'Open'));
+        (this.choices.length ? this.choices[this.choiceIndex].label : (this.options.actionLabel || 'Open'));
       if (!item) { box.innerHTML = '<span class="clack-fm-preview-icon">▰</span>'; name.textContent = 'Select a file'; meta.textContent = 'Choose a file to see its details.'; return; }
       name.textContent = item.name;
       meta.textContent = `${item.drive === 'github' ? 'GitHub repository' : 'Live website'} · ${item.path}${Number.isFinite(item.size) ? ` · ${formatSize(item.size)}` : ''}`;
@@ -261,13 +302,14 @@
 
     async choose(item = this.selected) {
       if (!item || !this.compatible(item)) return;
+      const choice = item === this.selected ? this.choices[this.choiceIndex]?.value : undefined;
       this.els.action.disabled = true; this.els.status.textContent = `${this.els.action.textContent} ${item.name}…`;
       try {
-        const opened = this.options.onSelect ? (await this.options.onSelect(item), true) : await openItem(item);
+        const opened = this.options.onSelect ? (await this.options.onSelect(item), true) : await openItem(item, choice);
         if (!opened) { this.els.status.textContent = 'Open cancelled'; this.els.action.disabled = false; return; }
         if (this.modal && this.options.closeOnSelect !== false) this.close();
         else {
-          const association = associationFor(item);
+          const association = choice === 'tab' ? null : (choice || associationFor(item));
           this.els.status.textContent = association ? `Opened ${item.name} in ${association.label}` : `Opened ${item.name} in a new tab`;
           this.els.action.disabled = false;
         }
@@ -293,6 +335,7 @@
     mount(host, options = {}) { return new Explorer(host, options, false); },
     kindFor,
     associationFor,
+    associationsFor,
     openItem
   };
 })();

@@ -14,6 +14,13 @@
       "parameter": "repo"
     },
     {
+      "label": "Markdown Viewer",
+      "kinds": ["markdown"],
+      "app": "applications/markdown.html",
+      "parameter": "repo",
+      "params": { "view": "rendered" }
+    },
+    {
       "label": "PDF Reader",
       "kinds": ["pdf"],
       "app": "applications/pdf-reader/index.html",
