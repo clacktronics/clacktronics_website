@@ -7,7 +7,7 @@
   "boot": [
     "file/home.md"
   ],
-  "theme": "monochrome.css",
+  "theme": "blood.css",
   "themes": [
     "clackos.css",
     "midnight.css",
