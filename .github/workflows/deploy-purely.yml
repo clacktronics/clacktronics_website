@@ -72,6 +72,25 @@ jobs:
         # it does not commit anything.
         run: python3 scripts/build_plain_site.py
 
+      - name: Precompress WebAssembly modules
+        # The site serves these gzipped (see .htaccess): together they are
+        # ~114 MB raw and ~30 MB gzipped, and compressing them per request
+        # would cost about a second of CPU each time.
+        #
+        # They are built here rather than committed so a .gz can never be left
+        # behind by a rebuild. That matters because not every module has a
+        # content-hashed name — vendor/pyodide/pyodide.asm.wasm and
+        # vendor/mupdf/mupdf-wasm.wasm keep the same filename across upgrades,
+        # so a stale .gz beside one of those would silently serve the previous
+        # module at the same URL. Regenerating on every deploy removes that
+        # failure mode entirely.
+        run: |
+          set -euo pipefail
+          find . -name '*.wasm' -not -path './.git/*' -print0 \
+            | xargs -0 -r -P 4 -I {} gzip -9 -k -f {}
+          echo "Precompressed:"
+          find . -name '*.wasm.gz' -not -path './.git/*' -printf '  %10s  %p\n' | sort -k2
+
       - name: Load SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:

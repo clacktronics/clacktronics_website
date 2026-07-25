@@ -12,10 +12,15 @@
 </IfModule>
 
 # ------------------------------------------------------- Precompressed Wasm
-# Graphite's module is 34 MB raw and 7.6 MB gzipped. Compressing that on every
-# request would burn about a second of CPU each time, so the gzipped copy is
-# built ahead of time and committed next to the original; this serves it to
-# clients that accept gzip and leaves everyone else on the plain file.
+# Every .wasm on the site — Graphite, transformers, pyodide, mupdf — ships with
+# a gzipped copy beside it: ~114 MB raw down to ~30 MB. Compressing files that
+# size on every request would burn about a second of CPU each time, so they are
+# built ahead of time by the deploy workflow (and never committed, so they
+# cannot go stale against the file they came from). This serves them to clients
+# that accept gzip and leaves everyone else on the plain file.
+#
+# The rule is deliberately generic: any .wasm that gains a .gz neighbour is
+# picked up with no change needed here.
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteCond %{HTTP:Accept-Encoding} gzip
