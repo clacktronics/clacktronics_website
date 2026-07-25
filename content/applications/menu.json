@@ -40,6 +40,7 @@
     { "type": "submenu", "label": "System", "icon": "cpu", "items": [
       { "type": "app", "page": "files.html", "label": "File Manager", "title": "File Manager", "icon": "folder", "width": 980, "height": 680, "multi": true },
       { "type": "app", "page": "text.html", "label": "Text Editor", "title": "Text Editor", "icon": "file-text", "width": 760, "height": 600, "multi": true },
+      { "type": "app", "page": "calendar.html", "label": "Calendar", "title": "Calendar", "icon": "calendar", "width": 1060, "height": 720 },
       { "type": "app", "page": "appearance.html", "label": "Appearance", "title": "Appearance", "icon": "image", "width": 460, "height": 420, "fixed": true, "integrated": true },
       { "type": "app", "page": "theme.html", "label": "Theme Editor", "title": "Theme Editor", "icon": "colors-swatch", "width": 960, "height": 700, "fixed": true, "multi": true, "integrated": true }
     ] },
