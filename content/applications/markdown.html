@@ -197,6 +197,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       </label>
       <div class="commit-actions">
         <button class="btn primary" id="commitGo"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Commit</button>
+        <button class="btn" id="commitCancel">Cancel</button>
         <span class="app-status" id="commitStatus"></span>
       </div>
     </div>
@@ -212,6 +213,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       </label>
       <div class="commit-actions">
         <button class="btn primary" id="uploadTokenGo"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload</button>
+        <button class="btn" id="uploadCancel">Cancel</button>
         <span class="app-status" id="uploadStatus"></span>
       </div>
     </div>
@@ -664,8 +666,10 @@ document.getElementById('uploadTokenGo').addEventListener('click', () => {
   uploadToken = t;
   doUpload();
 });
+/* Closing only happens through the title bar × or Cancel: a stray click on the
+ * backdrop used to bin a half-typed token. */
 document.getElementById('uploadClose').addEventListener('click', () => uploadModal.classList.remove('open'));
-uploadModal.addEventListener('click', e => { if (e.target === uploadModal) uploadModal.classList.remove('open'); });
+document.getElementById('uploadCancel').addEventListener('click', () => uploadModal.classList.remove('open'));
 uploadModal.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.tagName === 'INPUT') document.getElementById('uploadTokenGo').click();
 });
@@ -798,12 +802,8 @@ async function doCommit() {
 
 document.getElementById('commitGo').addEventListener('click', doCommit);
 document.getElementById('commitClose').addEventListener('click', () => commitModal.classList.remove('open'));
-commitModal.addEventListener('click', e => { if (e.target === commitModal) commitModal.classList.remove('open'); });
+document.getElementById('commitCancel').addEventListener('click', () => commitModal.classList.remove('open'));
 commitModal.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') doCommit(); });
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { commitModal.classList.remove('open'); uploadModal.classList.remove('open'); }
-});
 
 /* menu */
 const rms = document.querySelectorAll('.rm');

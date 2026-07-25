@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<div class="modal" id="commitModal">
+<div class="modal" id="commitModal" data-keep-open>
   <div class="modal-box">
     <header><span>Commit theme to website</span><button data-close="commitModal" aria-label="Close">&#10005;</button></header>
     <div class="commit-form">
@@ -236,7 +236,7 @@
       <label>Commit message<input type="text" id="commitMessage" value="Add website theme" spellcheck="false"></label>
       <label class="checkline"><input type="checkbox" id="makeActive" checked> Make this the website’s active theme</label>
       <label>Fine-grained access token <span class="app-status">Contents read/write for this repo; kept only until this window closes.</span><input type="password" id="commitToken" autocomplete="off"></label>
-      <div class="commit-actions"><button class="btn primary" id="commitGo">Commit</button><span class="app-status" id="commitStatus"></span></div>
+      <div class="commit-actions"><button class="btn primary" id="commitGo">Commit</button><button class="btn" data-close="commitModal">Cancel</button><span class="app-status" id="commitStatus"></span></div>
     </div>
   </div>
 </div>
@@ -612,9 +612,12 @@ appRoot.querySelector('.rm-bar').addEventListener('click', event => {
 });
 appRoot.addEventListener('click', closeMenus);
 appRoot.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => byId(button.dataset.close).classList.remove('open')));
-appRoot.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); }));
+/* Modals marked data-keep-open hold typed-in work (commit messages, tokens), so
+ * they only close through the title bar × or Cancel — never a stray backdrop
+ * click or Escape. */
+appRoot.querySelectorAll('.modal:not([data-keep-open])').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); }));
 appRoot.addEventListener('keydown', event => {
-  if (event.key === 'Escape') appRoot.querySelectorAll('.modal.open').forEach(modal => modal.classList.remove('open'));
+  if (event.key === 'Escape') appRoot.querySelectorAll('.modal.open:not([data-keep-open])').forEach(modal => modal.classList.remove('open'));
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); saveTheme(); }
 });
 renderPalette();

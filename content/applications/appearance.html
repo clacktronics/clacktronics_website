@@ -39,7 +39,7 @@
   </main>
 </div>
 
-<div class="paint-modal" id="siteDefaultModal" role="dialog" aria-modal="true" aria-labelledby="siteDefaultTitle">
+<div class="paint-modal" id="siteDefaultModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="siteDefaultTitle">
   <form class="paint-modal-box paint-dialog" id="siteDefaultForm">
     <header><span id="siteDefaultTitle">Set website default theme</span><button type="button" data-close="siteDefaultModal" aria-label="Close">×</button></header>
     <div class="paint-dialog-body">
@@ -217,7 +217,9 @@ async function commitSiteDefault(event) {
 byId('siteDefaultButton').addEventListener('click', openSiteDefault);
 byId('siteDefaultForm').addEventListener('submit', commitSiteDefault);
 appRoot.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => byId(button.dataset.close).classList.remove('open')));
-appRoot.querySelectorAll('.paint-modal').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); }));
+/* Modals marked data-keep-open hold typed-in work (tokens, commit details), so
+ * they only close through the title bar × or Cancel. */
+appRoot.querySelectorAll('.paint-modal:not([data-keep-open])').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); }));
 
 load();
 })();
