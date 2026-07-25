@@ -102,7 +102,7 @@ body {
 .submenu.open > .dropdown.sub { display: block; }
 /* ---------- Date pill, clock and the upcoming-events pull-down ---------- */
 #menubar-right { margin-left: auto; display: flex; align-items: stretch; gap: 2px; }
-#clock { display: flex; align-items: center; padding: 0 6px; color: var(--menu-dim); font-size: 12px; }
+#clock { display: flex; align-items: center; padding: 0 6px; color: var(--menu-text); font-size: 12px; }
 /* the colon blinks once a second, in step with the wall clock: clackos.js sets
    a negative animation-delay so the phase matches the current second */
 #clock .tick { animation: clock-tick 1s steps(1, end) infinite; }
@@ -111,7 +111,7 @@ body {
 
 #events-pill {
   all: unset; cursor: pointer; display: flex; align-items: center; gap: 6px;
-  padding: 0 9px; font: inherit; font-size: 12px; color: var(--menu-dim);
+  padding: 0 9px; font: inherit; font-size: 12px; color: var(--menu-text);
 }
 #events-pill:hover, #events-pill[aria-expanded="true"] { background: var(--leaf-deep); color: var(--menu-text); }
 #events-pill:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
