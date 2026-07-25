@@ -171,11 +171,20 @@ into `events.csv`.
 
 Luma sends no `Access-Control-Allow-Origin` header, so the browser cannot fetch
 the profile itself. `scripts/fetch_luma_events.py` does it instead and
-`.github/workflows/luma-events.yml` runs it every six hours (and on demand from
-the Actions tab), committing `luma.json` only when the events have actually
-changed — the timestamp alone never makes a commit. Scheduled workflows only
-run on the default branch, so the mirror starts refreshing once this is on
-`main`.
+`.github/workflows/luma-events.yml` runs it hourly (and on demand from the
+Actions tab), committing `luma.json` only when the events have actually changed
+— the timestamp alone never makes a commit. A run that finds nothing new writes
+nothing, so asking often costs two small HTTP requests.
+
+When it does commit, it then asks the deploy workflow to run. That step is not
+decoration: a push made with the automatic `GITHUB_TOKEN` deliberately does not
+trigger other workflows, so the mirror's own commit cannot start the deploy, and
+without the nudge a new Luma event would sit in the repository until something
+else happened to push to `main`.
+
+Scheduled workflows only run on the default branch, so the mirror refreshes from
+`main` and nowhere else. To pick up an event you have just created without
+waiting for the hour, run **Actions → Mirror Luma events → Run workflow**.
 
 ```json
 "luma": {
