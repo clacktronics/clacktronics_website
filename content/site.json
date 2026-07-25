@@ -7,7 +7,7 @@
   "boot": [
     "file/home.md"
   ],
-  "theme": "tasteless.css",
+  "theme": "clackos.css",
   "themes": [
     "clackos.css",
     "midnight.css",
