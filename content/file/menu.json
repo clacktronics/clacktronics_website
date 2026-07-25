@@ -14,6 +14,8 @@
     { "type": "sep" },
     { "type": "action", "action": "report-bug", "label": "Report bug…", "icon": "bug" },
     { "type": "sep" },
-    { "type": "action", "action": "close-front", "label": "Close front window", "icon": "close", "shortcut": "⌘W" }
+    { "type": "action", "action": "close-front", "label": "Close front window", "icon": "close", "shortcut": "⌘W" },
+    { "type": "sep" },
+    { "type": "action", "action": "restart", "label": "Restart", "icon": "reload" }
   ]
 }

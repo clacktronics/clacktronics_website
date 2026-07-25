@@ -173,7 +173,8 @@ listing every post newest-first, grouped by year.
   "width": 820, "height": 620, "multi": true }
 ```
 
-Built-in actions: `close-front`, `tidy`, `toggle-taskbar`, `copy`, `restart`.
+Built-in actions: `close-front`, `tidy`, `toggle-taskbar`, `copy`, `restart`,
+`reset`, `copy-desktop-link`, `forget-desktop`.
 `{ "type": "wallpapers" }` expands to the wallpaper picker. Wallpapers are
 bitmap files under `assets/backgrounds/`. Curated names and the default live in
 `content/site.json`; additional bitmap files in the public repository directory
@@ -452,8 +453,20 @@ and the toast says so.
 
 **View → Forget saved desktop** deletes the snapshot and stops saving for the
 rest of the visit (otherwise the next click would write it straight back);
-remembering resumes on the next load. **Restart and reset** clears it along
-with the saved theme and wallpaper.
+remembering resumes on the next load.
+
+Two menu items reboot the desktop, and they differ in how much they take with
+them:
+
+- **File → Restart** drops the saved desktop and reloads, so the windows come
+  back as `site.json`'s `boot` list has them. The theme, the wallpaper and
+  everything the applications have saved are left alone.
+- **View → Reset** clears everything this browser holds for the site —
+  `localStorage`, `sessionStorage`, the `clackos-theme-default` cookie and the
+  Cache Storage entries the applications fill (ClackChat's downloaded language
+  model among them) — and reloads into the site as a first-time visitor sees
+  it. Browser-saved work goes with it, so it asks for confirmation first.
+  IndexedDB is left alone.
 
 ### Letting an app remember its own state
 

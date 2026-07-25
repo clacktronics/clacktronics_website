@@ -43,8 +43,6 @@
       { "type": "app", "page": "theme.html", "label": "Theme Editor", "title": "Theme Editor", "icon": "colors-swatch", "width": 960, "height": 700, "fixed": true, "multi": true, "integrated": true }
     ] },
     { "type": "sep" },
-    { "type": "window", "md": "about.md", "label": "About ClackOS", "icon": "info-box" },
-    { "type": "action", "action": "restart", "label": "Restart", "icon": "reload" },
-    { "type": "action", "action": "restart-reset", "label": "Restart and reset", "icon": "reload" }
+    { "type": "window", "md": "about.md", "label": "About ClackOS", "icon": "info-box" }
   ]
 }
