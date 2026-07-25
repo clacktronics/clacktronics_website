@@ -314,12 +314,12 @@
             const boardCount = Math.max(1, state.pcbCount);
             const sideBySide = state.layoutMode === 'sidebyside';
             const boardGap = 18; // leaves room for the first board's height dimension
-            const stackStep = 5;
-            const boardStep = sideBySide ? (pcbW + boardGap) : stackStep;
-            // The first board always sits where a single board would, so overlaid mode still
-            // shows it registered against the panel; the extras fan down and right from it.
-            const stackSpanW = pcbW + ((boardCount - 1) * boardStep);
-            const stackSpanH = pcbH + (sideBySide ? 0 : (boardCount - 1) * stackStep);
+            const boardStep = pcbW + boardGap;
+            // Overlaid mode is for checking one board against the panel, so it shows the jacks
+            // and pots board only; the rest appear side by side.
+            const visibleBoards = sideBySide ? boardCount : 1;
+            const stackSpanW = pcbW + ((visibleBoards - 1) * boardStep);
+            const stackSpanH = pcbH;
 
             if (sideBySide) {
                 const gap = 15;
@@ -464,16 +464,14 @@
 
             let pcbHtml = '';
             // Drawn back to front so the first board — the one carrying the dimensions — sits on top.
-            for (let index = boardCount - 1; index >= 0; index--) {
-                const dx = index * boardStep;
-                const dy = sideBySide ? 0 : index * stackStep;
+            for (let index = visibleBoards - 1; index >= 0; index--) {
                 // Titled above the board, matching the panel. Overlaid there is nowhere to put a
-                // caption that is not on top of the panel, so the boards go untitled.
+                // caption that is not on top of the panel, so the board goes untitled.
                 const title = sideBySide
                     ? `<text x="${pcbW/2}" y="-3" fill="var(--ink)" font-size="3" font-weight="600" text-anchor="middle">${boardLabel(index)}</text>`
                     : '';
                 pcbHtml += `
-                <g transform="translate(${dx}, ${dy})">
+                <g transform="translate(${index * boardStep}, 0)">
                     ${title}
                     <rect x="0" y="0" width="${pcbW}" height="${pcbH}" fill="#064e3b" stroke="var(--ink)" stroke-width="0.5" />
                     ${pcbSvgGuides}
