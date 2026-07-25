@@ -181,7 +181,7 @@ const fillLight = new THREE.DirectionalLight(themeColor('--menu-dim', '#8fcaa8')
 fillLight.position.set(-80, 40, -60);
 scene.add(fillLight);
 
-const grid = new THREE.GridHelper(140, 14, 0x276b47, 0xd8cfa9);
+const grid = new THREE.GridHelper(140, 14, 0x276b47, 0x276b47);
 grid.position.y = -42;
 scene.add(grid);
 
@@ -195,7 +195,7 @@ function applyViewerTheme() {
   fillLight.color.set(themeColor('--menu-dim', '#8fcaa8'));
   const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material];
   gridMaterials[0]?.color.set(themeColor('--leaf-deep', '#276b47'));
-  gridMaterials[1]?.color.set(themeColor('--paper-line', '#d8cfa9'));
+  gridMaterials[1]?.color.set(themeColor('--leaf-deep', '#276b47'));
   modelRoot?.traverse(object => {
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     materials.filter(entry => entry?.userData.themed).forEach(entry => entry.color.set(modelColour()));
@@ -218,9 +218,9 @@ function resize() {
   render();
 }
 
-/* Models render in the chrome colour. Passing no colour marks the material as
+/* Models render in the theme accent. Passing no colour marks the material as
    themed, so applyViewerTheme can re-tint it when the palette changes. */
-const modelColour = () => new THREE.Color(themeColor('--ink', '#09140d'));
+const modelColour = () => new THREE.Color(themeColor('--leaf', '#4fae7d'));
 
 function material(color = null, options = {}) {
   const entry = new THREE.MeshStandardMaterial({
