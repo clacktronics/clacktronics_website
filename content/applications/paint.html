@@ -19,6 +19,8 @@
 .paint-bg-detail { font-size: 10.5px; color: var(--sage); line-height: 1.6; min-height: 1.4em; }
 .paint-bg-credit { font-size: 10px; color: var(--sage); line-height: 1.6; margin-top: 2px; }
 .paint-bg-credit a { color: var(--leaf-deep); text-decoration: underline; }
+.paint-upload-result:not([hidden]) { display: flex; align-items: center; gap: 10px; }
+.paint-upload-result a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--leaf-deep); text-decoration: underline; }
 </style>
 <script src="../../assets/js/file-manager.js"></script>
 </head>
@@ -31,6 +33,7 @@
       <button data-cmd="open-site"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>Open from website…</button>
       <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save</button>
       <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As…</button>
+      <button data-cmd="upload-site"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload to website…</button>
       <div class="sep"></div>
       <button data-cmd="set-background"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>Set as background tile</button>
     </div></div>
@@ -172,6 +175,29 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- Uploads go to the web host's PHP endpoint, not GitHub: pictures are large
+     binaries that do not belong in the repository. data-keep-open means a stray
+     backdrop click cannot bin the token being typed. -->
+<div class="paint-modal" id="uploadModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+  <form class="paint-modal-box paint-dialog" id="uploadForm">
+    <header><span id="uploadTitle">Upload to website</span><button type="button" data-close="uploadModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <label>File name <span><input id="uploadName" type="text" spellcheck="false" required></span></label>
+      <label id="uploadTokenRow">Upload token <span><input id="uploadToken" type="password" autocomplete="off"></span></label>
+      <p class="app-status">The secret set in upload-config.php on the web host; kept in memory only, until this tab closes.</p>
+      <p class="app-status" id="uploadStatus"></p>
+      <div class="paint-upload-result" id="uploadResult" hidden>
+        <a id="uploadLink" target="_blank" rel="noopener"></a>
+        <button type="button" class="btn" id="uploadCopy">Copy link</button>
+      </div>
+      <div class="paint-dialog-actions">
+        <button type="button" class="btn ghost" data-close="uploadModal">Cancel</button>
+        <button class="btn primary" id="uploadGo"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload</button>
+      </div>
+    </div>
+  </form>
 </div>
 
 <script>
@@ -885,7 +911,97 @@ document.addEventListener('click', event => {
   const closer = event.target.closest('[data-close]');
   if (closer) hideModal(closer.dataset.close);
 });
-modals.forEach(modal => modal.addEventListener('pointerdown', event => { if (event.target === modal) hideModal(modal.id); }));
+/* Dialogs marked data-keep-open hold typed-in work (tokens, names), so they
+ * close only through their × or Cancel button — never a stray backdrop click. */
+modals.forEach(modal => modal.addEventListener('pointerdown', event => {
+  if (event.target === modal && !modal.hasAttribute('data-keep-open')) hideModal(modal.id);
+}));
+
+/* ---- upload the picture to the web host ----
+ * Pictures are large binaries, so they go to the endpoint named by
+ * "assetUpload" in content/site.json (resolved against the site root, so it is
+ * same-origin) rather than into the GitHub repository. The token is held in
+ * memory for the session only; the host returns the public URL to link to. */
+const uploadForm = document.getElementById('uploadForm');
+const uploadName = document.getElementById('uploadName');
+const uploadTokenRow = document.getElementById('uploadTokenRow');
+const uploadTokenInput = document.getElementById('uploadToken');
+const uploadStatus = document.getElementById('uploadStatus');
+const uploadResult = document.getElementById('uploadResult');
+const uploadLink = document.getElementById('uploadLink');
+const uploadGo = document.getElementById('uploadGo');
+let uploadToken = null;      /* secret, memory only, per session */
+let assetUploadUrl = null;   /* resolved endpoint URL, or '' if unset */
+
+async function getAssetUploadUrl() {
+  if (assetUploadUrl !== null) return assetUploadUrl;
+  try {
+    const siteRoot = new URL('../../', location.href);
+    const site = await (await fetch(new URL('content/site.json', siteRoot))).json();
+    assetUploadUrl = site.assetUpload ? new URL(site.assetUpload, siteRoot).href : '';
+  } catch { assetUploadUrl = ''; }
+  return assetUploadUrl;
+}
+
+function showTokenRow(show) { uploadTokenRow.style.display = show ? 'flex' : 'none'; }
+
+async function openUploadDialog() {
+  const endpoint = await getAssetUploadUrl();
+  if (!endpoint) { setStatus('Uploads are not configured — add "assetUpload" to content/site.json.'); return; }
+  uploadName.value = fileName;
+  uploadTokenInput.value = '';
+  showTokenRow(!uploadToken);
+  uploadStatus.textContent = `to ${new URL(endpoint).host}`;
+  uploadResult.hidden = true;
+  showModal('uploadModal');
+  (uploadToken ? uploadName : uploadTokenInput).focus();
+}
+
+uploadForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const endpoint = await getAssetUploadUrl();
+  const token = uploadToken || uploadTokenInput.value.trim();
+  if (!token) { uploadStatus.textContent = 'A token is needed.'; return; }
+  const typed = uploadName.value.trim().replace(/[\\/]+/g, '-') || fileName;
+  const name = /\.png$/i.test(typed) ? typed : typed + '.png';
+  uploadGo.disabled = true;
+  uploadStatus.textContent = 'Uploading…';
+  uploadResult.hidden = true;
+  try {
+    const blob = await new Promise(resolve => canonicalCanvas().toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('The picture could not be encoded as a PNG.');
+    const body = new FormData();
+    body.append('file', blob, name);
+    const response = await fetch(endpoint, { method: 'POST', headers: { 'X-Upload-Token': token }, body });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.error || `Upload failed (${response.status}).`);
+    uploadToken = token;
+    uploadTokenInput.value = '';
+    showTokenRow(false);
+    fileName = name;
+    uploadLink.href = data.url;
+    uploadLink.textContent = data.url;
+    uploadResult.hidden = false;
+    uploadStatus.textContent = `Uploaded ${data.name} (${Math.max(1, Math.round(data.size / 1024))} KB).`;
+    setStatus(`Uploaded ${data.name} to the website`);
+  } catch (error) {
+    uploadStatus.textContent = error.message;
+    /* a rejected token is worth forgetting so the field comes back */
+    if (/token/i.test(error.message)) { uploadToken = null; showTokenRow(true); }
+    setStatus(`Upload failed: ${error.message}`);
+  } finally {
+    uploadGo.disabled = false;
+  }
+});
+
+document.getElementById('uploadCopy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(uploadLink.href);
+    uploadStatus.textContent = 'Link copied to the clipboard.';
+  } catch {
+    uploadStatus.textContent = 'Could not copy — select the link and copy it by hand.';
+  }
+});
 
 function openWebsiteBrowser() {
   window.ClackOSFileManager.open({
@@ -1065,6 +1181,7 @@ function runCmd(cmd) {
     case 'open-site': openWebsiteBrowser(); break;
     case 'save': savePng(false); break;
     case 'saveas': savePng(true); break;
+    case 'upload-site': openUploadDialog(); break;
     case 'set-background': setAsBackground(); break;
     case 'undo': undo(); break;
     case 'redo': redo(); break;
@@ -1109,7 +1226,7 @@ document.querySelector('.rm-bar').addEventListener('click', event => {
 });
 document.addEventListener('click', event => { if (!event.target.closest('.rm')) closeMenus(); });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') modals.forEach(modal => modal.classList.remove('open'));
+  if (event.key === 'Escape') modals.forEach(modal => { if (!modal.hasAttribute('data-keep-open')) modal.classList.remove('open'); });
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); }
 });
