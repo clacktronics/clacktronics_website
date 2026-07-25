@@ -248,6 +248,20 @@ scene.add(hemisphereLight);
 const keyLight = new THREE.DirectionalLight(0xffffff, 3.1);
 keyLight.position.set(70, 110, 80);
 keyLight.castShadow = true;
+/* Models are normalised to 80 units, so the shadow camera has to be widened
+   from its 10-unit default; left at the default it covers a small patch in the
+   middle of the model and fills it with shadow acne. The biases keep flat faces
+   from shadowing themselves. */
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.left = -95;
+keyLight.shadow.camera.right = 95;
+keyLight.shadow.camera.top = 95;
+keyLight.shadow.camera.bottom = -95;
+keyLight.shadow.camera.near = 1;
+keyLight.shadow.camera.far = 420;
+keyLight.shadow.camera.updateProjectionMatrix();
+keyLight.shadow.bias = -0.0006;
+keyLight.shadow.normalBias = 0.8;
 scene.add(keyLight);
 const fillLight = new THREE.DirectionalLight(themeColor('--menu-dim', '#8fcaa8'), 1.2);
 fillLight.position.set(-80, 40, -60);
@@ -278,14 +292,23 @@ function applyViewerTheme() {
   hemisphereLight.color.set(themeColor('--paper', '#f8f2dd'));
   hemisphereLight.groundColor.set(themeColor('--sage', '#66755a'));
   fillLight.color.set(themeColor('--menu-dim', '#8fcaa8'));
-  const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material];
-  gridMaterials.forEach(entry => entry?.color.set(paletteColour.grid()));
+  applyGridColour();
   modelRoot?.traverse(object => {
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     materials.filter(entry => entry?.userData.themed).forEach(entry => entry.color.set(modelColour()));
   });
   syncColourInputs();
   render();
+}
+
+/* GridHelper keeps its two line colours in a vertex colour attribute and draws
+   them through one material, so tinting the material would multiply the stored
+   colours instead of replacing them. Write the colour into the attribute. */
+function applyGridColour() {
+  const colour = new THREE.Color(paletteColour.grid());
+  const colours = grid.geometry.getAttribute('color');
+  for (let index = 0; index < colours.count; index += 1) colours.setXYZ(index, colour.r, colour.g, colour.b);
+  colours.needsUpdate = true;
 }
 
 function syncColourInputs() {
@@ -667,8 +690,7 @@ document.addEventListener('viewer-command', event => {
 colourInputs.model.addEventListener('input', event => setModelColour(event.target.value));
 colourInputs.grid.addEventListener('input', event => {
   overrides.grid = event.target.value;
-  const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material];
-  gridMaterials.forEach(entry => entry?.color.set(overrides.grid));
+  applyGridColour();
   render();
 });
 colourInputs.background.addEventListener('input', event => {
@@ -686,6 +708,7 @@ setModel(buildDemo());
 setGridVisible(true);
 setShadows(true);
 applyLighting();
+applyGridColour();
 syncColourInputs();
 resize();
 </script>
