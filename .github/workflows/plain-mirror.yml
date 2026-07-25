@@ -22,11 +22,13 @@ jobs:
         run: python3 scripts/build_plain_site.py
 
       - name: Commit the mirror if it changed
+        # sitemap.xml and robots.txt are generated alongside the mirror (they
+        # list its pages), so they are committed with it.
         run: |
-          if [ -n "$(git status --porcelain plain)" ]; then
+          if [ -n "$(git status --porcelain plain sitemap.xml robots.txt)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add plain
+            git add plain sitemap.xml robots.txt
             git commit -m "Rebuild plain HTML mirror"
             # the blog-index workflow may push concurrently
             git pull --rebase

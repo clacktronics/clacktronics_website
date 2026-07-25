@@ -4,7 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="only light">
-<title>Flip dots with Python</title>
+<title>Flip dots with Python — Clacktronics</title>
+<meta name="description" content="I have been working on a project for an artist that uses flip dot display panels. Flip dot/disc displays are a bygone technology that were typically used…">
+<link rel="canonical" href="https://clacktronics.co.uk/plain/blog/2019-01-03-flipdots.html">
+<meta property="og:site_name" content="Clacktronics">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flip dots with Python">
+<meta property="og:url" content="https://clacktronics.co.uk/plain/blog/2019-01-03-flipdots.html">
+<meta property="og:description" content="I have been working on a project for an artist that uses flip dot display panels. Flip dot/disc displays are a bygone technology that were typically used…">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "Flip dots with Python", "url": "https://clacktronics.co.uk/plain/blog/2019-01-03-flipdots.html", "mainEntityOfPage": "https://clacktronics.co.uk/plain/blog/2019-01-03-flipdots.html", "publisher": {"@type": "Organization", "name": "Clacktronics", "url": "https://clacktronics.co.uk/"}, "datePublished": "2019-01-03", "description": "I have been working on a project for an artist that uses flip dot display panels. Flip dot/disc displays are a bygone technology that were typically used…"}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
@@ -24,7 +33,8 @@
 <p>I have been working on a project for an artist that uses flip dot display panels. Flip dot/disc displays are a <a href="https://en.wikipedia.org/wiki/Flip-disc_display" target="_blank" rel="noopener noreferrer">bygone technology</a> that were typically used in places such as airports and stock exchanges, anywhere there was a need for dynamically displayed information. They were great for power efficiency as they retain their image with the power removed, therefore would have been much less power hungry than the light based displays of the time. Now superseded by LED displays that are just as efficient, but need less maintenance, they are still manufactured by <i>Alfa-Zeta</i> and used for more creative / nostalgic purposes. For this work I needed to create a program to show images on the panels, initially I was unsure of the source of the images, could it be a video? or programatically generated? So I decided to go as high level as possible and use Python on a Raspberry Pi. That way I would not have to re-write the program every time the ideas or the dimensions changed. I thought it would be great to be able to use <i>Python Imaging Library</i> <a href="https://github.com/python-pillow/Pillow" target="_blank" rel="noopener noreferrer">pillow fork</a> to manipulate the dots, that way I could draw shapes and text trivially, plus if any changes were needed I could write them quickly on the fly. I came up with <a href="https://github.com/clacktronics/flipPIL" target="_blank" rel="noopener noreferrer">FliPIL</a>  a sort of wrapper between PIL and the flip dot&#x27;s protocol.</p>
 <p><i>Alfa-Zeta</i> sell the flip dots in controllable panel modules, the larger one is made up of of two <a href="https://flipdots.com/en/products-services/flip-dot-boards-xy5/" target="_blank" rel="noopener noreferrer">7x28 sections</a> which is the type I used. Each 7x28 section has an ATMEGA micro-controller that receives messages over RS485 interface. The way you address each panel is by setting it in binary on a DIP switch connected to its microcontroller. The protocol to then control the panel is quite simple, you send a series of bytes, the first few bytes being meta information like address of the panel then there is a series of 28 bytes each representing a column (or row depending on your perspective) of 7 dots. So for example if I wanted the second row to be <span class="k">0010011</span> I would send a byte for the first column then another with the value 19 (the last bit being ignored).</p>
 <p>To make a display you have to tile the flip dot panels and set the addresses. I designed the wrapper class to make a PIL Image object that is the same width and height as the desired display then translate that image into the command for the flip dot display. To tell my program what the panel is like you have to define the layout using a two-dimensional array (&#x27;list&#x27; in python), this has to be done otherwise there is no-knowing the physical location of all the flip dot modules.</p>
-<p> fence0 <br>The wrapper is all set up as a class, you have to initiate the panel as an object with the above line. The first two arguments are so I could possibly add different types of flip dot modules in the future. The third is the one that defines the layouts, each list within the list represents a row and each entry in each inner list represents a column, the numbers are the panel module addresses. So the above would be interpreted as the following.</p>
+<pre class="code">panel1 = flipil(&quot;alfa_zeta&quot;, [28, 7], [[1,2],[3,4],[5,6]])</pre>
+<p>The wrapper is all set up as a class, you have to initiate the panel as an object with the above line. The first two arguments are so I could possibly add different types of flip dot modules in the future. The third is the one that defines the layouts, each list within the list represents a row and each entry in each inner list represents a column, the numbers are the panel module addresses. So the above would be interpreted as the following.</p>
 <pre class="code">1 2
 3 4
 5 6</pre>
@@ -38,7 +48,46 @@ panel1.send()</pre>
 <pre class="code">panel1.clear(0)</pre>
 <p>That&#x27;s it! you can see an example below of a &quot;bouncing ball&quot; animation on a 2x6 panel display. Notice that because it has an image representing the display in the wrapper program, I can get the width and height of the display, so those properties will automatically change if I change the size of the panel, this demonstrates the flexibility of the wrapper.</p>
 <div class="ctas"><a class="btn primary" href="https://www.youtube.com/watch?v=ELED1-Cavog" target="_blank" rel="noopener noreferrer">Watch on YouTube</a></div>
-<p>flipdot_bounce.py<br> fence5 </p>
+<p>flipdot_bounce.py</p>
+<pre class="code">
+from PIL import ImageDraw
+from flipil import flipil
+
+
+  from time import sleep
+  refresh = [0x80,0x82,0x8F]
+
+  panel_adds =[[1,2],[3,4],[5,6],[7,8],[9,10],[11,12]]
+
+
+  panel1 = flipil(&quot;alfa_zeta&quot;, [28, 7], panel_adds, init_color = 0, reverse_panel=False)
+  panel1.set_port(&#x27;/dev/ttyAMA0&#x27;, 57600)
+
+  draw = ImageDraw.Draw(panel1)
+
+  size = 10
+  dir_x = 1
+  dir_y = 1
+  x = 1
+  y = 1
+
+  while True:
+      sleep(.01)
+
+      if x+size+2 &gt; panel1.width or x &lt; 1:
+                dir_x *= -1
+      if y+size+2 &gt; panel1.height or y &lt; 1:
+                dir_y *= -1
+
+      x += dir_x
+      y += dir_y
+
+      panel1.clear(0)
+      draw = ImageDraw.Draw(panel1)
+      draw.ellipse((x,y,x+size,y+size), outline=1, fill=0)
+
+      panel1._translate()
+      panel1.send()</pre>
 </div>
 </main>
 <div id="plain-site-footer"><a href="../../index.html?desktop=1">Switch to the ClackOS desktop version</a></div>

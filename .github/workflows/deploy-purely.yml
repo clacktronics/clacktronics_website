@@ -31,6 +31,13 @@ concurrency:                    # never let two deploys overlap
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # Staging subfolder: the site publishes to <web root>/$SUBDIR, i.e.
+      # https://clacktronics.co.uk/temp/ — safe to preview without touching the
+      # live root. To go live, set SUBDIR to an empty string. Both the rsync
+      # destination and the canonical/sitemap URLs below follow this one knob.
+      SUBDIR: temp
+      SITE_ORIGIN: https://clacktronics.co.uk
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +53,11 @@ jobs:
         run: |
           echo "SITE_COMMIT=$GITHUB_SHA" >> "$GITHUB_ENV"
           echo "SITE_REPO=$GITHUB_REPOSITORY" >> "$GITHUB_ENV"
+          # Canonical links, Open Graph URLs, the sitemap and the Sitemap: line
+          # in robots.txt all have to be absolute, and must match where these
+          # files actually land — otherwise a staged build points crawlers at
+          # URLs that are not serving the pages yet.
+          echo "SITE_URL=${SITE_ORIGIN%/}${SUBDIR:+/$SUBDIR}/" >> "$GITHUB_ENV"
           BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           echo "SITE_BUILT_AT=$BUILT_AT" >> "$GITHUB_ENV"
           printf '{"commit":"%s","short":"%s","builtAt":"%s","ref":"%s","url":"https://github.com/%s/commit/%s"}\n' \
@@ -75,10 +87,8 @@ jobs:
 
       - name: Sync to purely
         run: |
-          # Staging subfolder: the site publishes to <web root>/temp, i.e.
-          # https://clacktronics.co.uk/temp/ — safe to preview without touching
-          # the live root. To go live, set SUBDIR="" (empty).
-          SUBDIR="temp"
+          # SUBDIR comes from the job env at the top of this file, so the upload
+          # path and the canonical URLs baked into the mirror cannot drift apart.
           DEST="${DEPLOY_PATH%/}${SUBDIR:+/$SUBDIR}"
           rsync -avz --human-readable \
             -e "ssh -p ${SSH_PORT:-22}" \

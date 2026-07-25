@@ -1,6 +1,7 @@
 ---
 title: Catalogue
 style: plain
+description: Eurorack modules, development boards and firmware libraries from Clacktronics — every board shipped with schematics, source and a written design post-mortem.
 ---
 # Catalogue
 
