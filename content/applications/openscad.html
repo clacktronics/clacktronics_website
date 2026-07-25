@@ -201,6 +201,7 @@ body { overflow: hidden; }
       </label>
       <div class="commit-actions">
         <button class="btn primary" id="commitGo"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span>Commit</button>
+        <button class="btn" id="commitCancel">Cancel</button>
         <span class="app-status" id="commitStatus"></span>
       </div>
     </div>
@@ -759,8 +760,10 @@ async function doCommit() {
 }
 
 document.getElementById('commitGo').addEventListener('click', doCommit);
+/* Closing only happens through the title bar × or Cancel: a stray click on the
+ * backdrop used to bin a half-typed commit. */
 document.getElementById('commitClose').addEventListener('click', () => commitModal.classList.remove('open'));
-commitModal.addEventListener('click', e => { if (e.target === commitModal) commitModal.classList.remove('open'); });
+document.getElementById('commitCancel').addEventListener('click', () => commitModal.classList.remove('open'));
 commitModal.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') doCommit(); });
 
 /* ---------------- menu / toolbar ---------------- */
@@ -786,7 +789,6 @@ document.querySelector('.scad-bar').addEventListener('click', e => {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') commitModal.classList.remove('open');
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveScad(e.shiftKey); }
   if (e.key === 'F5') { e.preventDefault(); render(); }
 });

@@ -8,7 +8,6 @@
 ### Non working features and bugs
 
 * Open app to video is not working
-* If click outside of "commit to website" in the markdown editor it seems to close the window which is awk
 
 ### New Features and featurettes
 

@@ -401,7 +401,8 @@ registered applications, Markdown windows, and desktop actions.
   selection tools; Gaussian Blur and Noise effects; the
   classic 28-colour box with left/right-click foreground/background
   colours; arbitrary bitmap dimensions up to 8192 × 8192; undo/redo; local or
-  website background opening; PNG saving; image-size resampling, anchored
+  website background opening; PNG saving and uploading straight to the web host
+  (File → Upload to website…); image-size resampling, anchored
   canvas resizing, crop selection, flip, invert and clear. The zoom tool
   supports 12.5%–800% views, and brush-based tools show their live footprint
   over the canvas. A non-destructive
@@ -603,6 +604,9 @@ browser and hand back a URL to link:
   drag an image/video/audio file onto the editor). The file is sent to the host,
   and the returned URL is inserted as `![](…)`, `@[video](…){controls}`, or a
   plain link depending on its type.
+- **Applications → ClackPaint… → File → Upload to website…** sends the picture
+  you are working on to the host as a PNG (never through GitHub) and shows the
+  public URL with a Copy link button, ready to paste into a post.
 
 The endpoint is `assets/upload.php`, named by `"assetUpload"` in
 `content/site.json` and resolved against the site root (so it is same-origin —
