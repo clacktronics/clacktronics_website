@@ -1,0 +1,62 @@
+# Apache configuration for the deployed site (rsynced to purely.website).
+#
+# Everything here is wrapped in <IfModule> guards, so on a host without the
+# relevant module the directive is skipped and the site serves exactly as it
+# did before.
+
+# ---------------------------------------------------------------- MIME types
+<IfModule mod_mime.c>
+  # Browsers only stream-compile WebAssembly when it arrives as
+  # application/wasm; served as octet-stream it falls back to a slower path.
+  AddType application/wasm .wasm
+</IfModule>
+
+# ------------------------------------------------------- Precompressed Wasm
+# Every .wasm on the site — Graphite, transformers, pyodide, mupdf — ships with
+# a gzipped copy beside it: ~114 MB raw down to ~30 MB. Compressing files that
+# size on every request would burn about a second of CPU each time, so they are
+# built ahead of time by the deploy workflow (and never committed, so they
+# cannot go stale against the file they came from). This serves them to clients
+# that accept gzip and leaves everyone else on the plain file.
+#
+# The rule is deliberately generic: any .wasm that gains a .gz neighbour is
+# picked up with no change needed here.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP:Accept-Encoding} gzip
+  RewriteCond %{REQUEST_FILENAME}\.gz -s
+  RewriteRule ^(.+\.wasm)$ $1.gz [QSA,L]
+</IfModule>
+
+# The rewrite is internal, so the response still has to describe itself: the
+# body is gzipped, and it is a Wasm module rather than a .gz download. This is
+# scoped to .wasm.gz specifically rather than using `AddEncoding gzip .gz`,
+# which would apply to every .gz on the site and would silently corrupt any
+# gzip archive someone later puts up for download.
+<IfModule mod_headers.c>
+  <FilesMatch "\.wasm\.gz$">
+    ForceType application/wasm
+    Header set Content-Encoding gzip
+  </FilesMatch>
+
+  # Proxies and caches must key on Accept-Encoding, or a gzipped response can
+  # be handed to a client that did not ask for one.
+  <FilesMatch "\.wasm$">
+    Header append Vary Accept-Encoding
+  </FilesMatch>
+</IfModule>
+
+# ------------------------------------------------------------- Compression
+# On-the-fly compression for the small text assets. Wasm is deliberately absent
+# here: it is handled by the precompressed file above.
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml
+  AddOutputFilterByType DEFLATE application/javascript text/javascript
+  AddOutputFilterByType DEFLATE application/json application/manifest+json
+  AddOutputFilterByType DEFLATE image/svg+xml application/xml
+</IfModule>
+
+# Long-lived caching is not set here. It is scoped to the one directory where
+# it is provably safe — see vendor/graphite/assets/.htaccess. Everything else,
+# including assets/js/clackos.js and assets/css/, is updated in place, so it
+# keeps whatever the host already does and a deploy shows up immediately.

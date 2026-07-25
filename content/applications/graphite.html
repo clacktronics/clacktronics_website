@@ -107,13 +107,15 @@ function applyPalette() {
 }
 
 /* The demo artwork files are not vendored (see vendor/graphite/PROVENANCE.md),
- * so the welcome screen's entry for them is hidden rather than left to fail
- * with Graphite's "could not be reached over the internet" dialog. The welcome
- * screen is re-rendered by the backend, hence the observer. */
+ * so both entries that would open them — the welcome screen button and the
+ * File menu item — are hidden rather than left to fail with Graphite's "could
+ * not be reached over the internet" dialog. Both are re-rendered by the
+ * backend (the File menu only exists while it is open), hence the observer. */
 function hideDemoArtworkEntry(doc) {
-  for (const label of doc.querySelectorAll('.text-button .text-label')) {
-    if (label.textContent.trim() !== 'Open Demo Artwork') continue;
-    const row = label.closest('tr') || label.closest('.widget-span');
+  for (const label of doc.querySelectorAll('.text-label')) {
+    /* the File menu spells it with a trailing ellipsis */
+    if (!/^Open Demo Artwork/.test(label.textContent.trim())) continue;
+    const row = label.closest('.layout-row, tr, .widget-span');
     if (row) row.style.display = 'none';
   }
 }
