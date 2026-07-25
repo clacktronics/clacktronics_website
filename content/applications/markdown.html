@@ -858,20 +858,30 @@ document.addEventListener('drop', async e => {
 
 show();
 
+/* `view=rendered` (the File Manager's "Markdown Viewer" association) opens the
+ * file as a rendered page; the toolbar's preview button switches back to the
+ * source at any point. */
+function showRendered() {
+  if (!mde.isPreviewActive()) EasyMDE.togglePreview(mde);
+}
+
 /* ---- open a file passed in the query string ----
  * `open` remains content-relative for the desktop's File → Edit command;
  * `repo` is a repository-root path supplied by the File Manager. */
 {
   const params = new URLSearchParams(location.search);
   const repositoryPath = params.get('repo'); const contentPath = params.get('open');
+  const rendered = params.get('view') === 'rendered';
   const requested = repositoryPath || (contentPath ? `content/${contentPath.replace(/^content\//, '')}` : '');
   if (requested) {
     const rel = requested.replace(/^\/+/, '');
     const parts = rel.split('/');
     if (rel && !/[\\?#\0]/.test(rel) && parts.every(part => part && part !== '.' && part !== '..') && /\.(?:md|markdown)$/i.test(rel))
-      openRepositoryMarkdown(rel).catch(error => { status.textContent = error.message; });
+      openRepositoryMarkdown(rel)
+        .then(() => { if (rendered) showRendered(); })
+        .catch(error => { status.textContent = error.message; });
     else status.textContent = 'Refused to open an unexpected path.';
-  }
+  } else if (rendered) showRendered();
 }
 })();
 </script>

@@ -368,11 +368,15 @@ registered applications, Markdown windows, and desktop actions.
   Reader accepts PDFs. The standalone File Manager opens recognised files in
   their ClackOS application (including Paint, Markdown Editor, PDF Reader,
   Video Lab, OpenSCAD, Pure Data, Web Browser, and Text Editor); unknown file
-  types show a confirmation before opening a browser tab. Associations are
-  configured in `content/file-associations.json` rather than in the File
-  Manager code. Rules are checked from top to bottom and may match `kinds`,
-  `extensions`, and optional `drives`; each rule names the destination `app`,
-  query-string `parameter`, label, and optional `source: "url"`.
+  types show a confirmation before opening a browser tab. When a file matches
+  more than one rule an "Open with" menu appears next to the Open button, so a
+  `.md` file can be opened in the Markdown Editor, as a rendered page (the
+  Markdown Viewer rule, which adds `view=rendered`), or in a browser tab.
+  Associations are configured in `content/file-associations.json` rather than
+  in the File Manager code. Rules are checked from top to bottom and may match
+  `kinds`, `extensions`, and optional `drives`; each rule names the destination
+  `app`, query-string `parameter`, label, optional fixed `params` appended to
+  the query, and optional `source: "url"`.
 - `applications/text.html` (Applications → System → Text Editor) — a small plain
   text editor with local open/save, File System Access support where available,
   website-file browsing, and startup association for `.txt` and related text
@@ -449,7 +453,10 @@ registered applications, Markdown windows, and desktop actions.
   saving); elsewhere saving downloads the file. Drag-and-drop works,
   Ctrl+S saves. File → Open from website… opens the shared file manager:
   Markdown files load into the editor, while other files insert a suitable
-  link or media embed. File → Commit to website…
+  link or media embed. A file passed as `?repo=` (or `?open=`) with
+  `view=rendered` opens straight into the rendered preview — what the File
+  Manager's Markdown Viewer entry does — and the toolbar's preview button
+  switches back to the source. File → Commit to website…
   publishes an edit straight to the repo through GitHub's contents API:
   it needs a fine-grained personal access token (GitHub → Settings →
   Developer settings → Fine-grained tokens; scope it to this repo only
