@@ -300,6 +300,7 @@
     <svg id="board-svg" role="img" aria-label="PCB heater copper preview"></svg>
 </main>
 
+<script src="../../assets/js/app-state.js"></script>
 <script>
 "use strict";
 
@@ -1288,6 +1289,12 @@ els.exportButton.addEventListener("click", downloadKiCad);
 els.pngExportButton.addEventListener("click", downloadEtchPng);
 window.__pcbHeaterApp = { update, getModel: () => lastModel, generateKiCad, downloadKiCad, createEtchCanvas, downloadEtchPng };
 update();
+
+/* Remembered by ClackOS: every control is part of the design, so the form is
+ * the state. Values are applied without synthetic events — a change on the
+ * pattern select would reset pitch and iteration depth to that pattern's
+ * defaults — and the board is recomputed once at the end instead. */
+window.ClackOSAppState?.connect({ controls: true, dispatch: false, restore: () => update() });
 </script>
 </body>
 </html>

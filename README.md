@@ -13,6 +13,7 @@ assets/
     clackos.css             ← default palette
     midnight.css            ← example dark palette
   js/clackos.js             ← window manager, menu builder, markdown renderer
+  js/app-state.js           ← opt-in state persistence for application pages
 content/
   site.json                 ← menu order + which windows open at boot
   file/                     ← FILE menu
@@ -420,6 +421,81 @@ wallpapers.
 
 1. Create `content/<name>/` with a `menu.json`.
 2. Add `<name>` to the `menus` array in `content/site.json`.
+
+## Saved desktops and shareable links
+
+The desktop remembers itself between visits, and there is still no server
+involved. On every change ClackOS writes a small snapshot to `localStorage`
+(key `clackos-session`) holding which windows are open, where they sit, how
+large they are, which one is in front, whether they are minimised or
+maximised, how far each markdown document is scrolled, the theme and
+wallpaper, and whatever state each app chooses to report. On the next visit
+that snapshot is replayed instead of the `boot` list in `site.json`; the boot
+list is still what a first-time visitor gets.
+
+**View → Copy link to this desktop** encodes the same snapshot into the URL
+after a `#`, deflate-compressed and base64url-encoded:
+
+```
+https://clacktronics.co.uk/#desktop=zVNNb9swDP0rgs9x4qRJm...
+```
+
+Because it is a fragment it is never sent to the web host — the whole desktop
+travels inside the link itself. Opening one restores that desktop in any
+browser, then clears the hash so the visitor carries on with a session of
+their own. Window ids arriving this way are treated as untrusted: an
+application must be one already registered in a `menu.json`, and a document
+must be a markdown path under `content/` with no traversal, so a link cannot
+turn the desktop into an arbitrary iframe or file viewer. A desktop carrying
+more app state than fits in a sensible URL is shared as window layout only,
+and the toast says so.
+
+**View → Forget saved desktop** deletes the snapshot and stops saving for the
+rest of the visit (otherwise the next click would write it straight back);
+remembering resumes on the next load. **Restart and reset** clears it along
+with the saved theme and wallpaper.
+
+### Letting an app remember its own state
+
+Apps opt in with `assets/js/app-state.js`. Add the script, then either hand
+over the whole form or describe the state yourself:
+
+```html
+<script src="../../assets/js/app-state.js"></script>
+<script>
+/* every input, select and textarea with an id */
+ClackOSAppState.connect({ controls: true });
+
+/* or a shape of your own */
+const session = ClackOSAppState.connect({
+  save: () => ({ text: editor.value, caret: editor.selectionStart }),
+  restore: saved => editor.value = saved?.text || ''
+});
+editor.addEventListener('input', () => session.schedule());
+</script>
+```
+
+`connect()` returns `{ report, schedule, capture, apply }` — `schedule()` is a
+debounced `report()`, for state that changes on every keystroke. With
+`controls: true` the helper reports by itself whenever a control changes, and
+on restore it sets the values and then fires `input`/`change` so the app
+recalculates. Pass `dispatch: false` when those synthetic events would fight
+the app (the PCB Heater's pattern select resets pitch and iteration depth to
+that pattern's defaults) and use `restore` to call the app's own recompute
+instead. Under the hood the app posts `{ type: 'clackos-state', state }` and
+`{ type: 'clackos-request-state' }` to the desktop, which replies with
+`{ type: 'clackos-state-restore', state }`; iframe apps use `postMessage`,
+integrated apps the same `clackos-message` DOM event as the rest of the
+protocol. State is stored as JSON and capped at 64 KB per window, so keep it
+to settings and documents rather than bitmaps or audio.
+
+Opening an app page directly, outside the desktop, is a no-op: there is nobody
+to report to and nothing to restore, so the standalone entry points behave
+exactly as before. Apps wired up so far are the PCB Heater Designer (its whole
+control panel) and the Text Editor (its document, name and caret); apps
+launched with a query string — the Markdown Editor's `?open=`, for example —
+already come back with the right file because that query is part of the
+window's id.
 
 ## Plain HTML mirror
 

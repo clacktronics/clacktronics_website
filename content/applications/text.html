@@ -33,6 +33,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; }
 </div>
 <input id="picker" type="file" accept=".txt,.log,.csv,.json,.css,.js,.mjs,.xml,.yaml,.yml,.ini,.conf,text/plain" hidden>
 <script src="../../assets/js/file-manager.js"></script>
+<script src="../../assets/js/app-state.js"></script>
 <script>
 (() => {
 const editor = document.getElementById('editor'), status = document.getElementById('status'), position = document.getElementById('position');
@@ -106,6 +107,21 @@ menus.forEach(menu => menu.querySelector(':scope > button').addEventListener('cl
 document.addEventListener('click', () => menus.forEach(menu => menu.classList.remove('open')));
 document.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); save(false).catch(error => showStatus(error.message)); } });
 window.addEventListener('beforeunload', event => { if (dirty) event.preventDefault(); });
+
+/* Remembered by ClackOS: the text itself, its name and where the caret was.
+ * A file handle picked from the local disk cannot survive the window, so a
+ * restored document behaves like an unsaved one until it is saved again. */
+const session = window.ClackOSAppState?.connect({
+  save: () => ({ text: editor.value, name: fileName, caret: editor.selectionStart }),
+  restore: saved => {
+    if (!saved || typeof saved.text !== 'string') return;
+    setDocument(saved.text, saved.name);
+    const caret = Math.min(Math.max(0, saved.caret | 0), editor.value.length);
+    editor.setSelectionRange(caret, caret);
+    updatePosition();
+  }
+});
+editor.addEventListener('input', () => session?.schedule());
 
 const requested = new URLSearchParams(location.search).get('repo');
 if (requested) openRequested(requested).catch(error => showStatus(error.message));
