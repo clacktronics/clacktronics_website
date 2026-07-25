@@ -27,6 +27,17 @@ site = json.loads((content / 'site.json').read_text(encoding='utf-8'))
 file_menu = json.loads((content / 'file' / 'menu.json').read_text(encoding='utf-8'))
 applications_menu = json.loads((content / 'applications' / 'menu.json').read_text(encoding='utf-8'))
 
+SITE_NAME = 'Clacktronics'
+
+# Absolute base URL for canonical links, Open Graph URLs and sitemap entries —
+# all three have to be absolute, so the build needs to know where the pages
+# will actually be served from. The deploy workflow exports SITE_URL derived
+# from its SUBDIR, so a staged build under /temp/ emits /temp/ URLs rather than
+# pointing search engines at a root that isn't live yet; otherwise site.json's
+# "siteUrl" decides.
+SITE_URL = (os.environ.get('SITE_URL', '').strip()
+            or site.get('siteUrl', 'https://clacktronics.co.uk/')).rstrip('/') + '/'
+
 # ---------------------------------------------------------------- collect
 def collect_pages():
     """Map content-relative md path -> mirror-relative html path."""
@@ -106,6 +117,173 @@ def fix_url(url, page_out, allow_fragment=True):
     if re.match(r'^(?:https?:|mailto:|tel:|#)', url, re.I):
         return url
     return resolve_site_url(url, page_out)
+
+# ---------------------------------------------------------------- crawling
+DESCRIPTION_LIMIT = 155
+
+def page_url(page_out):
+    """Absolute URL of a mirror page (canonical link and sitemap entry)."""
+    return SITE_URL + 'plain/' + page_out
+
+def absolute_url(url, page_out):
+    """Promote a URL already resolved for this page to an absolute one."""
+    if re.match(r'^https?:', url, re.I):
+        return url
+    return urllib.parse.urljoin(page_url(page_out), url)
+
+def strip_markdown(text):
+    """Reduce a markdown block to the prose inside it."""
+    text = re.sub(r'!\[[^\]]*\]\([^)\s]*\)', '', text)             # images
+    text = re.sub(r'@\[[a-z]+\]\([^)]*\)(?:\{[^}]*\})?', '', text, flags=re.I)
+    text = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text)           # links -> label
+    text = re.sub(r'<[^>]+>', '', text)                            # raw html tags
+    text = re.sub(r'[*`>#]+', '', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+def page_title(meta, body):
+    """Frontmatter title, else the first heading — archive.md has no header."""
+    if meta.get('title'):
+        return meta['title'].strip()
+    m = re.search(r'^#\s+(.+)$', body, re.M)
+    return strip_markdown(m.group(1)) if m else SITE_NAME
+
+def head_title(title):
+    """Search results show the site name, so add it when the title lacks it."""
+    return title if 'clacktronics' in title.lower() else f'{title} — {SITE_NAME}'
+
+DATE_LIKE = re.compile(
+    r'^(?:\d{4}-\d{2}-\d{2}'
+    r'|\d{1,2}(?:st|nd|rd|th)?\s+\w+\s+\d{4}'
+    r'|\w+\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})$', re.I)
+
+def summarise(meta, body):
+    """Meta description: an explicit one, else the tagline, else first prose.
+
+    Blog posts put their date in `tagline:`, which makes a useless search
+    snippet, so a date-shaped tagline falls through to the prose instead.
+    """
+    for key in ('description', 'tagline'):
+        value = strip_markdown(meta.get(key, ''))
+        if value and not DATE_LIKE.match(value):
+            return value
+    for block in re.split(r'\r?\n\s*\r?\n', body):
+        block = block.strip()
+        # Headings, rules, lists, fences, embeds, raw HTML, quotes and tables
+        # are not prose. Image-led blocks are: the old posts open with a photo
+        # and carry straight on into the text, and strip_markdown drops images.
+        if not block or block.startswith(('#', '-', '`', '@', '<', '>', '|')):
+            continue
+        if re.match(r'^\d+\.\s', block):
+            continue
+        # A paragraph of nothing but links is the button row, not a summary.
+        if all(re.match(r'^\[[^\]]+\]\([^)]+\)$', l.strip())
+               for l in block.splitlines()):
+            continue
+        text = strip_markdown(block)
+        if len(text) < 40:
+            continue
+        if len(text) > DESCRIPTION_LIMIT:
+            text = text[:DESCRIPTION_LIMIT].rsplit(' ', 1)[0].rstrip(' ,;:') + '…'
+        return text
+    return ''
+
+def first_image(body, page_out):
+    """Absolute URL of the page's first image, for og:image."""
+    m = re.search(r'!\[[^\]]*\]\(([^)\s]+)\)', body)
+    if not m:
+        return ''
+    src = fix_url(m.group(1), page_out, allow_fragment=False)
+    return absolute_url(src, page_out) if src else ''
+
+def post_date(md_rel):
+    """The YYYY-MM-DD a blog post filename starts with, or ''."""
+    m = re.match(r'(\d{4}-\d{2}-\d{2})', posixpath.basename(md_rel))
+    return m.group(1) if m else ''
+
+def json_ld(md_rel, page_out, title, description, image):
+    """Schema.org metadata: BlogPosting for posts, WebSite for the home page."""
+    url = page_url(page_out)
+    if page_out.startswith('blog/'):
+        data = {'@context': 'https://schema.org', '@type': 'BlogPosting',
+                'headline': title, 'url': url, 'mainEntityOfPage': url,
+                'publisher': {'@type': 'Organization', 'name': SITE_NAME,
+                              'url': SITE_URL}}
+        date = post_date(md_rel)
+        if date:
+            data['datePublished'] = date
+        if image:
+            data['image'] = image
+    elif page_out == 'index.html':
+        data = {'@context': 'https://schema.org', '@type': 'WebSite',
+                'name': SITE_NAME, 'url': SITE_URL}
+    else:
+        return ''
+    if description:
+        data['description'] = description
+    body = json.dumps(data, ensure_ascii=False).replace('</', r'<\/')
+    return '<script type="application/ld+json">%s</script>\n' % body
+
+def head_meta(md_rel, page_out, meta, body):
+    """The crawler-facing part of <head>: description, canonical, OG, JSON-LD."""
+    title = page_title(meta, body)
+    description = summarise(meta, body)
+    image = first_image(body, page_out)
+    noindex = 'noindex' in meta.get('robots', '').lower()
+    tags = [f'<title>{esc(head_title(title))}</title>']
+    if description:
+        tags.append(f'<meta name="description" content="{esc(description)}">')
+    if noindex:
+        # Test and scratch pages stay crawlable but out of the index.
+        tags.append('<meta name="robots" content="noindex,follow">')
+    tags += [f'<link rel="canonical" href="{esc(page_url(page_out))}">',
+             f'<meta property="og:site_name" content="{esc(SITE_NAME)}">',
+             '<meta property="og:type" content="%s">'
+             % ('article' if page_out.startswith('blog/') else 'website'),
+             f'<meta property="og:title" content="{esc(title)}">',
+             f'<meta property="og:url" content="{esc(page_url(page_out))}">']
+    if description:
+        tags.append(f'<meta property="og:description" content="{esc(description)}">')
+    if image:
+        tags.append(f'<meta property="og:image" content="{esc(image)}">')
+    tags.append('<meta name="twitter:card" content="%s">'
+                % ('summary_large_image' if image else 'summary'))
+    ld = json_ld(md_rel, page_out, title, description, image)
+    return '\n'.join(tags) + '\n' + ld, noindex
+
+def build_sitemap(entries):
+    """A sitemap of the mirror — the only per-page URLs the site has."""
+    urls = []
+    for url, lastmod in entries:
+        urls.append('  <url>\n    <loc>%s</loc>%s\n  </url>'
+                    % (esc(url),
+                       '\n    <lastmod>%s</lastmod>' % lastmod if lastmod else ''))
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            + '\n'.join(urls) + '\n</urlset>\n')
+
+def build_robots():
+    """robots.txt, generated so the Sitemap line follows SITE_URL."""
+    return f'''# robots.txt for {SITE_NAME} — generated by scripts/build_plain_site.py
+#
+# The ClackOS desktop at / assembles itself in the browser from site.json,
+# menu.json and Markdown, so crawlers need assets/ and content/ to render it at
+# all: those stay open deliberately. Per-page URLs only exist in the static
+# mirror under /plain/, which is what the sitemap lists.
+User-agent: *
+Allow: /
+
+# Vendored emulators and WebAssembly runtimes are tens of megabytes of payload
+# with nothing to index. KiCanvas stays allowed because mirror pages embed it.
+Disallow: /vendor/
+Allow: /vendor/kicanvas/
+
+# Reader uploads (linked from content where they matter) and the frozen copies
+# of the previous websites, which would otherwise read as duplicate content.
+Disallow: /assets/uploads/
+Disallow: /archive/
+
+Sitemap: {SITE_URL}sitemap.xml
+'''
 
 def menu_link(href, label, new_tab=False):
     target = ' target="_blank" rel="noopener noreferrer"' if new_tab else ''
@@ -439,6 +617,22 @@ def build_embed(block):
     return '<p class="build-stamp">Build %s%s</p>' % (code, tail)
 
 # ---------------------------------------------------------------- blocks
+def paragraphs_with_fences(block, fences, page_out):
+    """Render a paragraph, restoring any fenced code block inside it.
+
+    A fence written without a blank line after it ends up in the same block as
+    the prose that follows, which used to leak the raw placeholder (NUL bytes
+    and all) into the page. Emit the code where it was written instead.
+    """
+    out = []
+    for i, part in enumerate(re.split(r'\x00fence(\d+)\x00', block)):
+        if i % 2:
+            out.append(fences[int(part)])
+        elif part.strip():
+            out.append('<p>%s</p>'
+                       % inline(part.strip(), page_out).replace('\n', '<br>'))
+    return out
+
 def md_to_html(body, meta, page_out, state):
     fences = []
     body = re.sub(r'```\w*\r?\n([\s\S]*?)```',
@@ -503,7 +697,7 @@ def md_to_html(body, meta, page_out, state):
                     for i, l in enumerate(block.splitlines())]
             out.append('<div class="ctas">%s</div>' % ''.join(btns))
         else:
-            out.append('<p>%s</p>' % inline(block, page_out).replace('\n', '<br>'))
+            out.extend(paragraphs_with_fences(block, fences, page_out))
     return '\n'.join(out)
 
 # ---------------------------------------------------------------- pages
@@ -514,21 +708,20 @@ def render_page(md_rel, page_out):
     state = {'kicanvas': False, 'headings': {}}
     article = md_to_html(body, meta, page_out, state)
     style_class = 'page' if meta.get('style') == 'page' else 'plain'
-    title = meta.get('title', 'Clacktronics')
+    crawl_meta, noindex = head_meta(md_rel, page_out, meta, body)
     menu = render_menu(md_rel, page_out)
     kicanvas = ('<script type="module" src="%s"></script>\n'
                 % esc(resolve_site_url('vendor/kicanvas/kicanvas.js', page_out))
                 if state['kicanvas'] else '')
     theme = site.get('theme', 'clackos.css')
     css = lambda path: esc(resolve_site_url(path, page_out))
-    return f'''<!DOCTYPE html>
+    page = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="only light">
-<title>{esc(title)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+{crawl_meta}<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{css('assets/css/icons.css')}">
@@ -582,6 +775,7 @@ def render_page(md_rel, page_out):
 </body>
 </html>
 '''
+    return page, noindex
 
 CSS = '''/* Plain mirror of clacktronics.co.uk — the ClackOS look without the desktop.
  * Loaded after assets/css/clackos.css + the active theme; these overrides
@@ -651,12 +845,22 @@ body.plain-mirror main { flex: 1; width: 100%; }
 '''
 
 def main():
+    indexable = []
     for md_rel, page_out in PAGES.items():
         dest = out_root / page_out
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(render_page(md_rel, page_out), encoding='utf-8', newline='\n')
+        page, noindex = render_page(md_rel, page_out)
+        dest.write_text(page, encoding='utf-8', newline='\n')
+        if not noindex:
+            indexable.append((page_url(page_out), post_date(md_rel)))
     (out_root / STYLE).write_text(CSS, encoding='utf-8', newline='\n')
+    # robots.txt and sitemap.xml only work from the origin root, so they sit
+    # beside index.html rather than in the mirror they describe.
+    (root / 'sitemap.xml').write_text(build_sitemap(indexable),
+                                      encoding='utf-8', newline='\n')
+    (root / 'robots.txt').write_text(build_robots(), encoding='utf-8', newline='\n')
     print(f'wrote {len(PAGES)} pages to {out_root.relative_to(root)}/')
+    print(f'wrote sitemap.xml ({len(indexable)} urls) and robots.txt for {SITE_URL}')
 
 if __name__ == '__main__':
     main()

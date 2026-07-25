@@ -1,6 +1,7 @@
 ---
 title: Markdown test page
 style: page
+robots: noindex
 tagline: Every renderer feature on one page — if something here looks wrong, the renderer is wrong.
 width: 760
 height: 80%

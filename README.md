@@ -94,6 +94,8 @@ Each markdown file starts with frontmatter describing its window:
 title: Projects            ← titlebar / taskbar text
 style: plain               ← "plain" or "page" (rich landing-page look)
 tagline: Optional line     ← rendered under the h1 with a rule
+description: One sentence  ← optional; search-result snippet for the mirror
+robots: noindex            ← optional; keep this page out of search results
 width: 480                 ← optional; px or % (default: 80% of the desktop)
 height: 60%
 ---
@@ -435,13 +437,56 @@ so the mirror keeps the ClackOS typography and palette. Mobile devices enter
 this version by default. Each page footer links back to the desktop version,
 and the taskbar links to the mirror.
 
-The mirror is generated — don't edit `plain/` by hand. A GitHub Actions
+The mirror is generated — don't edit `plain/` by hand (the same run also writes
+the root `sitemap.xml` and `robots.txt`; see [Search engines](#search-engines)).
+A GitHub Actions
 workflow (`.github/workflows/plain-mirror.yml`) regenerates it automatically
 whenever anything under `content/` changes. To rebuild it locally:
 
 ```sh
 python3 scripts/build_plain_site.py
 ```
+
+## Search engines
+
+The ClackOS desktop builds itself in the browser, so `index.html` has no
+content of its own and the site has no per-page URLs — every window is a menu
+click. The **plain mirror is therefore the crawlable site**, and the same
+generator produces the metadata that makes it indexable:
+
+- a per-page `<title>` (with the site name appended when the frontmatter title
+  doesn't already carry it), `<meta name="description">`, Open Graph and
+  Twitter-card tags, and a self-referencing `<link rel="canonical">`;
+- `sitemap.xml` and `robots.txt` at the repo root — both only work from the
+  origin root, so they sit beside `index.html` rather than inside `plain/`;
+- `BlogPosting` JSON-LD on posts (with `datePublished` from the filename) and
+  `WebSite` JSON-LD on the home page.
+
+`index.html` carries a relative `<link rel="canonical" href="plain/index.html">`
+so the empty desktop shell doesn't compete with the mirror's copy of the same
+page. Mobile crawlers (Googlebot included) already follow the shell's redirect
+into `plain/`.
+
+The description is taken from `description:` in the frontmatter, else
+`tagline:`, else the first real paragraph, trimmed to ~155 characters. Blog
+posts keep their date in `tagline:`, which makes a poor search snippet, so a
+date-shaped tagline is skipped in favour of the prose. **Write a
+`description:` line** for any page whose opening paragraph would read badly in
+search results. `robots: noindex` in the frontmatter keeps a page crawlable but
+out of the index and out of the sitemap (the Markdown test page uses it).
+
+Canonical links, Open Graph URLs and sitemap entries have to be absolute, so
+the build needs to know where the pages will be served from:
+
+- `"siteUrl"` in `content/site.json` is the default (the live root);
+- the `SITE_URL` environment variable overrides it. The deploy workflow derives
+  `SITE_URL` from its own `SUBDIR`, so a staged build under `temp/` emits
+  `/temp/` URLs instead of pointing crawlers at a root that isn't live yet.
+
+When the site goes live at the web root, set `SUBDIR` to an empty string in
+`.github/workflows/deploy-purely.yml` (one job-level knob now drives both the
+rsync destination and the URLs) and redirect the old `/temp/…` paths to their
+root equivalents so anything already indexed follows across.
 
 ## Deploying to a web host (purely.website)
 
