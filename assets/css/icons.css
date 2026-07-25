@@ -38,6 +38,7 @@
 .pixel-icon[data-icon="video"] { --pixel-icon: url('../icons/pixelarticons/video.svg'); }
 .pixel-icon[data-icon="mic"] { --pixel-icon: url('../icons/pixelarticons/mic.svg'); }
 .pixel-icon[data-icon="brush"] { --pixel-icon: url('../icons/pixelarticons/brush.svg'); }
+.pixel-icon[data-icon="shapes"] { --pixel-icon: url('../icons/pixelarticons/shapes.svg'); }
 .pixel-icon[data-icon="spray-can"] { --pixel-icon: url('../icons/pixelarticons/spray-can.svg'); }
 .pixel-icon[data-icon="pipette"] { --pixel-icon: url('../icons/pixelarticons/pipette.svg'); }
 .pixel-icon[data-icon="box"] { --pixel-icon: url('../icons/pixelarticons/box.svg'); }

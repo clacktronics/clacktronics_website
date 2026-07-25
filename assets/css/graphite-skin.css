@@ -1,0 +1,46 @@
+/* ClackOS skin for the vendored Graphite editor.
+   Injected into the same-origin iframe by content/applications/graphite.html,
+   alongside the palette bridge in that page which rewrites Graphite's greyscale
+   ramp (--color-0-black … --color-f-white) from the live ClackOS theme. This
+   file covers everything the ramp cannot: typography and a few hardcoded
+   colours in Graphite's own stylesheet. */
+
+/* Graphite locks itself to its dark scheme with `<meta name="color-scheme"
+   content="dark only">`; the desktop decides the tone instead. */
+:root { color-scheme: light dark; }
+
+/* The loading spinner Graphite paints before the Wasm module boots is hardcoded
+   to #222/#eee in its index.html, which flashes dark inside a light desktop. */
+body::before { background: var(--paper) !important; }
+body::after { border-color: var(--ink-soft) transparent var(--ink-soft) transparent !important; }
+
+/* ClackOS is a monospace desktop. Graphite bundles Source Sans Pro for its UI
+   and Source Code Pro for numeric fields; both give way to IBM Plex Mono, with
+   the size nudged down so the longer monospace strings still fit the widgets. */
+body,
+button,
+input,
+textarea,
+select,
+.text-label,
+.text-button,
+.menu-bar-input,
+.widget-section,
+.floating-menu-content {
+  font-family: 'IBM Plex Mono', 'Source Code Pro', monospace !important;
+}
+body { font-size: 11px !important; }
+
+/* Graphite's menu bar sits directly under the ClackOS title bar, so it loses
+   its own rounded top corners and picks up the window's separator line. */
+.title-bar {
+  border-bottom: 1px solid var(--paper-line) !important;
+}
+
+/* The editor's own scrollbars, matched to the ones used across ClackOS apps. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--paper-deep); }
+::-webkit-scrollbar-thumb { background: var(--sage); border-radius: 6px; border: 2px solid var(--paper-deep); }
+
+/* Focus rings follow the desktop accent rather than Graphite's blue. */
+:focus-visible { outline-color: var(--leaf) !important; }

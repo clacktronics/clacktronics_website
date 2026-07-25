@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graphite — ClackOS</title>
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+html, body { height: 100%; margin: 0; }
+body { display: flex; flex-direction: column; background: var(--paper); }
+iframe { display: block; width: 100%; flex: 1; min-height: 0; border: 0; }
+.credit {
+  margin: 0; padding: 6px 16px; font-size: 10.5px; line-height: 1.6;
+  font-family: 'IBM Plex Mono', monospace; color: var(--sage);
+  border-top: 1px solid var(--paper-line); background: var(--paper-deep);
+}
+.credit a { color: var(--leaf-deep); text-decoration: underline; }
+.credit a:hover { color: var(--leaf); }
+</style>
+</head>
+<body>
+<iframe id="editor" title="Graphite vector graphics editor" src="../../vendor/graphite/index.html"></iframe>
+<p class="credit">Editor:
+  <a href="https://graphite.art/" target="_blank" rel="noopener">Graphite</a>
+  by the Graphite authors, Rust compiled to WebAssembly · free software,
+  <a href="../../vendor/graphite/LICENSE.txt" target="_blank">Apache&nbsp;2.0</a> ·
+  <a href="https://github.com/GraphiteEditor/Graphite" target="_blank" rel="noopener">source</a> ·
+  icons substituted (see
+  <a href="../../vendor/graphite/PROVENANCE.md" target="_blank">provenance</a>)
+</p>
+<script>
+/* ClackOS wrapper for the vendored Graphite build.
+ *
+ * Graphite draws its whole UI from a 16-step greyscale ramp
+ * (--color-0-black … --color-f-white) declared on its `:root`, plus an `-rgb`
+ * triple per step used for alpha compositing. Those triples cannot be derived
+ * from a colour in pure CSS, so the ramp is rebuilt here in JS from the live
+ * ClackOS palette and written as inline custom properties on the editor's root
+ * element, where they outrank Graphite's own stylesheet.
+ *
+ * The ramp runs background → foreground, which is what Graphite assumes: low
+ * indices are surfaces, high indices are text and highlights. Because ClackOS's
+ * --paper/--ink pair flips with the theme, the same mapping produces a light
+ * Graphite under the default theme and a dark one under Midnight, with no
+ * per-theme tables. */
+const frame = document.getElementById('editor');
+
+const parseColor = (value) => {
+  const probe = document.createElement('span');
+  probe.style.color = value;
+  document.body.appendChild(probe);
+  const rgb = getComputedStyle(probe).color;
+  probe.remove();
+  const parts = /rgba?\(([^)]+)\)/.exec(rgb);
+  if (!parts) return [0, 0, 0];
+  return parts[1].split(',').slice(0, 3).map(n => Math.round(parseFloat(n)));
+};
+
+const mix = (from, to, t) => from.map((c, i) => Math.round(c + (to[i] - c) * t));
+const hex = (c) => '#' + c.map(n => n.toString(16).padStart(2, '0')).join('');
+
+const RAMP_NAMES = [
+  '0-black', '1-nearblack', '2-mildblack', '3-darkgray', '4-dimgray', '5-dullgray',
+  '6-lowergray', '7-middlegray', '8-uppergray', '9-palegray', 'a-softgray',
+  'b-lightgray', 'c-brightgray', 'd-mildwhite', 'e-nearwhite', 'f-white'
+];
+
+function paletteFromTheme() {
+  const read = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const paper = parseColor(read('--paper') || '#f8f2dd');
+  const paperDeep = parseColor(read('--paper-deep') || '#f3ecd1');
+  const paperLine = parseColor(read('--paper-line') || '#d8cfa9');
+  const ink = parseColor(read('--ink-soft') || read('--ink') || '#14231a');
+
+  /* Steps 0–2 are the surfaces Graphite stacks (window gaps, panel chrome,
+   * panel body), so they take the theme's three paper tones directly. The rest
+   * ramp on toward the ink, with a gamma that keeps the low-index widget
+   * backgrounds close to the paper and pushes the contrast into the text
+   * steps where Graphite expects it. */
+  const ramp = RAMP_NAMES.map((_, index) => {
+    if (index === 0) return paperLine;
+    if (index === 1) return paperDeep;
+    if (index === 2) return paper;
+    return mix(paper, ink, Math.pow((index - 2) / (RAMP_NAMES.length - 3), 1.35));
+  });
+
+  const vars = {};
+  ramp.forEach((colour, index) => {
+    vars[`--color-${RAMP_NAMES[index]}`] = hex(colour);
+    vars[`--color-${RAMP_NAMES[index]}-rgb`] = colour.join(', ');
+  });
+
+  /* Accents: selection and overlays follow the desktop's leaf green, and the
+   * "no colour" swatch has to sit on the theme's paper rather than white. */
+  const accent = parseColor(read('--leaf') || '#4fae7d');
+  vars['--color-overlay-blue'] = hex(accent);
+  vars['--color-none'] = hex(paper);
+
+  return vars;
+}
+
+function applyPalette() {
+  const doc = frame.contentDocument;
+  if (!doc || !doc.documentElement) return;
+  const vars = paletteFromTheme();
+  for (const [name, value] of Object.entries(vars)) doc.documentElement.style.setProperty(name, value);
+}
+
+/* The demo artwork files are not vendored (see vendor/graphite/PROVENANCE.md),
+ * so the welcome screen's entry for them is hidden rather than left to fail
+ * with Graphite's "could not be reached over the internet" dialog. The welcome
+ * screen is re-rendered by the backend, hence the observer. */
+function hideDemoArtworkEntry(doc) {
+  for (const label of doc.querySelectorAll('.text-button .text-label')) {
+    if (label.textContent.trim() !== 'Open Demo Artwork') continue;
+    const row = label.closest('tr') || label.closest('.widget-span');
+    if (row) row.style.display = 'none';
+  }
+}
+
+function skin() {
+  try {
+    const doc = frame.contentDocument;
+    const add = (href, id) => {
+      const link = doc.createElement('link');
+      link.rel = 'stylesheet';
+      if (id) link.id = id;
+      link.href = href;
+      doc.head.appendChild(link);
+      return link;
+    };
+    add('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    /* the desktop's palette, so the skin below can refer to --paper and friends
+     * even when this page runs outside ClackOS */
+    add(new URL('../../assets/themes/clackos.css', location.href).href, 'clackos-fallback-theme');
+    const skinLink = add(new URL('../../assets/css/graphite-skin.css', location.href).href);
+    applyPalette();
+    /* Graphite's stylesheet is injected by its bundle after first paint, so the
+     * skin is re-appended once to stay last in the cascade */
+    setTimeout(() => { doc.head.appendChild(skinLink); applyPalette(); }, 2000);
+    new MutationObserver(() => hideDemoArtworkEntry(doc)).observe(doc.body, { childList: true, subtree: true });
+    hideDemoArtworkEntry(doc);
+  } catch (e) { console.warn('could not skin Graphite:', e); }
+}
+
+frame.addEventListener('load', skin);
+/* ClackOS re-themes nested app frames on every theme change; both the desktop
+ * event and the standalone case land here. */
+window.addEventListener('clackos-themechange', applyPalette);
+</script>
+</body>
+</html>
