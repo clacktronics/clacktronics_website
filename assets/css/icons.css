@@ -86,6 +86,8 @@
 .pixel-icon[data-icon="link"] { --pixel-icon: url('../icons/pixelarticons/link.svg'); }
 .pixel-icon[data-icon="keyboard-music"] { --pixel-icon: url('../icons/pixelarticons/keyboard-music.svg'); }
 .pixel-icon[data-icon="message-text"] { --pixel-icon: url('../icons/pixelarticons/message-text.svg'); }
+.pixel-icon[data-icon="calendar"] { --pixel-icon: url('../icons/pixelarticons/calendar.svg'); }
+.pixel-icon[data-icon="map-pin"] { --pixel-icon: url('../icons/pixelarticons/map-pin.svg'); }
 
 .icon-label,
 .menu-item-label {

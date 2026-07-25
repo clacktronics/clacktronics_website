@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Calendar — ClackOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<link rel="stylesheet" id="clackos-theme" href="../../assets/themes/clackos.css">
+<style>
+html, body { height: 100%; overflow: hidden; }
+[hidden] { display: none !important; }
+.cal-app { height: 100%; display: grid; grid-template-rows: auto auto 1fr auto; min-height: 0; }
+
+.cal-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 16px; border-bottom: 1px solid var(--paper-line);
+}
+.cal-tabs { display: flex; border: 1px solid var(--ink); border-radius: 6px; overflow: hidden; }
+.cal-tab {
+  all: unset; cursor: pointer; padding: 7px 14px; font: inherit; font-size: 12px;
+  color: var(--control-text); background: var(--paper);
+}
+.cal-tab + .cal-tab { border-left: 1px solid var(--ink); }
+.cal-tab[aria-selected="true"] { background: var(--ink); color: var(--menu-text); }
+.cal-tab:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+.cal-move { display: flex; align-items: center; gap: 6px; }
+.cal-step {
+  all: unset; cursor: pointer; display: grid; place-items: center; width: 30px; height: 30px;
+  border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--control-text);
+}
+.cal-step:hover { background: var(--paper-deep); }
+.cal-step:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.cal-step .pixel-icon { width: 15px; height: 15px; }
+.cal-bar .btn { padding: 7px 14px; }
+.cal-period {
+  flex: 1; min-width: 160px; font-family: 'Dosis', sans-serif; font-size: 21px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--heading);
+}
+.cal-check { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--control-text); }
+
+.cal-main { min-height: 0; padding: 0; gap: 0; }
+.cal-main > section { flex: 1; min-height: 0; }
+
+/* ---- month view ---- */
+.cal-month { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 316px; }
+.cal-sheet { min-width: 0; display: grid; grid-template-rows: auto 1fr; min-height: 0; padding: 12px 0 14px 16px; }
+.cal-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding-bottom: 6px; }
+.cal-weekdays span {
+  font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--leaf-deep); text-align: center;
+}
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(var(--cal-rows, 6), minmax(72px, 1fr));
+  gap: 4px; min-height: 0;
+}
+.cal-day {
+  all: unset; box-sizing: border-box; cursor: pointer; min-width: 0; min-height: 0; overflow: hidden;
+  display: grid; grid-template-rows: auto 1fr; gap: 3px; padding: 5px;
+  border: 1px solid var(--paper-line); border-radius: 6px; background: var(--paper-deep);
+  font: inherit; text-align: left; color: var(--control-text);
+}
+.cal-day:hover { border-color: var(--ink); }
+.cal-day:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.cal-day.outside { background: var(--paper); color: var(--disabled-text); }
+.cal-day.selected { border: 2px solid var(--ink); padding: 4px; }
+.cal-day .num { justify-self: start; font-size: 11.5px; font-weight: 600; line-height: 1.4; }
+.cal-day.today .num {
+  min-width: 19px; padding: 0 4px; border-radius: 4px; text-align: center;
+  background: var(--leaf-deep); color: var(--button-text);
+}
+.cal-marks { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow: hidden; }
+.cal-chip {
+  all: unset; box-sizing: border-box; cursor: pointer; display: block; width: 100%;
+  padding: 2px 5px; border-radius: 4px; border-left: 3px solid var(--leaf-deep);
+  background: var(--paper); color: var(--ink-soft);
+  font: inherit; font-size: 10.5px; line-height: 1.5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cal-chip:hover { background: var(--ink); color: var(--menu-text); }
+.cal-chip:focus-visible { outline: 2px solid var(--leaf); outline-offset: -1px; }
+.cal-chip .at { color: var(--sage); }
+.cal-chip:hover .at { color: var(--menu-dim); }
+/* mirrored from Luma rather than kept in events.csv */
+.cal-chip.from-luma { border-left-style: dashed; border-left-color: var(--sage); }
+.cal-more { font-size: 10px; color: var(--sage); padding-left: 4px; }
+
+.cal-side {
+  min-width: 0; min-height: 0; display: grid; grid-template-rows: auto 1fr;
+  border-left: 1px solid var(--paper-line);
+}
+.cal-side-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; }
+.cal-side-head h2 { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--heading); }
+.cal-side-body { min-height: 0; overflow: auto; padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+/* ---- upcoming view ---- */
+.cal-list { min-height: 0; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.cal-section {
+  font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--leaf-deep); margin-top: 6px;
+}
+.cal-section:first-child { margin-top: 0; }
+
+/* ---- one event, shared by the sidebar and the list ----
+   Three columns: an optional date badge, the body, and the edit button. The
+   body is its own flex column so the card lays out the same either way. */
+.cal-event {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 11px 13px; border: 1px solid var(--ink); border-radius: 7px; background: var(--paper-deep);
+}
+.cal-event.past { border-color: var(--paper-line); color: var(--sage); }
+.cal-event .badge {
+  flex: none; display: grid; place-items: center; gap: 1px;
+  min-width: 46px; padding: 5px 6px; border-radius: 6px;
+  background: var(--ink); color: var(--button-text);
+}
+.cal-event.past .badge { background: var(--sage); }
+.cal-event .badge .d { font-family: 'Dosis', sans-serif; font-size: 19px; font-weight: 700; line-height: 1; }
+.cal-event .badge .m { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+.cal-event.from-luma { border-style: dashed; }
+.cal-event .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cal-event h3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; font-weight: 600; color: var(--heading); }
+.cal-event h3 .tag {
+  padding: 1px 6px; border: 1px solid var(--sage); border-radius: 4px;
+  color: var(--sage); font-size: 9.5px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; text-decoration: none;
+}
+.cal-event h3 a.tag:hover { border-color: var(--leaf-deep); color: var(--leaf-deep); }
+.cal-event .when { font-size: 11px; color: var(--sage); }
+.cal-event .where { display: flex; align-items: center; gap: 6px; font-size: 11.5px; }
+.cal-event .where .pixel-icon { width: 13px; height: 13px; color: var(--leaf-deep); }
+.cal-event .where a { color: var(--leaf-deep); }
+.cal-event .notes { margin-top: 3px; padding-top: 8px; border-top: 1px solid var(--paper-line); }
+.cal-event .cal-edit {
+  all: unset; cursor: pointer; flex: none; display: grid; place-items: center;
+  width: 26px; height: 26px; border: 1px solid var(--ink); border-radius: 5px; color: var(--control-text);
+}
+.cal-event .cal-edit:hover { background: var(--ink); color: var(--menu-text); }
+.cal-event .cal-edit:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.cal-event .cal-edit .pixel-icon { width: 14px; height: 14px; }
+
+/* ---- rendered markdown notes ---- */
+.md { font-size: 11.5px; line-height: 1.75; color: var(--ink-soft); }
+.md > * + * { margin-top: 8px; }
+.md h3, .md h4, .md h5, .md h6 { color: var(--heading); font-size: 12px; font-weight: 600; }
+.md a { color: var(--leaf-deep); }
+.md strong { color: var(--strong-text); font-weight: 600; }
+.md ul, .md ol { padding-left: 20px; }
+.md li + li { margin-top: 3px; }
+.md code { padding: 0 3px; border-radius: 3px; background: var(--paper); font-size: 11px; }
+.md pre { padding: 8px 10px; border-radius: 5px; background: var(--paper); overflow-x: auto; }
+.md pre code { padding: 0; background: none; }
+.md blockquote { padding-left: 10px; border-left: 3px solid var(--paper-line); color: var(--sage); }
+.md hr { border: 0; border-top: 1px solid var(--paper-line); }
+.md img { display: block; max-width: 100%; height: auto; border-radius: 5px; }
+
+.cal-empty { padding: 18px; border: 1px dashed var(--paper-line); border-radius: 7px; color: var(--sage); font-size: 11.5px; line-height: 1.8; }
+.cal-status {
+  display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
+  padding: 6px 16px; border-top: 1px solid var(--paper-line); font-size: 11px; color: var(--sage);
+}
+.cal-status .dirty { color: var(--leaf-deep); font-weight: 600; }
+.cal-status a { color: var(--leaf-deep); }
+.cal-status > span:last-child { flex: none; white-space: nowrap; }
+
+/* ---- modals ---- */
+.modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: color-mix(in srgb, var(--ink) 38%, transparent); }
+.modal.open { display: flex; }
+.modal-box {
+  width: min(520px, 92vw); max-height: 88vh; display: flex; flex-direction: column;
+  border: 2px solid var(--ink); border-radius: 9px; background: var(--paper);
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 35%, transparent);
+}
+.modal-box header {
+  display: flex; justify-content: space-between; gap: 12px; padding: 9px 13px;
+  border-radius: 6px 6px 0 0; background: var(--ink); color: var(--menu-text);
+}
+.modal-box header button { all: unset; cursor: pointer; padding: 0 3px; }
+.cal-form { overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 11px; }
+.cal-form label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--control-text); }
+.cal-form .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.cal-form input, .cal-form textarea {
+  font: inherit; font-size: 12.5px; width: 100%; padding: 6px 10px;
+  color: var(--control-text); background: var(--paper-deep);
+  border: 1px solid var(--ink); border-radius: 6px;
+}
+.cal-form textarea { min-height: 116px; resize: vertical; line-height: 1.6; }
+.cal-form input:focus-visible, .cal-form textarea:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.cal-form .hint { font-size: 10.5px; font-weight: 400; color: var(--sage); text-transform: none; letter-spacing: 0; }
+.cal-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0 14px 14px; }
+.cal-actions .spacer { flex: 1; }
+.cal-actions .btn { padding: 8px 16px; }
+.cal-actions .danger { border-color: #a04a3a; color: #a04a3a; }
+.cal-msg { padding: 0 14px 12px; font-size: 11.5px; color: var(--sage); }
+
+@media (max-width: 860px) {
+  .cal-month { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; overflow: auto; }
+  .cal-sheet { padding: 12px 16px; }
+  .cal-grid { grid-template-rows: repeat(var(--cal-rows, 6), minmax(62px, auto)); }
+  .cal-side { border-left: 0; border-top: 1px solid var(--paper-line); }
+}
+</style>
+</head>
+<body>
+<div class="app cal-app">
+  <nav class="rm-bar" aria-label="Calendar menu">
+    <div class="rm"><button type="button">File</button><div class="rm-dd">
+      <button type="button" data-cmd="reload"><span class="pixel-icon" data-icon="reload"></span>Reload from website</button>
+      <button type="button" data-cmd="open"><span class="pixel-icon" data-icon="open"></span>Open CSV file…</button>
+      <button type="button" data-cmd="save"><span class="pixel-icon" data-icon="save"></span>Save CSV file…</button>
+      <div class="sep"></div>
+      <button type="button" data-cmd="commit"><span class="pixel-icon" data-icon="git-commit"></span>Commit to website…</button>
+    </div></div>
+    <div class="rm"><button type="button">View</button><div class="rm-dd">
+      <button type="button" data-cmd="month"><span class="pixel-icon" data-icon="grid-3x3"></span>Month</button>
+      <button type="button" data-cmd="upcoming"><span class="pixel-icon" data-icon="list-box"></span>Upcoming events</button>
+      <div class="sep"></div>
+      <button type="button" data-cmd="today"><span class="pixel-icon" data-icon="calendar"></span>Go to today</button>
+    </div></div>
+    <div class="rm"><button type="button">Event</button><div class="rm-dd">
+      <button type="button" data-cmd="new"><span class="pixel-icon" data-icon="plus-box"></span>New event…</button>
+    </div></div>
+  </nav>
+
+  <header class="cal-bar">
+    <div class="cal-tabs" role="tablist" aria-label="Calendar view">
+      <button type="button" class="cal-tab" role="tab" data-view="month" aria-selected="true">Month</button>
+      <button type="button" class="cal-tab" role="tab" data-view="upcoming" aria-selected="false">Upcoming</button>
+    </div>
+    <div class="cal-move" id="monthNav">
+      <button type="button" class="cal-step" data-step="-1" aria-label="Previous month"><span class="pixel-icon" data-icon="arrow-left"></span></button>
+      <button type="button" class="cal-step" data-step="1" aria-label="Next month"><span class="pixel-icon" data-icon="arrow-right"></span></button>
+    </div>
+    <h1 class="cal-period" id="periodLabel">Calendar</h1>
+    <label class="cal-check" id="pastToggle" hidden><input type="checkbox" id="includePast"> Show past events</label>
+    <button type="button" class="btn" id="todayButton">Today</button>
+    <button type="button" class="btn primary" id="newButton">New event</button>
+  </header>
+
+  <main class="app-main cal-main">
+    <section class="cal-month" id="monthView">
+      <div class="cal-sheet">
+        <div class="cal-weekdays" aria-hidden="true">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+        <div class="cal-grid" id="grid"></div>
+      </div>
+      <aside class="cal-side">
+        <div class="cal-side-head">
+          <h2 id="selectedLabel">—</h2>
+          <button type="button" class="cal-step" id="addOnDay" aria-label="New event on this day"><span class="pixel-icon" data-icon="plus-box"></span></button>
+        </div>
+        <div class="cal-side-body" id="dayEvents"></div>
+      </aside>
+    </section>
+    <section class="cal-list" id="upcomingView" hidden></section>
+  </main>
+
+  <footer class="cal-status">
+    <span id="status">Loading events…</span>
+    <span id="counts"></span>
+  </footer>
+</div>
+
+<input id="picker" type="file" accept=".csv,text/csv" hidden>
+
+<div class="modal" id="editModal" data-keep-open>
+  <div class="modal-box">
+    <header><span id="editTitle">New event</span><button type="button" data-close="editModal" aria-label="Close">&#10005;</button></header>
+    <div class="cal-form">
+      <label>Title<input type="text" id="fTitle" spellcheck="false"></label>
+      <div class="pair">
+        <label>Date<input type="date" id="fDate"></label>
+        <label>Start time <span class="hint">optional</span><input type="time" id="fTime"></label>
+      </div>
+      <div class="pair">
+        <label>End date <span class="hint">optional, for multi-day</span><input type="date" id="fEndDate"></label>
+        <label>End time <span class="hint">optional</span><input type="time" id="fEndTime"></label>
+      </div>
+      <label>Location<input type="text" id="fLocation" placeholder="Venue, town"></label>
+      <label>Map link <span class="hint">optional — otherwise a Google Maps search on the location</span><input type="text" id="fMap" spellcheck="false" placeholder="https://maps.app.goo.gl/…"></label>
+      <label>Notes <span class="hint">markdown</span><textarea id="fNotes" spellcheck="false"></textarea></label>
+    </div>
+    <div class="cal-actions">
+      <button type="button" class="btn primary" id="editSave">Save event</button>
+      <button type="button" class="btn" data-close="editModal">Cancel</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn danger" id="editDelete">Delete</button>
+    </div>
+    <p class="cal-msg" id="editMsg"></p>
+  </div>
+</div>
+
+<div class="modal" id="commitModal" data-keep-open>
+  <div class="modal-box">
+    <header><span>Commit events to website</span><button type="button" data-close="commitModal" aria-label="Close">&#10005;</button></header>
+    <div class="cal-form">
+      <label>Repo path<input type="text" id="commitPath" readonly></label>
+      <label>Commit message<input type="text" id="commitMessage" spellcheck="false"></label>
+      <label>Fine-grained access token <span class="hint">Contents read/write for this repo only; kept in memory until this window closes.</span><input type="password" id="commitToken" autocomplete="off"></label>
+    </div>
+    <div class="cal-actions">
+      <button type="button" class="btn primary" id="commitGo">Commit</button>
+      <button type="button" class="btn" data-close="commitModal">Cancel</button>
+    </div>
+    <p class="cal-msg" id="commitStatus"></p>
+  </div>
+</div>
+
+<script src="../../assets/js/app-state.js"></script>
+<script>
+(() => {
+/* ClackOS Calendar — the website's own events live in one CSV under
+ * content/applications/calendar/events.csv, edited here and published straight
+ * to GitHub with a fine-grained token, exactly like the Markdown and Theme
+ * editors. Nothing is stored server-side; the CSV *is* the database.
+ *
+ * Events hosted on Luma are shown alongside them, read from luma.json in the
+ * same folder. That file is a mirror, regenerated by
+ * scripts/fetch_luma_events.py (Luma sends no CORS headers, so the fetch
+ * cannot happen in the browser), which is why Luma events are read-only here
+ * and never written into events.csv. */
+const byId = id => document.getElementById(id);
+const appBase = new URL('.', location.href);          /* content/applications/ */
+const CSV_PATH = 'content/applications/calendar/events.csv';
+const LUMA_PATH = 'calendar/luma.json';               /* relative to appBase */
+const COLUMNS = ['title', 'date', 'end', 'location', 'map', 'notes'];
+
+const grid = byId('grid');
+const monthView = byId('monthView');
+const upcomingView = byId('upcomingView');
+const periodLabel = byId('periodLabel');
+const selectedLabel = byId('selectedLabel');
+const dayEvents = byId('dayEvents');
+const statusEl = byId('status');
+const countsEl = byId('counts');
+const editModal = byId('editModal');
+const commitModal = byId('commitModal');
+const includePast = byId('includePast');
+const picker = byId('picker');
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
+const SHORT_MONTHS = MONTHS.map(name => name.slice(0, 3));
+const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+let events = [];                         /* both sources, merged for display */
+let lumaEvents = [];                     /* the mirror, kept so a reload of one source keeps the other */
+let lumaSource = '';                     /* the profile the mirror came from */
+let eventSeq = 0;
+let view = 'month';
+let cursor = new Date();                 /* any day inside the month on show */
+let selectedIso = null;
+let dirty = false;
+let editing = null;                      /* the event being edited, or null */
+let deleteArmed = false;
+let siteConfig = null;
+let ghToken = '';                        /* in memory only, never persisted */
+
+/* ---------------- dates ----------------
+ * Everything is a local YYYY-MM-DD string, so comparing days is a string
+ * compare and no timezone can shift an event onto the wrong date. */
+const pad = n => String(n).padStart(2, '0');
+const isoOf = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+const dateOf = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+const todayIso = () => isoOf(new Date());
+const shiftIso = (iso, days) => {
+  const date = dateOf(iso);
+  date.setDate(date.getDate() + days);
+  return isoOf(date);
+};
+
+const STAMP_RE = /^(\d{4})-(\d{2})-(\d{2})(?:[T ]+(\d{1,2}):(\d{2}))?$/;
+const TIME_RE = /^(\d{1,2}):(\d{2})$/;
+
+/* "2026-08-14", "2026-08-14 19:30" and "2026-08-14T19:30" all parse; anything
+ * else (including 31 February) does not. */
+function parseStamp(value) {
+  const match = STAMP_RE.exec(String(value ?? '').trim());
+  if (!match) return null;
+  const [, year, month, day, hour, minute] = match;
+  const date = new Date(+year, +month - 1, +day);
+  if (date.getMonth() !== +month - 1 || date.getDate() !== +day) return null;
+  if (hour !== undefined && +hour > 23) return null;
+  return { iso: `${year}-${month}-${day}`, time: hour === undefined ? '' : `${pad(+hour)}:${minute}` };
+}
+
+function parseTime(value) {
+  const match = TIME_RE.exec(String(value ?? '').trim());
+  if (!match || +match[1] > 23) return '';
+  return `${pad(+match[1])}:${match[2]}`;
+}
+
+const startStamp = event => event.date + (event.time ? ' ' + event.time : '');
+const endStamp = event => {
+  if (event.endDate === event.date && !event.endTime) return '';
+  return event.endDate + (event.endTime ? ' ' + event.endTime : '');
+};
+const sortKey = event => event.date + 'T' + (event.time || '00:00') + ' ' + event.title.toLowerCase();
+const byWhen = (a, b) => (sortKey(a) < sortKey(b) ? -1 : sortKey(a) > sortKey(b) ? 1 : 0);
+
+function formatDay(iso, withYear = true) {
+  const date = dateOf(iso);
+  return `${SHORT_DAYS[date.getDay()]} ${date.getDate()} ${SHORT_MONTHS[date.getMonth()]}`
+    + (withYear ? ` ${date.getFullYear()}` : '');
+}
+
+/* "Fri 14 Aug 2026, 19:30", "Fri 14 Aug 2026, 19:30 – 22:00",
+ * "Fri 14 Aug – Sun 16 Aug 2026" */
+function describeWhen(event) {
+  const sameYear = event.date.slice(0, 4) === event.endDate.slice(0, 4);
+  if (event.endDate === event.date) {
+    const times = [event.time, event.endTime].filter(Boolean).join(' – ');
+    return formatDay(event.date) + (times ? `, ${times}` : '');
+  }
+  const from = formatDay(event.date, !sameYear) + (event.time ? ` ${event.time}` : '');
+  const to = formatDay(event.endDate) + (event.endTime ? ` ${event.endTime}` : '');
+  return `${from} – ${to}`;
+}
+
+/* ---------------- CSV ----------------
+ * RFC 4180: quoted fields may hold commas, quotes ("") and newlines, which is
+ * what lets a whole markdown note live in one cell. */
+function parseCsv(text) {
+  const source = String(text).replace(/^\uFEFF/, '');
+  const rows = [];
+  let row = [];
+  let field = '';
+  let quoted = false;
+  let started = false;                   /* this row has at least one cell */
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i];
+    if (quoted) {
+      if (char !== '"') { field += char; continue; }
+      if (source[i + 1] === '"') { field += '"'; i++; continue; }
+      quoted = false;
+      continue;
+    }
+    if (char === '"' && field === '') { quoted = true; started = true; continue; }
+    if (char === ',') { row.push(field); field = ''; started = true; continue; }
+    if (char === '\r') continue;
+    if (char === '\n') {
+      if (started || field) { row.push(field); rows.push(row); }
+      row = []; field = ''; started = false;
+      continue;
+    }
+    field += char;
+    started = true;
+  }
+  if (started || field) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function csvCell(value) {
+  const text = String(value ?? '').replace(/\r\n?/g, '\n');
+  return /[",\n]/.test(text) || text !== text.trim() ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+/* Only the website's own events are ever written back: the Luma ones belong to
+ * their mirror and would come straight back on the next fetch. */
+function toCsv(list) {
+  const rows = [COLUMNS.join(',')];
+  for (const event of list.filter(isOwn).sort(byWhen))
+    rows.push([event.title, startStamp(event), endStamp(event), event.location, event.map, event.notes]
+      .map(csvCell).join(','));
+  return rows.join('\n') + '\n';
+}
+
+/* Columns are matched by header name, so the file can carry them in any order
+ * and gain extra ones without upsetting the app. */
+function eventsFromCsv(text) {
+  const rows = parseCsv(text).filter(row => row.some(cell => cell.trim()));
+  if (!rows.length) return { list: [], skipped: 0 };
+  const header = rows[0].map(cell => cell.trim().toLowerCase());
+  const index = {};
+  for (const name of COLUMNS) index[name] = header.indexOf(name);
+  if (index.date === -1 || index.title === -1)
+    throw new Error('The CSV needs at least a "title" and a "date" column.');
+  const list = [];
+  let skipped = 0;
+  for (const row of rows.slice(1)) {
+    const cell = name => (index[name] === -1 ? '' : (row[index[name]] ?? '')).trim();
+    const start = parseStamp(cell('date'));
+    if (!start) { skipped++; continue; }
+    const event = fromRecord({
+      title: cell('title'), date: cell('date'), end: cell('end'),
+      location: cell('location'), map: cell('map'),
+      notes: (index.notes === -1 ? '' : (row[index.notes] ?? '')).replace(/\r\n?/g, '\n').trim()
+    }, 'csv');
+    if (event) list.push(event); else skipped++;
+  }
+  return { list, skipped };
+}
+
+/* The Luma mirror written by scripts/fetch_luma_events.py. Its stamps are
+ * already local wall-clock in the event's own timezone, the same shape the CSV
+ * uses, so both sources go through fromRecord. */
+function eventsFromLuma(payload) {
+  const list = [];
+  let skipped = 0;
+  for (const record of Array.isArray(payload?.events) ? payload.events : []) {
+    const event = fromRecord(record, 'luma');
+    if (event) list.push(event); else skipped++;
+  }
+  return { list, skipped, source: safeUrl(payload?.source) };
+}
+
+/* One record — a CSV row or a mirror entry — as the event shape the app uses.
+ * Null when there is no usable date, which is the one thing an event needs. */
+function fromRecord(record, source) {
+  const start = parseStamp(record.date);
+  if (!start) return null;
+  const rawEnd = String(record.end ?? '').trim();
+  const end = parseStamp(rawEnd) || (parseTime(rawEnd) ? { iso: start.iso, time: parseTime(rawEnd) } : null);
+  return {
+    id: ++eventSeq,
+    source,
+    title: String(record.title ?? '').trim() || 'Untitled event',
+    date: start.iso,
+    time: start.time,
+    endDate: end && end.iso >= start.iso ? end.iso : start.iso,
+    endTime: end ? end.time : '',
+    location: String(record.location ?? '').trim(),
+    map: String(record.map ?? '').trim(),
+    notes: String(record.notes ?? '').trim(),
+    url: safeUrl(record.url)
+  };
+}
+
+const isOwn = event => event.source !== 'luma';
+
+/* The CSV wins a clash: a hand-written entry for the same day and title is
+ * there to say more than the mirror does. */
+function mergeSources(own, mirrored) {
+  const claimed = new Set(own.map(event => `${event.date} ${event.title.toLowerCase()}`));
+  return [...own, ...mirrored.filter(event => !claimed.has(`${event.date} ${event.title.toLowerCase()}`))];
+}
+
+/* ---------------- markdown ----------------
+ * A small renderer so an event note can be written like the rest of the site.
+ * Everything is escaped first and only the constructs below are re-introduced,
+ * so a note can never inject markup into the page. */
+const esc = text => String(text).replace(/[&<>"']/g, char =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+const unesc = text => String(text)
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+  .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+
+/* http(s) and mailto links only, plus site-relative paths for images. Anything
+ * with another scheme — javascript:, data: — is dropped. */
+function safeUrl(value, allowRelative = false) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  if (/^(?:https?|mailto):/i.test(raw)) {
+    try { return new URL(raw).href; } catch { return ''; }
+  }
+  if (allowRelative && !/^[a-z][a-z0-9+.-]*:/i.test(raw) && !raw.startsWith('//')) return raw;
+  return '';
+}
+
+const BLOCK_START = /^\s*(?:```|~~~|#{1,6}\s|>|[-*+]\s|\d+[.)]\s)/;
+const RULE = /^\s*(?:[-*_]\s*){3,}$/;
+const BULLET = /^\s*[-*+]\s+/;
+const NUMBERED = /^\s*\d+[.)]\s+/;
+
+function inlineMd(text) {
+  const codes = [];
+  let out = esc(text).replace(/`([^`]+)`/g, (whole, code) => `\u0001${codes.push(code) - 1}\u0001`);
+  out = out.replace(/!\[([^\]]*)\]\(([^()\s]+)\)/g, (whole, alt, url) => {
+    const safe = safeUrl(unesc(url), true);
+    return safe ? `<img src="${esc(safe)}" alt="${alt}" loading="lazy">` : whole;
+  });
+  out = out.replace(/\[([^\]]+)\]\(([^()\s]+)\)/g, (whole, label, url) => {
+    const safe = safeUrl(unesc(url), true);
+    return safe ? `<a href="${esc(safe)}" target="_blank" rel="noopener noreferrer">${label}</a>` : whole;
+  });
+  out = out
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*\w])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+    .replace(/(^|[^_\w])_([^_\n]+)_/g, '$1<em>$2</em>')
+    .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+  return out.replace(/\u0001(\d+)\u0001/g, (whole, slot) => `<code>${codes[+slot]}</code>`);
+}
+
+/* A single newline inside a paragraph is a line break: event notes are written
+ * as short lines, not reflowed prose. */
+const paragraph = lines => `<p>${inlineMd(lines.join('\n')).replace(/\n/g, '<br>')}</p>`;
+
+function markdownToHtml(source) {
+  const lines = String(source ?? '').replace(/\r\n?/g, '\n').replace(/[\u0000\u0001]/g, '').split('\n');
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) { i++; continue; }
+
+    const fence = /^\s*(```|~~~)/.exec(line);
+    if (fence) {
+      const closing = new RegExp('^\\s*' + fence[1]);
+      const body = [];
+      i++;
+      while (i < lines.length && !closing.test(lines[i])) body.push(lines[i++]);
+      i++;
+      out.push(`<pre><code>${esc(body.join('\n'))}</code></pre>`);
+      continue;
+    }
+    if (RULE.test(line)) { out.push('<hr>'); i++; continue; }
+
+    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (heading) {
+      const level = Math.min(6, heading[1].length + 2);   /* notes sit inside a card */
+      out.push(`<h${level}>${inlineMd(heading[2].trim())}</h${level}>`);
+      i++;
+      continue;
+    }
+    if (/^\s*>/.test(line)) {
+      const body = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) body.push(lines[i++].replace(/^\s*>\s?/, ''));
+      out.push(`<blockquote>${markdownToHtml(body.join('\n'))}</blockquote>`);
+      continue;
+    }
+    if (BULLET.test(line) || NUMBERED.test(line)) {
+      const ordered = !BULLET.test(line);
+      const marker = ordered ? NUMBERED : BULLET;
+      const items = [];
+      while (i < lines.length && marker.test(lines[i])) {
+        const item = [lines[i++].replace(marker, '')];
+        /* an indented continuation line belongs to the item above */
+        while (i < lines.length && lines[i].trim() && /^\s{2,}\S/.test(lines[i])
+          && !BULLET.test(lines[i]) && !NUMBERED.test(lines[i])) item.push(lines[i++].trim());
+        items.push(`<li>${inlineMd(item.join('\n')).replace(/\n/g, '<br>')}</li>`);
+      }
+      out.push(ordered ? `<ol>${items.join('')}</ol>` : `<ul>${items.join('')}</ul>`);
+      continue;
+    }
+
+    const body = [];
+    while (i < lines.length && lines[i].trim() && !BLOCK_START.test(lines[i]) && !RULE.test(lines[i]))
+      body.push(lines[i++]);
+    out.push(paragraph(body));
+  }
+  return out.join('\n');
+}
+
+/* ---------------- events → DOM ---------------- */
+function mapLink(event) {
+  const explicit = safeUrl(event.map);
+  if (explicit) return explicit;
+  if (!event.location.trim()) return '';
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(event.location.trim());
+}
+
+/* A Luma event is a mirror of somebody else's record, so it gets a tag linking
+ * back to its page instead of the pencil that edits the CSV. */
+function eventCard(event, { badge = false } = {}) {
+  const card = document.createElement('article');
+  card.className = 'cal-event' + (isOwn(event) ? '' : ' from-luma')
+    + (event.endDate < todayIso() ? ' past' : '');
+  const link = mapLink(event);
+  const where = event.location.trim() || (link ? 'Map' : '');
+  card.innerHTML = `
+    ${badge ? `<div class="badge"><span class="d">${dateOf(event.date).getDate()}</span>
+      <span class="m">${SHORT_MONTHS[dateOf(event.date).getMonth()]}</span></div>` : ''}
+    <div class="body">
+      <h3>${esc(event.title)}${isOwn(event) ? '' : (event.url
+        ? `<a class="tag" href="${esc(event.url)}" target="_blank" rel="noopener noreferrer">Luma</a>`
+        : '<span class="tag">Luma</span>')}</h3>
+      <p class="when">${esc(describeWhen(event))}</p>
+      ${where ? `<p class="where"><span class="pixel-icon" data-icon="map-pin"></span>${link
+        ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(where)}</a>`
+        : esc(where)}</p>` : ''}
+      ${event.notes ? `<div class="notes md">${markdownToHtml(event.notes)}</div>` : ''}
+    </div>
+    ${isOwn(event) ? '<button type="button" class="cal-edit" aria-label="Edit event"><span class="pixel-icon" data-icon="pencil"></span></button>' : ''}`;
+  card.querySelector('.cal-edit')?.addEventListener('click', () => openEditor(event));
+  return card;
+}
+
+function emptyNote(text) {
+  const note = document.createElement('p');
+  note.className = 'cal-empty';
+  note.textContent = text;
+  return note;
+}
+
+/* Every day an event covers, so a multi-day event shows on each of its days. */
+function eventsByDay() {
+  const days = new Map();
+  for (const event of events) {
+    let iso = event.date;
+    for (let step = 0; iso <= event.endDate && step < 400; step++, iso = shiftIso(iso, 1)) {
+      if (!days.has(iso)) days.set(iso, []);
+      days.get(iso).push(event);
+    }
+  }
+  for (const list of days.values()) list.sort(byWhen);
+  return days;
+}
+
+function renderMonth() {
+  const days = eventsByDay();
+  const today = todayIso();
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  periodLabel.textContent = `${MONTHS[month]} ${year}`;
+
+  const first = new Date(year, month, 1);
+  const lead = (first.getDay() + 6) % 7;                 /* weeks start Monday */
+  const start = new Date(year, month, 1 - lead);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const rows = Math.ceil((lead + daysInMonth) / 7);
+  grid.style.setProperty('--cal-rows', rows);
+  grid.textContent = '';
+
+  for (let offset = 0; offset < rows * 7; offset++) {
+    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + offset);
+    const iso = isoOf(date);
+    const onDay = days.get(iso) || [];
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'cal-day';
+    if (date.getMonth() !== month) cell.classList.add('outside');
+    if (iso === today) cell.classList.add('today');
+    if (iso === selectedIso) cell.classList.add('selected');
+    cell.setAttribute('aria-label', `${formatDay(iso)}, ${onDay.length} event${onDay.length === 1 ? '' : 's'}`);
+    cell.innerHTML = `<span class="num">${date.getDate()}</span><span class="cal-marks"></span>`;
+    const marks = cell.querySelector('.cal-marks');
+    for (const event of onDay.slice(0, 3)) {
+      const chip = document.createElement('span');
+      chip.className = 'cal-chip' + (isOwn(event) ? '' : ' from-luma');
+      chip.innerHTML = (event.time && event.date === iso ? `<span class="at">${event.time}</span> ` : '')
+        + esc(event.title);
+      chip.title = `${event.title} — ${describeWhen(event)}${isOwn(event) ? '' : ' (from Luma)'}`;
+      marks.appendChild(chip);
+    }
+    if (onDay.length > 3) {
+      const more = document.createElement('span');
+      more.className = 'cal-more';
+      more.textContent = `+${onDay.length - 3} more`;
+      marks.appendChild(more);
+    }
+    cell.addEventListener('click', () => selectDay(iso));
+    grid.appendChild(cell);
+  }
+  renderSelectedDay(days);
+}
+
+function renderSelectedDay(days = eventsByDay()) {
+  if (!selectedIso) selectedIso = todayIso();
+  selectedLabel.textContent = formatDay(selectedIso);
+  const onDay = days.get(selectedIso) || [];
+  dayEvents.textContent = '';
+  if (!onDay.length) dayEvents.appendChild(emptyNote('Nothing on this day. Use + to add an event.'));
+  else for (const event of onDay) dayEvents.appendChild(eventCard(event));
+}
+
+function renderUpcoming() {
+  const today = todayIso();
+  const sorted = [...events].sort(byWhen);
+  const upcoming = sorted.filter(event => event.endDate >= today);
+  const past = sorted.filter(event => event.endDate < today).reverse();
+  periodLabel.textContent = 'Upcoming events';
+  upcomingView.textContent = '';
+
+  if (!upcoming.length) {
+    upcomingView.appendChild(emptyNote(events.length
+      ? 'No events left on the calendar. Add one, or show past events below.'
+      : 'No events yet. Use New event to add the first one, then commit the calendar to the website.'));
+  } else {
+    for (const event of upcoming) upcomingView.appendChild(eventCard(event, { badge: true }));
+  }
+  if (includePast.checked && past.length) {
+    const heading = document.createElement('h2');
+    heading.className = 'cal-section';
+    heading.textContent = 'Past';
+    upcomingView.appendChild(heading);
+    for (const event of past) upcomingView.appendChild(eventCard(event, { badge: true }));
+  }
+}
+
+function render() {
+  const isMonth = view === 'month';
+  monthView.hidden = !isMonth;
+  upcomingView.hidden = isMonth;
+  byId('monthNav').hidden = !isMonth;
+  byId('pastToggle').hidden = isMonth;
+  for (const tab of document.querySelectorAll('.cal-tab'))
+    tab.setAttribute('aria-selected', String(tab.dataset.view === view));
+  if (isMonth) renderMonth(); else renderUpcoming();
+
+  const today = todayIso();
+  const upcoming = events.filter(event => event.endDate >= today).length;
+  const mirrored = events.filter(event => !isOwn(event)).length;
+  const fromLuma = lumaSource
+    ? ` from <a href="${esc(lumaSource)}" target="_blank" rel="noopener noreferrer">Luma</a>`
+    : ' from Luma';
+  countsEl.innerHTML = `${events.length} event${events.length === 1 ? '' : 's'} · ${upcoming} upcoming`
+    + (mirrored ? ` · ${mirrored}${fromLuma}` : '');
+  reportState();
+}
+
+function selectDay(iso) {
+  selectedIso = iso;
+  const date = dateOf(iso);
+  if (date.getMonth() !== cursor.getMonth() || date.getFullYear() !== cursor.getFullYear()) cursor = date;
+  render();
+}
+
+function setView(next) {
+  view = next === 'upcoming' ? 'upcoming' : 'month';
+  render();
+}
+
+function setStatus(text, isDirty = dirty) {
+  dirty = isDirty;
+  statusEl.innerHTML = esc(text) + (dirty ? ' <span class="dirty">— not committed yet</span>' : '');
+}
+
+/* ---------------- loading and saving ---------------- */
+/* The mirror is a bonus, not a dependency: it is missing until the workflow has
+ * run once, and the calendar must work either way. */
+async function loadLuma() {
+  try {
+    const res = await fetch(new URL(`${LUMA_PATH}?_clack=${Date.now()}`, appBase), { cache: 'no-store' });
+    if (res.status === 404) return '';
+    if (!res.ok) throw new Error(`Could not load the Luma mirror (${res.status}).`);
+    const { list, source } = eventsFromLuma(await res.json());
+    lumaEvents = list;
+    lumaSource = source;
+    return list.length ? ` and ${list.length} from Luma` : '';
+  } catch (error) {
+    lumaEvents = [];
+    lumaSource = '';
+    console.warn(error);
+    return ' — the Luma events could not be read';
+  }
+}
+
+async function loadFromWebsite(quiet = false) {
+  const luma = await loadLuma();
+  try {
+    const res = await fetch(new URL(`calendar/events.csv?_clack=${Date.now()}`, appBase), { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Could not load the events CSV (${res.status}).`);
+    const { list, skipped } = eventsFromCsv(await res.text());
+    events = mergeSources(list, lumaEvents);
+    setStatus(`Loaded ${list.length} event${list.length === 1 ? '' : 's'} from ${CSV_PATH}${luma}`
+      + (skipped ? ` — ${skipped} row${skipped === 1 ? '' : 's'} had no usable date` : ''), false);
+  } catch (error) {
+    events = [...lumaEvents];
+    setStatus(error.message, false);
+    if (!quiet) console.warn(error);
+  }
+  render();
+}
+
+function saveCsvFile() {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([toCsv(events)], { type: 'text/csv' }));
+  link.download = 'events.csv';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  setStatus('Saved events.csv locally');
+}
+
+/* A local CSV stands in for the website's own events; the Luma mirror is not
+ * part of that file and stays where it is. */
+async function openCsvFile(file) {
+  try {
+    const { list, skipped } = eventsFromCsv(await file.text());
+    events = mergeSources(list, lumaEvents);
+    setStatus(`Opened ${file.name} — ${list.length} event${list.length === 1 ? '' : 's'}`
+      + (skipped ? `, ${skipped} row${skipped === 1 ? '' : 's'} skipped` : ''), true);
+    render();
+  } catch (error) {
+    setStatus(error.message);
+  }
+}
+
+/* ---------------- the editor ---------------- */
+function openEditor(event) {
+  /* Luma events are a mirror of a record kept elsewhere; editing one here would
+   * be undone by the next fetch, so they carry no pencil and none gets in. */
+  if (event && !isOwn(event)) return;
+  editing = event || null;
+  deleteArmed = false;
+  byId('editTitle').textContent = event ? 'Edit event' : 'New event';
+  byId('fTitle').value = event ? event.title : '';
+  byId('fDate').value = event ? event.date : (selectedIso || todayIso());
+  byId('fTime').value = event ? event.time : '';
+  byId('fEndDate').value = event && event.endDate !== event.date ? event.endDate : '';
+  byId('fEndTime').value = event ? event.endTime : '';
+  byId('fLocation').value = event ? event.location : '';
+  byId('fMap').value = event ? event.map : '';
+  byId('fNotes').value = event ? event.notes : '';
+  byId('editDelete').textContent = 'Delete';
+  byId('editDelete').hidden = !event;
+  byId('editMsg').textContent = '';
+  editModal.classList.add('open');
+  byId('fTitle').focus();
+}
+
+function saveEditor() {
+  const message = byId('editMsg');
+  const title = byId('fTitle').value.trim();
+  const start = parseStamp(byId('fDate').value);
+  if (!title) { message.textContent = 'The event needs a title.'; return; }
+  if (!start) { message.textContent = 'The event needs a date.'; return; }
+  const endValue = byId('fEndDate').value.trim();
+  const end = endValue ? parseStamp(endValue) : null;
+  if (endValue && !end) { message.textContent = 'The end date is not a date.'; return; }
+  if (end && end.iso < start.iso) { message.textContent = 'The end date is before the start date.'; return; }
+  const draft = {
+    title,
+    date: start.iso,
+    time: parseTime(byId('fTime').value),
+    endDate: end ? end.iso : start.iso,
+    endTime: parseTime(byId('fEndTime').value),
+    location: byId('fLocation').value.trim(),
+    map: byId('fMap').value.trim(),
+    notes: byId('fNotes').value.replace(/\r\n?/g, '\n').trim()
+  };
+  if (draft.map && !safeUrl(draft.map)) {
+    message.textContent = 'The map link must be an http(s) address.';
+    return;
+  }
+  if (editing) Object.assign(editing, draft);
+  else events.push({ id: ++eventSeq, source: 'csv', url: '', ...draft });
+  selectedIso = draft.date;
+  cursor = dateOf(draft.date);
+  editModal.classList.remove('open');
+  setStatus(`${editing ? 'Updated' : 'Added'} “${draft.title}”`, true);
+  editing = null;
+  render();
+}
+
+function deleteEvent() {
+  const button = byId('editDelete');
+  if (!deleteArmed) {
+    deleteArmed = true;
+    button.textContent = 'Confirm delete';
+    byId('editMsg').textContent = 'Click again to remove this event from the calendar.';
+    return;
+  }
+  const title = editing.title;
+  events = events.filter(event => event !== editing);
+  editing = null;
+  deleteArmed = false;
+  editModal.classList.remove('open');
+  setStatus(`Deleted “${title}”`, true);
+  render();
+}
+
+/* ---------------- committing to GitHub ---------------- */
+async function getSiteConfig() {
+  if (siteConfig) return siteConfig;
+  const res = await fetch(new URL(`../site.json?_clack=${Date.now()}`, appBase), { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Could not load content/site.json (${res.status}).`);
+  siteConfig = await res.json();
+  return siteConfig;
+}
+
+const b64utf8 = text => {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+};
+
+async function openCommit() {
+  try {
+    const cfg = await getSiteConfig();
+    byId('commitPath').value = CSV_PATH;
+    byId('commitMessage').value = 'Update the events calendar';
+    byId('commitToken').value = '';
+    byId('commitToken').closest('label').hidden = !!ghToken;
+    byId('commitStatus').textContent = `to ${cfg.repo} (${cfg.branch})`;
+    commitModal.classList.add('open');
+    (ghToken ? byId('commitMessage') : byId('commitToken')).focus();
+  } catch (error) {
+    setStatus(error.message);
+  }
+}
+
+async function commitEvents() {
+  const commitStatus = byId('commitStatus');
+  const token = ghToken || byId('commitToken').value.trim();
+  if (!token) { commitStatus.textContent = 'A token is needed.'; return; }
+  let cfg;
+  try { cfg = await getSiteConfig(); } catch (error) { commitStatus.textContent = error.message; return; }
+  const api = `https://api.github.com/repos/${cfg.repo}/contents/${CSV_PATH}`;
+  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+  commitStatus.textContent = 'Committing…';
+  try {
+    /* the current sha, which is also the conflict check */
+    let sha = null;
+    const current = await fetch(`${api}?ref=${encodeURIComponent(cfg.branch)}`, { headers });
+    if (current.status === 200) sha = (await current.json()).sha;
+    else if (current.status === 401) throw new Error('The token was rejected (401).');
+    else if (current.status !== 404) throw new Error(`Could not read the current file (${current.status}).`);
+
+    const res = await fetch(api, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        message: byId('commitMessage').value.trim() || 'Update the events calendar',
+        content: b64utf8(toCsv(events)),
+        branch: cfg.branch,
+        ...(sha ? { sha } : {})
+      })
+    });
+    if (res.status === 409) throw new Error('events.csv changed on GitHub — reload and try again.');
+    if (!res.ok) throw new Error(`GitHub said ${res.status}: ${(await res.json()).message || ''}`);
+    const out = await res.json();
+    ghToken = token;                                   /* kept for this window only */
+    byId('commitToken').value = '';
+    commitModal.classList.remove('open');
+    setStatus(`Committed ${out.commit.sha.slice(0, 7)} — the site rebuilds in about a minute.`, false);
+    render();
+  } catch (error) {
+    commitStatus.textContent = error.message;
+  }
+}
+
+/* ---------------- wiring ---------------- */
+const COMMANDS = {
+  reload: () => loadFromWebsite(),
+  open: () => picker.click(),
+  save: saveCsvFile,
+  commit: openCommit,
+  month: () => setView('month'),
+  upcoming: () => setView('upcoming'),
+  today: () => { cursor = new Date(); selectDay(todayIso()); },
+  new: () => openEditor(null)
+};
+
+const menus = [...document.querySelectorAll('.rm')];
+const closeMenus = () => menus.forEach(menu => menu.classList.remove('open'));
+for (const menu of menus) {
+  menu.querySelector(':scope > button').addEventListener('click', event => {
+    event.stopPropagation();
+    const wasOpen = menu.classList.contains('open');
+    closeMenus();
+    if (!wasOpen) menu.classList.add('open');
+  });
+}
+document.querySelector('.rm-bar').addEventListener('click', event => {
+  const command = event.target.closest('[data-cmd]')?.dataset.cmd;
+  if (!command) return;
+  closeMenus();
+  COMMANDS[command]?.();
+});
+document.addEventListener('click', closeMenus);
+
+for (const tab of document.querySelectorAll('.cal-tab'))
+  tab.addEventListener('click', () => setView(tab.dataset.view));
+for (const step of document.querySelectorAll('.cal-step[data-step]'))
+  step.addEventListener('click', () => {
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + Number(step.dataset.step), 1);
+    render();
+  });
+byId('todayButton').addEventListener('click', COMMANDS.today);
+byId('newButton').addEventListener('click', () => openEditor(null));
+byId('addOnDay').addEventListener('click', () => openEditor(null));
+includePast.addEventListener('change', () => render());
+byId('editSave').addEventListener('click', saveEditor);
+byId('editDelete').addEventListener('click', deleteEvent);
+byId('commitGo').addEventListener('click', commitEvents);
+for (const button of document.querySelectorAll('[data-close]'))
+  button.addEventListener('click', () => byId(button.dataset.close).classList.remove('open'));
+picker.addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (file) openCsvFile(file);
+  event.target.value = '';
+});
+editModal.addEventListener('keydown', event => {
+  if (event.key === 'Enter' && event.target.tagName === 'INPUT') { event.preventDefault(); saveEditor(); }
+});
+commitModal.addEventListener('keydown', event => {
+  if (event.key === 'Enter' && event.target.tagName === 'INPUT') { event.preventDefault(); commitEvents(); }
+});
+/* Both modals hold typed-in work — a half-written event, a token — so they are
+ * marked data-keep-open and close on × or Cancel only: neither Escape nor a
+ * stray backdrop click may throw it away. */
+document.addEventListener('keydown', event => {
+  const open = [...document.querySelectorAll('.modal.open')];
+  if (event.key === 'Escape') {
+    open.filter(modal => !modal.hasAttribute('data-keep-open'))
+      .forEach(modal => modal.classList.remove('open'));
+    closeMenus();
+    return;
+  }
+  if (open.length || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+  if (view !== 'month') return;
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + (event.key === 'ArrowLeft' ? -1 : 1), 1);
+    render();
+  }
+});
+
+/* ---------------- session state ---------------- */
+const params = new URLSearchParams(location.search);
+if (params.get('view') === 'upcoming') view = 'upcoming';
+const wanted = parseStamp(params.get('date') || '');
+if (wanted) { selectedIso = wanted.iso; cursor = dateOf(wanted.iso); }
+
+let reportState = () => {};
+if (window.ClackOSAppState?.connected) {
+  const state = window.ClackOSAppState.connect({
+    save: () => ({ view, month: `${cursor.getFullYear()}-${pad(cursor.getMonth() + 1)}`, selectedIso, includePast: includePast.checked }),
+    restore: saved => {
+      if (!saved) return;
+      if (saved.view) view = saved.view === 'upcoming' ? 'upcoming' : 'month';
+      const month = parseStamp(`${saved.month}-01`);
+      if (month) cursor = dateOf(month.iso);
+      const day = parseStamp(saved.selectedIso || '');
+      if (day) selectedIso = day.iso;
+      includePast.checked = !!saved.includePast;
+      render();
+    }
+  });
+  reportState = () => state.schedule();
+}
+
+selectedIso = selectedIso || todayIso();
+render();
+loadFromWebsite();
+})();
+</script>
+</body>
+</html>

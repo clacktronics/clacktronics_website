@@ -1,0 +1,52 @@
+name: Mirror Luma events
+
+# Luma sends no CORS headers, so the Calendar app cannot fetch the profile from
+# the browser. This does it here instead and commits the result, which the app
+# reads as an ordinary file from its own origin.
+
+on:
+  schedule:
+    # four times a day, enough for a calendar of upcoming events
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+  push:
+    # only on the live branch: a push to a feature branch should not land a bot
+    # commit on it. Use "Run workflow" to refresh from anywhere.
+    branches:
+      - main
+    paths:
+      - 'scripts/fetch_luma_events.py'
+      - '.github/workflows/luma-events.yml'
+
+permissions:
+  contents: write
+
+# A run started by the schedule must not race one started by a push.
+concurrency:
+  group: luma-events
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch the Luma events
+        # The script leaves the file alone when nothing has changed, so an
+        # unchanged calendar makes no commit.
+        run: python3 scripts/fetch_luma_events.py
+
+      - name: Commit the events if they changed
+        run: |
+          if [ -n "$(git status --porcelain content/applications/calendar/luma.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add content/applications/calendar/luma.json
+            git commit -m "Update the Luma events mirror"
+            # the plain-mirror and blog-index workflows may push concurrently
+            git pull --rebase
+            git push
+          else
+            echo "the Luma events are already up to date"
+          fi
