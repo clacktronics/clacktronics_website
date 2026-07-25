@@ -9,13 +9,10 @@
 
 * Open app to video is not working
 * If click outside of "commit to website" in the markdown editor it seems to close the window which is awk
-* Drop down menus don't work in Pure data in Firefox
 
 ### New Features and featurettes
 
-* in 3d model viewer need auto rotate and material selection (transparent) and lighting? background choice. hide/Show grid, export.
-* Add sliders in theme editor for transparency and maybe text sizes, maybe also font choser?
-* Split out some of the settings in theme editor so colours can be different.
+* Add sliders text sizes, maybe also font choser?
 
 ### New Apps
 
@@ -27,5 +24,4 @@
 * Waveacity
 * SSTV encoder and decoder
 * AFSK encoder and decoder
-* Kicad panel designer
 
