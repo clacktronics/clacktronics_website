@@ -149,15 +149,34 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" data-cmd="light-soft" id="light-soft" aria-pressed="false"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Soft box<span class="mi-check"></span></button>
         <button type="button" data-cmd="light-dramatic" id="light-dramatic" aria-pressed="false"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Dramatic<span class="mi-check"></span></button>
         <button type="button" data-cmd="light-flat" id="light-flat" aria-pressed="false"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Flat<span class="mi-check"></span></button>
+        <button type="button" data-cmd="light-unlit" id="light-unlit" aria-pressed="false"><span class="pixel-icon" data-icon="eye-off" aria-hidden="true"></span>No lighting<span class="mi-check"></span></button>
         <div class="sep"></div>
         <div class="mi-row">
           <label for="light-brightness">Brightness</label>
           <input type="range" id="light-brightness" min="40" max="200" step="5" value="100">
         </div>
-        <button type="button" data-cmd="shadows" id="shadows" aria-pressed="true"><span class="pixel-icon" data-icon="eye-off" aria-hidden="true"></span>Shadows<span class="mi-check"></span></button>
+        <button type="button" data-cmd="shadows" id="shadows" aria-pressed="true"><span class="pixel-icon" data-icon="eye" aria-hidden="true"></span>Shadows<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <div class="mi-row">
+          <label for="colour-key">Key light</label>
+          <input type="color" id="colour-key" value="#ffffff">
+        </div>
+        <div class="mi-row">
+          <label for="colour-fill">Fill light</label>
+          <input type="color" id="colour-fill" value="#8fcaa8">
+        </div>
+        <div class="mi-row">
+          <label for="colour-sky">Sky</label>
+          <input type="color" id="colour-sky" value="#f8f2dd">
+        </div>
+        <div class="mi-row">
+          <label for="colour-ground">Ground bounce</label>
+          <input type="color" id="colour-ground" value="#66755a">
+        </div>
+        <button type="button" data-cmd="lighting-reset"><span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span>Match ClackOS theme</button>
       </div>
     </div>
-    <span class="viewer-file-name" id="viewer-file-name">Demo assembly</span>
+    <span class="viewer-file-name" id="viewer-file-name">PJ3410 round nut</span>
     <input id="model-file" type="file" accept=".stl,.step,.stp" aria-label="Open an STL or STEP model" hidden>
   </nav>
 
@@ -170,8 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
   </main>
 
   <footer class="viewer-status">
-    <span><strong id="model-name">Demo assembly</strong></span>
-    <span id="model-stats">9 objects · sample</span>
+    <span><strong id="model-name">PJ3410 round nut</strong></span>
+    <span id="model-stats">STL · sample</span>
     <span class="viewer-message" id="viewer-message">Ready — files stay in this browser.</span>
     <span class="viewer-credit">
       <a href="https://threejs.org/license/" target="_blank" rel="noreferrer">three.js · MIT</a>
@@ -201,21 +220,33 @@ const shadowButton = document.getElementById('shadows');
 const colourInputs = {
   model: document.getElementById('colour-model'),
   grid: document.getElementById('colour-grid'),
-  background: document.getElementById('colour-background')
+  background: document.getElementById('colour-background'),
+  key: document.getElementById('colour-key'),
+  fill: document.getElementById('colour-fill'),
+  sky: document.getElementById('colour-sky'),
+  ground: document.getElementById('colour-ground')
 };
 const brightnessInput = document.getElementById('light-brightness');
+
+const DEFAULT_MODEL_NAME = 'PJ3410 round nut';
 
 const themeColor = (name, fallback) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
 /* Colours follow the ClackOS palette until the user picks their own; an entry
    here overrides the theme variable of the same name until it is reset. */
-const overrides = { model: null, grid: null, background: null };
+const overrides = { model: null, grid: null, background: null, key: null, fill: null, sky: null, ground: null };
 const paletteColour = {
   model: () => overrides.model || themeColor('--leaf', '#4fae7d'),
   grid: () => overrides.grid || themeColor('--leaf-deep', '#276b47'),
-  background: () => overrides.background || themeColor('--paper-deep', '#f3ecd1')
+  background: () => overrides.background || themeColor('--paper-deep', '#f3ecd1'),
+  key: () => overrides.key || '#ffffff',
+  fill: () => overrides.fill || themeColor('--menu-dim', '#8fcaa8'),
+  sky: () => overrides.sky || themeColor('--paper', '#f8f2dd'),
+  ground: () => overrides.ground || themeColor('--sage', '#66755a')
 };
+const sceneColourKeys = ['model', 'grid', 'background'];
+const lightColourKeys = ['key', 'fill', 'sky', 'ground'];
 const asHex = value => `#${new THREE.Color(value).getHexString()}`;
 
 const scene = new THREE.Scene();
@@ -241,11 +272,9 @@ controls.autoRotate = false;
 controls.autoRotateSpeed = 0.9;
 controls.addEventListener('change', render);
 
-const hemisphereLight = new THREE.HemisphereLight(
-  themeColor('--paper', '#f8f2dd'), themeColor('--sage', '#66755a'), 2.2
-);
+const hemisphereLight = new THREE.HemisphereLight(paletteColour.sky(), paletteColour.ground(), 2.2);
 scene.add(hemisphereLight);
-const keyLight = new THREE.DirectionalLight(0xffffff, 3.1);
+const keyLight = new THREE.DirectionalLight(paletteColour.key(), 3.1);
 keyLight.position.set(70, 110, 80);
 keyLight.castShadow = true;
 /* Models are normalised to 80 units, so the shadow camera has to be widened
@@ -263,17 +292,24 @@ keyLight.shadow.camera.updateProjectionMatrix();
 keyLight.shadow.bias = -0.0006;
 keyLight.shadow.normalBias = 0.8;
 scene.add(keyLight);
-const fillLight = new THREE.DirectionalLight(themeColor('--menu-dim', '#8fcaa8'), 1.2);
+const fillLight = new THREE.DirectionalLight(paletteColour.fill(), 1.2);
 fillLight.position.set(-80, 40, -60);
 scene.add(fillLight);
+/* Unlit mode lights everything evenly through this one, so faces keep their
+   exact colour with no shading at all. */
+const ambientLight = new THREE.AmbientLight(0xffffff, 0);
+scene.add(ambientLight);
 
 /* Each preset is a set of light intensities and a key-light direction; the
-   brightness slider scales all three intensities on top of the preset. */
+   brightness slider scales the intensities on top of the preset. */
 const lightingPresets = {
-  studio: { hemisphere: 2.2, key: 3.1, fill: 1.2, keyPosition: [70, 110, 80] },
-  soft: { hemisphere: 3.4, key: 1.3, fill: 1.7, keyPosition: [40, 120, 70] },
-  dramatic: { hemisphere: 0.6, key: 4.8, fill: 0.3, keyPosition: [110, 70, 25] },
-  flat: { hemisphere: 4.2, key: 0.7, fill: 1, keyPosition: [0, 140, 10] }
+  studio: { hemisphere: 2.2, key: 3.1, fill: 1.2, ambient: 0, keyPosition: [70, 110, 80] },
+  soft: { hemisphere: 3.4, key: 1.3, fill: 1.7, ambient: 0, keyPosition: [40, 120, 70] },
+  dramatic: { hemisphere: 0.6, key: 4.8, fill: 0.3, ambient: 0, keyPosition: [110, 70, 25] },
+  flat: { hemisphere: 4.2, key: 0.7, fill: 1, ambient: 0, keyPosition: [0, 140, 10] },
+  /* An ambient intensity of PI cancels the Lambert 1/PI factor, so unlit faces
+     come out at exactly the model colour. */
+  unlit: { hemisphere: 0, key: 0, fill: 0, ambient: Math.PI, keyPosition: [0, 140, 10] }
 };
 let lightingPreset = 'studio';
 let brightness = 1;
@@ -289,9 +325,7 @@ let autoRotateWanted = true;
 
 function applyViewerTheme() {
   scene.background.set(paletteColour.background());
-  hemisphereLight.color.set(themeColor('--paper', '#f8f2dd'));
-  hemisphereLight.groundColor.set(themeColor('--sage', '#66755a'));
-  fillLight.color.set(themeColor('--menu-dim', '#8fcaa8'));
+  applyLightColours();
   applyGridColour();
   modelRoot?.traverse(object => {
     const materials = Array.isArray(object.material) ? object.material : [object.material];
@@ -311,6 +345,15 @@ function applyGridColour() {
   colours.needsUpdate = true;
 }
 
+/* Light colours follow the palette too, until they are overridden from the
+   Lighting menu. */
+function applyLightColours() {
+  keyLight.color.set(paletteColour.key());
+  fillLight.color.set(paletteColour.fill());
+  hemisphereLight.color.set(paletteColour.sky());
+  hemisphereLight.groundColor.set(paletteColour.ground());
+}
+
 function syncColourInputs() {
   Object.entries(colourInputs).forEach(([key, input]) => { input.value = asHex(paletteColour[key]()); });
 }
@@ -320,6 +363,7 @@ function applyLighting() {
   hemisphereLight.intensity = preset.hemisphere * brightness;
   keyLight.intensity = preset.key * brightness;
   fillLight.intensity = preset.fill * brightness;
+  ambientLight.intensity = preset.ambient * brightness;
   keyLight.position.set(...preset.keyPosition);
   Object.keys(lightingPresets).forEach(name => setToggleState(document.getElementById(`light-${name}`), name === lightingPreset));
   render();
@@ -663,8 +707,8 @@ function setLightingPreset(name) {
   applyLighting();
 }
 
-function resetColours() {
-  Object.keys(overrides).forEach(key => { overrides[key] = null; });
+function resetColours(keys) {
+  keys.forEach(key => { overrides[key] = null; });
   applyViewerTheme();
 }
 
@@ -678,11 +722,13 @@ document.addEventListener('viewer-command', event => {
        setAutoRotate(autoRotateWanted);
      },
      grid: () => setGridVisible(!grid.visible),
-     'colours-reset': resetColours,
+     'colours-reset': () => resetColours(sceneColourKeys),
+     'lighting-reset': () => resetColours(lightColourKeys),
      'light-studio': () => setLightingPreset('studio'),
      'light-soft': () => setLightingPreset('soft'),
      'light-dramatic': () => setLightingPreset('dramatic'),
      'light-flat': () => setLightingPreset('flat'),
+     'light-unlit': () => setLightingPreset('unlit'),
      shadows: () => setShadows(shadowButton.getAttribute('aria-pressed') !== 'true')
    })[event.detail]?.();
 });
@@ -698,19 +744,46 @@ colourInputs.background.addEventListener('input', event => {
   scene.background.set(overrides.background);
   render();
 });
+lightColourKeys.forEach(key => colourInputs[key].addEventListener('input', event => {
+  overrides[key] = event.target.value;
+  applyLightColours();
+  render();
+}));
 brightnessInput.addEventListener('input', event => {
   brightness = Number(event.target.value) / 100;
   applyLighting();
 });
+
+/* The viewer opens on a real part — a PJ3410 jack round nut, triangulated from
+   the STEP file so it loads without the STEP engine. The built demo assembly is
+   the fallback if the file cannot be fetched. */
+async function loadDefaultModel() {
+  try {
+    const response = await fetch('models/pj3410-round-nut.stl');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const parsed = await parseStl(await response.arrayBuffer());
+    setModel(parsed.root);
+    nameEl.textContent = DEFAULT_MODEL_NAME;
+    fileNameEl.textContent = DEFAULT_MODEL_NAME;
+    statsEl.textContent = `STL · ${parsed.triangles.toLocaleString()} triangles · sample`;
+  } catch (error) {
+    console.error(error);
+    nameEl.textContent = 'Demo assembly';
+    fileNameEl.textContent = 'Demo assembly';
+    statsEl.textContent = '9 objects · sample';
+  }
+}
 
 new ResizeObserver(resize).observe(stage);
 setModel(buildDemo());
 setGridVisible(true);
 setShadows(true);
 applyLighting();
+applyLightColours();
 applyGridColour();
 syncColourInputs();
 resize();
+loadDefaultModel();
 </script>
 </body>
 </html>
