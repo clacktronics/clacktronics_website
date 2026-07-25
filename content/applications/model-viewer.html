@@ -37,14 +37,6 @@ body { overflow: hidden; }
 }
 .viewer-stage.dragging { box-shadow: inset 0 0 0 4px var(--leaf); }
 .viewer-stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-.viewer-prompt {
-  position: absolute; top: 14px; left: 14px; z-index: 2; pointer-events: none;
-  max-width: min(330px, calc(100% - 28px)); padding: 9px 12px;
-  border: 1px solid var(--paper-line); border-radius: 6px;
-  color: var(--control-text); background: color-mix(in srgb, var(--paper) 92%, transparent);
-  font-size: 11px; line-height: 1.55;
-}
-.viewer-prompt strong { display: block; margin-bottom: 2px; font-weight: 600; }
 .viewer-busy {
   position: absolute; inset: 0; z-index: 4; display: none;
   align-items: center; justify-content: center;
@@ -177,14 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
     <span class="viewer-file-name" id="viewer-file-name">PJ3410 round nut</span>
-    <input id="model-file" type="file" accept=".stl,.step,.stp" aria-label="Open an STL or STEP model" hidden>
+    <input id="model-file" type="file" accept=".stl,.step,.stp,.obj,.3mf" aria-label="Open an STL, STEP, OBJ or 3MF model" hidden>
   </nav>
 
   <main class="viewer-stage" id="viewer-stage" aria-label="Interactive 3D model viewport">
-    <div class="viewer-prompt" id="viewer-prompt">
-      <strong><span class="pixel-icon" data-icon="box" aria-hidden="true"></span> Drop an STL or STEP file here</strong>
-      Drag to orbit · right-drag to pan · wheel to zoom
-    </div>
     <div class="viewer-busy" id="viewer-busy" role="status">Loading model…</div>
   </main>
 
@@ -208,7 +196,6 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 const stage = document.getElementById('viewer-stage');
 const fileInput = document.getElementById('model-file');
 const fileNameEl = document.getElementById('viewer-file-name');
-const prompt = document.getElementById('viewer-prompt');
 const busy = document.getElementById('viewer-busy');
 const nameEl = document.getElementById('model-name');
 const statsEl = document.getElementById('model-stats');
@@ -617,6 +604,47 @@ async function parseStl(buffer) {
   };
 }
 
+/* OBJ and 3MF arrive with the loader's own materials. Swap them for the
+   viewer's, keeping any colour the file actually specified: a plain white
+   material is what both loaders leave behind when the file names no colour. */
+function adoptMaterials(root) {
+  let ownColours = false;
+  let triangles = 0;
+  root.traverse(object => {
+    if (!object.isMesh) return;
+    const { geometry } = object;
+    if (!geometry.getAttribute('normal')) geometry.computeVertexNormals();
+    const vertexColours = Boolean(geometry.getAttribute('color'));
+    const sources = Array.isArray(object.material) ? object.material : [object.material];
+    const replacements = sources.map(source => {
+      const given = source?.color && source.color.getHex() !== 0xffffff ? source.color.clone() : null;
+      ownColours = ownColours || vertexColours || Boolean(given);
+      return material(given, {
+        vertexColors: vertexColours,
+        transparent: Boolean(source?.transparent),
+        opacity: source?.opacity ?? 1
+      });
+    });
+    sources.filter(Boolean).forEach(source => source.dispose());
+    object.material = Array.isArray(object.material) ? replacements : replacements[0];
+    const positions = geometry.getAttribute('position');
+    triangles += (geometry.index ? geometry.index.count : positions.count) / 3;
+  });
+  return { ownColours, triangles: Math.floor(triangles) };
+}
+
+async function parseObj(buffer) {
+  const { OBJLoader } = await import('three/addons/loaders/OBJLoader.js');
+  const root = new OBJLoader().parse(new TextDecoder().decode(buffer));
+  return { root, ...adoptMaterials(root) };
+}
+
+async function parse3mf(buffer) {
+  const { ThreeMFLoader } = await import('three/addons/loaders/3MFLoader.js');
+  const root = new ThreeMFLoader().parse(buffer);
+  return { root, ...adoptMaterials(root) };
+}
+
 async function parseStep(buffer) {
   busy.textContent = 'Loading STEP engine…';
   const occt = await loadOcct();
@@ -646,10 +674,19 @@ async function parseStep(buffer) {
   return { root, triangles: Math.floor(triangles), parts: result.meshes.length, ownColours };
 }
 
+const formats = {
+  stl: { label: 'STL', parse: parseStl },
+  step: { label: 'STEP', parse: parseStep },
+  stp: { label: 'STEP', parse: parseStep },
+  obj: { label: 'OBJ', parse: parseObj },
+  '3mf': { label: '3MF', parse: parse3mf }
+};
+
 async function openFile(file) {
   const extension = file.name.split('.').pop().toLowerCase();
-  if (!['stl', 'step', 'stp'].includes(extension)) {
-    showMessage('Choose an STL, STEP or STP file.', true);
+  const format = formats[extension];
+  if (!format) {
+    showMessage('Choose an STL, STEP, OBJ or 3MF file.', true);
     return;
   }
 
@@ -658,15 +695,13 @@ async function openFile(file) {
   showMessage('Opening locally…');
   try {
     const buffer = await file.arrayBuffer();
-    const parsed = extension === 'stl' ? await parseStl(buffer) : await parseStep(buffer);
+    const parsed = await format.parse(buffer);
     setModel(parsed.root);
-    prompt.hidden = true;
     nameEl.textContent = file.name;
     fileNameEl.textContent = file.name;
-    const format = extension === 'stl' ? 'STL' : 'STEP';
     const parts = parsed.parts ? ` · ${parsed.parts.toLocaleString()} parts` : '';
     const colours = parsed.ownColours ? ' · file colours' : '';
-    statsEl.textContent = `${format} · ${parsed.triangles.toLocaleString()} triangles${parts}${colours}`;
+    statsEl.textContent = `${format.label} · ${parsed.triangles.toLocaleString()} triangles${parts}${colours}`;
     showMessage(parsed.ownColours
       ? 'Loaded locally — the model’s own colours are shown.'
       : 'Loaded locally — nothing was uploaded.');
