@@ -426,7 +426,6 @@
             if (panelGroup) panelGroup.innerHTML = panelHtml;
 
             // PCB Rendering
-            const pcbTextOpacity = state.layoutMode === 'overlaid' ? 0 : 0.5;
             let pcbSvgGuides = '';
             const pcbOffsetXInside = state.pcbTolerance;
             const pcbOffsetYInside = (ph - pcbH) / 2;
@@ -446,17 +445,16 @@
 
             const pcbDimOffset = 7;
             const pcbDimTextOffset = 5;
-            // In overlaid mode, keep the PCB width closer to the boards.
-            const pcbDimYOffset = (state.layoutMode === 'overlaid' && state.showPanel) ? ((ph - pcbH)/2 + 7) : pcbDimOffset;
             // Put PCB height on the right so it remains distinct from the panel height.
             const pcbDimX = pcbW + pcbDimOffset;
 
-            // Dimensions go on the first board only — the rest are identical copies of it.
+            // Dimensions go on the first board only — the rest are identical copies of it — and
+            // only side by side, where they have room. Overlaid they just clutter the panel.
             const pcbDimensionsHtml = `
-                <line x1="0" y1="${pcbH + pcbDimYOffset}" x2="${pcbW}" y2="${pcbH + pcbDimYOffset}" stroke="var(--ink)" stroke-width="0.3" marker-start="url(#arrow)" marker-end="url(#arrow)" />
-                <line x1="0" y1="${pcbH}" x2="0" y2="${pcbH + pcbDimYOffset + 2}" stroke="var(--ink)" stroke-width="0.3" />
-                <line x1="${pcbW}" y1="${pcbH}" x2="${pcbW}" y2="${pcbH + pcbDimYOffset + 2}" stroke="var(--ink)" stroke-width="0.3" />
-                <text x="${pcbW/2}" y="${pcbH + pcbDimYOffset + pcbDimTextOffset}" fill="var(--ink)" font-size="3.5" text-anchor="middle">${pcbW.toFixed(2)}</text>
+                <line x1="0" y1="${pcbH + pcbDimOffset}" x2="${pcbW}" y2="${pcbH + pcbDimOffset}" stroke="var(--ink)" stroke-width="0.3" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+                <line x1="0" y1="${pcbH}" x2="0" y2="${pcbH + pcbDimOffset + 2}" stroke="var(--ink)" stroke-width="0.3" />
+                <line x1="${pcbW}" y1="${pcbH}" x2="${pcbW}" y2="${pcbH + pcbDimOffset + 2}" stroke="var(--ink)" stroke-width="0.3" />
+                <text x="${pcbW/2}" y="${pcbH + pcbDimOffset + pcbDimTextOffset}" fill="var(--ink)" font-size="3.5" text-anchor="middle">${pcbW.toFixed(2)}</text>
                 <line x1="${pcbDimX}" y1="0" x2="${pcbDimX}" y2="${pcbH}" stroke="var(--ink)" stroke-width="0.3" marker-start="url(#arrow)" marker-end="url(#arrow)" />
                 <line x1="${pcbW}" y1="0" x2="${pcbDimX + 2}" y2="0" stroke="var(--ink)" stroke-width="0.3" />
                 <line x1="${pcbW}" y1="${pcbH}" x2="${pcbDimX + 2}" y2="${pcbH}" stroke="var(--ink)" stroke-width="0.3" />
@@ -468,13 +466,18 @@
             // Drawn back to front so the first board — the one carrying the dimensions — sits on top.
             for (let index = boardCount - 1; index >= 0; index--) {
                 const dx = index * boardStep;
-                const dy = state.layoutMode === 'sidebyside' ? 0 : index * stackStep;
+                const dy = sideBySide ? 0 : index * stackStep;
+                // Titled above the board, matching the panel. Overlaid there is nowhere to put a
+                // caption that is not on top of the panel, so the boards go untitled.
+                const title = sideBySide
+                    ? `<text x="${pcbW/2}" y="-3" fill="var(--ink)" font-size="3" font-weight="600" text-anchor="middle">${boardLabel(index)}</text>`
+                    : '';
                 pcbHtml += `
                 <g transform="translate(${dx}, ${dy})">
+                    ${title}
                     <rect x="0" y="0" width="${pcbW}" height="${pcbH}" fill="#064e3b" stroke="var(--ink)" stroke-width="0.5" />
                     ${pcbSvgGuides}
-                    ${index === 0 ? pcbDimensionsHtml : ''}
-                    <text x="${pcbW/2}" y="${pcbH/2}" fill="var(--ink)" opacity="${pcbTextOpacity}" font-size="5" font-weight="600" text-anchor="middle" dominant-baseline="middle" style="transition: opacity 0.5s ease;">${boardLabel(index)}</text>
+                    ${(index === 0 && sideBySide) ? pcbDimensionsHtml : ''}
                 </g>`;
             }
             if (pcbGroup) pcbGroup.innerHTML = pcbHtml;
