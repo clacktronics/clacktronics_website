@@ -193,7 +193,12 @@ host.dispatchEvent(new CustomEvent('clackos-resize', {
 
 The `menu.json` size still applies while the app loads, so keep it close to the
 app's usual size to avoid a visible jump. Clacksweeper uses this to fit its
-window to the board. Current apps:
+window to the board.
+
+An app that can end its own session closes its window by posting
+`{ type: 'clackos-close-window' }` to the desktop. The window closed is the one
+the message came from, so an app can only close itself. QBasic uses this for
+File → Exit. Current apps:
 
 Application links may include a query string. Only pages already registered as
 `"type": "app"` in a menu can be launched, so Markdown cannot turn the desktop
@@ -242,6 +247,16 @@ registered applications, Markdown windows, and desktop actions.
   screen claims keyboard focus for the frame (js-dos cancels the canvas
   mousedown, which otherwise leaves the keystrokes with the desktop), and
   Ctrl+V or the corner Paste button feeds clipboard text in as keystrokes.
+  The demo programs in `content/applications/qbasic/programs/` are copied into
+  `C:\PROGRAMS`, which QBasic runs from, so its File → Open dialog lists them
+  immediately. Static hosting cannot list a directory, so the set to copy comes
+  from `programs.json`: run `scripts/build_qbasic_programs.py` after adding,
+  renaming or removing a program. Names must be DOS 8.3 and the emulated CPU is
+  modest, so keep drawing loops cheap (see `PLASMA.BAS`, which precomputes its
+  sines). QBasic is started from the DOSBox shell rather than as a `-c`
+  argument: it writes nothing to stdout, so the shell prompt reappearing there
+  is how File → Exit is detected, and the app then asks ClackOS to close its
+  window with a `clackos-close-window` message.
 - `applications/video/index.html` (Applications → Video Lab…) — a
   browser-only video player and editor with native preview plus a version-pinned
   FFmpeg WebAssembly compatibility/export engine. Supports forward and

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "programs": [
+    {
+      "file": "BOUNCE.BAS",
+      "title": "Bouncing Ball - a ball ricocheting around the screen",
+      "size": 733
+    },
+    {
+      "file": "LINES.BAS",
+      "title": "Random Lines - coloured lines drawn at random, clearing when full",
+      "size": 459
+    },
+    {
+      "file": "PLASMA.BAS",
+      "title": "Plasma - a shaded pattern animated by cycling the palette",
+      "size": 1347
+    },
+    {
+      "file": "SPIRO.BAS",
+      "title": "Spirograph - curves traced by a circle rolling inside another one",
+      "size": 767
+    },
+    {
+      "file": "STARS.BAS",
+      "title": "Starfield - stars streaming past, as if flying through them",
+      "size": 1109
+    },
+    {
+      "file": "SYNTH.BAS",
+      "title": "Clack Synth - play the keyboard like an octave of a synthesiser",
+      "size": 1499
+    }
+  ]
+}
