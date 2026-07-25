@@ -25,6 +25,9 @@
   --window-inactive: #2a3b2f;
   --window-border-inactive: var(--window-inactive);
   --title-text: #c8e3d2;
+  /* falls back to the active colour, so themes written before the split
+     (and any theme that omits it) keep their old inactive titles */
+  --title-text-inactive: var(--title-text);
   --accent-hover: #6fcf9a;
   --button-text: #f2ecd6;
   --disabled-text: #b3ab8d;
@@ -244,6 +247,7 @@ body {
 .window.fixed { min-width: 0; min-height: 0; }
 .window.closing { opacity: 0; transform: scale(0.97); }
 .window.inactive .titlebar { background: var(--window-inactive); }
+.window.inactive .titlebar .title { color: var(--title-text-inactive); }
 .window.inactive .frame { border-color: var(--window-border-inactive); }
 .titlebar {
   background: var(--titlebar); color: var(--menu-text);

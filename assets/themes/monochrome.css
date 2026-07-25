@@ -16,7 +16,8 @@
   --menu-dim: #000000;
   --desktop: #ffffff;
   --window-inactive: #000000;
-  --title-text: #000000;
+  --title-text: #ffffff;
+  --title-text-inactive: #d1d1d1;
   --accent-hover: #ffffff;
   --button-text: #ffffff;
   --disabled-text: #d1d1d1;
