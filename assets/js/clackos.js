@@ -1205,6 +1205,40 @@ function forgetSession() {
   try { localStorage.removeItem(SESSION_KEY); } catch {}
 }
 
+/* Fade out and come back up. Whatever the caller cleared first decides how
+ * much of the desktop survives the trip. */
+function rebootDesktop() {
+  document.body.style.transition = 'opacity 0.4s ease';
+  document.body.style.opacity = '0';
+  setTimeout(() => location.reload(), 420);
+}
+
+/* Everything ClackOS and its applications keep in this browser: the saved
+ * desktop, the theme and wallpaper (including a tile painted in ClackPaint),
+ * each app's own settings and saved games, and the files the applications
+ * have cached — the language model ClackChat downloads, for one. Local files
+ * and anything on the website are untouched, but browser-saved work is not
+ * recoverable, so this asks first. */
+async function resetClackOS() {
+  const warning = 'Reset ClackOS?\n\n' +
+    'This clears everything this browser remembers: the saved desktop, the ' +
+    'chosen theme and wallpaper, every application\'s saved settings and ' +
+    'games, and any files the applications have cached.';
+  if (!window.confirm(warning)) return;
+  forgetSession();
+  try { localStorage.clear(); } catch {}
+  try { sessionStorage.clear(); } catch {}
+  /* the theme cookie is the one preference that lives outside storage */
+  document.cookie = `${encodeURIComponent(THEME_COOKIE)}=; Max-Age=0; Path=/; SameSite=Lax`;
+  if (window.caches) {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(key => caches.delete(key)));
+    } catch {}
+  }
+  rebootDesktop();
+}
+
 /* Put a restored window back exactly where it was, clamped to the desktop it
  * is being restored onto — which may be a different size from the one it was
  * saved on, especially when the snapshot arrived as a link. */
@@ -1549,27 +1583,17 @@ function runAction(action) {
       if (sel && navigator.clipboard) navigator.clipboard.writeText(sel).catch(() => {});
       break;
     }
+    /* File → Restart: the windows go back to the desktop the website ships
+     * with. Only the saved desktop is dropped — the chosen theme, wallpaper
+     * and everything the applications have saved are left alone. */
     case 'restart': {
-      document.body.style.transition = 'opacity 0.4s ease';
-      document.body.style.opacity = '0';
-      setTimeout(() => location.reload(), 420);
-      break;
-    }
-    case 'restart-reset': {
-      /* Clear the browser-saved theming overrides so the desktop reboots into
-       * the website's default appearance (theme, wallpaper and any custom
-       * background uploaded via Paint). */
-      try {
-        localStorage.removeItem(THEME_KEY);
-        localStorage.removeItem('clackos-wallpaper');
-        localStorage.removeItem(CUSTOM_BG_KEY);
-      } catch {}
       forgetSession();
-      document.body.style.transition = 'opacity 0.4s ease';
-      document.body.style.opacity = '0';
-      setTimeout(() => location.reload(), 420);
+      rebootDesktop();
       break;
     }
+    /* View → Reset: everything this browser remembers about ClackOS goes,
+     * and the desktop comes back as a first-time visitor sees it. */
+    case 'reset': resetClackOS(); break;
   }
 }
 
