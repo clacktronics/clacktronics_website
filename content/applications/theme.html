@@ -54,7 +54,7 @@
 .mock-menu .brand { width: 11px; height: 11px; border-radius: 3px; background: var(--leaf); margin-right: 8px; }
 .mock-menu .item { padding: 0 7px; line-height: 28px; }
 .mock-menu .item.open { background: var(--leaf-deep); }
-.mock-menu .clock { margin-left: auto; color: var(--menu-dim); }
+.mock-menu .clock { margin-left: auto; color: var(--menu-text); }
 
 /* an open menu, so dropdown surface, dividers, icons, highlight, disabled and
    check colours are all visible without interacting with the preview */
@@ -99,7 +99,7 @@
   display: flex; align-items: center; gap: 6px; padding: 7px 10px;
   border-radius: 6px 6px 0 0; background: var(--titlebar); color: var(--title-text); font-size: 11px;
 }
-.mock-window.behind .mock-title { background: var(--window-inactive); }
+.mock-window.behind .mock-title { background: var(--window-inactive); color: var(--title-text-inactive); }
 .mock-title .ico { width: 12px; height: 12px; color: var(--leaf); flex: none; }
 .mock-title .dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--menu-text); box-sizing: border-box; flex: none; }
 .mock-title .dot.close { background: var(--leaf); border-color: var(--leaf); }
@@ -257,7 +257,8 @@ const FIELDS = [
   'Windows',
   ['--titlebar', 'Active title bar'], ['--window-border', 'Active window border'],
   ['--window-inactive', 'Inactive title bar'], ['--window-border-inactive', 'Inactive window border'],
-  ['--title-text', 'Title text'], ['--paper', 'Window surface'],
+  ['--title-text', 'Active title text'], ['--title-text-inactive', 'Inactive title text'],
+  ['--paper', 'Window surface'],
   ['--paper-deep', 'Raised surface'], ['--paper-line', 'Dividers'],
   'Chrome & desktop',
   ['--ink', 'Chrome (menu bar, taskbar)'], ['--desktop', 'Desktop'],
@@ -286,7 +287,8 @@ const DEFAULTS = {
   '--menu-dim':'#8fcaa8', '--desktop':'#e3ddc6',
   '--titlebar':'#09140d', '--window-border':'#09140d',
   '--window-inactive':'#2a3b2f', '--window-border-inactive':'#2a3b2f',
-  '--title-text':'#c8e3d2', '--accent-hover':'#6fcf9a', '--button-text':'#f2ecd6',
+  '--title-text':'#c8e3d2', '--title-text-inactive':'#91a899',
+  '--accent-hover':'#6fcf9a', '--button-text':'#f2ecd6',
   '--disabled-text':'#b3ab8d'
 };
 const palette = byId('palette');
@@ -450,6 +452,8 @@ function loadCss(css, name) {
   for (const name of ['--titlebar', '--window-border'])
     if (!seen.has(name)) next[name] = next['--ink'];
   if (!seen.has('--window-border-inactive')) next['--window-border-inactive'] = next['--window-inactive'];
+  /* Title text used to be one colour for active and inactive windows. */
+  if (!seen.has('--title-text-inactive')) next['--title-text-inactive'] = next['--title-text'];
   values = next; themeName.value = safeName(name);
   themeTemplate.value = [...themeTemplate.options].some(option => option.value === themeName.value) ? themeName.value : '';
   edited = false;

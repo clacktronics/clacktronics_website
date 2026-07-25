@@ -26,6 +26,7 @@
   --window-inactive: #2a3b2f;
   --window-border-inactive: var(--window-inactive);
   --title-text: #c8e3d2;
+  --title-text-inactive: var(--title-text);
   --accent-hover: #6fcf9a;
   --button-text: #f2ecd6;
   --disabled-text: #b3ab8d;

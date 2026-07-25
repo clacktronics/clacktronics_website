@@ -15,7 +15,7 @@ const THEME_VARS = [
   '--paper', '--paper-deep', '--paper-line', '--sage',
   '--leaf', '--leaf-deep', '--menu-text', '--menu-dim', '--desktop',
   '--titlebar', '--window-border', '--window-inactive', '--window-border-inactive',
-  '--title-text', '--accent-hover', '--button-text',
+  '--title-text', '--title-text-inactive', '--accent-hover', '--button-text',
   '--disabled-text'
 ];
 /* Colours are hex; the two drop-shadow controls are a length and a percentage. */
