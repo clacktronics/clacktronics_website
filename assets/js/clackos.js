@@ -1422,7 +1422,19 @@ boot().catch(err => console.error('ClackOS failed to boot:', err));
  * themes/backgrounds. Integrated apps send the same payload as a DOM event;
  * iframe apps retain postMessage. Paint sends a PNG data URL for its custom
  * tile slot. */
-function handleAppMessage(data) {
+/* Which window an app message came from: iframe apps post from their own
+ * contentWindow, integrated apps dispatch from an element inside the window. */
+function windowIdFor(source) {
+  if (!source) return null;
+  for (const rec of windows.values()) {
+    const frame = rec.el.querySelector('iframe.appframe');
+    if (frame && frame.contentWindow === source) return rec.id;
+    if (source instanceof Node && rec.el.contains(source)) return rec.id;
+  }
+  return null;
+}
+
+function handleAppMessage(data, source) {
   if (data?.type === 'clackos-theme-preview') {
     applyThemePreview(data.variables);
   } else if (data?.type === 'clackos-appearance') {
@@ -1442,13 +1454,17 @@ function handleAppMessage(data) {
   } else if (data?.type === 'clackos-open-app') {
     const id = String(data.id || '');
     if (/^app:applications\/[a-z0-9][a-z0-9._/-]*(?:[?#].*)?$/i.test(id)) openWindow(id);
+  } else if (data?.type === 'clackos-close-window') {
+    /* apps that can quit on their own (QBasic's File > Exit) close their window */
+    const id = windowIdFor(source);
+    if (id) closeWindow(id);
   }
 }
 
-document.addEventListener('clackos-message', e => handleAppMessage(e.detail));
+document.addEventListener('clackos-message', e => handleAppMessage(e.detail, e.target));
 window.addEventListener('message', e => {
   if (e.origin !== location.origin) return;
-  handleAppMessage(e.data);
+  handleAppMessage(e.data, e.source);
 });
 
 /* Same-origin app windows and other tabs also synchronise through storage. */
