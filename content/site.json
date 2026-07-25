@@ -7,14 +7,15 @@
   "boot": [
     "file/home.md"
   ],
-  "theme": "blood.css",
+  "theme": "tasteless.css",
   "themes": [
     "clackos.css",
     "midnight.css",
     "poolside.css",
     "brownstone.css",
     "blood.css",
-    "monochrome.css"
+    "monochrome.css",
+    "tasteless.css"
   ],
   "background": "sand-dots.png",
   "backgrounds": [
