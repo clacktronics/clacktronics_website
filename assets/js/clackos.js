@@ -461,6 +461,139 @@ function kicanvasEmbed(markdown) {
   return `<figure class="kicanvas-embed"><kicanvas-embed controls="full" aria-label="${escAttr(title)}"><kicanvas-source src="${escAttr(src)}"></kicanvas-source></kicanvas-embed><figcaption>${esc(title)}</figcaption></figure>`;
 }
 
+/* @[model](part.stl "Caption"){options} — an inline 3D model.
+ *
+ * The directive only writes a placeholder; assets/js/model-embed.js turns it
+ * into a viewport built on the same three.js core as the 3D Model Viewer app
+ * (assets/js/model-scene.js). Defaults are chosen to sit in the prose rather
+ * than to look like a panel: no border, no grid, transparent background, and a
+ * slow spin. Every knob the app exposes is available as an option.
+ */
+const MODEL_LIGHTING = ['studio', 'soft', 'dramatic', 'flat', 'unlit'];
+const MODEL_CONTROLS = ['none', 'orbit', 'full'];
+const MODEL_COLOUR_OPTIONS = {
+  colour: 'colour', color: 'colour', grid: 'gridcolour',
+  key: 'key', fill: 'fill', sky: 'sky', ground: 'ground'
+};
+const isHexColour = value => /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(value);
+
+/* Returns null for an unrecognised or out-of-range option, which leaves the
+ * directive unrendered rather than silently ignoring what was asked for. */
+function modelEmbedSettings(text) {
+  const settings = { data: {}, classes: [], caption: false, height: 320, width: 0 };
+  const inRange = (value, min, max) => {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= min && number <= max ? number : null;
+  };
+  for (const token of String(text || '').trim().split(/[\s,]+/).filter(Boolean)) {
+    const split = token.indexOf('=');
+    const name = (split < 0 ? token : token.slice(0, split)).toLowerCase();
+    const value = split < 0 ? '' : token.slice(split + 1);
+    /* a colour option: {colour=#c98a3a}, {grid=#276b47}, {sky=#fff} … */
+    const colourKey = split > 0 && MODEL_COLOUR_OPTIONS[name];
+    if (colourKey) {
+      if (!isHexColour(value)) return null;
+      settings.data[colourKey] = value;
+      /* asking for a grid colour is asking for the grid */
+      if (colourKey === 'gridcolour') settings.data.grid = 'true';
+      continue;
+    }
+    switch (name) {
+      case 'height': {
+        const height = inRange(value, 80, 900);
+        if (height === null) return null;
+        settings.height = height;
+        break;
+      }
+      case 'width': {
+        const width = inRange(value.replace(/%$/, ''), 10, 100);
+        if (width === null) return null;
+        settings.width = width;
+        break;
+      }
+      case 'left': case 'right':
+        settings.classes.push(`model-embed-${name}`);
+        if (!settings.width) settings.width = 42;
+        break;
+      case 'background':
+        if (value !== 'none' && !isHexColour(value)) return null;
+        settings.data.background = value;
+        break;
+      case 'lighting':
+        if (!MODEL_LIGHTING.includes(value)) return null;
+        settings.data.lighting = value;
+        break;
+      case 'brightness': {
+        const brightness = inRange(value, 20, 400);
+        if (brightness === null) return null;
+        settings.data.brightness = String(brightness);
+        break;
+      }
+      case 'zoom': {
+        const zoom = inRange(value, 0.2, 4);
+        if (zoom === null) return null;
+        settings.data.zoom = String(zoom);
+        break;
+      }
+      case 'speed': {
+        const speed = inRange(value, -8, 8);
+        if (speed === null) return null;
+        settings.data.speed = String(speed);
+        break;
+      }
+      case 'controls':
+        if (!MODEL_CONTROLS.includes(value)) return null;
+        settings.data.controls = value;
+        break;
+      case 'static': settings.data.controls = 'none'; break;
+      case 'interactive': settings.data.controls = 'full'; break;
+      case 'grid': settings.data.grid = 'true'; break;
+      case 'nogrid': settings.data.grid = 'false'; break;
+      case 'shadows': settings.data.shadows = 'true'; break;
+      case 'noshadows': settings.data.shadows = 'false'; break;
+      case 'wireframe': settings.data.wireframe = 'true'; break;
+      case 'spin': settings.data.rotate = 'true'; break;
+      case 'nospin': settings.data.rotate = 'false'; break;
+      case 'caption': settings.caption = true; break;
+      case 'border': settings.classes.push('model-embed-bordered'); break;
+      default: return null;
+    }
+  }
+  return settings;
+}
+
+function modelEmbedMarkup(src, title, settings) {
+  const data = Object.entries(settings.data)
+    .map(([name, value]) => ` data-${name}="${escAttr(value)}"`).join('');
+  const caption = settings.caption ? `<figcaption>${esc(title)}</figcaption>` : '';
+  /* The fallback link is what a reader with scripting off (or a viewer that
+     cannot start WebGL) is left with; the embed script hides it as soon as it
+     claims the placeholder. */
+  return `<figure class="${['model-embed', ...settings.classes].join(' ')}"`
+    + `${settings.width ? ` style="width:${settings.width}%"` : ''}>`
+    + `<div class="model-embed-stage" style="height:${settings.height}px" role="img" aria-label="${escAttr(title)}"`
+    + ` data-model-src="${escAttr(src)}"${data}>`
+    + `<a class="model-embed-fallback" href="${escAttr(src)}">${esc(title)} — download the 3D model</a>`
+    + `</div>${caption}</figure>`;
+}
+
+function modelEmbed(markdown) {
+  const match = /^@\[model\]\((\S+?)(?:\s+["']([^"']+)["'])?\)(?:\{([^}]*)\})?$/i.exec(markdown.trim());
+  if (!match) return '';
+  const src = safeWebUrl(match[1], false);
+  if (!src || !/\.(?:stl|step|stp|obj|3mf)(?:[?#].*)?$/i.test(src)) return '';
+  const settings = modelEmbedSettings(match[3]);
+  if (!settings) return '';
+  if (!document.getElementById('model-embed-module')) {
+    const script = document.createElement('script');
+    script.id = 'model-embed-module';
+    script.type = 'module';
+    script.src = new URL('assets/js/model-embed.js', location.href).href;
+    document.head.appendChild(script);
+  }
+  return modelEmbedMarkup(src, match[2] || 'Interactive 3D model', settings);
+}
+
 /* @[build] renders a placeholder that is filled in after the window mounts
  * with the deployed commit from version.json (see populateBuildStamps). Useful
  * for telling at a glance which build the host is actually serving — handy when
@@ -615,6 +748,7 @@ function mdToHtml(body, meta, prefix = '') {
     const youtube = youtubeEmbed(block);
     const video = videoEmbed(block);
     const kicanvas = kicanvasEmbed(block);
+    const model = modelEmbed(block);
     const build = buildEmbed(block);
     if (fence) {
       out.push(fences[+fence[1]]);
@@ -624,6 +758,8 @@ function mdToHtml(body, meta, prefix = '') {
       out.push(video);
     } else if (kicanvas) {
       out.push(kicanvas);
+    } else if (model) {
+      out.push(model);
     } else if (build) {
       out.push(build);
     } else if (/^<[/!A-Za-z][\s\S]*>$/m.test(block)) {

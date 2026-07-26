@@ -23,6 +23,10 @@
 <link rel="stylesheet" href="../assets/themes/clackos.css">
 <link rel="stylesheet" href="style.css">
 <script type="module" src="../vendor/kicanvas/kicanvas.js"></script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"}}
+</script>
+<script type="module" src="../assets/js/model-embed.js"></script>
 <script src="../assets/js/highlight.js" data-auto defer></script>
 </head>
 <body class="plain-mirror">
@@ -98,6 +102,12 @@ void setup() {
 <div class="video-embed"><video src="https://clacktronics.co.uk/assets/flipdots.mp4" aria-label="Flipdots with controls" preload="metadata" playsinline controls></video></div>
 <p>An interactive KiCad schematic viewer:</p>
 <figure class="kicanvas-embed"><kicanvas-embed controls="full" aria-label="Example schematic"><kicanvas-source src="../content/applications/kicad/example.kicad_sch"></kicanvas-source></kicanvas-embed><figcaption>Example schematic</figcaption></figure>
+<p>An inline 3D model — borderless and transparent, so it sits in the text rather<br>than in a panel:</p>
+<figure class="model-embed"><div class="model-embed-stage" style="height:320px" role="img" aria-label="PJ3410 round nut" data-model-src="../content/applications/models/pj3410-round-nut.stl"><a class="model-embed-fallback" href="../content/applications/models/pj3410-round-nut.stl">PJ3410 round nut — download the 3D model</a></div></figure>
+<figure class="model-embed model-embed-right" style="width:42%"><div class="model-embed-stage" style="height:220px" role="img" aria-label="Round nut, dramatic" data-model-src="../content/applications/models/pj3410-round-nut.stl" data-colour="#c98a3a" data-grid="true" data-lighting="dramatic"><a class="model-embed-fallback" href="../content/applications/models/pj3410-round-nut.stl">Round nut, dramatic — download the 3D model</a></div><figcaption>Round nut, dramatic</figcaption></figure>
+<p>The same model floated beside the prose, with the settings turned up: a shorter<br>viewport, its own colour, the grid on, dramatic lighting and a caption<br>underneath. Text wraps around whatever follows a <span class="k">{right}</span> model, so the<br>directive goes above the paragraph it should sit beside — this one is long<br>enough to show the wrap running down the side of the model rather than stopping<br>short above it.</p>
+<p>A bordered, fully interactive one — wheel to zoom, right-drag to pan:</p>
+<figure class="model-embed model-embed-bordered"><div class="model-embed-stage" style="height:320px" role="img" aria-label="Interactive, bordered" data-model-src="../content/applications/models/pj3410-round-nut.stl" data-controls="full" data-background="#f3ecd1" data-rotate="false"><a class="model-embed-fallback" href="../content/applications/models/pj3410-round-nut.stl">Interactive, bordered — download the 3D model</a></div><figcaption>Interactive, bordered</figcaption></figure>
 <p>The build stamp, filled in from <span class="k">version.json</span> after the window mounts (reads<br>&quot;dev&quot; on a raw checkout):</p>
 <p class="build-stamp">Build: dev (unversioned)</p>
 <p>An embed directive with a bad target is not treated as an embed — this line<br>should render as ordinary paragraph text:</p>

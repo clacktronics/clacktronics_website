@@ -165,6 +165,24 @@ An interactive KiCad schematic viewer:
 
 @[kicanvas](content/applications/kicad/example.kicad_sch "Example schematic")
 
+An inline 3D model — borderless and transparent, so it sits in the text rather
+than in a panel:
+
+@[model](content/applications/models/pj3410-round-nut.stl "PJ3410 round nut")
+
+@[model](content/applications/models/pj3410-round-nut.stl "Round nut, dramatic"){right height=220 colour=#c98a3a grid lighting=dramatic caption}
+
+The same model floated beside the prose, with the settings turned up: a shorter
+viewport, its own colour, the grid on, dramatic lighting and a caption
+underneath. Text wraps around whatever follows a `{right}` model, so the
+directive goes above the paragraph it should sit beside — this one is long
+enough to show the wrap running down the side of the model rather than stopping
+short above it.
+
+A bordered, fully interactive one — wheel to zoom, right-drag to pan:
+
+@[model](content/applications/models/pj3410-round-nut.stl "Interactive, bordered"){border caption interactive background=#f3ecd1 nospin}
+
 The build stamp, filled in from `version.json` after the window mounts (reads
 "dev" on a raw checkout):
 

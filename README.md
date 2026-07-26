@@ -389,6 +389,38 @@ same date and title: a CSV entry wins over the mirrored one.
   — interactive inline KiCad schematic, board, or worksheet viewer. Site-relative
   and HTTP(S) sources ending in `.kicad_sch`, `.kicad_pcb`, or `.kicad_wks` are
   accepted; remote sources must allow cross-origin requests.
+- `@[model](content/applications/models/part.stl "Optional caption")` — an
+  inline 3D model, rendered by the same three.js core as the 3D Model Viewer
+  application (`assets/js/model-scene.js`). `.stl`, `.step`/`.stp`, `.obj` and
+  `.3mf` sources are accepted. It is deliberately borderless and transparent so
+  it reads as part of the prose; options in `{}` after it change any of the
+  viewer's settings:
+
+  | Option | Default | Effect |
+  | --- | --- | --- |
+  | `height=320` | `320` | Viewport height in pixels (80–900) |
+  | `width=60` | full width | Width as a percentage (10–100) |
+  | `left` / `right` | — | Float beside the text (width defaults to 42%) |
+  | `caption` | off | Show the title under the model |
+  | `border` | off | Draw the bordered panel the other embeds use |
+  | `colour=#c98a3a` | theme accent | Model colour (`color=` also works) |
+  | `background=#f3ecd1` | `none` | Backdrop; `none` lets the page show through |
+  | `grid` / `nogrid` | `nogrid` | Ground grid; `grid=#276b47` turns it on in that colour |
+  | `shadows` / `noshadows` | `shadows` | Shadow casting |
+  | `lighting=studio` | `studio` | `studio`, `soft`, `dramatic`, `flat`, `unlit` |
+  | `brightness=100` | `100` | Light intensity percentage (20–400) |
+  | `key=` `fill=` `sky=` `ground=` | theme | Individual light colours |
+  | `wireframe` | off | Render as wireframe |
+  | `spin` / `nospin` | `spin` | Auto-rotation (paused while off-screen) |
+  | `speed=0.9` | `0.9` | Rotation speed (−8–8; negative reverses) |
+  | `zoom=1` | `1` | Framing multiplier; above 1 fills more of the frame |
+  | `static` / `interactive` | drag to orbit | `static` disables input entirely; `interactive` (`controls=full`) adds wheel zoom and panning |
+
+  Dragging orbits the model by default, while the wheel and one-finger touch
+  stay with the page so scrolling past an embed still works. An unknown or
+  out-of-range option leaves the line as ordinary text, the same as the other
+  directives. Models load only once they are near the viewport, and a reader
+  without scripting gets a link to the model file.
 - Raw HTML blocks are rendered when a block starts with an HTML tag. Safe
   structural HTML is allowed; scripts, forms, styles, event handlers, SVG, and
   arbitrary iframes are removed. Use the YouTube directive for video.
@@ -833,7 +865,7 @@ File Manager). A submenu left empty by that filter is dropped
 too. `window:` links become normal
 page-to-page links in the current tab, while `app:` links open the standalone
 application as a full page in a new tab. The
-`@[youtube]` / `@[video]` / `@[kicanvas]` embeds still render inline, raw HTML
+`@[youtube]` / `@[video]` / `@[kicanvas]` / `@[model]` embeds still render inline, raw HTML
 blocks go through the same sanitiser policy as ClackOS, and headings get the
 same generated anchor ids so `[jump](#heading)` links work. The
 pages reuse `assets/css/clackos.css` plus the active theme from `site.json`,
