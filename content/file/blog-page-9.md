@@ -1,6 +1,6 @@
 ---
 title: Blog (page 9)
-tagline: Posts 41–44 of 44
+tagline: Posts 41–45 of 46
 style: plain
 robots: noindex
 ---
@@ -8,8 +8,37 @@ robots: noindex
 
 [Blog list](window:file/blog-list.md)
 [< Newer posts](window:file/blog-page-8.md)
+[Older posts >](window:file/blog-page-10.md)
 
-Page 9 of 9
+Page 9 of 10
+
+---
+
+## Juno 60 Memory Repair
+
+`14 March 2011` · [Open this post on its own](window:file/blog/2011-03-14-juno-60-memory-repair.md)
+
+![](https://clacktronics.co.uk/assets/643_juno60.jpg) This Juno 60 was brought to me because it had had its memory replaced but it was still loosing it memory after a while. Opening it up revealed a bath of battery acid had eaten away at the RAM chips power pins, but not so much that they were disconnected. Meaning that when on the RAM appeared to work as the voltage drop across the corroded power pins didn't get low enough to stop the memory from working when on but when in battery mode it would drop below the minimum threshold scrambling the memory.  I also did a few things like cleaning the chorus buttons and cleaning the volume pot.
+
+The two Ram chips with acid.
+
+![](https://clacktronics.co.uk/assets/643_juno60_ram.jpg)
+
+---
+
+## AKG BX-20 Repair
+
+`07 February 2011` · [Open this post on its own](window:file/blog/2011-02-07-akg-bx-20-repair.md)
+
+![Spring Reverb](https://clacktronics.co.uk/assets/643_akg-bx20.gif) Amazing spring reverb that was bought of ebay broken, because of its size I had to fix it on site. It was producing no sound at all (most equipment has a certain amount of hiss.)
+
+Then after a bit of testing I discovered there was no power supply voltage at all. After a bit of dismantling I managed to get to the PSU PCB which is relatively a simple (to the rest of the unit) 2 diode full wave rectifier. Basically what had happened was the (west German!) electrolytic's had completely shorted burning out the resistor.
+
+![Burnt out AKG PSU](https://clacktronics.co.uk/assets/643_akg-bx-20-psu.jpg) So then it was just the case of taking it back to the workshop and replacing all the burnt out parts .. then with a bit of re-fitting it was alive!!
+
+Here is the sound clip made by the owner, its a very tasty reverb .... maybe not worth the space it takes up!!
+
+Amazingly AKG Still provide a support service manual for the BX-20  [found here](http://www.akg.com/site/powerslave,id,7,nodeid,7,_language,EN,cat,11.html)
 
 ---
 
@@ -71,44 +100,8 @@ http://www.youtube.com/watch?v=8UCsbIOCBrs
 
 ---
 
-## Octave Cat SRM Repair
-
-`25 January 2011` · [Open this post on its own](window:file/blog/2011-01-25-octave-cat-srm-repair.md)
-
-![](https://clacktronics.co.uk/assets/octave_cat_srm_back.jpg)[![](https://clacktronics.co.uk/assets/643_octave_cat_srm.jpg)](https://clacktronics.co.uk/assets/octave_cat_srm.jpg)
-This keyboard has a strange duophonic mode that is fun but slightly useless, it assigns one VCO to the lower pressed key and the other VCO to the upper pressed key but doesn't touch anything else. So rather than 2 'Voices' it is 2 pitches. Its quite well known that Arp sued them claiming it was a copy of their Oddesey design 1. Great thing about the design is that there is almost every type of modulation you could wish for and it has both an ADSR and AR both assignable anywhere at the flick of a switch. Making the VCO's modulate each other is particularly interesting, there are therefore quite a lot of FM sound opportunities.
-
-[![](https://clacktronics.co.uk/assets/643_octave_cat_srm_back.jpg)](https://clacktronics.co.uk/assets/octave_cat_srm_back-e1296051016222.jpg)
-
-This particular unit had a few major faults but was still sort of usable. First problem was that the pitch would drop down super low when the key was released, I realized this was because the 'hold' capacitor was broken. Other problems were the S&H was broken and the LFO delay was not working.
-
-[![](https://clacktronics.co.uk/assets/643_octave_cat_board_b.jpg)](https://clacktronics.co.uk/assets/octave_cat_board_b.jpg)
-
-[![](https://clacktronics.co.uk/assets/643_cat_pcb_board_a_manual-300x231.jpg)![](https://clacktronics.co.uk/assets/643_cat_pcb_board_a-300x225.jpg)](https://clacktronics.co.uk/assets/cat_pcb_board_a.jpg)
-
-Opening the synth up is quite easy, but its a pain to get to the top of the PCB, you have to pull they keyboard out the way and detach it from the power supply whilst balancing the unit on 2 books so that it doesn't damage the knobs. Any testing whilst it is on has to be done with a separate power supply or by knowing were the components are and testing it on the other side of the board!
-
-[![](https://clacktronics.co.uk/assets/643_octave_cat_logo.jpg)](https://clacktronics.co.uk/assets/octave_cat_logo.jpg)
-[![](https://clacktronics.co.uk/assets/643_octave_cat_knobs.jpg)](https://clacktronics.co.uk/assets/octave_cat_knobs.jpg)
-
-**Schematics**
-
-Here are schematics of the SRM
-
- * [PSU and wiring](http://clacktronics.co.uk/synthesizer/octave-cat-srm-repair/attachment/s1)
- * [Board A - Voltage References and Keyboard Processing](http://clacktronics.co.uk/synthesizer/octave-cat-srm-repair/attachment/s7)
- * [Board A - LFO, Noise and Transient Generators](http://clacktronics.co.uk/synthesizer/octave-cat-srm-repair/attachment/s10)
- * [Board A -  VCO's](http://clacktronics.co.uk/synthesizer/octave-cat-srm-repair/attachment/s11)
- * [Board B - VCF & VCA](http://clacktronics.co.uk/synthesizer/octave-cat-srm-repair/attachment/s12)
-
-**References**
-
-	
-  1. 'Octave The Cat' Vintage synth explorer -'[http://www.vintagesynth.com/misc/octavecat.php](http://www.vintagesynth.com/misc/octavecat.php)'
-
----
-
-Page 9 of 9
+Page 9 of 10
 
 [Blog list](window:file/blog-list.md)
 [< Newer posts](window:file/blog-page-8.md)
+[Older posts >](window:file/blog-page-10.md)

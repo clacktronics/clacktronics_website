@@ -1,6 +1,6 @@
 ---
 title: Blog (page 8)
-tagline: Posts 36–40 of 44
+tagline: Posts 36–40 of 46
 style: plain
 robots: noindex
 ---
@@ -10,7 +10,60 @@ robots: noindex
 [< Newer posts](window:file/blog-page-7.md)
 [Older posts >](window:file/blog-page-9.md)
 
-Page 8 of 9
+Page 8 of 10
+
+---
+
+## MFOS Soundlab Synthesizer with MIDI
+
+`05 June 2011` · [Open this post on its own](window:file/blog/2011-06-05-midsoundlab.md)
+
+[![](https://clacktronics.co.uk/assets/643_midi-mfos-soundlab.jpg)](https://clacktronics.co.uk/assets/MIDI-MFOS-Soundlab.jpg)
+This was a one off project to see if I could fit MIDI into the simple MFOS  soundlab (Designed by Ray Wilson see [musicfromouterspace.com ](http://musicfromouterspace.com)) it was built from parts I had  laying around including a MIDImplant ([midimplant.com](http://midimplant.com)), basically I was attempting to try and make it perform like a monosynth. Below is a list of  the modifications done.
+	
+  * MIDI control of pitch and trigger
+
+	
+  * MIDI control of cutoff and amplitude by mod wheel
+
+	
+  * Pitch of VCO's are modified around 0 (means you can get a vibrato without the fundamental pitch moving )
+
+	
+  * It runs off and AC adapter (included) so no batteries.
+
+	
+  * Master Octave selection switch and detune on VCO2
+
+The  Soundlab is capable of some fantastic analogue vintage sounds as well  as some quite interesting new ones. Especially due to its unusual filter  design that can be quite gristley. It isn't fantastically accurate as a monosynth but if I wanted that I would buy a cheap commercial one!
+
+It is for sale [here](http://cgi.ebay.co.uk/MFOS-Soundlab-MIDI-/120733233974?pt=UK_Musical_Instruments_Pro_Audio_Synthesisers_CV&hash=item1c1c42f336)
+
+[![](https://clacktronics.co.uk/assets/643_mfos-wooden-keyboard-s.jpg)](https://clacktronics.co.uk/assets/MFOS-Wooden-Keyboard-s.jpg)
+
+I am also selling this keyboard puts out 1V/Oct CV and triggers as well as portamento controls also made from circuits at musicfromouterspace. [See here](http://cgi.ebay.co.uk/MFOS-Soundlab-MIDI-/120733233974?pt=UK_Musical_Instruments_Pro_Audio_Synthesisers_CV&hash=item1c1c42f336)
+
+@[youtube](https://www.youtube.com/watch?v=EGM5uhOYWVY)
+
+Mod Details coming soon ....
+
+---
+
+## Roland Chorus Echo SRE-555 Repair
+
+`23 April 2011` · [Open this post on its own](window:file/blog/2011-04-23-roland-sre555.md)
+
+[![](https://clacktronics.co.uk/assets/643_1.jpg)](https://clacktronics.co.uk/assets/1.jpg)This was a Roland Chorus Echo SRE-555 in a desperate need of service, It was bought second hand from Japan and was damaged in transit. It is actually just a Roland RE-501, but enclosed in a more compact 19" rack-mount case. For some unknown reason the SRE-555 usually costs more than a standard RE-501 in second hand prices, possibly because of its rarity or the fact it will fit into a studio better with its robust case.
+
+It took quite a lot of working out just to find the right way to open the unit, especially as there is no known service manual so it was all guess work. The construction is really complex and multi-layered. Below is when the inside was finally reached...
+
+[![](https://clacktronics.co.uk/assets/643_img_20110418_153559.jpg)](https://clacktronics.co.uk/assets/IMG_20110418_153559.jpg)
+
+I was amazed - it is so clean inside! Those endless layers of metal definitely did their job!
+
+[![](https://clacktronics.co.uk/assets/643_IMG_20110417_014811jpg)](https://clacktronics.co.uk/assets/IMG_20110417_014811.jpg)
+
+Unfortunately all inputs and outputs were damaged, as well as PSU... when fixed I managed to put the unit back together and run some tests. I also took a quick video of the module in action, the quality is not so great (sorry)
 
 ---
 
@@ -65,35 +118,7 @@ It really come alive with no input and just feedback as demonstrated below
 
 ---
 
-## Juno 60 Memory Repair
-
-`14 March 2011` · [Open this post on its own](window:file/blog/2011-03-14-juno-60-memory-repair.md)
-
-![](https://clacktronics.co.uk/assets/643_juno60.jpg) This Juno 60 was brought to me because it had had its memory replaced but it was still loosing it memory after a while. Opening it up revealed a bath of battery acid had eaten away at the RAM chips power pins, but not so much that they were disconnected. Meaning that when on the RAM appeared to work as the voltage drop across the corroded power pins didn't get low enough to stop the memory from working when on but when in battery mode it would drop below the minimum threshold scrambling the memory.  I also did a few things like cleaning the chorus buttons and cleaning the volume pot.
-
-The two Ram chips with acid.
-
-![](https://clacktronics.co.uk/assets/643_juno60_ram.jpg)
-
----
-
-## AKG BX-20 Repair
-
-`07 February 2011` · [Open this post on its own](window:file/blog/2011-02-07-akg-bx-20-repair.md)
-
-![Spring Reverb](https://clacktronics.co.uk/assets/643_akg-bx20.gif) Amazing spring reverb that was bought of ebay broken, because of its size I had to fix it on site. It was producing no sound at all (most equipment has a certain amount of hiss.)
-
-Then after a bit of testing I discovered there was no power supply voltage at all. After a bit of dismantling I managed to get to the PSU PCB which is relatively a simple (to the rest of the unit) 2 diode full wave rectifier. Basically what had happened was the (west German!) electrolytic's had completely shorted burning out the resistor.
-
-![Burnt out AKG PSU](https://clacktronics.co.uk/assets/643_akg-bx-20-psu.jpg) So then it was just the case of taking it back to the workshop and replacing all the burnt out parts .. then with a bit of re-fitting it was alive!!
-
-Here is the sound clip made by the owner, its a very tasty reverb .... maybe not worth the space it takes up!!
-
-Amazingly AKG Still provide a support service manual for the BX-20  [found here](http://www.akg.com/site/powerslave,id,7,nodeid,7,_language,EN,cat,11.html)
-
----
-
-Page 8 of 9
+Page 8 of 10
 
 [Blog list](window:file/blog-list.md)
 [< Newer posts](window:file/blog-page-7.md)

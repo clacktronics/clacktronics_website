@@ -1,6 +1,6 @@
 ---
 title: Blog (page 5)
-tagline: Posts 21–25 of 44
+tagline: Posts 21–25 of 46
 style: plain
 robots: noindex
 ---
@@ -10,7 +10,43 @@ robots: noindex
 [< Newer posts](window:file/blog-page-4.md)
 [Older posts >](window:file/blog-page-6.md)
 
-Page 5 of 9
+Page 5 of 10
+
+---
+
+## Clacktronics does LED Projects
+
+`04 January 2013` · [Open this post on its own](window:file/blog/2013-01-04-clacktronics-does-led-projects.md)
+
+[![LED hoop](../assets/643_led-hoop.jpg)](../assets/LED-hoop.jpg)
+I quite often get approached by artists and designers to produce electronic parts for them. Recently I seem to have made a lot of LED projects! Above is part of a series of LED hoops that were commissioned for the band Django Django. This was by the artist [Kim Coleman](http://kimcolemanprojects.com/) who needed them as a part of her stage design for the band. 
+
+![Photo credit : Django Django ](../assets/643_ddphoto.jpg) 
+
+First a Series of 3 hoops were made (pictured above, middle frame) theese were very basic white LED chains made from discrete 5mm diffused white LED's. I know it is a bit crazy doing a point to point chain of LEDs but I needed them to be difused! Then for their large performance at Sheppards Bush Empire I made RGB hoops that had smiley faces, I learnt my lesson and theese are RGB tape with epoxy coating to help diffusion. Each segment ( the hoop and the 2 eyes and the mouth ) could be RGB DMX controlled by the lighting engineer.
+
+@[youtube](https://www.youtube.com/watch?v=OaeqY0oh3iE)
+
+Finally I also made an interesting piece of lighting for the artist Ryan Gander, he commissioned me to find a way to make a flickering light that lasts.  As shown below (apologies for the mess!) here is a program I wrote to simulate bulb flicker. My solution is LED so it is completely solid state, the electronics were designed to withstand sub-zero conditions as it had to be used outside during winter in Denmark!
+
+@[youtube](https://www.youtube.com/watch?v=RRyg7e9cVxA)
+
+The code is fairly simple and parametric so it can be modified to make all sorts of flickering. See github link below.
+
+[GitHub - Flicker_box](https://github.com/clacktronics/Flicker_box)
+
+---
+
+## Rebel Tech - Stoichea
+
+`01 July 2012` · [Open this post on its own](window:file/blog/2012-07-01-592.md)
+
+[![Rebel Tech - Stoichea](../assets/643_dsc_81401.jpg)](../assets/DSC_81401.jpg)
+Recently I have been working with [Rebel Tech](http://www.rebeltech.org/) to release a new Eurorack module range based in London. It has been really interesting and something I have long been interested in producing. The first module is a dual Euclidean Sequencer and more details can be found on the website here 
+
+[rebeltech.org/modules/stoicheia/](http://www.rebeltech.org/modules/stoicheia/)
+
+Look out for more modules in the future, some influenced by clacktronics!
 
 ---
 
@@ -52,33 +88,7 @@ Such a shame I really wanted to hear it! it has so many interesting features
 
 ---
 
-## Lazertran Tutorial
-
-`27 September 2011` · [Open this post on its own](window:file/blog/2011-09-27-lazertran-tutorial.md)
-
-![](https://clacktronics.co.uk/research/lazertran/643_24_Lazertran_Tutorial_Aluminium_finished.jpg)
-I have written a new [lazertran tutorial](window:file/misc/lazertran.md) This is how I make a lot of one offs and small batches. Soon I will be moving to screen print , so I will put up info on that. Interestingly I have found information about how you can use it to etch, this could be good for PCB's!
-
----
-
-## Modded Realistic Reverb 2
-
-`05 September 2011` · [Open this post on its own](window:file/blog/2011-09-05-modded-realistic-reverb-2.md)
-
-[![](https://clacktronics.co.uk/assets/643_realistic-reverb-2.jpg)](https://clacktronics.co.uk/assets/Realistic-Reverb-2.jpg)
-I made this for Owen at [Flesh and Bone Studios](http://www.fleshandbonestudios.com/) in Hackney after he saw [this original post](https://clacktronics.co.uk/2011/realistic-reverb-noismaking-mods.html). I had a bit more time to make it properly and I tried to make it look a bit more like the original case - it strangely ended up looking a bit more like a Roger Mayer pedal. Pretty much the same mods so see the link to the original post.
-
-[![](https://clacktronics.co.uk/assets/643_rr-blank.jpg)](https://clacktronics.co.uk/assets/RR-blank.jpg)The enclosure came out quite nice - the process was to apply lazertran and fuse it on in the oven for 2 hours then I sprayed a few light layers of Acrylic Laquer which created a really nice stippled effect.
-
-[![](https://clacktronics.co.uk/assets/643_rr-stipple.jpg)](https://clacktronics.co.uk/assets/RR-stipple.jpg)
-
-I also made another video for it but this time with a Wasp.
-
-@[youtube](https://www.youtube.com/watch?v=5F-Rb0QGoxk)
-
----
-
-Page 5 of 9
+Page 5 of 10
 
 [Blog list](window:file/blog-list.md)
 [< Newer posts](window:file/blog-page-4.md)

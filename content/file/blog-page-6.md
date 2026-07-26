@@ -1,6 +1,6 @@
 ---
 title: Blog (page 6)
-tagline: Posts 26–30 of 44
+tagline: Posts 26–30 of 46
 style: plain
 robots: noindex
 ---
@@ -10,7 +10,33 @@ robots: noindex
 [< Newer posts](window:file/blog-page-5.md)
 [Older posts >](window:file/blog-page-7.md)
 
-Page 6 of 9
+Page 6 of 10
+
+---
+
+## Lazertran Tutorial
+
+`27 September 2011` · [Open this post on its own](window:file/blog/2011-09-27-lazertran-tutorial.md)
+
+![](https://clacktronics.co.uk/research/lazertran/643_24_Lazertran_Tutorial_Aluminium_finished.jpg)
+I have written a new [lazertran tutorial](window:file/misc/lazertran.md) This is how I make a lot of one offs and small batches. Soon I will be moving to screen print , so I will put up info on that. Interestingly I have found information about how you can use it to etch, this could be good for PCB's!
+
+---
+
+## Modded Realistic Reverb 2
+
+`05 September 2011` · [Open this post on its own](window:file/blog/2011-09-05-modded-realistic-reverb-2.md)
+
+[![](https://clacktronics.co.uk/assets/643_realistic-reverb-2.jpg)](https://clacktronics.co.uk/assets/Realistic-Reverb-2.jpg)
+I made this for Owen at [Flesh and Bone Studios](http://www.fleshandbonestudios.com/) in Hackney after he saw [this original post](https://clacktronics.co.uk/2011/realistic-reverb-noismaking-mods.html). I had a bit more time to make it properly and I tried to make it look a bit more like the original case - it strangely ended up looking a bit more like a Roger Mayer pedal. Pretty much the same mods so see the link to the original post.
+
+[![](https://clacktronics.co.uk/assets/643_rr-blank.jpg)](https://clacktronics.co.uk/assets/RR-blank.jpg)The enclosure came out quite nice - the process was to apply lazertran and fuse it on in the oven for 2 hours then I sprayed a few light layers of Acrylic Laquer which created a really nice stippled effect.
+
+[![](https://clacktronics.co.uk/assets/643_rr-stipple.jpg)](https://clacktronics.co.uk/assets/RR-stipple.jpg)
+
+I also made another video for it but this time with a Wasp.
+
+@[youtube](https://www.youtube.com/watch?v=5F-Rb0QGoxk)
 
 ---
 
@@ -55,51 +81,7 @@ http://cgi.ebay.co.uk/ws/eBayISAPI.dll?ViewItem&item=120745511966&ssPageName=STR
 
 ---
 
-## Yamaha CS-10 Sub Octave Mod
-
-`22 June 2011` · [Open this post on its own](window:file/blog/2011-06-22-yamahacs10.md)
-
-[![](https://clacktronics.co.uk/assets/643_yamaha_cs80_sub_octave_mod.jpg)](https://clacktronics.co.uk/assets/Yamaha_CS80_Sub_octave_mod.jpg)The Yamaha CS series has some unique features inside and out. Most of the circuitry uses quite unusual IC's (custom perhaps?) . The VCO for a start uses an interesting method of resetting the core, I can't really go into detail because I can't exactly understand what is going on but it creates a very stable oscillator that was used in the polyphonic part of the CS series. It has quite a pleasant band-pass filter and very fast attack settings, it can sound a bit sterile but its unique-ness pays off for that.
-
-Here I added a sub-octave [taken from Yves Usson's schematics,](http://yusynth.net/index_en.php?&arg=3) except I added a couple more flip-flop's to create 2 more octaves below! I thought this would be interesting because the VCO has quite a range, so you can end up with 2 pitches 4 octaves apart!
-
-Sound Samples soon!
-
----
-
-## Video Synthesis Part 1 : Getting into Video Circuits
-
-`22 June 2011` · [Open this post on its own](window:file/blog/2011-06-22-video-synthesis-part-1-getting-into-video-circuits.md)
-
-![](https://clacktronics.co.uk/assets/643_gieskes.gif) Frame from video by [Gijs Gieskes](http://gieskes.nl) Just recently I have been researching how to work with analogue video, specifically Composite (the yellow phono connector you get on a lot of consumer video equipment.) Here is some information I have found out.
-
-Firstly composite video is far more complex than audio, the reason being that to represent a sound electronically you only need 2 dimensions amplitude over time. It is easily represented by voltage, making it possible to create quite interesting effects and adjustments to the sound with very little and low cost circuitry. Where as composite video is a 2 dimensional image (X,Y) over time with Brightness (luminance) and Colour (chrominance) information is still represented by a voltage, but it has to hold all that information in a 2 dimensional signal. To do this it is constructed of a repeating (scanning) waveform that contains triggers, frequency bursts and a DC voltage that each represent a different component of the image.
-
-There is a good app note here that explains it a lot better and in depth than me by Maxim Semiconductors - [www.maxim-ic.com/app-notes/index.mvp/id/734](http://www.maxim-ic.com/app-notes/index.mvp/id/734)
-
-Now, all this makes it quite difficult to use a handful of components to do anything effective as with sound. Of course you can glitch and mess up the image but in the end it gets a bit boring and 'samey' and pretty much consists of making the image glitch a bit. Composite video is quite a sensitive high frequency signal and for example if you want to change one parameter like contrast (luminance) you have to do it without affecting the other parts of the signal.
-
-Ideally what you need to do is separate the parts (usually sync from luminosity and chrominance.)
-
-There is a lot out there on what can be achieved with circuitry, but not a lot on how. Then I found this excellent book by [Elektor ](http://Elektor.com)that describes to the modern user (released 2011) on how it all works including how to decode and encode composite video! Also touches on lost historical technologies such as mechanical TV and spiral scanning.
-
-[![](https://clacktronics.co.uk/assets/643_analogue-video-300.jpg)](https://clacktronics.co.uk/assets/Analogue-Video-300.jpg)Copyright Elektor
-
-Below is some of the best bits I could find that certainly seem to have legs for direct video manipulation with circuitry.
-
-**gieskes.nl**
-http://vimeo.com/20876345
-
-Gijs Gieskes created this fantastic swiping circuit based around micro-controllers that seem to work by switching between 2 video sources very quickly to create interesting fade patterns. His website is [gieskes.nl](http://gieskes.nl/visual-equipment/?file=vm1).
-
-**256byteram**
-http://youtu.be/W5wv7RbJ3EQ
-
-Taking the idea of switches this video demonstrates using a comparator to super-impose video. His youtube channel is [256byteram](http://www.youtube.com/user/256byteram)
-
----
-
-Page 6 of 9
+Page 6 of 10
 
 [Blog list](window:file/blog-list.md)
 [< Newer posts](window:file/blog-page-5.md)

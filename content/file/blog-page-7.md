@@ -1,6 +1,6 @@
 ---
 title: Blog (page 7)
-tagline: Posts 31–35 of 44
+tagline: Posts 31–35 of 46
 style: plain
 robots: noindex
 ---
@@ -10,7 +10,51 @@ robots: noindex
 [< Newer posts](window:file/blog-page-6.md)
 [Older posts >](window:file/blog-page-8.md)
 
-Page 7 of 9
+Page 7 of 10
+
+---
+
+## Yamaha CS-10 Sub Octave Mod
+
+`22 June 2011` · [Open this post on its own](window:file/blog/2011-06-22-yamahacs10.md)
+
+[![](https://clacktronics.co.uk/assets/643_yamaha_cs80_sub_octave_mod.jpg)](https://clacktronics.co.uk/assets/Yamaha_CS80_Sub_octave_mod.jpg)The Yamaha CS series has some unique features inside and out. Most of the circuitry uses quite unusual IC's (custom perhaps?) . The VCO for a start uses an interesting method of resetting the core, I can't really go into detail because I can't exactly understand what is going on but it creates a very stable oscillator that was used in the polyphonic part of the CS series. It has quite a pleasant band-pass filter and very fast attack settings, it can sound a bit sterile but its unique-ness pays off for that.
+
+Here I added a sub-octave [taken from Yves Usson's schematics,](http://yusynth.net/index_en.php?&arg=3) except I added a couple more flip-flop's to create 2 more octaves below! I thought this would be interesting because the VCO has quite a range, so you can end up with 2 pitches 4 octaves apart!
+
+Sound Samples soon!
+
+---
+
+## Video Synthesis Part 1 : Getting into Video Circuits
+
+`22 June 2011` · [Open this post on its own](window:file/blog/2011-06-22-video-synthesis-part-1-getting-into-video-circuits.md)
+
+![](https://clacktronics.co.uk/assets/643_gieskes.gif) Frame from video by [Gijs Gieskes](http://gieskes.nl) Just recently I have been researching how to work with analogue video, specifically Composite (the yellow phono connector you get on a lot of consumer video equipment.) Here is some information I have found out.
+
+Firstly composite video is far more complex than audio, the reason being that to represent a sound electronically you only need 2 dimensions amplitude over time. It is easily represented by voltage, making it possible to create quite interesting effects and adjustments to the sound with very little and low cost circuitry. Where as composite video is a 2 dimensional image (X,Y) over time with Brightness (luminance) and Colour (chrominance) information is still represented by a voltage, but it has to hold all that information in a 2 dimensional signal. To do this it is constructed of a repeating (scanning) waveform that contains triggers, frequency bursts and a DC voltage that each represent a different component of the image.
+
+There is a good app note here that explains it a lot better and in depth than me by Maxim Semiconductors - [www.maxim-ic.com/app-notes/index.mvp/id/734](http://www.maxim-ic.com/app-notes/index.mvp/id/734)
+
+Now, all this makes it quite difficult to use a handful of components to do anything effective as with sound. Of course you can glitch and mess up the image but in the end it gets a bit boring and 'samey' and pretty much consists of making the image glitch a bit. Composite video is quite a sensitive high frequency signal and for example if you want to change one parameter like contrast (luminance) you have to do it without affecting the other parts of the signal.
+
+Ideally what you need to do is separate the parts (usually sync from luminosity and chrominance.)
+
+There is a lot out there on what can be achieved with circuitry, but not a lot on how. Then I found this excellent book by [Elektor ](http://Elektor.com)that describes to the modern user (released 2011) on how it all works including how to decode and encode composite video! Also touches on lost historical technologies such as mechanical TV and spiral scanning.
+
+[![](https://clacktronics.co.uk/assets/643_analogue-video-300.jpg)](https://clacktronics.co.uk/assets/Analogue-Video-300.jpg)Copyright Elektor
+
+Below is some of the best bits I could find that certainly seem to have legs for direct video manipulation with circuitry.
+
+**gieskes.nl**
+http://vimeo.com/20876345
+
+Gijs Gieskes created this fantastic swiping circuit based around micro-controllers that seem to work by switching between 2 video sources very quickly to create interesting fade patterns. His website is [gieskes.nl](http://gieskes.nl/visual-equipment/?file=vm1).
+
+**256byteram**
+http://youtu.be/W5wv7RbJ3EQ
+
+Taking the idea of switches this video demonstrates using a comparator to super-impose video. His youtube channel is [256byteram](http://www.youtube.com/user/256byteram)
 
 ---
 
@@ -71,60 +115,7 @@ Not particularity good looking but is quite unique nonetheless!
 
 ---
 
-## MFOS Soundlab Synthesizer with MIDI
-
-`05 June 2011` · [Open this post on its own](window:file/blog/2011-06-05-midsoundlab.md)
-
-[![](https://clacktronics.co.uk/assets/643_midi-mfos-soundlab.jpg)](https://clacktronics.co.uk/assets/MIDI-MFOS-Soundlab.jpg)
-This was a one off project to see if I could fit MIDI into the simple MFOS  soundlab (Designed by Ray Wilson see [musicfromouterspace.com ](http://musicfromouterspace.com)) it was built from parts I had  laying around including a MIDImplant ([midimplant.com](http://midimplant.com)), basically I was attempting to try and make it perform like a monosynth. Below is a list of  the modifications done.
-	
-  * MIDI control of pitch and trigger
-
-	
-  * MIDI control of cutoff and amplitude by mod wheel
-
-	
-  * Pitch of VCO's are modified around 0 (means you can get a vibrato without the fundamental pitch moving )
-
-	
-  * It runs off and AC adapter (included) so no batteries.
-
-	
-  * Master Octave selection switch and detune on VCO2
-
-The  Soundlab is capable of some fantastic analogue vintage sounds as well  as some quite interesting new ones. Especially due to its unusual filter  design that can be quite gristley. It isn't fantastically accurate as a monosynth but if I wanted that I would buy a cheap commercial one!
-
-It is for sale [here](http://cgi.ebay.co.uk/MFOS-Soundlab-MIDI-/120733233974?pt=UK_Musical_Instruments_Pro_Audio_Synthesisers_CV&hash=item1c1c42f336)
-
-[![](https://clacktronics.co.uk/assets/643_mfos-wooden-keyboard-s.jpg)](https://clacktronics.co.uk/assets/MFOS-Wooden-Keyboard-s.jpg)
-
-I am also selling this keyboard puts out 1V/Oct CV and triggers as well as portamento controls also made from circuits at musicfromouterspace. [See here](http://cgi.ebay.co.uk/MFOS-Soundlab-MIDI-/120733233974?pt=UK_Musical_Instruments_Pro_Audio_Synthesisers_CV&hash=item1c1c42f336)
-
-@[youtube](https://www.youtube.com/watch?v=EGM5uhOYWVY)
-
-Mod Details coming soon ....
-
----
-
-## Roland Chorus Echo SRE-555 Repair
-
-`23 April 2011` · [Open this post on its own](window:file/blog/2011-04-23-roland-sre555.md)
-
-[![](https://clacktronics.co.uk/assets/643_1.jpg)](https://clacktronics.co.uk/assets/1.jpg)This was a Roland Chorus Echo SRE-555 in a desperate need of service, It was bought second hand from Japan and was damaged in transit. It is actually just a Roland RE-501, but enclosed in a more compact 19" rack-mount case. For some unknown reason the SRE-555 usually costs more than a standard RE-501 in second hand prices, possibly because of its rarity or the fact it will fit into a studio better with its robust case.
-
-It took quite a lot of working out just to find the right way to open the unit, especially as there is no known service manual so it was all guess work. The construction is really complex and multi-layered. Below is when the inside was finally reached...
-
-[![](https://clacktronics.co.uk/assets/643_img_20110418_153559.jpg)](https://clacktronics.co.uk/assets/IMG_20110418_153559.jpg)
-
-I was amazed - it is so clean inside! Those endless layers of metal definitely did their job!
-
-[![](https://clacktronics.co.uk/assets/643_IMG_20110417_014811jpg)](https://clacktronics.co.uk/assets/IMG_20110417_014811.jpg)
-
-Unfortunately all inputs and outputs were damaged, as well as PSU... when fixed I managed to put the unit back together and run some tests. I also took a quick video of the module in action, the quality is not so great (sorry)
-
----
-
-Page 7 of 9
+Page 7 of 10
 
 [Blog list](window:file/blog-list.md)
 [< Newer posts](window:file/blog-page-6.md)

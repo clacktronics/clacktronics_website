@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="only light">
 <title>Blog (page 7) — Clacktronics</title>
-<meta name="description" content="Posts 31–35 of 44">
+<meta name="description" content="Posts 31–35 of 46">
 <meta name="robots" content="noindex,follow">
 <link rel="canonical" href="https://clacktronics.co.uk/plain/blog-page-7.html">
 <meta property="og:site_name" content="Clacktronics">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Blog (page 7)">
 <meta property="og:url" content="https://clacktronics.co.uk/plain/blog-page-7.html">
-<meta property="og:description" content="Posts 31–35 of 44">
-<meta property="og:image" content="https://clacktronics.co.uk/assets/643_octave_kitten_main_634.jpg">
+<meta property="og:description" content="Posts 31–35 of 46">
+<meta property="og:image" content="https://clacktronics.co.uk/assets/643_yamaha_cs80_sub_octave_mod.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,10 +29,31 @@
 <div class="plain">
 <p class="up-link"><a href="index.html">↑ clacktronics.co.uk</a></p>
 <h1 id="blog">Blog</h1>
-<p class="tagline">Posts 31–35 of 44</p>
+<p class="tagline">Posts 31–35 of 46</p>
 <div class="rule"></div>
 <div class="ctas"><a class="btn primary" href="blog-list.html">Blog list</a><a class="btn ghost" href="blog-page-6.html">&lt; Newer posts</a><a class="btn ghost" href="blog-page-8.html">Older posts &gt;</a></div>
-<p>Page 7 of 9</p>
+<p>Page 7 of 10</p>
+<div class="rule"></div>
+<p class="eyebrow" id="yamaha-cs-10-sub-octave-mod">Yamaha CS-10 Sub Octave Mod</p>
+<p><span class="k">22 June 2011</span> · <a href="blog/2011-06-22-yamahacs10.html">Open this post on its own</a></p>
+<p><a href="https://clacktronics.co.uk/assets/Yamaha_CS80_Sub_octave_mod.jpg" target="_blank" rel="noopener noreferrer"><img src="https://clacktronics.co.uk/assets/643_yamaha_cs80_sub_octave_mod.jpg" alt="" loading="lazy"></a>The Yamaha CS series has some unique features inside and out. Most of the circuitry uses quite unusual IC&#x27;s (custom perhaps?) . The VCO for a start uses an interesting method of resetting the core, I can&#x27;t really go into detail because I can&#x27;t exactly understand what is going on but it creates a very stable oscillator that was used in the polyphonic part of the CS series. It has quite a pleasant band-pass filter and very fast attack settings, it can sound a bit sterile but its unique-ness pays off for that.</p>
+<p>Here I added a sub-octave <a href="http://yusynth.net/index_en.php?&amp;arg=3" target="_blank" rel="noopener noreferrer">taken from Yves Usson&#x27;s schematics,</a> except I added a couple more flip-flop&#x27;s to create 2 more octaves below! I thought this would be interesting because the VCO has quite a range, so you can end up with 2 pitches 4 octaves apart!</p>
+<p>Sound Samples soon!</p>
+<div class="rule"></div>
+<p class="eyebrow" id="video-synthesis-part-1-getting-into-video-circuits">Video Synthesis Part 1 : Getting into Video Circuits</p>
+<p><span class="k">22 June 2011</span> · <a href="blog/2011-06-22-video-synthesis-part-1-getting-into-video-circuits.html">Open this post on its own</a></p>
+<p><img src="https://clacktronics.co.uk/assets/643_gieskes.gif" alt="" loading="lazy"> Frame from video by <a href="http://gieskes.nl" target="_blank" rel="noopener noreferrer">Gijs Gieskes</a> Just recently I have been researching how to work with analogue video, specifically Composite (the yellow phono connector you get on a lot of consumer video equipment.) Here is some information I have found out.</p>
+<p>Firstly composite video is far more complex than audio, the reason being that to represent a sound electronically you only need 2 dimensions amplitude over time. It is easily represented by voltage, making it possible to create quite interesting effects and adjustments to the sound with very little and low cost circuitry. Where as composite video is a 2 dimensional image (X,Y) over time with Brightness (luminance) and Colour (chrominance) information is still represented by a voltage, but it has to hold all that information in a 2 dimensional signal. To do this it is constructed of a repeating (scanning) waveform that contains triggers, frequency bursts and a DC voltage that each represent a different component of the image.</p>
+<p>There is a good app note here that explains it a lot better and in depth than me by Maxim Semiconductors - <a href="http://www.maxim-ic.com/app-notes/index.mvp/id/734" target="_blank" rel="noopener noreferrer">www.maxim-ic.com/app-notes/index.mvp/id/734</a></p>
+<p>Now, all this makes it quite difficult to use a handful of components to do anything effective as with sound. Of course you can glitch and mess up the image but in the end it gets a bit boring and &#x27;samey&#x27; and pretty much consists of making the image glitch a bit. Composite video is quite a sensitive high frequency signal and for example if you want to change one parameter like contrast (luminance) you have to do it without affecting the other parts of the signal.</p>
+<p>Ideally what you need to do is separate the parts (usually sync from luminosity and chrominance.)</p>
+<p>There is a lot out there on what can be achieved with circuitry, but not a lot on how. Then I found this excellent book by <a href="http://Elektor.com" target="_blank" rel="noopener noreferrer">Elektor</a>that describes to the modern user (released 2011) on how it all works including how to decode and encode composite video! Also touches on lost historical technologies such as mechanical TV and spiral scanning.</p>
+<p><a href="https://clacktronics.co.uk/assets/Analogue-Video-300.jpg" target="_blank" rel="noopener noreferrer"><img src="https://clacktronics.co.uk/assets/643_analogue-video-300.jpg" alt="" loading="lazy"></a>Copyright Elektor</p>
+<p>Below is some of the best bits I could find that certainly seem to have legs for direct video manipulation with circuitry.</p>
+<p><b>gieskes.nl</b><br>http://vimeo.com/20876345</p>
+<p>Gijs Gieskes created this fantastic swiping circuit based around micro-controllers that seem to work by switching between 2 video sources very quickly to create interesting fade patterns. His website is <a href="http://gieskes.nl/visual-equipment/?file=vm1" target="_blank" rel="noopener noreferrer">gieskes.nl</a>.</p>
+<p><b>256byteram</b><br>http://youtu.be/W5wv7RbJ3EQ</p>
+<p>Taking the idea of switches this video demonstrates using a comparator to super-impose video. His youtube channel is <a href="http://www.youtube.com/user/256byteram" target="_blank" rel="noopener noreferrer">256byteram</a></p>
 <div class="rule"></div>
 <p class="eyebrow" id="octave-kitten-repair">Octave Kitten Repair</p>
 <p><span class="k">22 June 2011</span> · <a href="blog/2011-06-22-octave-kitten-repair.html">Open this post on its own</a></p>
@@ -61,31 +82,7 @@
 <p>Not particularity good looking but is quite unique nonetheless!</p>
 <p><a href="https://clacktronics.co.uk/assets/AVRSYN-guts1.jpg" target="_blank" rel="noopener noreferrer"><img src="https://clacktronics.co.uk/assets/643_avrsyn-guts1.jpg" alt="" loading="lazy"></a></p>
 <div class="rule"></div>
-<p class="eyebrow" id="mfos-soundlab-synthesizer-with-midi">MFOS Soundlab Synthesizer with MIDI</p>
-<p><span class="k">05 June 2011</span> · <a href="blog/2011-06-05-midsoundlab.html">Open this post on its own</a></p>
-<p><a href="https://clacktronics.co.uk/assets/MIDI-MFOS-Soundlab.jpg" target="_blank" rel="noopener noreferrer"><img src="https://clacktronics.co.uk/assets/643_midi-mfos-soundlab.jpg" alt="" loading="lazy"></a><br>This was a one off project to see if I could fit MIDI into the simple MFOS  soundlab (Designed by Ray Wilson see <a href="http://musicfromouterspace.com" target="_blank" rel="noopener noreferrer">musicfromouterspace.com</a>) it was built from parts I had  laying around including a MIDImplant (<a href="http://midimplant.com" target="_blank" rel="noopener noreferrer">midimplant.com</a>), basically I was attempting to try and make it perform like a monosynth. Below is a list of  the modifications done.</p>
-<ul class="list"><li><p>MIDI control of pitch and trigger</p></li></ul>
-<ul class="list"><li><p>MIDI control of cutoff and amplitude by mod wheel</p></li></ul>
-<ul class="list"><li><p>Pitch of VCO&#x27;s are modified around 0 (means you can get a vibrato without the fundamental pitch moving )</p></li></ul>
-<ul class="list"><li><p>It runs off and AC adapter (included) so no batteries.</p></li></ul>
-<ul class="list"><li><p>Master Octave selection switch and detune on VCO2</p></li></ul>
-<p>The  Soundlab is capable of some fantastic analogue vintage sounds as well  as some quite interesting new ones. Especially due to its unusual filter  design that can be quite gristley. It isn&#x27;t fantastically accurate as a monosynth but if I wanted that I would buy a cheap commercial one!</p>
-<p>It is for sale <a href="http://cgi.ebay.co.uk/MFOS-Soundlab-MIDI-/120733233974?pt=UK_Musical_Instruments_Pro_Audio_Synthesisers_CV&amp;hash=item1c1c42f336" target="_blank" rel="noopener noreferrer">here</a></p>
-<p><a href="https://clacktronics.co.uk/assets/MFOS-Wooden-Keyboard-s.jpg" target="_blank" rel="noopener noreferrer"><img src="https://clacktronics.co.uk/assets/643_mfos-wooden-keyboard-s.jpg" alt="" loading="lazy"></a></p>
-<p>I am also selling this keyboard puts out 1V/Oct CV and triggers as well as portamento controls also made from circuits at musicfromouterspace. <a href="http://cgi.ebay.co.uk/MFOS-Soundlab-MIDI-/120733233974?pt=UK_Musical_Instruments_Pro_Audio_Synthesisers_CV&amp;hash=item1c1c42f336" target="_blank" rel="noopener noreferrer">See here</a></p>
-<div class="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/EGM5uhOYWVY" title="YouTube video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
-<p>Mod Details coming soon ....</p>
-<div class="rule"></div>
-<p class="eyebrow" id="roland-chorus-echo-sre-555-repair">Roland Chorus Echo SRE-555 Repair</p>
-<p><span class="k">23 April 2011</span> · <a href="blog/2011-04-23-roland-sre555.html">Open this post on its own</a></p>
-<p><a href="https://clacktronics.co.uk/assets/1.jpg" target="_blank" rel="noopener noreferrer"><img src="https://clacktronics.co.uk/assets/643_1.jpg" alt="" loading="lazy"></a>This was a Roland Chorus Echo SRE-555 in a desperate need of service, It was bought second hand from Japan and was damaged in transit. It is actually just a Roland RE-501, but enclosed in a more compact 19&quot; rack-mount case. For some unknown reason the SRE-555 usually costs more than a standard RE-501 in second hand prices, possibly because of its rarity or the fact it will fit into a studio better with its robust case.</p>
-<p>It took quite a lot of working out just to find the right way to open the unit, especially as there is no known service manual so it was all guess work. The construction is really complex and multi-layered. Below is when the inside was finally reached...</p>
-<p><a href="https://clacktronics.co.uk/assets/IMG_20110418_153559.jpg" target="_blank" rel="noopener noreferrer"><img src="https://clacktronics.co.uk/assets/643_img_20110418_153559.jpg" alt="" loading="lazy"></a></p>
-<p>I was amazed - it is so clean inside! Those endless layers of metal definitely did their job!</p>
-<p><a href="https://clacktronics.co.uk/assets/IMG_20110417_014811.jpg" target="_blank" rel="noopener noreferrer"><img src="https://clacktronics.co.uk/assets/643_IMG_20110417_014811jpg" alt="" loading="lazy"></a></p>
-<p>Unfortunately all inputs and outputs were damaged, as well as PSU... when fixed I managed to put the unit back together and run some tests. I also took a quick video of the module in action, the quality is not so great (sorry)</p>
-<div class="rule"></div>
-<p>Page 7 of 9</p>
+<p>Page 7 of 10</p>
 <div class="ctas"><a class="btn primary" href="blog-list.html">Blog list</a><a class="btn ghost" href="blog-page-6.html">&lt; Newer posts</a><a class="btn ghost" href="blog-page-8.html">Older posts &gt;</a></div>
 </div>
 </main>

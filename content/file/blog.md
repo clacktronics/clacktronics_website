@@ -1,6 +1,6 @@
 ---
 title: Blog
-tagline: Posts 1–5 of 44
+tagline: Posts 1–5 of 46
 style: plain
 ---
 # Blog
@@ -8,13 +8,35 @@ style: plain
 [Blog list](window:file/blog-list.md)
 [Older posts >](window:file/blog-page-2.md)
 
-Page 1 of 9
+Page 1 of 10
+
+---
+
+## New EuroClack Kits
+
+`27 June 2024` · [Open this post on its own](window:file/blog/2024-06-27-Two-new-kits.md)
+
+![Proto PSU on a breadboard](https://clacktronics.co.uk/assets/proto_psu.jpg)
+
+There are two new Eurorack kits, one is called [ProtoPSU](window:file/euroclack/proto-psu.md) which is a breadboardable power supply to create +-12V and 5V from a 15V supply. The other is [Analogue Meter](window:file/euroclack/analogue-meter.md) which is a physical meter for Eurorack to observe DC and slow moving voltages.
+
+---
+
+## Build Your Own Modular
+
+`27 June 2024` · [Open this post on its own](window:file/blog/2024-06-27-Build-Your-Own-Modular-book.md)
+
+![modular synth with keyboard](https://clacktronics.co.uk/assets/byom.jpg)
+
+I have just released a new projects called BUILD YOUR OWN MODULAR, it is a ring binder book that contains all the PCBs and the documentation to build your own complete Eurorack modular. See the complete project page and where to buy here! [BUILD YOUR OWN MODULAR - Project page](window:file/euroclack/byom.md)
 
 ---
 
 ## EuroClack - Mini Speaker
 
 `09 August 2019` · [Open this post on its own](window:file/blog/2019-08-09-euroclack.md)
+
+![Mini-Speaker kit](https://clacktronics.co.uk/euroclack/mini-speaker_kit/images/mini-speaker_kit_main_image.jpg)
 
 I am back to producing audio equipment! There is a new section under "Reasearch" called EuroClack, it is for synth DIY and I am producing and selling full kits / designing open source modules. The first full kit is a mini-speaker that fits into 6HP, see more inforation on [the page](https://clacktronics.co.uk/euroclack/).
 
@@ -119,76 +141,7 @@ In 2017 I started working for [Boldport](https://boldport.com) a PCB design comp
 
 ---
 
-## Paris Opera
-
-`26 June 2017` · [Open this post on its own](window:file/blog/2017-06-26-Paris_Opera.md)
-
-![paris opera ceiling -  chagall painting, illuminated by DMX lights](https://clacktronics.co.uk/assets/Palais_garnier_roof_haroon_mirza.gif)
-I had the rare opportunity to be a part of a project at the Palais Garnier, that is one of the main Opera house’s in Paris. I was working with Haroon Mirza to produce a live light and projection installation that interacted with a composition by Pierre Boulez called “Anthèmes II” and was a collaboration with the choreographer Wayne McGregor.
-
-“Anthèmes II” was a fairly early production created at IRCAM by Boulez, using the latest technological research at that time. In fact it actually used early versions of “Max” the visual programming software. I had the opportunity to look at the technical document for that work, it was fascinating to see how the work has been adapted for each new advance in technology. Originally using a number of NeXT machines serial linked and processed with FX processors to now simply running on a single Macbook Pro! There are a lot of technical details in the work that I will skim over, but its basically a program that follows a solo violinist reacting and performing with them according to a score. It does things like passing the violinist sound through various FX and panning the results around 6 speakers, also triggering various samplers. The technicians from IRCAM kindly let us receive data feeds from the MAX/MSP program via open sound control so the elements we control could respond to the live sound. Below is an example of the peice played at the BBC Proms.
-
-@[youtube](https://www.youtube.com/watch?v=TMYDgwNALY8)
-
-The Palais Garnier is a very lavish building, with a complicated baroque style gilt interior. Haroon wanted to work with the internal structure of the auditorium, highlighting parts with lights. We focused on the windows that go around the dome of the auditorium, there were 64 little windows on the edge of the Chagall painting, this is an idea number when working computers! Those were each fitted with PARLED’s. The other element of the work was a projected backdrop on the stage, the idea was to make it look a little bit like an oscilloscope. The data provided to move the beam was quite slow so the movement of the dot was simply a rotating dot. I have recently been learning more about using mathematics to produce graphics from the great youtube series called coding with math by Keith Peters. To produce a rotation all I needed to do was use sine and cosine! The software I used to produce the visualisation was Processing.
-
-Haroon typically produces light / audio works by programming Arduino’s (well AVR’s) built in PWM peripheral. To keep the sound but control the DMX lights I simply established a simple serial link over USB to the control program.
-
-![paris opera control box diagram](https://clacktronics.co.uk/assets/Paris_opera_control_box.png)
-
-Overall this was a very good experience, I got to try out experimental technology in a fairly low tech live production environment. There is little public recordings of the performance but bellow is a small excerpt from the rehearsals showing the projection and the lights performing.
-
-@[youtube](https://www.youtube.com/watch?v=QnbSaL5OvnU)
-
----
-
-## Cryptocoin ticker
-
-`20 June 2017` · [Open this post on its own](window:file/blog/2017-06-20-cryptocoin_ticker.md)
-
-![Pimoroni's microdot phat displaying Bitcoin program](https://clacktronics.co.uk/assets/microdot_bitcoin.jpg)
-A Quick 5 minute build and possibly a prototype for a future project. I took the Pimoroni micro dot display, which is suitably retro looking, like an 80s/90s stock exchange. Although it is LED, it actually looks a bit like an old [Vacuum fluorescent display](https://en.wikipedia.org/wiki/Vacuum_fluorescent_display)! The code is a very simple Python script that uses Coinmarketcap API (I chose them because they pull all the coins together) which is simply just provided as JSON, the API allows you to request by currency so I just pulled the ones I wanted and fed the details into a single string that loops on the display.
-
-See the python code below, it gets the details of the coins one by one and pulls the dollar value of them, concatenating it into a single string that is fed into the Pimoroni module for loading up text on the display. It only requests new information every 20 loops to lower demand on the API as it is probably request limited.
-
-```python
-from time import sleep
-from microdotphat import write_string, scroll, clear, show
-import json
-import urllib2
-
-# choose currencies to display
-currencies = ['bitcoin', 'litecoin', 'dogecoin']
-
-while True:
-    ticker = ''
-
-    for currency in currencies:
-
-        url = "https://api.coinmarketcap.com/v1/ticker/%s/" % currency
-        data = json.load(urllib2.urlopen(url))[0]
-
-        ticker += '%s ' % data['symbol']
-        ticker += '$%s ' % data['price_usd']
-
-    for i in range(20):
-        clear()
-        write_string(ticker, kerning=False)
-        for c in ticker:
-            show()
-            scroll(amount_x=8)
-            sleep(.5)
-
-    sleep(10)
-```
-
-Here is a Demo of it working, it can simply be run at startup ensuring there is an internet connection.
-
-@[youtube](https://www.youtube.com/watch?v=wlej3YBEKBU)
-
----
-
-Page 1 of 9
+Page 1 of 10
 
 [Blog list](window:file/blog-list.md)
 [Older posts >](window:file/blog-page-2.md)
