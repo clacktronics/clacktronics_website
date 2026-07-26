@@ -106,22 +106,40 @@ stays plain monospace rather than being coloured at random. Tag a block
 ` ```text ` (or `output`, `log`, `csv`) to switch colouring off deliberately.
 
 Colours are never written in the highlighter. Every token is wrapped in a
-`tok-…` span and `assets/css/code.css` derives the colour from the variables
-the active theme already sets, so a palette written in the Theme Editor
+`tok-…` span and `assets/css/code.css` builds the colour out of the code
+surface's own background in OKLCH, so a palette written in the Theme Editor
 recolours code with no further work:
 
-- each token is a mix of a theme accent and the foreground the theme already
-  guarantees is legible on that surface, so no token can drift far enough from
-  the text colour to become unreadable;
-- accents are chosen per surface — the colours a theme puts on `--ink` for the
-  dark code blocks, shells and consoles, and the ones it puts on `--paper` for
-  the light CodeMirror editors;
-- weight and italics separate the token types as well as hue does, so a
-  single-hue palette such as `blood.css` or `monochrome.css` still reads as
-  code;
-- errors and warnings start from `--code-alert` / `--code-caution` (the only
-  fixed hues, since no theme variable means "wrong") and are then pulled
-  towards the theme's own foreground.
+- **lightness is inverted from the panel's.** `sign(0.577 - l)` is +1 when the
+  panel is dark and -1 when it is light, so tokens are pushed away from the
+  background whichever way round a theme paints it — bright on ink, deep on
+  paper — and never strand themselves at the middle lightness of a strongly
+  coloured panel. How far each token is pushed is what separates the prominent
+  ones (functions, keywords) from the quiet ones (comments, punctuation).
+- **hue is turned away from the panel's own.** `calc(h + 150)` and friends put
+  each token most of the way around the wheel from the background, so a red
+  panel cannot get red text. The palette still rotates with the theme rather
+  than being a fixed rainbow dropped on top of it.
+- **chroma is set per token type**, high enough to read as colour rather than
+  as tinted grey. Out-of-gamut combinations are mapped back by the browser.
+- weight and italics carry the same distinctions, so the code still reads as
+  code if a browser renders it without colour.
+
+Errors and warnings are rotated furthest from the panel hue for the same
+reason — a console that cannot show its errors is no use — with
+`--code-alert` / `--code-caution` left as the fallback hues.
+
+Two surfaces are defined: the dark panels (code blocks, shells, consoles,
+`--ink`) and the light editors (`--paper`). Browsers too old for
+`oklch(from …)` or `sign()` fall back to a plainer set of colours mixed from
+the theme accents.
+
+Measured across the seven themes in `assets/themes/`, the worst token contrast
+on a code block is 9.9:1 for `clackos.css`, 8.7:1 for `blood.css`, 6.1:1 for
+`brownstone.css` and 4.4:1 for `poolside.css`, whose panel is a fully
+saturated blue. Where a number looks low it is the palette's own ceiling
+rather than the derivation: `blood.css`'s editor lands around 3:1 because
+plain white text on its red `--paper` only manages 4:1 to begin with.
 
 The same stylesheet retunes the CodeMirror editors in Python, OpenSCAD and
 Processing, and the shell/console panes in Python, OpenSCAD, Processing and

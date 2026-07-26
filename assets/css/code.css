@@ -1,20 +1,26 @@
 /* Theme-responsive colours for code — Markdown code blocks, the CodeMirror
  * editors in Python/OpenSCAD/Processing, and the shell and console panes.
  *
- * Nothing here is a fixed colour. Every token is mixed from the variables the
+ * Nothing here is a fixed colour. Every token is derived from the variables the
  * active theme already sets, so blood.css, clackos.css or a palette written
  * tomorrow in the Theme Editor recolours code automatically.
  *
- * How it stays readable in any palette:
- *   - every token is a mix of an accent and --code-fg, the colour the theme
- *     already guarantees is legible on that surface, so nothing can drift far
- *     enough from the foreground to disappear;
- *   - the accents are picked per surface — colours the theme puts on --ink for
- *     dark panes, colours it puts on --paper for the light editors;
- *   - weight and italics separate the token types as well as hue does, so a
- *     single-hue theme (blood.css, monochrome.css) still reads as code.
+ * The colours are built from the code surface's own background, in OKLCH:
  *
- * Two surfaces exist, and each declares its own foreground and accents. */
+ *   - lightness is inverted from the background's, so tokens are bright on a
+ *     dark panel and dark on a light one — the contrast holds whichever way
+ *     round a theme paints the surface;
+ *   - hue is the background's hue turned well away from itself, so a red panel
+ *     never gets red text. The palette still rotates with the theme rather than
+ *     being a fixed rainbow dropped on top of it;
+ *   - chroma is set per token type, high enough to read as colour rather than
+ *     as tinted grey.
+ *
+ * Weight and italics carry the same distinctions, so the code still reads as
+ * code if a browser renders it without colour.
+ *
+ * Two surfaces exist: the dark panels (code blocks, shells, consoles) and the
+ * light editors. Each declares its own background and foreground. */
 
 /* Each accent is a blend of two theme colours rather than one. Palettes are
    allowed to reuse a colour — monochrome.css sets --menu-dim to the same black
@@ -60,6 +66,38 @@ pre.code, .code-dark, .code-light, .CodeMirror {
   --tok-operator: color-mix(in oklab, var(--code-fg) 86%, var(--code-bg));
   --tok-error: color-mix(in oklab, var(--code-alert) 62%, var(--code-fg));
   --tok-warn: color-mix(in oklab, var(--code-caution) 62%, var(--code-fg));
+}
+
+/* The real palette. Relative colour syntax can take the background apart into
+   lightness and hue, which the mixes above cannot do.
+
+   `sign(0.577 - l)` is +1 when the panel is dark and -1 when it is light, so
+   every token is pushed the same distance *away* from the panel whichever way
+   round a theme paints it — bright on ink, deep on paper, and never stranded
+   at the mid lightness of a strongly coloured panel like blood.css's. How far
+   it is pushed is what separates prominent tokens from quiet ones.
+
+   `calc(h + 150)` and friends turn the hue most of the way around the wheel
+   from the panel's own, so a red panel cannot get red text; the palette still
+   rotates with the theme instead of being a fixed rainbow dropped on top of
+   it. Chroma is set per token, high enough to read as colour rather than as
+   tinted grey — out-of-gamut combinations are mapped back by the browser.
+
+   Browsers without oklch(from …) or sign() keep the mixes above. */
+@supports (color: oklch(from white calc(0.5 + 0.1 * sign(0.5 - l)) c h)) {
+  pre.code, .code-dark, .code-light, .CodeMirror {
+    --tok-function: oklch(from var(--code-bg) calc(0.577 + 0.37 * sign(0.577 - l)) 0.09 calc(h + 40));
+    --tok-keyword: oklch(from var(--code-bg) calc(0.577 + 0.34 * sign(0.577 - l)) 0.17 calc(h + 150));
+    --tok-type: oklch(from var(--code-bg) calc(0.577 + 0.33 * sign(0.577 - l)) 0.15 calc(h + 95));
+    --tok-string: oklch(from var(--code-bg) calc(0.577 + 0.32 * sign(0.577 - l)) 0.15 calc(h + 235));
+    --tok-builtin: oklch(from var(--code-bg) calc(0.577 + 0.31 * sign(0.577 - l)) 0.11 calc(h + 150));
+    --tok-number: oklch(from var(--code-bg) calc(0.577 + 0.30 * sign(0.577 - l)) 0.13 calc(h + 285));
+    --tok-meta: oklch(from var(--code-bg) calc(0.577 + 0.28 * sign(0.577 - l)) 0.10 calc(h + 95));
+    --tok-operator: oklch(from var(--code-bg) calc(0.577 + 0.28 * sign(0.577 - l)) 0.03 calc(h + 150));
+    --tok-comment: oklch(from var(--code-bg) calc(0.577 + 0.22 * sign(0.577 - l)) 0.04 calc(h + 150));
+    --tok-error: oklch(from var(--code-bg) calc(0.577 + 0.33 * sign(0.577 - l)) 0.19 calc(h + 190));
+    --tok-warn: oklch(from var(--code-bg) calc(0.577 + 0.33 * sign(0.577 - l)) 0.16 calc(h + 250));
+  }
 }
 
 /* ------------------------------------------------- Markdown code blocks */
