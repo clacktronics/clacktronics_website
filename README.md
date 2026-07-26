@@ -152,6 +152,66 @@ of the script sets the five. Pushing a post to `content/file/blog/` runs the
 script in CI (`.github/workflows/blog-index.yml`) and commits the result, so
 the blog keeps itself up to date.
 
+### Dead links and Wayback mirrors
+
+The posts go back to 2011 and a fair number of the sites they link to have
+since gone. `scripts/wayback_dead_links.py` walks the markdown in `content/`,
+checks every outbound link, and for the ones that are actually gone swaps the
+URL for an archive.org snapshot and marks it in the text:
+
+```markdown
+[Vintage Synth Explorer](http://www.vintagesynth.com/misc/octavecat.php)
+[Vintage Synth Explorer](https://web.archive.org/web/20110123182157/http://www.vintagesynth.com/misc/octavecat.php) (wayback mirror)
+```
+
+Which snapshot depends on the file. A blog post is named `YYYY-MM-DD-slug.md`,
+so its links get the capture closest to the day the post was written — the page
+as it was when the post was talking about it. Everything else gets the newest
+capture.
+
+Replacing a link that still works would be worse than leaving a broken one, so
+the checker only calls a link dead on an unambiguous answer: `404`, `410`, a
+host with no DNS record, or a refused connection. A `403`, `429`, `500` or a
+timeout means "cannot tell" and the link is left alone. `HEAD` is tried first
+and then `GET`, because plenty of servers refuse `HEAD` and serve the page
+happily. There are three more guards: a connection error is only believed if
+the hostname really fails to resolve (behind a proxy, urllib lies about this),
+the run aborts if it cannot reach the web at all, and it aborts if more than
+half the links look dead — that is a broken network, not a broken web.
+
+```sh
+python3 scripts/wayback_dead_links.py --dry-run       # report, change nothing
+python3 scripts/wayback_dead_links.py                 # rewrite in place
+python3 scripts/wayback_dead_links.py --report out.md content/file/blog
+```
+
+Only the posts are rewritten: `blog.md`, `blog-page-N.md` and `blog-list.md`
+are built from them, so a directory scan skips them and the workflow re-runs
+`build_blog_index.py` instead. Re-running is safe: links already pointing at
+`web.archive.org`, and any link already carrying the marker, are skipped, and
+a link the archive had no snapshot for this month is simply tried again next
+month. Statuses are cached in `.link-check-cache.json` (gitignored) for a week
+so a re-run is cheap.
+Image sources are left alone unless `--include-images` is given — a marker
+next to a picture would just render as stray text. Links to
+`clacktronics.co.uk` itself are skipped too, since that host serves this
+site's own assets; `--include-site` takes them in, which is worth a `--dry-run`
+first because the old WordPress permalinks under it are dead and would all be
+rewritten at once.
+
+`.github/workflows/dead-links.yml` runs the sweep on the 1st of each month and
+on demand from the Actions tab (with a dry-run switch). It opens a **pull
+request** rather than pushing to `main` — calling a link dead is a judgement
+call and the diff is worth reading — with the report as the PR body, and
+uploads that report as an artifact either way. For the PR step to work,
+Settings → Actions → General → "Allow GitHub Actions to create and approve pull
+requests" has to be ticked; without it the branch is still pushed and only the
+`gh pr create` fails.
+
+Reference-style links (`[text][ref]`) and bare `<http://…>` autolinks are not
+rewritten — nothing in `content/` uses them. A page that answers `200` with
+"this video is unavailable" is not detectable either; those still need a human.
+
 ### The events calendar
 
 Upcoming events live in one CSV, `content/applications/calendar/events.csv`,

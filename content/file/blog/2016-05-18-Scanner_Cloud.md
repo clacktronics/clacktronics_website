@@ -33,7 +33,7 @@ I learned a great deal on this project about working with scale and allowing fle
 
 See links below for more detail and the actual exhibition website.
 
-* [PublishingRooms.com](http://publishingrooms.com)
+* [PublishingRooms.com](https://web.archive.org/web/20170223073116/http://publishingrooms.com/) (wayback mirror)
 * [Scanner Server Code on Github](https://github.com/clacktronics/Foxall_Scanner)
 * [Bonington Gallery](http://boningtongallery.co.uk)
 
