@@ -11,7 +11,7 @@ Part of [Misc](window:file/misc.md).
 
 Lazertran is an excellent way of producing decals for enclosures because it naturally provides a hard wearing transparent finish onto metal surfaces. It gives a comparable finish quality to screen printing whilst being just as economical and flexible for ‘one-offs’ as printing images onto photo paper.
 
-Whilst useful, the [instructions supplied with lazertran](http://www.lazertran.com/techniques/ceramics.htm) for use on metal are quite minimal and a little confusing. This is why I am writing this small, step by step photogrphic record on how I use it. It should help those trying to find out how it works and tips of how to get a good finish. My technique is not perfect so if you have any tips or suggestions on how to do it better please let me know [Ben@clacktronics.co.uk](mailto:ben@clacktronics.co.uk)
+Whilst useful, the [instructions supplied with lazertran](https://web.archive.org/web/20120817081113/http://www.lazertran.com:80/techniques/ceramics.htm) (wayback mirror) for use on metal are quite minimal and a little confusing. This is why I am writing this small, step by step photogrphic record on how I use it. It should help those trying to find out how it works and tips of how to get a good finish. My technique is not perfect so if you have any tips or suggestions on how to do it better please let me know [Ben@clacktronics.co.uk](mailto:ben@clacktronics.co.uk)
 
 In a nutshell Lazertran is a polymer sheet that has the possibility to be fused onto metal; it is done by soaking off the paper backing , applying it and then heating it in the oven for a couple of hours. Once cooled the finish is strong, durable and glossy.
 

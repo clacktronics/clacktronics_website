@@ -11,3 +11,8 @@ version.json
 # immediately before rsync (see .github/workflows/deploy-purely.yml) so they can
 # never drift out of sync with the file they were built from.
 *.wasm.gz
+
+# Link-check bookkeeping: which URLs were reachable when, and the last sweep's
+# report (see scripts/wayback_dead_links.py). Both are regenerated on demand.
+.link-check-cache.json
+link-report.md

@@ -1,0 +1,107 @@
+name: Mirror dead links
+
+# Checks every outbound link in content/ and, where a link is genuinely gone,
+# repoints it at an archive.org snapshot from around the time the post was
+# written (see scripts/wayback_dead_links.py).
+#
+# The result arrives as a pull request rather than a push to main: deciding a
+# link is dead is a judgement call, and rewriting one that was merely having a
+# bad day would be worse than leaving it broken. Read the diff, then merge.
+#
+# Runs on the 1st of each month, and on demand from the Actions tab — the
+# manual run has a dry-run switch if you just want the report.
+#
+# Note: for the PR step to work, Settings -> Actions -> General -> "Allow
+# GitHub Actions to create and approve pull requests" must be ticked. Without
+# it the branch is still pushed; only `gh pr create` fails.
+
+on:
+  schedule:
+    - cron: '17 4 1 * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report only, change nothing'
+        type: boolean
+        default: false
+      include_site:
+        description: 'Also check links to clacktronics.co.uk itself'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: dead-links
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Restore the link status cache
+        # Statuses are remembered for a week so a re-run does not hammer the
+        # same few hundred hosts. The key rolls every run and falls back to the
+        # newest earlier cache.
+        uses: actions/cache@v4
+        with:
+          path: .link-check-cache.json
+          key: link-check-${{ github.run_id }}
+          restore-keys: link-check-
+
+      - name: Check the links
+        id: sweep
+        run: |
+          python3 scripts/wayback_dead_links.py \
+            --report link-report.md \
+            ${{ inputs.dry_run && '--dry-run' || '' }} \
+            ${{ inputs.include_site && '--include-site' || '' }}
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-report
+          path: link-report.md
+          if-no-files-found: ignore
+
+      - name: Rebuild the blog windows
+        # The sweep only touches the posts; blog.md / blog-page-N.md are built
+        # from them, so they are regenerated rather than rewritten separately.
+        if: ${{ !inputs.dry_run }}
+        run: python3 scripts/build_blog_index.py
+
+      - name: Open a pull request for the rewrites
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain content)" ]; then
+            echo "no dead links to mirror"
+            exit 0
+          fi
+          branch="wayback-mirrors/${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add content
+          git commit -m "Point dead links at Wayback Machine mirrors"
+          for delay in 2 4 8 16 0; do
+            git push -u origin "$branch" && break
+            [ "$delay" = 0 ] && exit 1
+            sleep "$delay"
+          done
+          gh pr create \
+            --title "Point dead links at Wayback Machine mirrors" \
+            --body-file link-report.md \
+            --head "$branch" \
+            --base main

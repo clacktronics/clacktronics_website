@@ -27,7 +27,7 @@ The Analogue Meter kit comes partially assembled, striking the perfect balance b
 
 ## Available to buy from
 
-- [Thonk](https://www.thonk.co.uk/shop/clacktronics-voltage-meter-kit/)
+- [Thonk](https://web.archive.org/web/20260210124829/https://www.thonk.co.uk/shop/clacktronics-voltage-meter-kit/) (wayback mirror)
 
 ## Bill of Materials
 
