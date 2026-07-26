@@ -569,13 +569,24 @@ function sanitizeHtmlBlock(html) {
   return template.innerHTML;
 }
 
+/* A fenced code block, coloured by assets/js/highlight.js. The fence's info
+ * string picks the language; without one the highlighter sniffs the code and
+ * leaves it plain when it is prose or program output rather than source. */
+function codeBlock(code, info) {
+  const highlighter = window.ClackHighlight;
+  const language = highlighter ? highlighter.resolve(info, code) : '';
+  const attribute = language ? ` data-lang="${escAttr(language)}"` : '';
+  const inner = language ? highlighter.highlight(code, language) : esc(code);
+  return `<pre class="code"${attribute}>${inner}</pre>`;
+}
+
 /* `prefix` is HTML placed inside the content wrapper, above the page: the
  * link back up to the page a window sits under. */
 function mdToHtml(body, meta, prefix = '') {
   /* lift fenced code blocks out before splitting on blank lines */
   const fences = [];
-  body = body.replace(/```\w*\r?\n([\s\S]*?)```/g, (_, code) => {
-    fences.push(`<pre class="code">${esc(code.replace(/\s+$/, ''))}</pre>`);
+  body = body.replace(/```([\w+#.-]*)[ \t]*\r?\n([\s\S]*?)```/g, (_, info, code) => {
+    fences.push(codeBlock(code.replace(/\s+$/, ''), info));
     return `\x00fence${fences.length - 1}\x00`;
   });
 

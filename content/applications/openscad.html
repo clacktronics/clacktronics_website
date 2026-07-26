@@ -19,7 +19,7 @@ body { overflow: hidden; }
 .scad-bar .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; }
 .scad-bar .pixel-icon { width: 16px; height: 16px; }
 .scad-run { color: var(--leaf-deep); }
-.scad-stop { color: #a04a3a; }
+.scad-stop { color: var(--code-alert); }
 .scad-spacer { flex: 1; }
 .scad-auto { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--sage); user-select: none; cursor: pointer; }
 
@@ -46,18 +46,7 @@ body { overflow: hidden; }
   background: var(--paper); color: var(--ink-soft);
   font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.6;
 }
-.CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
-.CodeMirror-selected { background: rgba(79, 174, 125, 0.25) !important; }
-.CodeMirror-gutters { background: var(--paper-deep) !important; border-right: 1px solid var(--paper-line) !important; }
-.CodeMirror-linenumber { color: var(--sage) !important; }
-.cm-s-default .cm-keyword { color: #276b47; font-weight: 600; }
-.cm-s-default .cm-builtin { color: #276b47; }
-.cm-s-default .cm-def { color: #09140d; font-weight: 600; }
-.cm-s-default .cm-variable-2 { color: #a8841f; }
-.cm-s-default .cm-string { color: #8a3d2e; }
-.cm-s-default .cm-comment { color: #66755a; font-style: italic; }
-.cm-s-default .cm-number { color: #a8841f; }
-.cm-s-default .cm-operator { color: #14231a; }
+/* editor cursor, gutter and token colours: assets/css/code.css */
 
 .scad-stage {
   position: relative; flex: 1; min-height: 0; overflow: hidden;
@@ -94,9 +83,7 @@ body { overflow: hidden; }
   font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.5;
   padding: 8px 12px; white-space: pre-wrap; word-break: break-word; user-select: text;
 }
-.scad-console-out .err { color: #e8927c; }
-.scad-console-out .warn { color: #e5c46a; }
-.scad-console-out .sys { color: #8fcaa8; }
+/* .err/.warn/.sys colours come with .code-dark, from assets/css/code.css */
 .scad-status { padding: 0 16px 10px; }
 
 /* ---- modals (shared look with the Markdown editor) ---- */
@@ -178,7 +165,7 @@ body { overflow: hidden; }
 
     <div class="scad-console">
       <div class="scad-pane-title"><span class="pixel-icon" data-icon="terminal" aria-hidden="true"></span><span>Console</span></div>
-      <div class="scad-console-out" id="out"></div>
+      <div class="scad-console-out code-dark" id="out"></div>
     </div>
   </div>
 

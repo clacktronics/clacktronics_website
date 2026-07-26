@@ -81,6 +81,8 @@
 .editor-preview code, .editor-preview-side code {
   background: var(--paper-deep); color: var(--leaf-deep); padding: 1px 5px; border-radius: 4px;
 }
+/* .code-dark hands the preview's code blocks the same theme-derived token
+   palette the rendered page uses — see assets/css/code.css */
 .editor-preview pre, .editor-preview-side pre {
   background: var(--ink); color: var(--menu-text); padding: 12px 14px;
   border-radius: 8px; overflow-x: auto; margin-bottom: 12px;
@@ -221,6 +223,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 </div>
 
 <script src="../../vendor/easymde/easymde.min.js"></script>
+<script src="../../assets/js/highlight.js"></script>
 <script src="../../assets/js/file-manager.js"></script>
 <script>
 (() => {
@@ -232,8 +235,21 @@ let sitePath = null;    /* repo path when opened via "Open from website" */
 let ghToken = null;     /* fine-grained PAT, memory only, per session */
 let repoCfg = null;     /* { repo, branch } from content/site.json */
 
+/* Colour the preview's fenced code the way the rendered page will, using the
+ * shared highlighter. EasyMDE hands us the Markdown; we render it as usual and
+ * then walk the result. */
+function renderPreview(plainText) {
+  const html = mde.markdown(plainText);
+  const holder = document.createElement('div');
+  holder.innerHTML = html;
+  holder.querySelectorAll('pre').forEach(pre => pre.classList.add('code-dark'));
+  window.ClackHighlight?.apply(holder);
+  return holder.innerHTML;
+}
+
 const mde = new EasyMDE({
   element: document.getElementById('ed'),
+  previewRender: renderPreview,
   autofocus: true,
   spellChecker: false,
   nativeSpellcheck: true,

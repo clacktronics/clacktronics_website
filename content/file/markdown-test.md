@@ -105,12 +105,39 @@ and its <angle brackets> unescaped-looking but safely escaped.
 ```
 
 ```python
-# a language tag is accepted and ignored — no highlighting, just monospace
+# a language tag picks the highlighter; the colours come from the theme
 def blink(pin, ms=250):
     while True:
         pin.toggle()
         sleep_ms(ms)
 ```
+
+A fence with no tag is sniffed instead — this one should come out as C++:
+
+```
+#include <Arduino.h>
+
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);   // blink forever
+}
+```
+
+JavaScript and HTML are detected the same way, and embedded script and style
+blocks are coloured in their own language:
+
+```
+<!DOCTYPE html>
+<html>
+  <body class="demo">
+    <p>Hello &amp; welcome</p>
+    <style>.demo { color: #4fae7d; }</style>
+    <script>document.querySelector('p').textContent = `tick ${Date.now()}`;</script>
+  </body>
+</html>
+```
+
+The first block above stayed plain because prose is not source code, and a
+fence tagged `text` (or `output`, `log`) asks for no colour explicitly.
 
 > A blockquote renders in the quote style.
 > Continuation lines stay inside the same quote as line breaks,

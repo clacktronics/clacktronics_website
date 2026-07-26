@@ -35,17 +35,7 @@
   background: var(--paper); color: var(--ink-soft);
   font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.6;
 }
-.CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
-.CodeMirror-selected { background: color-mix(in srgb, var(--leaf) 25%, transparent) !important; }
-.CodeMirror-gutters { background: var(--paper-deep) !important; border-right: 1px solid var(--paper-line) !important; }
-.CodeMirror-linenumber { color: var(--sage) !important; }
-.cm-s-default .cm-keyword { color: var(--leaf-deep); font-weight: 600; }
-.cm-s-default .cm-def { color: var(--strong-text); font-weight: 600; }
-.cm-s-default .cm-string { color: color-mix(in srgb, var(--leaf-deep) 55%, var(--ink-soft)); }
-.cm-s-default .cm-comment { color: var(--sage); font-style: italic; }
-.cm-s-default .cm-number { color: color-mix(in srgb, var(--sage) 55%, var(--ink-soft)); }
-.cm-s-default .cm-builtin { color: var(--leaf-deep); }
-.cm-s-default .cm-operator { color: var(--ink-soft); }
+/* editor cursor, gutter and token colours: assets/css/code.css */
 
 .py-shell-out {
   flex: 1; min-height: 0; overflow-y: auto;
@@ -55,9 +45,7 @@
   padding: 10px 12px; white-space: pre-wrap; word-break: break-word;
   user-select: text;
 }
-.py-shell-out .err { color: #e8927c; }
-.py-shell-out .sys { color: var(--menu-dim); }
-.py-shell-out .echo { color: var(--menu-dim); }
+/* .err/.sys/.echo colours come with .code-dark, from assets/css/code.css */
 .py-shell-in {
   display: flex; align-items: center; gap: 8px;
   border: 1px solid var(--ink); border-top: none; border-radius: 0 0 8px 8px;
@@ -115,7 +103,7 @@
     </div>
     <div class="py-shell">
       <div class="py-pane-title"><span class="pixel-icon" data-icon="terminal" aria-hidden="true"></span><span>Shell</span></div>
-      <div class="py-shell-out" id="out"></div>
+      <div class="py-shell-out code-dark" id="out"></div>
       <div class="py-shell-in">
         <span class="prompt">&gt;&gt;&gt;</span>
         <input id="repl" autocomplete="off" spellcheck="false" aria-label="Python shell input" disabled>

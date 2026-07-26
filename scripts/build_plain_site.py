@@ -640,10 +640,21 @@ def paragraphs_with_fences(block, fences, page_out):
                        % inline(part.strip(), page_out).replace('\n', '<br>'))
     return out
 
+def code_block(info, code, state):
+    """A fenced code block, carrying its fence tag through as data-lang.
+
+    The mirror stays static: assets/js/highlight.js resolves the tag (or sniffs
+    the code when there is no tag) and colours the block in the browser. With
+    scripting off the block is still the plain monospace panel it always was.
+    """
+    state['code'] = True
+    tag = ' data-lang="%s"' % esc(info) if info else ''
+    return '<pre class="code"%s>%s</pre>' % (tag, esc(code.rstrip()))
+
 def md_to_html(body, meta, page_out, state):
     fences = []
-    body = re.sub(r'```\w*\r?\n([\s\S]*?)```',
-                  lambda m: fences.append('<pre class="code">%s</pre>' % esc(m.group(1).rstrip())) or
+    body = re.sub(r'```([\w+#.-]*)[ \t]*\r?\n([\s\S]*?)```',
+                  lambda m: fences.append(code_block(m.group(1), m.group(2), state)) or
                   '\x00fence%d\x00' % (len(fences) - 1), body)
 
     blocks = [b.strip() for b in re.split(r'\r?\n[ \t]*\r?\n', body) if b.strip()]
@@ -736,7 +747,7 @@ def up_link(md_rel, meta, page_out):
 
 def render_page(md_rel, page_out):
     meta, body = parse_front_matter((content / md_rel).read_text(encoding='utf-8'))
-    state = {'kicanvas': False, 'headings': {}}
+    state = {'kicanvas': False, 'code': False, 'headings': {}}
     article = up_link(md_rel, meta, page_out) + md_to_html(body, meta, page_out, state)
     style_class = 'page' if meta.get('style') == 'page' else 'plain'
     crawl_meta, noindex = head_meta(md_rel, page_out, meta, body)
@@ -744,6 +755,10 @@ def render_page(md_rel, page_out):
     kicanvas = ('<script type="module" src="%s"></script>\n'
                 % esc(resolve_site_url('vendor/kicanvas/kicanvas.js', page_out))
                 if state['kicanvas'] else '')
+    # data-auto tells the highlighter to colour this page's code blocks itself
+    highlight = ('<script src="%s" data-auto defer></script>\n'
+                 % esc(resolve_site_url('assets/js/highlight.js', page_out))
+                 if state['code'] else '')
     theme = site.get('theme', 'clackos.css')
     css = lambda path: esc(resolve_site_url(path, page_out))
     page = f'''<!DOCTYPE html>
@@ -759,7 +774,7 @@ def render_page(md_rel, page_out):
 <link rel="stylesheet" href="{css('assets/css/clackos.css')}">
 <link rel="stylesheet" href="{css('assets/themes/' + theme)}">
 <link rel="stylesheet" href="{esc(rel_href(STYLE, page_out))}">
-{kicanvas}</head>
+{kicanvas}{highlight}</head>
 <body class="plain-mirror">
 <header id="plain-nav">{menu}</header>
 <main>
