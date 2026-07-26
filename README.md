@@ -216,9 +216,13 @@ That rewrites two things, both from the posts alone:
   already a page of its own and the list links to all of them.
 * `content/file/blog-list.md` — the list window (File → Open → Blog List):
   every post as a dated link, newest first, grouped by year, closing with a
-  quiet link to `content/file/blog-template.md` — the skeleton to copy for
-  the next post. That page is hand-written and `robots: noindex`; the list
-  link to it comes from `TEMPLATE_MD` in the script.
+  quiet link that starts the next post. It opens the Markdown Editor on
+  `app:applications/markdown.html?new=post` (`NEW_POST_APP` in the script),
+  which fills the buffer with a post dated today — frontmatter, title, a
+  picture and a paragraph — and names the file `YYYY-MM-DD-new-post.md`, so
+  **File → Commit to website…** already points at `content/file/blog/`.
+  Rename the slug in the commit path if you want a better one; the date is
+  the part that has to be right.
 
 Pages are rebuilt from scratch each run, so the count follows the number of
 posts and any page no longer needed is deleted. `POSTS_PER_PAGE` at the top
@@ -693,7 +697,9 @@ registered applications, Markdown windows, and desktop actions.
   link or media embed. A file passed as `?repo=` (or `?open=`) with
   `view=rendered` opens straight into the rendered preview — what the File
   Manager's Markdown Viewer entry does — and the toolbar's preview button
-  switches back to the source. File → Commit to website…
+  switches back to the source. `?new=post` opens a blog post dated today
+  instead of a file, which is what the last line of the blog list links to.
+  File → Commit to website…
   publishes an edit straight to the repo through GitHub's contents API:
   it needs a fine-grained personal access token (GitHub → Settings →
   Developer settings → Fine-grained tokens; scope it to this repo only

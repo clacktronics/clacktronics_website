@@ -77,4 +77,4 @@ style: plain
 `27 Jan` [Amdek PCK-100](window:file/blog/2011-01-27-amdek-pck-100.md)
 `25 Jan` [Octave Cat SRM Repair](window:file/blog/2011-01-25-octave-cat-srm-repair.md)
 
-*Writing the next one? Start from the [post template](window:file/blog-template.md).*
+*Writing the next one? [Start a post for today](app:applications/markdown.html?new=post).*

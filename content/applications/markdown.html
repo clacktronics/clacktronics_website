@@ -413,6 +413,59 @@ function newFile() {
   show();
 }
 
+/* ---- a blog post for today ----
+ * Reached from the link at the foot of the blog list (`?new=post`). The blog
+ * is built from the filenames in content/file/blog/, so the one thing a new
+ * post cannot do without is a correctly dated `YYYY-MM-DD-slug.md` name — it
+ * is filled in here, along with a working post around it, so that what lands
+ * in the editor renders as-is and only needs its words replaced.
+ *
+ * The date is the browser's local one, which is the date the person writing
+ * the post is having. */
+const POST_SLUG = 'new-post';
+
+function todayPost() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  /* the taglines on the existing posts read "9 August 2019" — no leading zero */
+  const written = now.toLocaleDateString('en-GB',
+    { day: 'numeric', month: 'long', year: 'numeric' });
+  return { name: `${stamp}-${POST_SLUG}.md`, body: `---
+title: New post
+tagline: ${written}
+style: plain
+---
+# New post
+
+![A modular synth](https://clacktronics.co.uk/assets/byom.jpg)
+
+This is where the post goes. Replace the title above (in both places), point
+the picture at a real image on \`https://clacktronics.co.uk/assets/\`, and write
+the piece. The first paragraph is what search results show, so it is worth
+making it a summary rather than a warm-up.
+
+Commit this with **Commit to website…** and the blog pages rebuild themselves.
+` };
+}
+
+function newPost() {
+  const post = todayPost();
+  mde.value(post.body);
+  handle = null;
+  /* left null on purpose: the post is not in the repository yet, and the
+     commit dialog already defaults an unsaved file to content/file/blog/ and
+     offers "Add …" rather than "Update …" */
+  sitePath = null;
+  fileName = post.name;
+  dirty = false;
+  show();
+  status.textContent = `New post for ${post.name.slice(0, 10)} — edit, then Commit to website…`;
+  /* land the cursor on the title rather than at the top of the frontmatter */
+  mde.codemirror.setCursor({ line: 1, ch: 7 });
+  mde.codemirror.focus();
+}
+
 /* ---- ClackOS links inserted into Markdown ---- */
 const cm = mde.codemirror;
 
@@ -883,13 +936,17 @@ function showRendered() {
 
 /* ---- open a file passed in the query string ----
  * `open` remains content-relative for the desktop's File → Edit command;
- * `repo` is a repository-root path supplied by the File Manager. */
+ * `repo` is a repository-root path supplied by the File Manager;
+ * `new=post` starts a dated blog post instead of opening anything. */
 {
   const params = new URLSearchParams(location.search);
   const repositoryPath = params.get('repo'); const contentPath = params.get('open');
   const rendered = params.get('view') === 'rendered';
   const requested = repositoryPath || (contentPath ? `content/${contentPath.replace(/^content\//, '')}` : '');
-  if (requested) {
+  if (params.get('new') === 'post' && !requested) {
+    newPost();
+    if (rendered) showRendered();
+  } else if (requested) {
     const rel = requested.replace(/^\/+/, '');
     const parts = rel.split('/');
     if (rel && !/[\\?#\0]/.test(rel) && parts.every(part => part && part !== '.' && part !== '..') && /\.(?:md|markdown)$/i.test(rel))
