@@ -694,7 +694,8 @@ registered applications, Markdown windows, and desktop actions.
   saving); elsewhere saving downloads the file. Drag-and-drop works,
   Ctrl+S saves. File → Open from website… opens the shared file manager:
   Markdown files load into the editor, while other files insert a suitable
-  link or media embed. A file passed as `?repo=` (or `?open=`) with
+  link or media embed (a `.stl`, `.step`, `.stp`, `.obj` or `.3mf` file inserts
+  an inline `@[model]` viewer). A file passed as `?repo=` (or `?open=`) with
   `view=rendered` opens straight into the rendered preview — what the File
   Manager's Markdown Viewer entry does — and the toolbar's preview button
   switches back to the source. `?new=post` opens a blog post dated today
@@ -948,17 +949,20 @@ It needs these repository secrets (Settings → Secrets and variables → Action
 host's `~/.ssh/authorized_keys`), `DEPLOY_PATH` (the absolute web root, e.g.
 `/home/USER/public_html`), and optionally `SSH_PORT` (defaults to 22).
 
-## Uploading images and video
+## Uploading images, video and 3D models
 
 Large binaries do not belong in Git (repo-size and Actions limits), so the site
 links to media served from the web host instead — the same pattern the old blog
 posts already use. ClackOS can upload media straight to the host from the
 browser and hand back a URL to link:
 
-- **Applications → Markdown Editor… → Insert → Upload image or video…** (or just
-  drag an image/video/audio file onto the editor). The file is sent to the host,
-  and the returned URL is inserted as `![](…)`, `@[video](…){controls}`, or a
-  plain link depending on its type.
+- **Applications → Markdown Editor… → Insert → Upload image, video or 3D model…**
+  (or just drag an image, video, audio or model file onto the editor). The file
+  is sent to the host, and the returned URL is inserted as `![](…)`,
+  `@[video](…){controls}`, `@[model](… "name")`, or a plain link depending on
+  its type. Insert → Inline 3D model… (and the toolbar's model button) writes
+  the same directive for a file that is already on the site, asking for the
+  path, an optional caption and an optional option string.
 - **Applications → ClackPaint… → File → Upload to website…** sends the picture
   you are working on to the host as a PNG (never through GitHub) and shows the
   public URL with a Copy link button, ready to paste into a post.
@@ -979,7 +983,11 @@ set `base` and `dir` in the config to the canonical live paths.
 **How malicious uploads are prevented.** Every request needs the secret token
 (constant-time checked); only an allow-list of image/video/audio types is
 accepted, with the stored extension taken from the file's *sniffed* content type
-rather than its name; filenames are generated server-side (date + random) so
+rather than its name; 3D models (STL, STEP, OBJ, 3MF) have no MIME type of their
+own that `finfo` reports, so they are matched on their actual content instead —
+a binary STL's triangle count must account for its exact byte length, a STEP
+must open with `ISO-10303-21;`, a 3MF must be a zip containing a
+`3dmodel.model` part, and so on, with the filename still trusted for nothing; filenames are generated server-side (date + random) so
 there is no path traversal or overwriting; a size cap applies (100 MB default,
 subject to the host's `upload_max_filesize`/`post_max_size`); and `upload.php`
 drops a `.htaccess` into the uploads folder that disables script execution, so

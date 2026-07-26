@@ -158,7 +158,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <button data-cmd="commit"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Commit to website&hellip;</button>
     </div></div>
     <div class="rm"><button>Insert</button><div class="rm-dd">
-      <button data-cmd="insert-upload"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload image or video&hellip;</button>
+      <button data-cmd="insert-upload"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload image, video or 3D model&hellip;</button>
       <div class="sep"></div>
       <button data-cmd="insert-window"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Markdown window link&hellip;</button>
       <button data-cmd="insert-action"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Desktop action link&hellip;</button>
@@ -166,6 +166,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <button data-cmd="insert-youtube-embed"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Inline YouTube video&hellip;</button>
       <button data-cmd="insert-video-embed"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Inline video file&hellip;</button>
       <button data-cmd="insert-kicanvas-embed"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>Inline KiCanvas design&hellip;</button>
+      <button data-cmd="insert-model-embed"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>Inline 3D model&hellip;</button>
       <div class="sep"></div>
       <button data-cmd="insert-video"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Video Lab file link&hellip;</button>
       <button data-cmd="insert-pdf"><span class="pixel-icon" data-icon="file-text" aria-hidden="true"></span>PDF Reader file link&hellip;</button>
@@ -269,6 +270,11 @@ const mde = new EasyMDE({
               action: insertKicanvasEmbed,
               className: 'kicanvas-embed',
               title: 'Insert inline KiCad design'
+            }, {
+              name: 'model-embed',
+              action: insertModelEmbed,
+              className: 'model-embed',
+              title: 'Insert inline 3D model'
             }, '|', 'preview', 'side-by-side', 'fullscreen', '|',
             'undo', 'redo'],
   initialValue: `# New document
@@ -303,7 +309,7 @@ const toolbarIcons = {
   heading: 'heading', quote: 'quote-text-inline', code: 'terminal',
   'unordered-list': 'bulletlist', 'ordered-list': 'list-box', table: 'grid-3x3',
   'horizontal-rule': 'minus-box', link: 'link', image: 'image',
-  'video-embed': 'video', 'kicanvas-embed': 'circuit-board', preview: 'eye',
+  'video-embed': 'video', 'kicanvas-embed': 'circuit-board', 'model-embed': 'box', preview: 'eye',
   'side-by-side': 'align-horizontal-distribute-center', fullscreen: 'expand',
   undo: 'undo', redo: 'reload'
 };
@@ -560,6 +566,21 @@ function insertKicanvasEmbed() {
   insertMarkdownEmbed('kicanvas', source, title.trim().replace(/["']/g, ''));
 }
 
+/* The viewer's own defaults are the borderless inline ones, so an empty options
+   answer is the common case; anything typed is passed through as written and
+   validated when the page renders. */
+function insertModelEmbed() {
+  const source = prompt('3D model URL or path from the site root (STL, STEP, OBJ or 3MF):', 'content/applications/models/pj3410-round-nut.stl');
+  if (!source) return;
+  const selected = cm.getSelection().trim();
+  const title = prompt('Optional model caption:', selected);
+  if (title === null) return;
+  const options = prompt('Optional settings, space separated — for example: height=260 colour=#c98a3a grid caption border right lighting=dramatic zoom=1.2 nospin interactive', '');
+  if (options === null) return;
+  insertMarkdownEmbed('model', source, title.trim().replace(/["']/g, ''),
+    options.trim().replace(/[{}]/g, ''));
+}
+
 function insertVideoLink() {
   const source = prompt('Video URL or path from the site root (for example content/media/demo.mp4):', 'content/media/demo.mp4');
   if (source) insertClackLink(`app:applications/video/index.html?src=${encodePart(source)}`, 'Open in Video Lab');
@@ -621,6 +642,7 @@ const insertCommands = {
   'insert-youtube-embed': insertYouTubeEmbed,
   'insert-video-embed': insertVideoEmbed,
   'insert-kicanvas-embed': insertKicanvasEmbed,
+  'insert-model-embed': insertModelEmbed,
   'insert-video': insertVideoLink,
   'insert-pdf': insertPDFLink,
   'insert-falstad': insertFalstadLink,
@@ -635,7 +657,8 @@ const insertCommands = {
  * Sends the file to the endpoint named by "assetUpload" in content/site.json
  * (resolved against the site root, so it is same-origin) with a secret token
  * held only in memory. The server stores it under assets/uploads/ and returns
- * a public URL, which is inserted as the right Markdown for its media type. */
+ * a public URL, which is inserted as the right Markdown for its media type:
+ * an image, a video, an inline 3D model, or a plain link. */
 const uploadModal = document.getElementById('uploadModal');
 const uploadTokenInput = document.getElementById('uploadTokenInput');
 const uploadStatus = document.getElementById('uploadStatus');
@@ -645,7 +668,9 @@ let pendingUpload = null;        /* the File waiting to be sent */
 
 const uploadPicker = document.createElement('input');
 uploadPicker.type = 'file';
-uploadPicker.accept = 'image/*,video/*,audio/*';
+/* Models have no useful MIME type of their own, so they are listed by
+   extension; the server identifies them from their contents either way. */
+uploadPicker.accept = 'image/*,video/*,audio/*,.stl,.step,.stp,.obj,.3mf';
 uploadPicker.addEventListener('change', () => {
   const f = uploadPicker.files[0];
   uploadPicker.value = '';
@@ -724,6 +749,7 @@ function insertUploadedMedia(data, name) {
   let snippet;
   if (data.kind === 'video') snippet = `@[video](${data.url}){controls}`;
   else if (data.kind === 'image') snippet = `![${alt}](${data.url})`;
+  else if (data.kind === 'model') snippet = `@[model](${data.url} "${alt.replace(/"/g, '')}")`;
   else snippet = `[${alt}](${data.url})`;
   cm.replaceSelection(snippet + '\n');
   cm.focus();
@@ -753,6 +779,7 @@ function markdownForFile(item) {
   const target = item.drive === 'github' ? item.path : item.url;
   if (item.kind === 'image') return `![${label}](${target})`;
   if (item.kind === 'video') return `@[video](${target} "${label.replace(/"/g, '')}"){controls}`;
+  if (item.kind === 'model') return `@[model](${target} "${label.replace(/"/g, '')}")`;
   return `[${label}](${target})`;
 }
 
@@ -910,9 +937,10 @@ document.addEventListener('drop', async e => {
   document.body.classList.remove('dragging');
   const f = e.dataTransfer.files[0];
   if (!f) return;
-  /* an image/video/audio file is uploaded to the web host; anything else is
-     treated as text and loaded into the editor */
-  if (/^(image|video|audio)\//.test(f.type)) {
+  /* an image/video/audio/3D-model file is uploaded to the web host; anything
+     else is treated as text and loaded into the editor. Models are matched by
+     extension because the browser reports no type for most of them. */
+  if (/^(image|video|audio)\//.test(f.type) || /\.(?:stl|step|stp|obj|3mf)$/i.test(f.name)) {
     const url = await getAssetUploadUrl();
     if (!url) { status.textContent = 'Dropped media, but uploads are not configured in content/site.json.'; return; }
     beginUpload(f);

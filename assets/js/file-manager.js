@@ -9,11 +9,13 @@
     video: /\.(?:mp4|webm|mov|m4v|ogv|avi|mkv)$/i,
     audio: /\.(?:mp3|wav|ogg|m4a|flac|aac)$/i,
     markdown: /\.(?:md|markdown)$/i,
-    pdf: /\.pdf$/i
+    pdf: /\.pdf$/i,
+    model: /\.(?:stl|step|stp|obj|3mf)$/i
   };
 
   const icon = item => item.type === 'folder' ? '▰' : item.kind === 'image' ? '▧' :
-    item.kind === 'video' ? '▶' : item.kind === 'audio' ? '♪' : item.kind === 'pdf' ? '▤' : '◇';
+    item.kind === 'video' ? '▶' : item.kind === 'audio' ? '♪' : item.kind === 'pdf' ? '▤' :
+    item.kind === 'model' ? '◨' : '◇';
   const encodePath = path => path.split('/').map(encodeURIComponent).join('/');
   const kindFor = path => Object.entries(mediaKinds).find(([, pattern]) => pattern.test(path))?.[0] || 'file';
   const formatSize = bytes => !Number.isFinite(bytes) ? '—' : bytes < 1024 ? `${bytes} B` :

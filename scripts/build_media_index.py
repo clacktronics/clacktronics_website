@@ -28,6 +28,8 @@ MEDIA_EXTENSIONS = {
     ".ogv": "video", ".avi": "video", ".mkv": "video",
     ".mp3": "audio", ".wav": "audio", ".ogg": "audio", ".m4a": "audio",
     ".flac": "audio", ".aac": "audio",
+    ".stl": "model", ".step": "model", ".stp": "model", ".obj": "model",
+    ".3mf": "model",
 }
 
 
