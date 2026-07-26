@@ -4,6 +4,7 @@
 
 * Make entire site downloadable
 * Consistent theme in in apps
+* Within the blog list add "new blog post" that opens markdown editor with a blog post template
 
 ### Non working features and bugs
 
