@@ -1,0 +1,128 @@
+/* Theme-responsive colours for code — Markdown code blocks, the CodeMirror
+ * editors in Python/OpenSCAD/Processing, and the shell and console panes.
+ *
+ * Nothing here is a fixed colour. Every token is mixed from the variables the
+ * active theme already sets, so blood.css, clackos.css or a palette written
+ * tomorrow in the Theme Editor recolours code automatically.
+ *
+ * How it stays readable in any palette:
+ *   - every token is a mix of an accent and --code-fg, the colour the theme
+ *     already guarantees is legible on that surface, so nothing can drift far
+ *     enough from the foreground to disappear;
+ *   - the accents are picked per surface — colours the theme puts on --ink for
+ *     dark panes, colours it puts on --paper for the light editors;
+ *   - weight and italics separate the token types as well as hue does, so a
+ *     single-hue theme (blood.css, monochrome.css) still reads as code.
+ *
+ * Two surfaces exist, and each declares its own foreground and accents. */
+
+/* Each accent is a blend of two theme colours rather than one. Palettes are
+   allowed to reuse a colour — monochrome.css sets --menu-dim to the same black
+   as --ink, blood.css sets --leaf to the same red as --menu-text — and a blend
+   keeps the token distinct from the background and from the plain text even
+   when one of its two ingredients has collapsed. */
+pre.code, .code-dark {
+  --code-bg: var(--ink);
+  --code-fg: var(--menu-text);
+  --code-accent-1: color-mix(in oklab, var(--leaf) 65%, var(--accent-hover));
+  --code-accent-2: color-mix(in oklab, var(--menu-dim) 55%, var(--title-text));
+  --code-accent-3: color-mix(in oklab, var(--accent-hover) 65%, var(--menu-dim));
+  --code-accent-4: color-mix(in oklab, var(--title-text) 65%, var(--leaf));
+}
+
+.code-light, .CodeMirror {
+  --code-bg: var(--paper);
+  --code-fg: var(--ink-soft);
+  --code-accent-1: color-mix(in oklab, var(--leaf-deep) 65%, var(--sage));
+  --code-accent-2: color-mix(in oklab, var(--sage) 55%, var(--heading));
+  --code-accent-3: color-mix(in oklab, var(--heading) 65%, var(--leaf-deep));
+  --code-accent-4: color-mix(in oklab, var(--strong-text) 65%, var(--leaf-deep));
+}
+
+/* Alerts have no theme variable to borrow, so they start from a fixed hue and
+   are then pulled towards the theme's own foreground like everything else. */
+:root {
+  --code-alert: #d24b32;
+  --code-caution: #d0a132;
+}
+
+/* The derivation, declared on the same elements as the inputs above so each
+   surface resolves it with its own foreground and accents. */
+pre.code, .code-dark, .code-light, .CodeMirror {
+  --tok-comment: color-mix(in oklab, var(--code-fg) 68%, var(--code-bg));
+  --tok-keyword: color-mix(in oklab, var(--code-accent-1) 50%, var(--code-fg));
+  --tok-builtin: color-mix(in oklab, var(--code-accent-1) 34%, var(--code-fg));
+  --tok-string: color-mix(in oklab, var(--code-accent-2) 50%, var(--code-fg));
+  --tok-number: color-mix(in oklab, var(--code-accent-2) 34%, var(--code-fg));
+  --tok-type: color-mix(in oklab, var(--code-accent-3) 44%, var(--code-fg));
+  --tok-meta: color-mix(in oklab, var(--code-accent-3) 30%, var(--code-fg));
+  --tok-function: color-mix(in oklab, var(--code-accent-4) 40%, var(--code-fg));
+  --tok-operator: color-mix(in oklab, var(--code-fg) 86%, var(--code-bg));
+  --tok-error: color-mix(in oklab, var(--code-alert) 62%, var(--code-fg));
+  --tok-warn: color-mix(in oklab, var(--code-caution) 62%, var(--code-fg));
+}
+
+/* ------------------------------------------------- Markdown code blocks */
+
+pre.code .tok-com { color: var(--tok-comment); font-style: italic; }
+pre.code .tok-str { color: var(--tok-string); }
+pre.code .tok-num { color: var(--tok-number); }
+pre.code .tok-key { color: var(--tok-keyword); font-weight: 600; }
+pre.code .tok-bui { color: var(--tok-builtin); }
+pre.code .tok-typ { color: var(--tok-type); }
+pre.code .tok-fn  { color: var(--tok-function); font-weight: 600; }
+pre.code .tok-var { color: var(--tok-type); }
+pre.code .tok-meta { color: var(--tok-meta); font-style: italic; }
+pre.code .tok-tag { color: var(--tok-keyword); }
+pre.code .tok-att { color: var(--tok-type); }
+pre.code .tok-op  { color: var(--tok-operator); }
+
+/* ------------------------------------------------- CodeMirror 5 editors
+   Replaces the library's own fixed palette (purple keywords, red strings)
+   with the same theme-derived tokens the code blocks use. The .CodeMirror
+   prefix is what makes these win: codemirror.css is loaded after this file in
+   the apps that use it, so the rules have to out-specify it rather than
+   out-order it. */
+
+.CodeMirror.cm-s-default .cm-keyword { color: var(--tok-keyword); font-weight: 600; }
+.CodeMirror.cm-s-default .cm-atom { color: var(--tok-number); }
+.CodeMirror.cm-s-default .cm-number { color: var(--tok-number); }
+.CodeMirror.cm-s-default .cm-def { color: var(--tok-function); font-weight: 600; }
+.CodeMirror.cm-s-default .cm-variable { color: var(--code-fg); }
+.CodeMirror.cm-s-default .cm-variable-2 { color: var(--tok-type); }
+.CodeMirror.cm-s-default .cm-variable-3,
+.CodeMirror.cm-s-default .cm-type { color: var(--tok-type); }
+.CodeMirror.cm-s-default .cm-property { color: var(--tok-function); }
+.CodeMirror.cm-s-default .cm-operator { color: var(--tok-operator); }
+.CodeMirror.cm-s-default .cm-comment { color: var(--tok-comment); font-style: italic; }
+.CodeMirror.cm-s-default .cm-string,
+.CodeMirror.cm-s-default .cm-string-2 { color: var(--tok-string); }
+.CodeMirror.cm-s-default .cm-meta,
+.CodeMirror.cm-s-default .cm-qualifier { color: var(--tok-meta); }
+.CodeMirror.cm-s-default .cm-builtin { color: var(--tok-builtin); }
+.CodeMirror.cm-s-default .cm-bracket { color: var(--tok-operator); }
+.CodeMirror.cm-s-default .cm-tag { color: var(--tok-keyword); }
+.CodeMirror.cm-s-default .cm-attribute { color: var(--tok-type); }
+.CodeMirror.cm-s-default .cm-hr { color: var(--tok-comment); }
+.CodeMirror.cm-s-default .cm-link { color: var(--tok-string); text-decoration: underline; }
+.CodeMirror.cm-s-default .cm-error { color: var(--tok-error); }
+
+/* Editor chrome: cursor, selection and gutter, so every editor matches. */
+.CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
+.CodeMirror-selected { background: color-mix(in oklab, var(--leaf) 25%, transparent) !important; }
+.CodeMirror-focused .CodeMirror-selected { background: color-mix(in oklab, var(--leaf) 35%, transparent) !important; }
+.CodeMirror-gutters { background: var(--paper-deep) !important; border-right: 1px solid var(--paper-line) !important; }
+.CodeMirror-linenumber { color: var(--sage) !important; }
+.CodeMirror-matchingbracket {
+  color: var(--tok-keyword) !important;
+  outline: 1px solid color-mix(in oklab, var(--leaf) 55%, transparent);
+}
+
+/* ------------------------------------------------- shells and consoles
+   Python's shell, OpenSCAD's and Pure Data's consoles: the same dark surface
+   as a code block, with the message classes those apps emit. */
+
+.code-dark .err { color: var(--tok-error); }
+.code-dark .warn { color: var(--tok-warn); }
+.code-dark .sys { color: var(--tok-meta); }
+.code-dark .echo { color: var(--tok-comment); }

@@ -64,18 +64,7 @@
   background: var(--paper); color: var(--ink-soft);
   font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.6;
 }
-.CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
-.CodeMirror-selected { background: rgba(79, 174, 125, 0.25) !important; }
-.CodeMirror-gutters { background: var(--paper-deep) !important; border-right: 1px solid var(--paper-line) !important; }
-.CodeMirror-linenumber { color: var(--sage) !important; }
-.cm-s-default .cm-keyword { color: #276b47; font-weight: 600; }
-.cm-s-default .cm-def { color: #09140d; font-weight: 600; }
-.cm-s-default .cm-variable-3, .cm-s-default .cm-type { color: #276b47; }
-.cm-s-default .cm-string { color: #8a3d2e; }
-.cm-s-default .cm-comment { color: #66755a; font-style: italic; }
-.cm-s-default .cm-number { color: #a8841f; }
-.cm-s-default .cm-builtin { color: #276b47; }
-.cm-s-default .cm-operator { color: #14231a; }
+/* editor cursor, gutter and token colours: assets/css/code.css */
 
 /* ---- PDE message area (the strip between editor and console) ---- */
 .pde-message {
@@ -85,10 +74,13 @@
   background: var(--paper-deep); color: var(--ink-soft);
   font-size: 11.5px; min-height: 27px;
 }
-.pde-message.error { background: #a04a3a; border-color: #a04a3a; color: #f8f2dd; }
+.pde-message.error {
+  background: var(--code-alert); border-color: var(--code-alert);
+  color: var(--menu-text);
+}
 .pde-message .msg { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pde-message .line-no { flex: none; color: var(--sage); font-variant-numeric: tabular-nums; }
-.pde-message.error .line-no { color: #f3d9c9; }
+.pde-message.error .line-no { color: color-mix(in oklab, var(--menu-text) 75%, var(--code-alert)); }
 
 /* ---- PDE console ---- */
 .pde-console {
@@ -99,8 +91,7 @@
   padding: 8px 12px; overflow-y: auto;
   white-space: pre-wrap; word-break: break-word; user-select: text;
 }
-.pde-console .err { color: #e8927c; }
-.pde-console .sys { color: #8fcaa8; }
+/* .err/.sys colours come with .code-dark, from assets/css/code.css */
 
 .credit {
   flex: none; margin: 6px 0 0; padding: 6px 16px; font-size: 10.5px; line-height: 1.6;
@@ -185,7 +176,7 @@
   <div class="pde-tabs"><span class="pde-tab" id="tab">sketch</span></div>
   <div class="pde-editor"><textarea id="code"></textarea></div>
   <div class="pde-message" id="message"><span class="msg" id="msg-text"></span><span class="line-no" id="line-no">1</span></div>
-  <div class="pde-console" id="console"></div>
+  <div class="pde-console code-dark" id="console"></div>
   <p class="credit">Engine:
     <a href="http://processingjs.org" target="_blank" rel="noopener">Processing.js</a> 1.6.6
     by John Resig &amp; the Processing.js team · free software,

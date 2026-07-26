@@ -1,4 +1,5 @@
 @import url("icons.css");
+@import url("code.css");
 
 /* Shared chrome for ClackOS applications — self-contained pages under
    content/<menu>/ that run standalone or inside a ClackOS window (iframe). */

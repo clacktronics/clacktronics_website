@@ -82,6 +82,59 @@ Theme filenames are restricted to letters, numbers, dots, underscores and
 hyphens and must end in `.css`. This keeps every template self-contained in the
 theme folder and prevents the editor from writing elsewhere in the repository.
 
+### Syntax highlighting
+
+Fenced code blocks are coloured by `assets/js/highlight.js`, a small tokeniser
+written for this site (no vendored library). It understands Python, C/C++
+(including Arduino sketches), JavaScript/TypeScript, HTML and XML — with
+embedded `<script>` and `<style>` blocks coloured in their own language — plus
+CSS, JSON, shell, OpenSCAD and Markdown.
+
+The fence tag picks the language, using the usual aliases (`py`, `c++`, `js`,
+`sh`, `scad`, …):
+
+    ```python
+    def blink(pin, ms=250):
+        ...
+    ```
+
+**A fence with no tag is detected automatically.** Each language scores itself
+against the code — `#include <…>` and `std::` say C++, `def …:` and `import`
+say Python, a closing tag says HTML — and the highest score wins. Prose and
+program output score nothing, so a fence holding a traceback or a paste of text
+stays plain monospace rather than being coloured at random. Tag a block
+` ```text ` (or `output`, `log`, `csv`) to switch colouring off deliberately.
+
+Colours are never written in the highlighter. Every token is wrapped in a
+`tok-…` span and `assets/css/code.css` derives the colour from the variables
+the active theme already sets, so a palette written in the Theme Editor
+recolours code with no further work:
+
+- each token is a mix of a theme accent and the foreground the theme already
+  guarantees is legible on that surface, so no token can drift far enough from
+  the text colour to become unreadable;
+- accents are chosen per surface — the colours a theme puts on `--ink` for the
+  dark code blocks, shells and consoles, and the ones it puts on `--paper` for
+  the light CodeMirror editors;
+- weight and italics separate the token types as well as hue does, so a
+  single-hue palette such as `blood.css` or `monochrome.css` still reads as
+  code;
+- errors and warnings start from `--code-alert` / `--code-caution` (the only
+  fixed hues, since no theme variable means "wrong") and are then pulled
+  towards the theme's own foreground.
+
+The same stylesheet retunes the CodeMirror editors in Python, OpenSCAD and
+Processing, and the shell/console panes in Python, OpenSCAD, Processing and
+Pure Data — anything carrying the `code-dark` class gets the code-block
+surface, including its `.err`, `.warn`, `.sys` and `.echo` message colours.
+The Markdown editor's preview uses the highlighter too, so a code block looks
+the same while you write it as it will on the page.
+
+In the plain HTML mirror the colouring happens in the browser: the generator
+writes the fence tag into `data-lang` and loads the highlighter with
+`data-auto`. With scripting off, code blocks are still the plain monospace
+panels they always were.
+
 ## Adding or editing content
 
 ### A new window
@@ -324,7 +377,8 @@ same date and title: a CSV entry wins over the mirrored one.
 - Headings automatically become anchor points: `# My Heading` gets
   `id="my-heading"`, so `[jump there](#my-heading)` scrolls within the window.
   Raw HTML can also define an explicit anchor such as `<a id="details"></a>`.
-- ` ``` ` fenced code blocks
+- ` ``` ` fenced code blocks, syntax coloured — see
+  [Syntax highlighting](#syntax-highlighting)
 - `> quote` — blockquote
 - `[label](window:file/euroclack.md)` — link to another window (followed in
   place; see above)

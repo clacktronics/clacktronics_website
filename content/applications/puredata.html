@@ -133,9 +133,7 @@ body { overflow: hidden; }
   font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.5;
   padding: 6px 12px; white-space: pre-wrap; word-break: break-word; user-select: text;
 }
-.pd-console-out .err { color: #e8927c; }
-.pd-console-out .warn { color: #e5c46a; }
-.pd-console-out .sys { color: #8fcaa8; }
+/* .err/.warn/.sys colours come with .code-dark, from assets/css/code.css */
 .pd-status { padding: 0 16px 4px; }
 
 /* ---- source modal ---- */
@@ -223,7 +221,7 @@ body { overflow: hidden; }
       </div>
     </div>
     <div class="pd-console-row">
-      <div class="pd-console-out" id="out"></div>
+      <div class="pd-console-out code-dark" id="out"></div>
     </div>
   </div>
 
