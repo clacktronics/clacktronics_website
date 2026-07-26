@@ -41,6 +41,15 @@ A `##` heading is not an `h2` — it renders as a small green eyebrow label, and
 is meant for section markers like the `// What we make` style used on the home
 page.
 
+## // A heading with no blank line under it
+A heading takes its own line and no more, so this sentence is an ordinary
+paragraph rather than part of the green label above it, even though nothing
+separates the two in the source. A list written the same way is still a list:
+
+## // And a list right underneath
+- The label above stays a label.
+- These stay bullets.
+
 ## // Lists
 
 1. **Numbered lists become the bordered box.** The list should render as the
@@ -153,13 +162,20 @@ Short links and Shorts/embed URLs are accepted by the same directive:
 
 @[youtube](https://youtu.be/9yssRi2fjQk "Proto-PSU kit assembly")
 
-An inline video — default playback is looping with no controls:
+An inline video — the default is an animated GIF in all but name: looping,
+muted, playing on its own, with no controls. It should be moving already:
 
 @[video](https://clacktronics.co.uk/assets/flipdots.mp4 "Flipdots flipping")
 
-The same video with both options, so it plays once and shows controls:
+The same video as an ordinary player, so it waits on its first frame until it is
+started, then plays through once with sound:
 
 @[video](https://clacktronics.co.uk/assets/flipdots.mp4 "Flipdots with controls"){noloop controls}
+
+A looping clip that still waits to be started, and keeps its controls — the
+`noautoplay` option overrides what looping implies:
+
+@[video](https://clacktronics.co.uk/assets/flipdots.mp4 "Flipdots on request"){noautoplay controls}
 
 An interactive KiCad schematic viewer:
 
