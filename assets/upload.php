@@ -2,7 +2,7 @@
 /**
  * ClackOS asset upload endpoint.
  *
- * Accepts one image/video/audio file over an authenticated POST and stores it
+ * Accepts one image/video/audio/3D-model file over an authenticated POST and stores it
  * under uploads/YYYY/MM/, returning the public URL as JSON. The Markdown Editor
  * (and other ClackOS apps) call this so large binaries land on the web host and
  * never go through the GitHub repository.
@@ -13,6 +13,9 @@
  *     it is never in the public repository.
  *   - Only an allow-list of image/video/audio types is accepted, and the stored
  *     extension is taken from the file's *sniffed* MIME type, not its name.
+ *   - 3D models (STL, STEP, OBJ, 3MF) have no MIME type of their own that finfo
+ *     can report, so they are matched on their actual content instead — see
+ *     sniff_model(). The filename is still never trusted for anything.
  *   - The uploads directory gets a .htaccess that disables script execution, so
  *     nothing dropped there can ever run, even if it slipped past the allow-list.
  *   - Filenames are generated server-side (date + random), so no path traversal
@@ -93,10 +96,19 @@ $allow = [
 ];
 $finfo = new finfo(FILEINFO_MIME_TYPE);
 $mime  = $finfo->file($file['tmp_name']) ?: '';
-if (!isset($allow[$mime])) {
-    send_json(415, ['ok' => false, 'error' => 'Only images, video and audio are accepted (got "' . $mime . '").']);
+$ext   = $allow[$mime] ?? null;
+$kind  = $ext !== null ? explode('/', $mime)[0] : null;   // image | video | audio
+
+// A model sniffs as something generic (octet-stream, text/plain, zip), so it is
+// only recognised by its own content signature, and only once the media
+// allow-list has already declined the file.
+if ($ext === null) {
+    $ext = sniff_model($file['tmp_name'], (int) $file['size']);
+    if ($ext !== null) $kind = 'model';
 }
-$ext = $allow[$mime];
+if ($ext === null) {
+    send_json(415, ['ok' => false, 'error' => 'Only images, video, audio and 3D models (STL, STEP, OBJ, 3MF) are accepted (got "' . $mime . '").']);
+}
 
 // ---- build a safe, unique destination --------------------------------------
 $slug = strtolower(pathinfo($file['name'] ?? '', PATHINFO_FILENAME));
@@ -129,10 +141,46 @@ send_json(200, [
     'name' => $name,
     'type' => $mime,
     'size' => (int) $file['size'],
-    'kind' => explode('/', $mime)[0], // image | video | audio
+    'kind' => $kind, // image | video | audio | model
 ]);
 
 // ---------------------------------------------------------------------------
+/**
+ * Identify a 3D model by its contents, returning the extension to store it
+ * under, or null when the file is not one. Each format is matched on something
+ * only a real file of that format has, so a renamed executable or script fails
+ * every test the same way an unknown binary does.
+ */
+function sniff_model($path, $size) {
+    $head = @file_get_contents($path, false, null, 0, 8192);
+    if ($head === false || $head === '') return null;
+
+    // Binary STL: 80-byte header, a uint32 triangle count, then exactly 50
+    // bytes per triangle — the arithmetic has to come out exactly.
+    if ($size > 84) {
+        $count = unpack('V', substr($head, 80, 4))[1];
+        if ($count > 0 && $size === 84 + $count * 50) return 'stl';
+    }
+
+    // 3MF is an OPC (zip) package that must contain a 3dmodel.model part.
+    if (strncmp($head, "PK\x03\x04", 4) === 0) {
+        if (!class_exists('ZipArchive')) return null;
+        $zip = new ZipArchive();
+        if ($zip->open($path) !== true) return null;
+        $found = $zip->locateName('3dmodel.model', ZipArchive::FL_NOCASE | ZipArchive::FL_NODIR);
+        $zip->close();
+        return $found !== false ? '3mf' : null;
+    }
+
+    // The rest are text formats, so anything with control bytes is out.
+    if (preg_match('/[\x00-\x08\x0e-\x1f]/', $head)) return null;
+    $text = ltrim($head);
+    if (stripos($text, 'ISO-10303-21;') === 0) return 'step';            // STEP
+    if (preg_match('/^solid\b/i', $text) && stripos($head, 'facet') !== false) return 'stl';
+    if (preg_match('/^v(?:[ \t]+[-+0-9.eE]+){3}[ \t]*$/m', $head)) return 'obj';
+    return null;
+}
+
 function send_json($status, $payload) {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');

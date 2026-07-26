@@ -54,6 +54,32 @@ body { overflow: hidden; }
 .viewer-message.error { color: #9a3f35; }
 .viewer-credit { margin-left: auto; white-space: nowrap; }
 .viewer-credit a { color: var(--leaf-deep); }
+/* Upload dialog — a model goes to the web host, never through GitHub. */
+.viewer-modal {
+  position: fixed; inset: 0; z-index: 50; display: none;
+  align-items: center; justify-content: center; background: rgba(9, 20, 13, 0.35);
+}
+.viewer-modal.open { display: flex; }
+.viewer-modal-box {
+  width: min(520px, 92vw); background: var(--paper);
+  border: 2px solid var(--ink); border-radius: 10px;
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 35%, transparent);
+}
+.viewer-modal-box header {
+  display: flex; justify-content: space-between; padding: 9px 14px;
+  border-radius: 8px 8px 0 0; background: var(--ink); color: var(--menu-text); font-size: 12.5px;
+}
+.viewer-modal-box header button { all: unset; padding: 0 4px; color: var(--menu-text); cursor: pointer; }
+.viewer-modal-body { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.viewer-modal-body label { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.viewer-modal-body label input { flex: 1; min-width: 0; }
+.viewer-modal-body .app-status { font-size: 10.5px; line-height: 1.6; }
+.viewer-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.viewer-upload-result:not([hidden]) { display: flex; align-items: center; gap: 8px; }
+.viewer-upload-result a {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--leaf-deep); font-size: 11px; text-decoration: underline;
+}
 @media (max-width: 620px) {
   .viewer-file-name { max-width: 40vw; }
   .viewer-credit { width: 100%; margin-left: 0; }
@@ -101,6 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
       <button type="button">File</button>
       <div class="rm-dd">
         <button type="button" data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open model&hellip;</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="upload"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload to website&hellip;</button>
       </div>
     </div>
     <div class="rm">
@@ -112,6 +140,19 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" data-cmd="wireframe" id="wireframe" aria-pressed="false"><span class="pixel-icon" data-icon="eye" aria-hidden="true"></span>Wireframe<span class="mi-check"></span></button>
         <button type="button" data-cmd="autorotate" id="autorotate" aria-pressed="true"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Auto-rotate<span class="mi-check"></span></button>
         <button type="button" data-cmd="grid" id="grid-toggle" aria-pressed="true"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Show grid<span class="mi-check"></span></button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Axes</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="axes-xyz" id="axes-xyz" aria-pressed="false"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>X Y Z &mdash; as authored<span class="mi-check"></span></button>
+        <button type="button" data-cmd="axes-xzy" id="axes-xzy" aria-pressed="true"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>X Z Y &mdash; Z up (CAD)<span class="mi-check"></span></button>
+        <button type="button" data-cmd="axes-yxz" id="axes-yxz" aria-pressed="false"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>Y X Z<span class="mi-check"></span></button>
+        <button type="button" data-cmd="axes-yzx" id="axes-yzx" aria-pressed="false"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>Y Z X<span class="mi-check"></span></button>
+        <button type="button" data-cmd="axes-zxy" id="axes-zxy" aria-pressed="false"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>Z X Y<span class="mi-check"></span></button>
+        <button type="button" data-cmd="axes-zyx" id="axes-zyx" aria-pressed="false"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>Z Y X<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="axes-default"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Use this format's default</button>
       </div>
     </div>
     <div class="rm">
@@ -188,12 +229,36 @@ document.addEventListener('DOMContentLoaded', () => {
   </footer>
 </div>
 
+<!-- Models are large binaries, so Upload to website sends them to the host's
+     endpoint (content/site.json's "assetUpload"), never through GitHub. -->
+<div class="viewer-modal" id="upload-modal" role="dialog" aria-modal="true" aria-labelledby="upload-title">
+  <form class="viewer-modal-box" id="upload-form">
+    <header><span id="upload-title">Upload to website</span><button type="button" data-close aria-label="Close">&times;</button></header>
+    <div class="viewer-modal-body">
+      <label>File name <input type="text" id="upload-name" spellcheck="false" required></label>
+      <label id="upload-token-row">Upload token <input type="password" id="upload-token" autocomplete="off"></label>
+      <p class="app-status">The secret set in upload-config.php on the web host; kept in memory only, until this tab closes.</p>
+      <p class="app-status" id="upload-status"></p>
+      <div class="viewer-upload-result" id="upload-result" hidden>
+        <a id="upload-link" target="_blank" rel="noopener"></a>
+        <button type="button" class="btn" id="upload-copy">Copy link</button>
+        <button type="button" class="btn" id="upload-copy-embed" title="Copy the markdown that renders this model inline">Copy @[model]</button>
+      </div>
+      <div class="viewer-modal-actions">
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button class="btn primary" id="upload-go"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload</button>
+      </div>
+    </div>
+  </form>
+</div>
+
 <script type="module">
 /* The scene, the loaders and the lighting rig live in assets/js/model-scene.js
    so the inline @[model] markdown embeds render exactly the same way; this file
    is the application shell around them — menus, status bar and file handling. */
 import {
-  createModelScene, LIGHTING_PRESETS, SCENE_COLOUR_KEYS, LIGHT_COLOUR_KEYS, asHex, formatFor, THREE
+  createModelScene, LIGHTING_PRESETS, SCENE_COLOUR_KEYS, LIGHT_COLOUR_KEYS,
+  AXIS_ORDERS, axisOrderFor, asHex, formatFor, THREE
 } from '../../assets/js/model-scene.js';
 
 const stage = document.getElementById('viewer-stage');
@@ -219,12 +284,16 @@ const colourInputs = {
 const brightnessInput = document.getElementById('light-brightness');
 
 const DEFAULT_MODEL_NAME = 'PJ3410 round nut';
+const DEFAULT_MODEL_FILE = 'pj3410-round-nut.stl';
 
 const viewer = createModelScene(stage);
 
 /* Models start spinning when they load, unless the user has turned it off. */
 let autoRotateWanted = true;
 let wireframeWanted = false;
+/* The bytes behind what is on screen, kept so File → Upload to website can send
+   the exact file that was opened. */
+let currentFile = null;
 
 function setToggleState(button, enabled) {
   if (!button) return;
@@ -267,6 +336,24 @@ function setModel(root) {
   viewer.setModel(root);
   viewer.setWireframe(wireframeWanted);
   setAutoRotate(autoRotateWanted);
+}
+
+/* three.js is Y-up, while STL, STEP and 3MF come out of CAD and slicers Z-up,
+   so those are turned a quarter turn as they load and the part stands the way
+   it was drawn. The menu overrides that per model: its six entries are the six
+   ways the file's axes can be mapped onto the world's. */
+function setAxisOrder(order) {
+  viewer.setAxisOrder(order);
+  AXIS_ORDERS.forEach(name =>
+    setToggleState(document.getElementById(`axes-${name}`), name === viewer.axisOrder));
+}
+
+/* Loading a file re-reads the default for its format, so opening an OBJ after
+   an STL does not leave the OBJ lying on its side. */
+function loadedModel(root, name) {
+  viewer.setAxisOrder(axisOrderFor(name), { refit: false });
+  setModel(root);
+  setAxisOrder(viewer.axisOrder);
 }
 
 window.addEventListener('clackos-themechange', () => {
@@ -325,8 +412,9 @@ async function openFile(file) {
   try {
     const buffer = await file.arrayBuffer();
     const parsed = await viewer.parse(buffer, file.name, message => { busy.textContent = message; });
+    currentFile = { name: file.name, buffer, type: file.type };
     wireframeWanted = false;
-    setModel(parsed.root);
+    loadedModel(parsed.root, file.name);
     setWireframe(false);
     nameEl.textContent = file.name;
     fileNameEl.textContent = file.name;
@@ -367,41 +455,158 @@ function resetColours(keys) {
   syncColourInputs();
 }
 
-document.addEventListener('viewer-command', event => {
-  ({ open: () => fileInput.click(),
-     fit: () => viewer.fitView(false),
-     reset: () => viewer.fitView(true),
-     wireframe: () => setWireframe(wireButton.getAttribute('aria-pressed') !== 'true'),
-     autorotate: () => {
-       autoRotateWanted = !viewer.autoRotate;
-       setAutoRotate(autoRotateWanted);
-     },
-     grid: () => setGridVisible(!viewer.gridVisible),
-     'colours-reset': () => resetColours(SCENE_COLOUR_KEYS),
-     'lighting-reset': () => resetColours(LIGHT_COLOUR_KEYS),
-     'light-studio': () => setLightingPreset('studio'),
-     'light-soft': () => setLightingPreset('soft'),
-     'light-dramatic': () => setLightingPreset('dramatic'),
-     'light-flat': () => setLightingPreset('flat'),
-     'light-unlit': () => setLightingPreset('unlit'),
-     shadows: () => setShadows(shadowButton.getAttribute('aria-pressed') !== 'true')
-   })[event.detail]?.();
-});
+const viewerCommands = {
+  open: () => fileInput.click(),
+  upload: openUploadDialog,
+  fit: () => viewer.fitView(false),
+  reset: () => viewer.fitView(true),
+  wireframe: () => setWireframe(wireButton.getAttribute('aria-pressed') !== 'true'),
+  autorotate: () => {
+    autoRotateWanted = !viewer.autoRotate;
+    setAutoRotate(autoRotateWanted);
+  },
+  grid: () => setGridVisible(!viewer.gridVisible),
+  'colours-reset': () => resetColours(SCENE_COLOUR_KEYS),
+  'lighting-reset': () => resetColours(LIGHT_COLOUR_KEYS),
+  'light-studio': () => setLightingPreset('studio'),
+  'light-soft': () => setLightingPreset('soft'),
+  'light-dramatic': () => setLightingPreset('dramatic'),
+  'light-flat': () => setLightingPreset('flat'),
+  'light-unlit': () => setLightingPreset('unlit'),
+  'axes-default': () => setAxisOrder(axisOrderFor(currentFile?.name || '')),
+  shadows: () => setShadows(shadowButton.getAttribute('aria-pressed') !== 'true')
+};
+AXIS_ORDERS.forEach(order => { viewerCommands[`axes-${order}`] = () => setAxisOrder(order); });
+
+document.addEventListener('viewer-command', event => viewerCommands[event.detail]?.());
 
 Object.entries(colourInputs).forEach(([key, input]) =>
   input.addEventListener('input', event => viewer.setColour(key, event.target.value)));
 brightnessInput.addEventListener('input', event =>
   viewer.setBrightness(Number(event.target.value) / 100));
 
+/* ---- upload the open model to the web host ----
+ * Models are large binaries, so they go to the endpoint named by "assetUpload"
+ * in content/site.json (resolved against the site root, so it is same-origin)
+ * rather than into the GitHub repository. The token is held in memory for this
+ * tab only; the host answers with the public URL to link to. */
+const uploadModal = document.getElementById('upload-modal');
+const uploadForm = document.getElementById('upload-form');
+const uploadName = document.getElementById('upload-name');
+const uploadTokenRow = document.getElementById('upload-token-row');
+const uploadTokenInput = document.getElementById('upload-token');
+const uploadStatus = document.getElementById('upload-status');
+const uploadResult = document.getElementById('upload-result');
+const uploadLink = document.getElementById('upload-link');
+const uploadGo = document.getElementById('upload-go');
+let uploadToken = null;        /* secret, memory only, per session */
+let assetUploadUrl = null;     /* resolved endpoint URL, or '' if unset */
+
+async function getAssetUploadUrl() {
+  if (assetUploadUrl !== null) return assetUploadUrl;
+  try {
+    const siteRoot = new URL('../../', location.href);
+    const site = await (await fetch(new URL('content/site.json', siteRoot))).json();
+    assetUploadUrl = site.assetUpload ? new URL(site.assetUpload, siteRoot).href : '';
+  } catch { assetUploadUrl = ''; }
+  return assetUploadUrl;
+}
+
+const showTokenRow = show => { uploadTokenRow.style.display = show ? 'flex' : 'none'; };
+const closeUploadDialog = () => uploadModal.classList.remove('open');
+
+async function openUploadDialog() {
+  if (!currentFile) {
+    showMessage('Open a model first — File → Open model….', true);
+    return;
+  }
+  const endpoint = await getAssetUploadUrl();
+  if (!endpoint) {
+    showMessage('Uploads are not configured — add "assetUpload" to content/site.json.', true);
+    return;
+  }
+  uploadName.value = currentFile.name;
+  uploadTokenInput.value = '';
+  showTokenRow(!uploadToken);
+  uploadStatus.textContent = `to ${new URL(endpoint).host}`;
+  uploadResult.hidden = true;
+  uploadModal.classList.add('open');
+  (uploadToken ? uploadName : uploadTokenInput).focus();
+}
+
+uploadForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const endpoint = await getAssetUploadUrl();
+  const token = uploadToken || uploadTokenInput.value.trim();
+  if (!token) { uploadStatus.textContent = 'A token is needed.'; return; }
+  /* The host generates the stored filename itself; this only feeds the slug it
+     builds that name from, so a path separator in it means nothing. */
+  const name = uploadName.value.trim().replace(/[\\/]+/g, '-') || currentFile.name;
+  uploadGo.disabled = true;
+  uploadStatus.textContent = 'Uploading…';
+  uploadResult.hidden = true;
+  try {
+    const file = new Blob([currentFile.buffer], { type: currentFile.type || 'application/octet-stream' });
+    const body = new FormData();
+    body.append('file', file, name);
+    const response = await fetch(endpoint, { method: 'POST', headers: { 'X-Upload-Token': token }, body });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.error || `Upload failed (${response.status}).`);
+    uploadToken = token;
+    uploadTokenInput.value = '';
+    showTokenRow(false);
+    uploadLink.href = data.url;
+    uploadLink.textContent = data.url;
+    uploadResult.hidden = false;
+    uploadStatus.textContent = `Uploaded ${data.name} (${Math.max(1, Math.round(data.size / 1024))} KB).`;
+    showMessage(`Uploaded ${data.name} to the website.`);
+  } catch (error) {
+    uploadStatus.textContent = error.message;
+    /* a rejected token is worth forgetting so the field comes back */
+    if (/token/i.test(error.message)) { uploadToken = null; showTokenRow(true); }
+    showMessage(`Upload failed: ${error.message}`, true);
+  } finally {
+    uploadGo.disabled = false;
+  }
+});
+
+/* The markdown for the uploaded file, carrying the axis order on screen when it
+   is not the one the format would pick on its own. */
+function modelDirective() {
+  const caption = (uploadName.value.trim() || currentFile.name).replace(/\.[^.]+$/, '').replace(/["']/g, '');
+  const axes = viewer.axisOrder === axisOrderFor(uploadName.value || currentFile.name)
+    ? '' : `{axes=${viewer.axisOrder}}`;
+  return `@[model](${uploadLink.href} "${caption}")${axes}`;
+}
+
+async function copyToClipboard(text, done) {
+  try {
+    await navigator.clipboard.writeText(text);
+    uploadStatus.textContent = done;
+  } catch {
+    uploadStatus.textContent = 'The browser would not give access to the clipboard.';
+  }
+}
+
+document.getElementById('upload-copy').addEventListener('click', () =>
+  copyToClipboard(uploadLink.href, 'Link copied to the clipboard.'));
+document.getElementById('upload-copy-embed').addEventListener('click', () =>
+  copyToClipboard(modelDirective(), 'Markdown copied — paste it into a page.'));
+uploadModal.querySelectorAll('[data-close]').forEach(button =>
+  button.addEventListener('click', closeUploadDialog));
+uploadModal.addEventListener('keydown', event => { if (event.key === 'Escape') closeUploadDialog(); });
+
 /* The viewer opens on a real part — a PJ3410 jack round nut, triangulated from
    the STEP file so it loads without the STEP engine. The built demo assembly is
    the fallback if the file cannot be fetched. */
 async function loadDefaultModel() {
   try {
-    const response = await fetch('models/pj3410-round-nut.stl');
+    const response = await fetch(`models/${DEFAULT_MODEL_FILE}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const parsed = await viewer.parse(await response.arrayBuffer(), 'pj3410-round-nut.stl');
-    setModel(parsed.root);
+    const buffer = await response.arrayBuffer();
+    const parsed = await viewer.parse(buffer, DEFAULT_MODEL_FILE);
+    currentFile = { name: DEFAULT_MODEL_FILE, buffer, type: 'application/octet-stream' };
+    loadedModel(parsed.root, DEFAULT_MODEL_FILE);
     nameEl.textContent = DEFAULT_MODEL_NAME;
     fileNameEl.textContent = DEFAULT_MODEL_NAME;
     statsEl.textContent = `STL · ${parsed.triangles.toLocaleString()} triangles · sample`;
@@ -414,6 +619,9 @@ async function loadDefaultModel() {
 }
 
 new ResizeObserver(() => viewer.resize()).observe(stage);
+/* The built-in demo is modelled the way three.js expects, so it starts on the
+   identity mapping; the file loaded over it switches to its format's default. */
+setAxisOrder('xyz');
 setModel(buildDemo());
 setGridVisible(true);
 setShadows(true);

@@ -28,6 +28,37 @@ export const LIGHTING_PRESETS = {
   unlit: { hemisphere: 0, key: 0, fill: 0, ambient: Math.PI, keyPosition: [0, 140, 10] }
 };
 
+/* Axis orders name which source axis becomes world X, Y and Z, in that order:
+   'xzy' sends the model's Z up, which is what three.js needs from a file drawn
+   Z-up. An odd permutation mirrors the model, so the world Z column is negated
+   to keep it a rotation — 'xzy' is then exactly a quarter turn about X. */
+export const AXIS_ORDERS = ['xyz', 'xzy', 'yxz', 'yzx', 'zxy', 'zyx'];
+
+/* STL, STEP and 3MF come from CAD and 3D-printing tools, which put Z up. OBJ
+   comes from graphics tools, which put Y up like three.js. */
+const FORMAT_AXIS_ORDER = { stl: 'xzy', step: 'xzy', stp: 'xzy', obj: 'xyz', '3mf': 'xzy' };
+
+export const extensionOf = name =>
+  String(name || '').split(/[?#]/)[0].split('.').pop().toLowerCase();
+
+export const axisOrderFor = name => FORMAT_AXIS_ORDER[extensionOf(name)] || 'xyz';
+
+function axisMatrix(order) {
+  const source = { x: 0, y: 1, z: 2 };
+  const rows = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  [...String(order)].forEach((axis, world) => { rows[world][source[axis]] = 1; });
+  const determinant =
+    rows[0][0] * (rows[1][1] * rows[2][2] - rows[1][2] * rows[2][1]) -
+    rows[0][1] * (rows[1][0] * rows[2][2] - rows[1][2] * rows[2][0]) +
+    rows[0][2] * (rows[1][0] * rows[2][1] - rows[1][1] * rows[2][0]);
+  if (determinant < 0) rows[2] = rows[2].map(value => -value);
+  return new THREE.Matrix4().set(
+    rows[0][0], rows[0][1], rows[0][2], 0,
+    rows[1][0], rows[1][1], rows[1][2], 0,
+    rows[2][0], rows[2][1], rows[2][2], 0,
+    0, 0, 0, 1);
+}
+
 export const SCENE_COLOUR_KEYS = ['model', 'grid', 'background'];
 export const LIGHT_COLOUR_KEYS = ['key', 'fill', 'sky', 'ground'];
 export const COLOUR_KEYS = [...SCENE_COLOUR_KEYS, ...LIGHT_COLOUR_KEYS];
@@ -186,8 +217,7 @@ export const MODEL_FORMATS = {
   '3mf': { label: '3MF', parse: parse3mf }
 };
 
-export const formatFor = name =>
-  MODEL_FORMATS[String(name || '').split(/[?#]/)[0].split('.').pop().toLowerCase()] || null;
+export const formatFor = name => MODEL_FORMATS[extensionOf(name)] || null;
 
 /* ------------------------------------------------------------------- viewer */
 
@@ -259,7 +289,9 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
   grid.position.y = -42;
   scene.add(grid);
 
-  let modelRoot = null;
+  let modelRoot = null;     // the holder that is normalised and added to the scene
+  let sourceRoot = null;    // the model as it was loaded, inside the holder
+  let axisOrder = 'xyz';
   let lightingPreset = 'studio';
   let brightness = 1;
   let rotationFrame = null;
@@ -441,13 +473,18 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     });
   }
 
+  /* The model sits inside a holder: the axis order turns the model, and the
+     holder carries the centring and scaling, so the two never fight. */
   function setModel(root) {
-    normaliseModel(root);
     if (modelRoot) {
       scene.remove(modelRoot);
       disposeObject(modelRoot);
     }
-    modelRoot = root;
+    sourceRoot = root;
+    modelRoot = new THREE.Group();
+    modelRoot.add(root);
+    applyAxisOrder();
+    normaliseModel(modelRoot);
     scene.add(modelRoot);
     modelRoot.traverse(object => {
       if (!object.isMesh) return;
@@ -455,6 +492,22 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
       object.receiveShadow = true;
     });
     fitView(true);
+  }
+
+  function applyAxisOrder() {
+    if (!sourceRoot) return;
+    sourceRoot.quaternion.setFromRotationMatrix(axisMatrix(axisOrder));
+    sourceRoot.updateMatrixWorld(true);
+  }
+
+  function setAxisOrder(order, { refit = true } = {}) {
+    if (!AXIS_ORDERS.includes(order)) return;
+    axisOrder = order;
+    if (!sourceRoot) return;
+    applyAxisOrder();
+    normaliseModel(modelRoot);
+    if (refit) fitView(true);
+    render();
   }
 
   function resize() {
@@ -494,10 +547,11 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     scene, camera, renderer, controls, grid,
     colour, material, parse, render, resize, dispose,
     setModel, fitView, setColour, setWireframe, setAutoRotate, setGridVisible,
-    setShadows, setLightingPreset, setBrightness, refreshTheme,
+    setShadows, setLightingPreset, setBrightness, setAxisOrder, refreshTheme,
     get modelRoot() { return modelRoot; },
     get autoRotate() { return controls.autoRotate; },
     get lightingPreset() { return lightingPreset; },
+    get axisOrder() { return axisOrder; },
     get gridVisible() { return grid.visible; },
     get shadows() { return keyLight.castShadow; }
   };

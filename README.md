@@ -7,12 +7,15 @@ A retro desktop-style website. The **visuals live in a single template**
 ```
 index.html                  ← page shell (menu bar, desktop, taskbar)
 assets/
-  css/clackos.css           ← all styling (the "template")
+  css/clackos.css           ← desktop styling (the "template")
+  css/content.css           ← styles for everything rendered from markdown
   backgrounds/              ← bitmap desktop tiles (PNG/JPEG/GIF/WebP/BMP)
   themes/                   ← one editable colour theme per CSS file
     clackos.css             ← default palette
     midnight.css            ← example dark palette
-  js/clackos.js             ← window manager, menu builder, markdown renderer
+  js/clackos.js             ← window manager and menu builder
+  js/markdown.js            ← the markdown renderer (desktop + editor preview)
+  js/model-scene.js         ← three.js viewer core (app + inline @[model])
   js/app-state.js           ← opt-in state persistence for application pages
   js/events.js              ← shared events reader (Calendar app + menu-bar pull-down)
 content/
@@ -422,6 +425,7 @@ same date and title: a CSV entry wins over the mirrored one.
   | `speed=0.9` | `0.9` | Rotation speed (−8–8; negative reverses) |
   | `zoom=1` | `1` | Framing multiplier; above 1 fills more of the frame |
   | `static` / `interactive` | drag to orbit | `static` disables input entirely; `interactive` (`controls=full`) adds wheel zoom and panning |
+  | `axes=xzy` | per format | Which source axis becomes world X, Y, Z. STL, STEP and 3MF default to `xzy` (Z up, as CAD draws it); OBJ defaults to `xyz` |
 
   Dragging orbits the model by default, while the wheel and one-finger touch
   stay with the page so scrolling past an embed still works. An unknown or
@@ -675,6 +679,20 @@ registered applications, Markdown windows, and desktop actions.
   vendor bundle. Open files with the button or drag-and-drop (several at
   once works), or link to a file kept in `content/applications/kicad/`
   with `kicad.html?file=<name>`.
+- `applications/model-viewer.html` (Applications → 3D Model Viewer) — an STL,
+  STEP, OBJ and 3MF viewer built on three.js (loaded from a CDN; STEP is
+  triangulated by `occt-import-js`). Files are read in the browser and never
+  uploaded unless you ask. The scene, loaders and lighting rig live in
+  `assets/js/model-scene.js`, shared with the inline `@[model]` embeds, so both
+  render identically. View fits, resets, wireframes and auto-rotates; Colours
+  and Lighting follow the ClackOS palette until overridden, with five lighting
+  presets, a brightness slider and shadows. **Axes** maps the file's axes onto
+  the world's: three.js is Y-up while CAD and slicers write Z-up, so STL, STEP
+  and 3MF are turned a quarter turn as they load (OBJ is left alone) and any of
+  the six orders can be picked by hand. File → Upload to website… sends the open
+  model to the web host through the same endpoint ClackPaint and the Markdown
+  Editor use, and hands back the public URL plus a ready-made `@[model]`
+  directive — including `{axes=…}` when the viewer is not on the format default.
 - `applications/eecircuit.html` (Applications → EEcircuit (SPICE)…) —
   EEcircuit, a browser SPICE simulator (ngspice as WebAssembly) with a
   netlist editor and WebGL plotting, mirrored from eecircuit.com under
@@ -689,12 +707,16 @@ registered applications, Markdown windows, and desktop actions.
   `vendor/easymde/`, MIT). Full markdown support: toolbar with
   headings, emphasis, strikethrough, quotes, lists, tables, code, links
   and images; syntax-highlighted editing; inline preview and
-  side-by-side split rendered in the ClackOS style. Open/save uses the
+  side-by-side split rendered by the site's own renderer
+  (`assets/js/markdown.js`) with the shared content styles
+  (`assets/css/content.css`), so the preview is what a ClackOS window and the
+  plain mirror will show — embeds, button rows and eyebrow headings included. Open/save uses the
   File System Access API where the browser supports it (true in-place
   saving); elsewhere saving downloads the file. Drag-and-drop works,
   Ctrl+S saves. File → Open from website… opens the shared file manager:
   Markdown files load into the editor, while other files insert a suitable
-  link or media embed. A file passed as `?repo=` (or `?open=`) with
+  link or media embed (a `.stl`, `.step`, `.stp`, `.obj` or `.3mf` file inserts
+  an inline `@[model]` viewer). A file passed as `?repo=` (or `?open=`) with
   `view=rendered` opens straight into the rendered preview — what the File
   Manager's Markdown Viewer entry does — and the toolbar's preview button
   switches back to the source. `?new=post` opens a blog post dated today
@@ -948,17 +970,23 @@ It needs these repository secrets (Settings → Secrets and variables → Action
 host's `~/.ssh/authorized_keys`), `DEPLOY_PATH` (the absolute web root, e.g.
 `/home/USER/public_html`), and optionally `SSH_PORT` (defaults to 22).
 
-## Uploading images and video
+## Uploading images, video and 3D models
 
 Large binaries do not belong in Git (repo-size and Actions limits), so the site
 links to media served from the web host instead — the same pattern the old blog
 posts already use. ClackOS can upload media straight to the host from the
 browser and hand back a URL to link:
 
-- **Applications → Markdown Editor… → Insert → Upload image or video…** (or just
-  drag an image/video/audio file onto the editor). The file is sent to the host,
-  and the returned URL is inserted as `![](…)`, `@[video](…){controls}`, or a
-  plain link depending on its type.
+- **Applications → Markdown Editor… → Insert → Upload image, video or 3D model…**
+  (or just drag an image, video, audio or model file onto the editor). The file
+  is sent to the host, and the returned URL is inserted as `![](…)`,
+  `@[video](…){controls}`, `@[model](… "name")`, or a plain link depending on
+  its type. Insert → Inline 3D model… (and the toolbar's model button) writes
+  the same directive for a file that is already on the site, asking for the
+  path, an optional caption and an optional option string.
+- **Applications → 3D Model Viewer → File → Upload to website…** sends the model
+  currently open to the host and shows the public URL, with buttons to copy the
+  link or the whole `@[model]` directive for pasting into a page.
 - **Applications → ClackPaint… → File → Upload to website…** sends the picture
   you are working on to the host as a PNG (never through GitHub) and shows the
   public URL with a Copy link button, ready to paste into a post.
@@ -979,7 +1007,11 @@ set `base` and `dir` in the config to the canonical live paths.
 **How malicious uploads are prevented.** Every request needs the secret token
 (constant-time checked); only an allow-list of image/video/audio types is
 accepted, with the stored extension taken from the file's *sniffed* content type
-rather than its name; filenames are generated server-side (date + random) so
+rather than its name; 3D models (STL, STEP, OBJ, 3MF) have no MIME type of their
+own that `finfo` reports, so they are matched on their actual content instead —
+a binary STL's triangle count must account for its exact byte length, a STEP
+must open with `ISO-10303-21;`, a 3MF must be a zip containing a
+`3dmodel.model` part, and so on, with the filename still trusted for nothing; filenames are generated server-side (date + random) so
 there is no path traversal or overwriting; a size cap applies (100 MB default,
 subject to the host's `upload_max_filesize`/`post_max_size`); and `upload.php`
 drops a `.htaccess` into the uploads folder that disables script execution, so

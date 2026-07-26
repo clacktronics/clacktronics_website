@@ -11,7 +11,7 @@
  * markdown long after the script loads. Viewports are only built once they are
  * near the viewport, and they stop rendering when they scroll away.
  */
-import { createModelScene, THREE } from './model-scene.js';
+import { createModelScene, axisOrderFor, THREE } from './model-scene.js';
 
 const number = (value, fallback) => {
   const parsed = Number(value);
@@ -109,6 +109,8 @@ async function hydrate(stage) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const parsed = await viewer.parse(await response.arrayBuffer(), src,
       message => statusLine(stage, message));
+    /* Z-up formats are turned as they load; {axes=…} overrides that. */
+    viewer.setAxisOrder(stage.dataset.axes || axisOrderFor(src), { refit: false });
     viewer.setModel(parsed.root);
     viewer.setWireframe(flag(stage, 'wireframe', false));
     applyRotation();

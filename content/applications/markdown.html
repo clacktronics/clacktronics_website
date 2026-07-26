@@ -10,7 +10,21 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
 <link rel="stylesheet" href="../../assets/css/file-manager.css">
+<!-- The preview renders the site's own markdown, so an @[model] embed can start
+     up in it. Its three.js comes from the same map index.html carries, and an
+     import map has to be in the document before any module loads. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"
+  }
+}
+</script>
 <link rel="stylesheet" href="../../vendor/easymde/easymde.min.css">
+<!-- after EasyMDE: the preview pane holds real ClackOS page markup, and
+     EasyMDE styles .editor-preview at the same specificity -->
+<link rel="stylesheet" href="../../assets/css/content.css">
 <style>
 .app { height: 100%; }
 .md-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 14px; }
@@ -61,47 +75,19 @@
 .editor-toolbar button i.fa { display: none; }
 .editor-toolbar button .pixel-icon { width: 17px; height: 17px; color: var(--control-text); }
 
-/* preview panes rendered like ClackOS pages */
+/* The preview holds the same .page / .plain markup a ClackOS window does, so
+   assets/css/content.css styles everything inside it — headings, lists, quotes,
+   code and the embeds. Only the pane itself is styled here. */
 .editor-preview, .editor-preview-side {
   background: var(--paper); color: var(--ink-soft);
   font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.85;
-  padding: 24px 28px;
+  padding: 0;
 }
 .editor-preview-side { border: 1px solid var(--ink); border-left: none; border-radius: 0 0 8px 0; }
-.editor-preview h1, .editor-preview-side h1,
-.editor-preview h2, .editor-preview-side h2 {
-  font-family: 'Dosis', sans-serif; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--heading); margin: 18px 0 10px;
-}
-.editor-preview h1, .editor-preview-side h1 { font-size: 26px; }
-.editor-preview h2, .editor-preview-side h2 { font-size: 20px; }
-.editor-preview h3, .editor-preview-side h3 { color: var(--leaf-deep); margin: 14px 0 8px; }
-.editor-preview p, .editor-preview-side p { margin-bottom: 12px; }
-.editor-preview a, .editor-preview-side a { color: var(--leaf-deep); }
-.editor-preview code, .editor-preview-side code {
-  background: var(--paper-deep); color: var(--leaf-deep); padding: 1px 5px; border-radius: 4px;
-}
-/* .code-dark hands the preview's code blocks the same theme-derived token
-   palette the rendered page uses — see assets/css/code.css */
-.editor-preview pre, .editor-preview-side pre {
-  background: var(--ink); color: var(--menu-text); padding: 12px 14px;
-  border-radius: 8px; overflow-x: auto; margin-bottom: 12px;
-}
-.editor-preview pre code, .editor-preview-side pre code { background: none; color: inherit; padding: 0; }
-.editor-preview blockquote, .editor-preview-side blockquote {
-  border-left: 3px solid var(--leaf-deep); padding-left: 14px; color: var(--sage);
-  font-style: italic; margin: 0 0 12px;
-}
-.editor-preview table, .editor-preview-side table { border-collapse: collapse; margin-bottom: 12px; }
-.editor-preview th, .editor-preview td, .editor-preview-side th, .editor-preview-side td {
-  border: 1px solid var(--paper-line); padding: 6px 10px;
-}
-.editor-preview th, .editor-preview-side th { background: var(--paper-deep); color: var(--strong-text); }
-.editor-preview ul, .editor-preview ol, .editor-preview-side ul, .editor-preview-side ol {
-  margin: 0 0 12px 22px;
-}
-.editor-preview hr, .editor-preview-side hr { border: none; border-top: 1px solid var(--ink); margin: 16px 0; }
-.editor-preview img, .editor-preview-side img { max-width: 100%; border: 1px solid var(--ink); border-radius: 6px; }
+/* Window content is centred at a fixed measure; the preview is its own column
+   and is often only half a window wide, so let it use the width it has. */
+.editor-preview .page, .editor-preview-side .page,
+.editor-preview .plain, .editor-preview-side .plain { max-width: none; padding: 24px 28px; }
 
 .md-status { padding: 6px 16px 12px; }
 body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -8px; }
@@ -158,7 +144,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <button data-cmd="commit"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Commit to website&hellip;</button>
     </div></div>
     <div class="rm"><button>Insert</button><div class="rm-dd">
-      <button data-cmd="insert-upload"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload image or video&hellip;</button>
+      <button data-cmd="insert-upload"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload image, video or 3D model&hellip;</button>
       <div class="sep"></div>
       <button data-cmd="insert-window"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Markdown window link&hellip;</button>
       <button data-cmd="insert-action"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Desktop action link&hellip;</button>
@@ -166,6 +152,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <button data-cmd="insert-youtube-embed"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Inline YouTube video&hellip;</button>
       <button data-cmd="insert-video-embed"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Inline video file&hellip;</button>
       <button data-cmd="insert-kicanvas-embed"><span class="pixel-icon" data-icon="circuit-board" aria-hidden="true"></span>Inline KiCanvas design&hellip;</button>
+      <button data-cmd="insert-model-embed"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>Inline 3D model&hellip;</button>
       <div class="sep"></div>
       <button data-cmd="insert-video"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Video Lab file link&hellip;</button>
       <button data-cmd="insert-pdf"><span class="pixel-icon" data-icon="file-text" aria-hidden="true"></span>PDF Reader file link&hellip;</button>
@@ -224,6 +211,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 
 <script src="../../vendor/easymde/easymde.min.js"></script>
 <script src="../../assets/js/highlight.js"></script>
+<script src="../../assets/js/markdown.js"></script>
 <script src="../../assets/js/file-manager.js"></script>
 <script>
 (() => {
@@ -235,16 +223,22 @@ let sitePath = null;    /* repo path when opened via "Open from website" */
 let ghToken = null;     /* fine-grained PAT, memory only, per session */
 let repoCfg = null;     /* { repo, branch } from content/site.json */
 
-/* Colour the preview's fenced code the way the rendered page will, using the
- * shared highlighter. EasyMDE hands us the Markdown; we render it as usual and
- * then walk the result. */
+/* The preview is rendered by the site's own renderer (assets/js/markdown.js),
+ * not by EasyMDE's, so what you write is previewed as a ClackOS window and the
+ * plain mirror will show it: eyebrow headings, button rows, the @[…] embeds and
+ * code coloured by the shared highlighter. Frontmatter is read the same way
+ * too, so `style: page` previews as the page layout.
+ *
+ * Links are left inert — window:/app:/action: links have no desktop to act on
+ * here, and following an ordinary link would navigate the editor away. */
 function renderPreview(plainText) {
-  const html = mde.markdown(plainText);
-  const holder = document.createElement('div');
-  holder.innerHTML = html;
-  holder.querySelectorAll('pre').forEach(pre => pre.classList.add('code-dark'));
-  window.ClackHighlight?.apply(holder);
-  return holder.innerHTML;
+  const { meta, body } = ClackMarkdown.parseFrontmatter(plainText);
+  const html = ClackMarkdown.render(body, meta);
+  requestAnimationFrame(() => document.querySelectorAll('.editor-preview, .editor-preview-side')
+    .forEach(pane => {
+      ClackMarkdown.populateBuildStamps(pane);
+    }));
+  return html;
 }
 
 const mde = new EasyMDE({
@@ -260,15 +254,17 @@ const mde = new EasyMDE({
   toolbar: ['bold', 'italic', 'strikethrough', '|', 'heading', 'quote', 'code', '|',
             'unordered-list', 'ordered-list', 'table', 'horizontal-rule', '|',
             'link', 'image', {
-              name: 'video-embed',
+              name: 'insert-video',
               action: insertVideoEmbed,
-              className: 'video-embed',
               title: 'Insert inline video'
             }, {
-              name: 'kicanvas-embed',
+              name: 'insert-kicanvas',
               action: insertKicanvasEmbed,
-              className: 'kicanvas-embed',
               title: 'Insert inline KiCad design'
+            }, {
+              name: 'insert-model',
+              action: insertModelEmbed,
+              title: 'Insert inline 3D model'
             }, '|', 'preview', 'side-by-side', 'fullscreen', '|',
             'undo', 'redo'],
   initialValue: `# New document
@@ -303,7 +299,7 @@ const toolbarIcons = {
   heading: 'heading', quote: 'quote-text-inline', code: 'terminal',
   'unordered-list': 'bulletlist', 'ordered-list': 'list-box', table: 'grid-3x3',
   'horizontal-rule': 'minus-box', link: 'link', image: 'image',
-  'video-embed': 'video', 'kicanvas-embed': 'circuit-board', preview: 'eye',
+  'insert-video': 'video', 'insert-kicanvas': 'circuit-board', 'insert-model': 'box', preview: 'eye',
   'side-by-side': 'align-horizontal-distribute-center', fullscreen: 'expand',
   undo: 'undo', redo: 'reload'
 };
@@ -560,6 +556,21 @@ function insertKicanvasEmbed() {
   insertMarkdownEmbed('kicanvas', source, title.trim().replace(/["']/g, ''));
 }
 
+/* The viewer's own defaults are the borderless inline ones, so an empty options
+   answer is the common case; anything typed is passed through as written and
+   validated when the page renders. */
+function insertModelEmbed() {
+  const source = prompt('3D model URL or path from the site root (STL, STEP, OBJ or 3MF):', 'content/applications/models/pj3410-round-nut.stl');
+  if (!source) return;
+  const selected = cm.getSelection().trim();
+  const title = prompt('Optional model caption:', selected);
+  if (title === null) return;
+  const options = prompt('Optional settings, space separated — for example: height=260 colour=#c98a3a grid caption border right lighting=dramatic zoom=1.2 nospin interactive', '');
+  if (options === null) return;
+  insertMarkdownEmbed('model', source, title.trim().replace(/["']/g, ''),
+    options.trim().replace(/[{}]/g, ''));
+}
+
 function insertVideoLink() {
   const source = prompt('Video URL or path from the site root (for example content/media/demo.mp4):', 'content/media/demo.mp4');
   if (source) insertClackLink(`app:applications/video/index.html?src=${encodePart(source)}`, 'Open in Video Lab');
@@ -621,6 +632,7 @@ const insertCommands = {
   'insert-youtube-embed': insertYouTubeEmbed,
   'insert-video-embed': insertVideoEmbed,
   'insert-kicanvas-embed': insertKicanvasEmbed,
+  'insert-model-embed': insertModelEmbed,
   'insert-video': insertVideoLink,
   'insert-pdf': insertPDFLink,
   'insert-falstad': insertFalstadLink,
@@ -635,7 +647,8 @@ const insertCommands = {
  * Sends the file to the endpoint named by "assetUpload" in content/site.json
  * (resolved against the site root, so it is same-origin) with a secret token
  * held only in memory. The server stores it under assets/uploads/ and returns
- * a public URL, which is inserted as the right Markdown for its media type. */
+ * a public URL, which is inserted as the right Markdown for its media type:
+ * an image, a video, an inline 3D model, or a plain link. */
 const uploadModal = document.getElementById('uploadModal');
 const uploadTokenInput = document.getElementById('uploadTokenInput');
 const uploadStatus = document.getElementById('uploadStatus');
@@ -645,7 +658,9 @@ let pendingUpload = null;        /* the File waiting to be sent */
 
 const uploadPicker = document.createElement('input');
 uploadPicker.type = 'file';
-uploadPicker.accept = 'image/*,video/*,audio/*';
+/* Models have no useful MIME type of their own, so they are listed by
+   extension; the server identifies them from their contents either way. */
+uploadPicker.accept = 'image/*,video/*,audio/*,.stl,.step,.stp,.obj,.3mf';
 uploadPicker.addEventListener('change', () => {
   const f = uploadPicker.files[0];
   uploadPicker.value = '';
@@ -724,6 +739,7 @@ function insertUploadedMedia(data, name) {
   let snippet;
   if (data.kind === 'video') snippet = `@[video](${data.url}){controls}`;
   else if (data.kind === 'image') snippet = `![${alt}](${data.url})`;
+  else if (data.kind === 'model') snippet = `@[model](${data.url} "${alt.replace(/"/g, '')}")`;
   else snippet = `[${alt}](${data.url})`;
   cm.replaceSelection(snippet + '\n');
   cm.focus();
@@ -753,6 +769,7 @@ function markdownForFile(item) {
   const target = item.drive === 'github' ? item.path : item.url;
   if (item.kind === 'image') return `![${label}](${target})`;
   if (item.kind === 'video') return `@[video](${target} "${label.replace(/"/g, '')}"){controls}`;
+  if (item.kind === 'model') return `@[model](${target} "${label.replace(/"/g, '')}")`;
   return `[${label}](${target})`;
 }
 
@@ -910,9 +927,10 @@ document.addEventListener('drop', async e => {
   document.body.classList.remove('dragging');
   const f = e.dataTransfer.files[0];
   if (!f) return;
-  /* an image/video/audio file is uploaded to the web host; anything else is
-     treated as text and loaded into the editor */
-  if (/^(image|video|audio)\//.test(f.type)) {
+  /* an image/video/audio/3D-model file is uploaded to the web host; anything
+     else is treated as text and loaded into the editor. Models are matched by
+     extension because the browser reports no type for most of them. */
+  if (/^(image|video|audio)\//.test(f.type) || /\.(?:stl|step|stp|obj|3mf)$/i.test(f.name)) {
     const url = await getAssetUploadUrl();
     if (!url) { status.textContent = 'Dropped media, but uploads are not configured in content/site.json.'; return; }
     beginUpload(f);
