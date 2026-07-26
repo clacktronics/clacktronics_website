@@ -166,6 +166,7 @@ function syncBrowserThemeColor() {
 
 /* ---------------- Content loading ---------------- */
 const contentCache = new Map();   // md path -> { meta, html }
+const metaCache = new Map();      // md path -> frontmatter (null when missing)
 const windowTitles = new Map();   // md path -> title (for the taskbar)
 
 /* GitHub Pages and other static hosts may cache JSON and Markdown longer than
@@ -183,12 +184,47 @@ async function loadJSON(path) {
   return res.json();
 }
 
+/* Where a page goes when it goes up: `up:` in the frontmatter decides, with
+ * `up: none` for a page that is already the top; otherwise it is the folder's
+ * own page — file/euroclack/mini-speaker.md goes up to file/euroclack.md —
+ * and the home window for everything that sits at the top level. */
+const HOME_PAGE = 'file/home.md';
+function upTarget(id, meta) {
+  const declared = (meta.up || '').trim();
+  if (declared) return declared === 'none' ? '' : declared;
+  if (id === HOME_PAGE) return '';
+  const dir = id.replace(/\/[^/]*$/, '');
+  return dir.includes('/') ? dir + '.md' : HOME_PAGE;
+}
+
+/* Frontmatter only, for the title of a page that is not being opened. */
+async function loadMeta(id) {
+  if (metaCache.has(id)) return metaCache.get(id);
+  let meta = null;
+  try {
+    const res = await fetchFresh('content/' + id);
+    if (res.ok) meta = parseFrontmatter(await res.text()).meta;
+  } catch {}
+  metaCache.set(id, meta);
+  return meta;
+}
+
+/* The "up" link every page but the top one carries, above its title. */
+async function upLinkHTML(id, meta) {
+  const up = upTarget(id, meta);
+  if (!up || up === id) return '';
+  const parent = await loadMeta(up);
+  if (!parent) return '';
+  return `<p class="up-link"><a href="#" data-action="open:${escInlineAttr(up)}">`
+    + `↑ ${esc(parent.title || up)}</a></p>`;
+}
+
 async function loadContent(id) {
   if (contentCache.has(id)) return contentCache.get(id);
   const res = await fetchFresh('content/' + id);
   if (!res.ok) throw new Error(`Failed to load content/${id}: ${res.status}`);
   const { meta, body } = parseFrontmatter(await res.text());
-  const rec = { meta, html: mdToHtml(body, meta) };
+  const rec = { meta, html: mdToHtml(body, meta, await upLinkHTML(id, meta)) };
   contentCache.set(id, rec);
   windowTitles.set(id, meta.title || id);
   return rec;
@@ -533,7 +569,9 @@ function sanitizeHtmlBlock(html) {
   return template.innerHTML;
 }
 
-function mdToHtml(body, meta) {
+/* `prefix` is HTML placed inside the content wrapper, above the page: the
+ * link back up to the page a window sits under. */
+function mdToHtml(body, meta, prefix = '') {
   /* lift fenced code blocks out before splitting on blank lines */
   const fences = [];
   body = body.replace(/```\w*\r?\n([\s\S]*?)```/g, (_, code) => {
@@ -615,7 +653,7 @@ function mdToHtml(body, meta) {
   });
 
   const style = meta.style === 'page' ? 'page' : 'plain';
-  return `<div class="${style}">${out.join('\n')}</div>`;
+  return `<div class="${style}">${prefix}${out.join('\n')}</div>`;
 }
 
 /* ---------------- Wallpapers ----------------
@@ -996,6 +1034,55 @@ function focusWindow(el) {
   el.style.zIndex = zTop;
   document.querySelectorAll('.window').forEach(w => w.classList.toggle('inactive', w !== el));
   updateTaskbar();
+}
+
+/* The window record a node sits in, if any. */
+function windowOf(node) {
+  const el = node.closest?.('.window');
+  return el ? [...windows.values()].find(rec => rec.el === el) || null : null;
+}
+
+/* Follow a markdown link inside an open window: the window keeps its place,
+ * size and stacking and swaps its content, title and icon for the page it was
+ * pointed at — the window id is the content path, so it moves with it. A page
+ * already open in another window is raised instead of being duplicated. */
+async function navigateWindow(rec, id) {
+  if (rec.id === id) return;
+  const open = windows.get(id);
+  if (open) {
+    open.el.style.display = 'flex';
+    open.minimised = false;
+    focusWindow(open.el);
+    updateTaskbar();
+    return;
+  }
+  let content;
+  try {
+    content = await loadContent(id);
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+  windows.delete(rec.id);
+  rec.id = id;
+  windows.set(id, rec);
+
+  const title = content.meta.title || id;
+  rec.icon = safeIconName(content.meta.icon) || windowIcons.get(id) || 'file-text';
+  rec.el.setAttribute('aria-label', title);
+  rec.el.querySelector('.title').innerHTML =
+    `${iconHTML(rec.icon, 'title-icon')}<span class="title-label">${esc(title)}</span>`;
+  rec.el.querySelector('.dot.close').setAttribute('aria-label', `Close ${title}`);
+  rec.el.querySelector('.dot.min').setAttribute('aria-label', `Minimise ${title}`);
+  rec.el.querySelector('.dot.max')?.setAttribute('aria-label', `Maximise ${title}`);
+
+  const winbody = rec.el.querySelector('.winbody');
+  winbody.innerHTML = content.html;
+  populateBuildStamps(winbody);
+  winbody.scrollTop = 0;
+  focusWindow(rec.el);
+  updateTaskbar();
+  scheduleSessionSave();
 }
 
 function closeWindow(id) {
@@ -1620,7 +1707,13 @@ document.addEventListener('click', e => {
   const btn = e.target.closest('[data-action]');
   if (!btn || btn.disabled) return;
   e.preventDefault();
-  runAction(btn.dataset.action);
+  /* A markdown link followed from inside a content window replaces that
+   * window, the way a page follows a link — the menus still open windows. */
+  const from = btn.closest('.winbody') && windowOf(btn);
+  const target = btn.dataset.action.startsWith('open:') ? btn.dataset.action.slice(5) : '';
+  if (from && target && !target.startsWith('app:') && !from.id.startsWith('app:'))
+    navigateWindow(from, target);
+  else runAction(btn.dataset.action);
   closeMenus();
 });
 bindWebLinkRouting(document);

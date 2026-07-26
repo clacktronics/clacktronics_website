@@ -703,10 +703,34 @@ def md_to_html(body, meta, page_out, state):
 # ---------------------------------------------------------------- pages
 STYLE = 'style.css'
 
+HOME_PAGE = 'file/home.md'
+
+def up_link(md_rel, meta, page_out):
+    """The link back to the page above this one, matching the desktop's rule.
+
+    `up:` in the frontmatter decides, with `up: none` for a page that is
+    already the top; otherwise it is the folder's own page —
+    file/euroclack/mini-speaker.md goes up to file/euroclack.md — and the home
+    page for everything at the top level.
+    """
+    declared = meta.get('up', '').strip()
+    if declared:
+        target = '' if declared == 'none' else declared
+    elif md_rel == HOME_PAGE:
+        target = ''
+    else:
+        folder = posixpath.dirname(md_rel)
+        target = folder + '.md' if '/' in folder else HOME_PAGE
+    if not target or target == md_rel or target not in PAGES:
+        return ''
+    title = parse_front_matter((content / target).read_text(encoding='utf-8'))[0].get('title', target)
+    return '<p class="up-link"><a href="%s">↑ %s</a></p>\n' % (
+        esc(rel_href(PAGES[target], page_out)), esc(title))
+
 def render_page(md_rel, page_out):
     meta, body = parse_front_matter((content / md_rel).read_text(encoding='utf-8'))
     state = {'kicanvas': False, 'headings': {}}
-    article = md_to_html(body, meta, page_out, state)
+    article = up_link(md_rel, meta, page_out) + md_to_html(body, meta, page_out, state)
     style_class = 'page' if meta.get('style') == 'page' else 'plain'
     crawl_meta, noindex = head_meta(md_rel, page_out, meta, body)
     menu = render_menu(md_rel, page_out)

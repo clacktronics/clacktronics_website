@@ -101,10 +101,24 @@ style: plain               ← "plain" or "page" (rich landing-page look)
 tagline: Optional line     ← rendered under the h1 with a rule
 description: One sentence  ← optional; search-result snippet for the mirror
 robots: noindex            ← optional; keep this page out of search results
+up: file/euroclack.md      ← optional; overrides the link back up ("none" for
+                             a page that is already the top)
 width: 480                 ← optional; px or % (default: 80% of the desktop)
 height: 60%
 ---
 ```
+
+Every page but the home window carries a small `↑ <parent>` link above its
+title. The parent is worked out from where the file sits — a page in a folder
+goes up to the folder's own page (`file/euroclack/mini-speaker.md` →
+`file/euroclack.md`, a blog post → `file/blog.md`) and anything at the top
+level goes up to the home window — so a new file gets one without being asked.
+`up:` in the frontmatter overrides it.
+
+Following a `window:` link from inside a window replaces that window, the way
+a page follows a link; the taskbar entry and titlebar follow along. The File
+menu still opens a new window, and a page already open in another window is
+raised rather than duplicated.
 
 ### Blog posts
 
@@ -250,7 +264,8 @@ same date and title: a CSV entry wins over the mirrored one.
   Raw HTML can also define an explicit anchor such as `<a id="details"></a>`.
 - ` ``` ` fenced code blocks
 - `> quote` — blockquote
-- `[label](window:file/euroclack.md)` — link that opens another window
+- `[label](window:file/euroclack.md)` — link to another window (followed in
+  place; see above)
 - `[label](app:applications/video/index.html?src=content%2Fmedia%2Fdemo.mp4)`
   — link that launches a registered application with startup options
 - `[label](app:applications/pdf-reader/index.html?file=content%2Ffiles%2Fmanual.pdf)`
