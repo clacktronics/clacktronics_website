@@ -931,9 +931,12 @@ async function openWindow(id, restore = null) {
 
   el.addEventListener('pointerdown', () => focusWindow(el));
 
-  el.querySelector('.dot.close').addEventListener('click', e => { e.stopPropagation(); closeWindow(id); });
-  el.querySelector('.dot.min').addEventListener('click', e => { e.stopPropagation(); minimiseWindow(id); });
-  el.querySelector('.dot.max')?.addEventListener('click', e => { e.stopPropagation(); toggleMax(id); });
+  /* rec.id, not the id this window opened with: following a link inside the
+   * window re-keys it under the page it navigated to, so a captured id would
+   * name a window that is no longer in the map and these buttons would go dead */
+  el.querySelector('.dot.close').addEventListener('click', e => { e.stopPropagation(); closeWindow(rec.id); });
+  el.querySelector('.dot.min').addEventListener('click', e => { e.stopPropagation(); minimiseWindow(rec.id); });
+  el.querySelector('.dot.max')?.addEventListener('click', e => { e.stopPropagation(); toggleMax(rec.id); });
 
   /* drag */
   titlebar.addEventListener('pointerdown', e => {
