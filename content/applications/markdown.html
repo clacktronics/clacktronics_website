@@ -58,6 +58,9 @@
 .cm-s-easymde .cm-link, .cm-s-easymde .cm-url { color: var(--leaf-deep); }
 .cm-s-easymde .cm-comment { background: var(--paper-deep); color: var(--leaf-deep); border-radius: 3px; }
 .cm-s-easymde .cm-hr { color: var(--paper-line); }
+/* frontmatter, coloured by the wrapper mode below — data, not prose */
+.cm-s-easymde .cm-def { color: var(--leaf-deep); font-weight: 600; }
+.cm-s-easymde .cm-meta { color: var(--sage); }
 
 .editor-toolbar {
   border: 1px solid var(--ink); border-bottom: none; border-radius: 8px 8px 0 0;
@@ -129,6 +132,23 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 .commit-form input { width: 100%; }
 .commit-actions { display: flex; align-items: center; gap: 14px; }
 .rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
+
+/* ---- the inline-video options dialog ---- */
+.opt-set { border: 1px solid var(--paper-line); border-radius: 8px; padding: 10px 12px 12px; margin: 0; }
+.opt-set legend {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--leaf-deep); padding: 0 6px;
+}
+.opt-set label {
+  flex-direction: row; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  padding: 3px 0; cursor: pointer;
+}
+.opt-set label:has(input:disabled) { cursor: default; opacity: 0.65; }
+.opt-set input { width: auto; flex: none; accent-color: var(--leaf-deep); }
+.commit-form .snippet {
+  margin: 0; font-size: 11.5px; color: var(--sage); overflow-wrap: anywhere;
+}
+.commit-form .snippet code { color: var(--leaf-deep); }
 </style>
 </head>
 <body>
@@ -188,6 +208,32 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
         <button class="btn primary" id="commitGo"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Commit</button>
         <button class="btn" id="commitCancel">Cancel</button>
         <span class="app-status" id="commitStatus"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="site-modal" id="videoModal">
+  <div class="site-box">
+    <header><span>Insert inline video</span><button id="videoClose" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
+    <div class="commit-form">
+      <label>Video URL or path from the site root
+        <input type="text" id="videoSrc" spellcheck="false" placeholder="content/media/demo.mp4">
+      </label>
+      <label>Title <span class="hint">(the accessible label for the clip — optional)</span>
+        <input type="text" id="videoTitle" spellcheck="false">
+      </label>
+      <fieldset class="opt-set">
+        <legend>Playback</legend>
+        <label><input type="checkbox" id="videoLoop" checked> Loop <span class="hint">repeat for as long as the page is open</span></label>
+        <label><input type="checkbox" id="videoAutoplay" checked> Play on its own <span class="hint">otherwise the reader starts it</span></label>
+        <label><input type="checkbox" id="videoMuted" checked> Muted <span class="hint">browsers only start silent clips on their own</span></label>
+        <label><input type="checkbox" id="videoControls"> Show the player controls <span class="hint">without them the clip reads as an animation</span></label>
+      </fieldset>
+      <p class="snippet">Inserts <code id="videoSnippet"></code></p>
+      <div class="commit-actions">
+        <button class="btn primary" id="videoGo"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Insert</button>
+        <button class="btn" id="videoCancel">Cancel</button>
       </div>
     </div>
   </div>
@@ -462,6 +508,79 @@ function newPost() {
   mde.codemirror.focus();
 }
 
+/* ---- what the editor colours ----
+ * EasyMDE colours the source with CommonMark's rules, which are not this
+ * renderer's. Two of them are actively misleading:
+ *
+ *   - Setext headings. CommonMark reads a line of text sitting directly above a
+ *     `---` as a heading and underlines it; mdToHtml() has no such rule, so that
+ *     is a paragraph followed by a horizontal rule. The frontmatter block at the
+ *     top of every page hits this every time — its last key comes out big and
+ *     bold, as if `height: 80%` were a section title.
+ *   - Frontmatter itself, which is data the renderer reads before the markdown
+ *     starts, not markdown.
+ *
+ * So wrap the gfm mode: colour the frontmatter as metadata (keeping it away from
+ * the inner mode, which is what stops the `---` below it reading as an
+ * underline) and drop heading styling from anything that is not an ATX `#`
+ * heading. Everything else is gfm's, unchanged.
+ */
+{
+  const CodeMirror = window.CodeMirror || mde.codemirror.constructor;
+  const gfm = mde.codemirror.getOption('mode');
+  const inner = typeof gfm === 'string' ? { name: gfm } : Object.assign({}, gfm);
+
+  const FENCE = /^---[ \t]*$/;
+  const ATX_HEADING = /^ {0,3}#{1,6}(?:\s|$)/;
+  const SETEXT_UNDERLINE = /^ {0,3}(?:={1,}|-{2,})[ \t]*$/;
+  const RULE = /^ {0,3}-{3,}[ \t]*$/;
+  const isHeadingStyle = token => token === 'header' || /^header-\d+$/.test(token);
+
+  CodeMirror.defineMode('clackos-markdown', config => {
+    const mode = CodeMirror.getMode(config, inner);
+    return {
+      startState: () => ({
+        inner: CodeMirror.startState(mode),
+        line: -1, front: 'start', heading: false, underline: false
+      }),
+      copyState: state => Object.assign({}, state, { inner: CodeMirror.copyState(mode, state.inner) }),
+      innerMode: state => ({ state: state.inner, mode }),
+      blankLine: state => (mode.blankLine ? mode.blankLine(state.inner) : undefined),
+      indent: (state, textAfter, line) =>
+        (mode.indent ? mode.indent(state.inner, textAfter, line) : CodeMirror.Pass),
+
+      token(stream, state) {
+        if (stream.sol()) {
+          state.line += 1;
+          /* frontmatter is the `---` fenced block on line 0 and nothing else */
+          if (state.front === 'start') state.front = state.line === 0 && FENCE.test(stream.string) ? 'open' : 'none';
+          else if (state.front === 'close') state.front = 'none';
+          else if (state.front === 'open' && FENCE.test(stream.string)) state.front = 'close';
+          state.heading = ATX_HEADING.test(stream.string);
+          state.underline = SETEXT_UNDERLINE.test(stream.string);
+        }
+        if (state.front === 'open' || state.front === 'close') {
+          /* `key:` in one colour, its value in another */
+          if (state.front === 'open' && stream.sol() && stream.match(/^[^:]+:/)) return 'def';
+          stream.skipToEnd();
+          return 'meta';
+        }
+
+        const style = mode.token(stream, state.inner);
+        if (!style || state.heading) return style;
+        const kept = style.split(' ').filter(token => !isHeadingStyle(token));
+        if (kept.length === style.split(' ').length) return style;
+        /* the underline itself is a rule to this renderer; the line above it is
+           ordinary prose */
+        if (state.underline) return RULE.test(stream.string) ? 'hr' : null;
+        return kept.join(' ') || null;
+      }
+    };
+  });
+
+  mde.codemirror.setOption('mode', 'clackos-markdown');
+}
+
 /* ---- ClackOS links inserted into Markdown ---- */
 const cm = mde.codemirror;
 
@@ -535,17 +654,80 @@ function insertYouTubeEmbed() {
   insertMarkdownEmbed('youtube', source, title);
 }
 
-function insertVideoEmbed() {
-  const source = prompt('Video URL or path from the site root:', 'content/media/demo.mp4');
-  if (!source) return;
-  const title = markdownEmbedTitle();
-  if (title === null) return;
-  const value = prompt('Optional playback settings: controls, noloop, or both:', '');
-  if (value === null) return;
-  const options = [...new Set(value.toLowerCase().split(/[\s,]+/).filter(option =>
-    ['controls', 'noloop'].includes(option)))].join(' ');
-  insertMarkdownEmbed('video', source, title, options);
+/* The playback options are four yes/no choices, but the markdown only spells out
+ * what differs from the renderer's defaults — a looping clip that plays itself
+ * with no controls needs no options at all. So the dialog offers the choices and
+ * works out the shortest `{…}` that produces them, showing the line it is about
+ * to write so there is no guessing about what the words mean. */
+const videoModal = document.getElementById('videoModal');
+const videoSrc = document.getElementById('videoSrc');
+const videoTitle = document.getElementById('videoTitle');
+const videoLoop = document.getElementById('videoLoop');
+const videoAutoplay = document.getElementById('videoAutoplay');
+const videoMuted = document.getElementById('videoMuted');
+const videoControls = document.getElementById('videoControls');
+const videoSnippet = document.getElementById('videoSnippet');
+
+function videoEmbedOptions() {
+  const loop = videoLoop.checked;
+  const autoplay = videoAutoplay.checked;
+  const options = [];
+  if (!loop) options.push('noloop');
+  /* autoplay follows looping unless it is asked for either way */
+  if (autoplay !== loop) options.push(autoplay ? 'autoplay' : 'noautoplay');
+  if (!autoplay && videoMuted.checked) options.push('muted');
+  if (videoControls.checked) options.push('controls');
+  return options.join(' ');
 }
+
+function videoEmbedMarkdown() {
+  const source = videoSrc.value.trim();
+  const title = videoTitle.value.trim().replace(/["']/g, '');
+  const options = videoEmbedOptions();
+  return `@[video](${markdownEmbedTarget(source || 'content/media/demo.mp4')}`
+    + `${title ? ` "${title}"` : ''})${options ? `{${options}}` : ''}`;
+}
+
+function refreshVideoDialog() {
+  /* a clip that plays itself has to be muted, so say so rather than let someone
+     pick a combination the browser will refuse */
+  videoMuted.disabled = videoAutoplay.checked;
+  if (videoAutoplay.checked) videoMuted.checked = true;
+  videoSnippet.textContent = videoEmbedMarkdown();
+}
+
+function insertVideoEmbed() {
+  const selected = cm.getSelection().trim();
+  const looksLikeSource = /^(?:https?:\/\/|[\w./-]+\.(?:mp4|webm|ogv|ogg|mov|m4v))/i.test(selected);
+  videoSrc.value = looksLikeSource ? selected : '';
+  videoTitle.value = looksLikeSource ? '' : selected;
+  videoLoop.checked = true;
+  videoAutoplay.checked = true;
+  videoMuted.checked = true;
+  videoControls.checked = false;
+  refreshVideoDialog();
+  videoModal.classList.add('open');
+  videoSrc.focus();
+  videoSrc.select();
+}
+
+function commitVideoEmbed() {
+  const source = videoSrc.value.trim();
+  if (!source) { videoSrc.focus(); return; }
+  videoModal.classList.remove('open');
+  cm.replaceSelection(videoEmbedMarkdown());
+  cm.focus();
+}
+
+videoModal.addEventListener('change', refreshVideoDialog);
+videoModal.addEventListener('input', refreshVideoDialog);
+videoModal.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT') commitVideoEmbed();
+  if (e.key === 'Escape') videoModal.classList.remove('open');
+});
+document.getElementById('videoGo').addEventListener('click', commitVideoEmbed);
+document.getElementById('videoClose').addEventListener('click', () => videoModal.classList.remove('open'));
+document.getElementById('videoCancel').addEventListener('click', () => videoModal.classList.remove('open'));
 
 function insertKicanvasEmbed() {
   const source = prompt('KiCad file URL or path from the site root:', 'content/applications/kicad/example.kicad_sch');
@@ -737,7 +919,10 @@ async function doUpload() {
 function insertUploadedMedia(data, name) {
   const alt = (name || '').replace(/\.[^.]+$/, '').replace(/\]/g, '\\]') || 'media';
   let snippet;
-  if (data.kind === 'video') snippet = `@[video](${data.url}){controls}`;
+  /* an uploaded clip gets the ordinary-player treatment — plays once, on
+     request, with its sound; Insert → Inline video file… is where the looping
+     no-controls animation is chosen deliberately */
+  if (data.kind === 'video') snippet = `@[video](${data.url}){noloop controls}`;
   else if (data.kind === 'image') snippet = `![${alt}](${data.url})`;
   else if (data.kind === 'model') snippet = `@[model](${data.url} "${alt.replace(/"/g, '')}")`;
   else snippet = `[${alt}](${data.url})`;
@@ -768,7 +953,7 @@ function markdownForFile(item) {
   const label = item.name.replace(/\.[^.]+$/, '').replace(/[\[\]]/g, '');
   const target = item.drive === 'github' ? item.path : item.url;
   if (item.kind === 'image') return `![${label}](${target})`;
-  if (item.kind === 'video') return `@[video](${target} "${label.replace(/"/g, '')}"){controls}`;
+  if (item.kind === 'video') return `@[video](${target} "${label.replace(/"/g, '')}"){noloop controls}`;
   if (item.kind === 'model') return `@[model](${target} "${label.replace(/"/g, '')}")`;
   return `[${label}](${target})`;
 }

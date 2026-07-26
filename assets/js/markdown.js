@@ -168,15 +168,39 @@ function youtubeEmbed(markdown) {
   return `<div class="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/${id}" title="${escAttr(title)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
 }
 
+/* @[video](clip.mp4 "Caption"){options} — an inline video file.
+ *
+ * A looping clip is the page's stand-in for an animated GIF, so it starts
+ * playing on its own; one that plays through once waits to be started instead.
+ * Browsers only honour autoplay on a muted video, so autoplay implies muted —
+ * without that the clip silently stays on its first frame, which is not what a
+ * looping video is for. `autoplay`/`noautoplay` override the default either way.
+ */
+const VIDEO_OPTIONS = ['noloop', 'controls', 'autoplay', 'noautoplay', 'muted'];
+
 function videoEmbed(markdown) {
   const match = /^@\[video\]\((\S+?)(?:\s+["']([^"']+)["'])?\)(?:\{([^}]*)\})?$/i.exec(markdown.trim());
   if (!match) return '';
   const src = siteUrl(safeWebUrl(match[1], false));
   if (!src) return '';
   const options = new Set(String(match[3] || '').toLowerCase().split(/[\s,]+/).filter(Boolean));
-  if ([...options].some(option => !['noloop', 'controls'].includes(option))) return '';
+  if ([...options].some(option => !VIDEO_OPTIONS.includes(option))) return '';
   const title = match[2] || 'Video';
-  return `<div class="video-embed"><video src="${escAttr(src)}" aria-label="${escAttr(title)}" preload="metadata" playsinline${options.has('controls') ? ' controls' : ''}${options.has('noloop') ? '' : ' loop'}></video></div>`;
+  const loop = !options.has('noloop');
+  const autoplay = options.has('autoplay') || (loop && !options.has('noautoplay'));
+  const muted = autoplay || options.has('muted');
+  const attributes = [
+    `src="${escAttr(src)}"`,
+    `aria-label="${escAttr(title)}"`,
+    /* an autoplaying clip is going to be fetched anyway */
+    `preload="${autoplay ? 'auto' : 'metadata'}"`,
+    'playsinline',
+    ...(loop ? ['loop'] : []),
+    ...(autoplay ? ['autoplay'] : []),
+    ...(muted ? ['muted'] : []),
+    ...(options.has('controls') ? ['controls'] : [])
+  ].join(' ');
+  return `<div class="video-embed"><video ${attributes}></video></div>`;
 }
 
 function kicanvasEmbed(markdown) {
@@ -467,7 +491,17 @@ function mdToHtml(body, meta, prefix = '') {
     return `\x00fence${fences.length - 1}\x00`;
   });
 
-  const blocks = body.split(/\r?\n[ \t]*\r?\n/).map(b => b.trim()).filter(Boolean);
+  /* A heading owns its own line and nothing else. Without the split, a line
+     written directly under a `#`/`##` with no blank line between them lands in
+     the same block and is swallowed by the heading — a whole paragraph coming
+     out as a green eyebrow label. Splitting here rather than in the heading
+     branch means what follows still goes through the full set of rules, so a
+     list tucked under a heading is a list. */
+  const blocks = body.split(/\r?\n[ \t]*\r?\n/).map(b => b.trim()).filter(Boolean)
+    .flatMap(block => {
+      const heading = /^(#{1,2}[ \t]+[^\r\n]*)\r?\n([\s\S]+)$/.exec(block);
+      return heading ? [heading[1], heading[2]] : [block];
+    });
   const out = [];
   let footerNext = false;
   const headingIds = new Map();

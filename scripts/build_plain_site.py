@@ -574,22 +574,33 @@ def youtube_embed(block):
             'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>'
             % (vid, esc(title)))
 
+VIDEO_OPTIONS = {'noloop', 'controls', 'autoplay', 'noautoplay', 'muted'}
+
 def video_embed(block, page_out):
+    """An inline video file; see videoEmbed() in assets/js/markdown.js.
+
+    A looping clip autoplays (muted, because that is the only autoplay a
+    browser allows); one that plays through once waits to be started."""
     m = re.match(r'^@\[video\]\((\S+?)(?:\s+["\']([^"\']+)["\'])?\)(?:\{([^}]*)\})?$', block, re.I)
     if not m:
         return None
     opts = set(re.split(r'[\s,]+', (m.group(3) or '').lower().strip()) if m.group(3) else [])
     opts.discard('')
-    if opts - {'noloop', 'controls'}:
+    if opts - VIDEO_OPTIONS:
         return None
     src = fix_url(m.group(1), page_out, allow_fragment=False)
     if not src:
         return None
-    return ('<div class="video-embed"><video src="%s" aria-label="%s" preload="metadata" '
-            'playsinline%s%s></video></div>'
-            % (esc(src), esc(m.group(2) or 'Video'),
-               ' controls' if 'controls' in opts else '',
-               '' if 'noloop' in opts else ' loop'))
+    loop = 'noloop' not in opts
+    autoplay = 'autoplay' in opts or (loop and 'noautoplay' not in opts)
+    muted = autoplay or 'muted' in opts
+    attributes = ['src="%s"' % esc(src),
+                  'aria-label="%s"' % esc(m.group(2) or 'Video'),
+                  'preload="%s"' % ('auto' if autoplay else 'metadata'),
+                  'playsinline']
+    attributes += [name for name, on in (('loop', loop), ('autoplay', autoplay),
+                                         ('muted', muted), ('controls', 'controls' in opts)) if on]
+    return '<div class="video-embed"><video %s></video></div>' % ' '.join(attributes)
 
 def kicanvas_embed(block, page_out, state):
     m = re.match(r'^@\[kicanvas\]\((\S+?)(?:\s+["\']([^"\']+)["\'])?\)$', block, re.I)
@@ -784,7 +795,15 @@ def md_to_html(body, meta, page_out, state):
                   lambda m: fences.append(code_block(m.group(1), m.group(2), state)) or
                   '\x00fence%d\x00' % (len(fences) - 1), body)
 
-    blocks = [b.strip() for b in re.split(r'\r?\n[ \t]*\r?\n', body) if b.strip()]
+    # A heading owns its own line and nothing else; see mdToHtml() in
+    # assets/js/markdown.js. Anything written directly under one, with no blank
+    # line between, is the next block rather than part of the heading.
+    blocks = []
+    for block in (b.strip() for b in re.split(r'\r?\n[ \t]*\r?\n', body)):
+        if not block:
+            continue
+        heading = re.match(r'^(#{1,2}[ \t]+[^\r\n]*)\r?\n([\s\S]+)$', block)
+        blocks += [heading.group(1), heading.group(2)] if heading else [block]
     out = []
     footer_next = False
     for idx, block in enumerate(blocks):

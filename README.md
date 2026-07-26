@@ -384,17 +384,30 @@ same date and title: a CSV entry wins over the mirrored one.
 ### Markdown that the renderer understands
 
 - `# Heading` — window heading (in `page` style, followed by the tagline and rule)
-- `## Text` — small green eyebrow label (e.g. `## // What we make`)
+- `## Text` — small green eyebrow label (e.g. `## // What we make`). Both
+  heading forms take their own line and nothing else: a line written directly
+  underneath, with no blank line between, is the next block.
 - `**bold**`, `*italic*`
 - `` `text` `` — green keyword highlight (used for `$`, part numbers, hex colours)
 - `1. item` — numbered feature list, rendered as the bordered `01/02/03` box
 - `![alt](src)` — image (linked images `[![](thumb)](full)` work too)
 - `@[youtube](https://youtu.be/VIDEO_ID "Optional title")` — responsive inline
   YouTube player (regular, Shorts, embed, and `youtu.be` URLs are accepted)
-- `@[video](content/media/demo.mp4 "Optional title")` — inline video file;
-  looping is on and controls are hidden by default. Add `{noloop}`, `{controls}`,
-  or `{noloop controls}` after it to change playback, for example:
-  `@[video](clips/demo.webm){noloop controls}`.
+- `@[video](content/media/demo.mp4 "Optional title")` — inline video file. By
+  default it behaves like an animated GIF: looping, muted, playing on its own,
+  with no controls. Options in `{}` after it change that:
+
+  | Option | Effect |
+  | --- | --- |
+  | `noloop` | play through once instead of repeating |
+  | `controls` | show the player controls |
+  | `autoplay` / `noautoplay` | start on its own, or wait to be started — the default follows looping |
+  | `muted` | mute a clip that is not playing on its own (an autoplaying clip is always muted, because that is the only autoplay a browser allows) |
+
+  So `@[video](clips/demo.webm){noloop controls}` is an ordinary video player,
+  and `@[video](clips/demo.webm)` is a silent looping animation. The editor's
+  **Insert → Inline video file…** offers these as tick boxes and shows the line
+  it will write.
 - `@[kicanvas](content/applications/kicad/example.kicad_sch "Optional caption")`
   — interactive inline KiCad schematic, board, or worksheet viewer. Site-relative
   and HTTP(S) sources ending in `.kicad_sch`, `.kicad_pcb`, or `.kicad_wks` are

@@ -49,6 +49,10 @@
 <p>A single line break inside a paragraph<br>should stay a line break,<br>so these three lines stack without a blank line between them.</p>
 <p class="eyebrow" id="eyebrow-headings">// Eyebrow headings</p>
 <p>A <span class="k">##</span> heading is not an <span class="k">h2</span> — it renders as a small green eyebrow label, and<br>is meant for section markers like the <span class="k">// What we make</span> style used on the home<br>page.</p>
+<p class="eyebrow" id="a-heading-with-no-blank-line-under-it">// A heading with no blank line under it</p>
+<p>A heading takes its own line and no more, so this sentence is an ordinary<br>paragraph rather than part of the green label above it, even though nothing<br>separates the two in the source. A list written the same way is still a list:</p>
+<p class="eyebrow" id="and-a-list-right-underneath">// And a list right underneath</p>
+<ul class="list"><li><p>The label above stays a label.</p></li><li><p>These stay bullets.</p></li></ul>
 <p class="eyebrow" id="lists">// Lists</p>
 <ol class="list"><li><p><b>Numbered lists become the bordered box.</b> The list should render as the    <span class="k">01/02/03</span> feature panel, not as a plain ordered list. Wrapped lines in an    item are joined into one paragraph.</p></li><li><p><b>Second item.</b> Inline markup still works here: <span class="k">code</span>, <i>italic</i>, and a    <a href="index.html">link back home</a>.</p></li><li><p><b>Third item</b> so the numbering has somewhere to go.</p></li></ol>
 <ul class="list"><li><p>A bullet list renders as a plain <span class="k">ul.list</span>.</p></li><li><p>Items also support <b>inline</b> <span class="k">markup</span>.</p></li><li><p>Wrapping a bullet across two lines   joins it into a single paragraph.</p></li></ul>
@@ -97,10 +101,12 @@ void setup() {
 <div class="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/PFA5VV02D28" title="Mini-Speaker kit assembly" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
 <p>Short links and Shorts/embed URLs are accepted by the same directive:</p>
 <div class="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/9yssRi2fjQk" title="Proto-PSU kit assembly" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
-<p>An inline video — default playback is looping with no controls:</p>
-<div class="video-embed"><video src="https://clacktronics.co.uk/assets/flipdots.mp4" aria-label="Flipdots flipping" preload="metadata" playsinline loop></video></div>
-<p>The same video with both options, so it plays once and shows controls:</p>
+<p>An inline video — the default is an animated GIF in all but name: looping,<br>muted, playing on its own, with no controls. It should be moving already:</p>
+<div class="video-embed"><video src="https://clacktronics.co.uk/assets/flipdots.mp4" aria-label="Flipdots flipping" preload="auto" playsinline loop autoplay muted></video></div>
+<p>The same video as an ordinary player, so it waits on its first frame until it is<br>started, then plays through once with sound:</p>
 <div class="video-embed"><video src="https://clacktronics.co.uk/assets/flipdots.mp4" aria-label="Flipdots with controls" preload="metadata" playsinline controls></video></div>
+<p>A looping clip that still waits to be started, and keeps its controls — the<br><span class="k">noautoplay</span> option overrides what looping implies:</p>
+<div class="video-embed"><video src="https://clacktronics.co.uk/assets/flipdots.mp4" aria-label="Flipdots on request" preload="metadata" playsinline loop controls></video></div>
 <p>An interactive KiCad schematic viewer:</p>
 <figure class="kicanvas-embed"><kicanvas-embed controls="full" aria-label="Example schematic"><kicanvas-source src="../content/applications/kicad/example.kicad_sch"></kicanvas-source></kicanvas-embed><figcaption>Example schematic</figcaption></figure>
 <p>An inline 3D model — borderless and transparent, so it sits in the text rather<br>than in a panel:</p>
