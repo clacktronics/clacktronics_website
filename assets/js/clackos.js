@@ -275,8 +275,12 @@ function bindWebLinkRouting(root) {
     /* target="_blank" is an explicit opt-out of in-OS routing (e.g. the
      * taskbar's Plain HTML link) — let the browser open a real new tab */
     if (anchor.target === '_blank') return;
+    /* An in-page anchor is handled by the data-anchor scroller, not here.
+     * anchor.href resolves "#section" against the document, so it has to be
+     * caught by the attribute — the resolved URL looks like an ordinary page. */
+    if (anchor.dataset.anchor || (anchor.getAttribute('href') || '').startsWith('#')) return;
     const safe = safeWebUrl(anchor.href, false);
-    if (!/^https?:/i.test(safe)) return;   /* mailto:, tel:, fragments — leave alone */
+    if (!/^https?:/i.test(safe)) return;   /* mailto:, tel: — leave alone */
     const appId = webViewerAppId(safe);
     if (appId) { event.preventDefault(); openWindow(appId); return; }
     /* Not local and not whitelisted: open in a real new tab rather than the

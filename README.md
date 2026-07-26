@@ -20,8 +20,6 @@ content/
   file/                     ← FILE menu
     menu.json               ← items in this menu, in order
     home.md                 ← the landing window
-    readme.md
-    catalogue.md
     blog.md                 ← the blog, page 1 (generated, see below)
     blog-page-N.md          ← the blog, pages 2+ (generated)
     blog-list.md            ← index of every post (generated)
@@ -91,7 +89,7 @@ theme folder and prevents the editor from writing elsewhere in the repository.
 2. Add an entry to that folder's `menu.json`:
 
    ```json
-   { "type": "window", "md": "projects.md", "label": "Open Projects" }
+   { "type": "window", "md": "projects.md", "label": "Projects" }
    ```
 
 Each markdown file starts with frontmatter describing its window:
@@ -125,11 +123,11 @@ python3 scripts/build_blog_index.py
 That rewrites two things, both from the posts alone:
 
 * `content/file/blog.md` and `content/file/blog-page-N.md` — the blog itself
-  (File → Open Blog). Five posts per page in full, newest first, with a
+  (File → Open → Blog). Five posts per page in full, newest first, with a
   Newer/Older button row and a link to the list at the top and bottom of
   every page. Pages 2 and up are `robots: noindex`, since each post is
   already a page of its own and the list links to all of them.
-* `content/file/blog-list.md` — the list window (File → Open Blog List):
+* `content/file/blog-list.md` — the list window (File → Open → Blog List):
   every post as a dated link, newest first, grouped by year.
 
 Pages are rebuilt from scratch each run, so the count follows the number of
@@ -252,7 +250,7 @@ same date and title: a CSV entry wins over the mirrored one.
   Raw HTML can also define an explicit anchor such as `<a id="details"></a>`.
 - ` ``` ` fenced code blocks
 - `> quote` — blockquote
-- `[label](window:file/catalogue.md)` — link that opens another window
+- `[label](window:file/euroclack.md)` — link that opens another window
 - `[label](app:applications/video/index.html?src=content%2Fmedia%2Fdemo.mp4)`
   — link that launches a registered application with startup options
 - `[label](app:applications/pdf-reader/index.html?file=content%2Ffiles%2Fmanual.pdf)`
@@ -294,7 +292,7 @@ the left however many there are.
 ### Menu items (`menu.json`)
 
 ```json
-{ "type": "window", "md": "home.md", "label": "Open Clacktronics", "shortcut": "⌘O" }
+{ "type": "window", "md": "home.md", "label": "Clacktronics", "shortcut": "⌘O" }
 { "type": "action", "action": "close-front", "label": "Close front window" }
 { "type": "action", "label": "Undo", "disabled": true }
 { "type": "sep" }

@@ -21,7 +21,7 @@ Every board ships with schematics, source code and a written explanation of the 
 
 Because constraints are clarifying. A 1-bit screen forces every pixel to justify itself, and we think documentation should work the same way. This site contains no tracking, no scripts it doesn't need, and nothing that won't render on a machine from 1984 — in spirit, at least.
 
-[Browse the catalogue](window:file/catalogue.md)
-[Read the docs](window:file/readme.md)
+[Read the blog](window:file/blog.md)
+[Browse EuroClack](window:file/euroclack.md)
 
 

@@ -2,13 +2,11 @@
   "label": "File",
   "items": [
     { "type": "submenu", "label": "Open", "icon": "folder", "items": [
-      { "type": "window", "md": "home.md", "label": "Open Clacktronics", "icon": "home", "shortcut": "⌘O" },
-      { "type": "window", "md": "readme.md", "label": "Open README.txt", "icon": "file-text" },
-      { "type": "window", "md": "catalogue.md", "label": "Open Catalogue", "icon": "article" },
-      { "type": "window", "md": "euroclack.md", "label": "Open EuroClack", "icon": "circuit-board" },
-      { "type": "window", "md": "blog.md", "label": "Open Blog", "icon": "rss" },
-      { "type": "window", "md": "blog-list.md", "label": "Open Blog List", "icon": "article" },
-      { "type": "window", "md": "markdown-test.md", "label": "Open Markdown test", "icon": "file-text" }
+      { "type": "window", "md": "home.md", "label": "Clacktronics", "icon": "home", "shortcut": "⌘O" },
+      { "type": "window", "md": "euroclack.md", "label": "EuroClack", "icon": "circuit-board" },
+      { "type": "window", "md": "blog.md", "label": "Blog", "icon": "rss" },
+      { "type": "window", "md": "blog-list.md", "label": "Blog List", "icon": "article" },
+      { "type": "window", "md": "markdown-test.md", "label": "Markdown test", "icon": "file-text" }
     ] },
     { "type": "sep" },
     { "type": "action", "action": "edit-front", "label": "Edit…", "icon": "pencil", "shortcut": "⌘E" },
