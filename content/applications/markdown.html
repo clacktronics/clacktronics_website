@@ -10,7 +10,21 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/css/app.css">
 <link rel="stylesheet" href="../../assets/css/file-manager.css">
+<!-- The preview renders the site's own markdown, so an @[model] embed can start
+     up in it. Its three.js comes from the same map index.html carries, and an
+     import map has to be in the document before any module loads. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"
+  }
+}
+</script>
 <link rel="stylesheet" href="../../vendor/easymde/easymde.min.css">
+<!-- after EasyMDE: the preview pane holds real ClackOS page markup, and
+     EasyMDE styles .editor-preview at the same specificity -->
+<link rel="stylesheet" href="../../assets/css/content.css">
 <style>
 .app { height: 100%; }
 .md-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 14px; }
@@ -61,47 +75,19 @@
 .editor-toolbar button i.fa { display: none; }
 .editor-toolbar button .pixel-icon { width: 17px; height: 17px; color: var(--control-text); }
 
-/* preview panes rendered like ClackOS pages */
+/* The preview holds the same .page / .plain markup a ClackOS window does, so
+   assets/css/content.css styles everything inside it — headings, lists, quotes,
+   code and the embeds. Only the pane itself is styled here. */
 .editor-preview, .editor-preview-side {
   background: var(--paper); color: var(--ink-soft);
   font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.85;
-  padding: 24px 28px;
+  padding: 0;
 }
 .editor-preview-side { border: 1px solid var(--ink); border-left: none; border-radius: 0 0 8px 0; }
-.editor-preview h1, .editor-preview-side h1,
-.editor-preview h2, .editor-preview-side h2 {
-  font-family: 'Dosis', sans-serif; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--heading); margin: 18px 0 10px;
-}
-.editor-preview h1, .editor-preview-side h1 { font-size: 26px; }
-.editor-preview h2, .editor-preview-side h2 { font-size: 20px; }
-.editor-preview h3, .editor-preview-side h3 { color: var(--leaf-deep); margin: 14px 0 8px; }
-.editor-preview p, .editor-preview-side p { margin-bottom: 12px; }
-.editor-preview a, .editor-preview-side a { color: var(--leaf-deep); }
-.editor-preview code, .editor-preview-side code {
-  background: var(--paper-deep); color: var(--leaf-deep); padding: 1px 5px; border-radius: 4px;
-}
-/* .code-dark hands the preview's code blocks the same theme-derived token
-   palette the rendered page uses — see assets/css/code.css */
-.editor-preview pre, .editor-preview-side pre {
-  background: var(--ink); color: var(--menu-text); padding: 12px 14px;
-  border-radius: 8px; overflow-x: auto; margin-bottom: 12px;
-}
-.editor-preview pre code, .editor-preview-side pre code { background: none; color: inherit; padding: 0; }
-.editor-preview blockquote, .editor-preview-side blockquote {
-  border-left: 3px solid var(--leaf-deep); padding-left: 14px; color: var(--sage);
-  font-style: italic; margin: 0 0 12px;
-}
-.editor-preview table, .editor-preview-side table { border-collapse: collapse; margin-bottom: 12px; }
-.editor-preview th, .editor-preview td, .editor-preview-side th, .editor-preview-side td {
-  border: 1px solid var(--paper-line); padding: 6px 10px;
-}
-.editor-preview th, .editor-preview-side th { background: var(--paper-deep); color: var(--strong-text); }
-.editor-preview ul, .editor-preview ol, .editor-preview-side ul, .editor-preview-side ol {
-  margin: 0 0 12px 22px;
-}
-.editor-preview hr, .editor-preview-side hr { border: none; border-top: 1px solid var(--ink); margin: 16px 0; }
-.editor-preview img, .editor-preview-side img { max-width: 100%; border: 1px solid var(--ink); border-radius: 6px; }
+/* Window content is centred at a fixed measure; the preview is its own column
+   and is often only half a window wide, so let it use the width it has. */
+.editor-preview .page, .editor-preview-side .page,
+.editor-preview .plain, .editor-preview-side .plain { max-width: none; padding: 24px 28px; }
 
 .md-status { padding: 6px 16px 12px; }
 body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -8px; }
@@ -225,6 +211,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 
 <script src="../../vendor/easymde/easymde.min.js"></script>
 <script src="../../assets/js/highlight.js"></script>
+<script src="../../assets/js/markdown.js"></script>
 <script src="../../assets/js/file-manager.js"></script>
 <script>
 (() => {
@@ -236,16 +223,22 @@ let sitePath = null;    /* repo path when opened via "Open from website" */
 let ghToken = null;     /* fine-grained PAT, memory only, per session */
 let repoCfg = null;     /* { repo, branch } from content/site.json */
 
-/* Colour the preview's fenced code the way the rendered page will, using the
- * shared highlighter. EasyMDE hands us the Markdown; we render it as usual and
- * then walk the result. */
+/* The preview is rendered by the site's own renderer (assets/js/markdown.js),
+ * not by EasyMDE's, so what you write is previewed as a ClackOS window and the
+ * plain mirror will show it: eyebrow headings, button rows, the @[…] embeds and
+ * code coloured by the shared highlighter. Frontmatter is read the same way
+ * too, so `style: page` previews as the page layout.
+ *
+ * Links are left inert — window:/app:/action: links have no desktop to act on
+ * here, and following an ordinary link would navigate the editor away. */
 function renderPreview(plainText) {
-  const html = mde.markdown(plainText);
-  const holder = document.createElement('div');
-  holder.innerHTML = html;
-  holder.querySelectorAll('pre').forEach(pre => pre.classList.add('code-dark'));
-  window.ClackHighlight?.apply(holder);
-  return holder.innerHTML;
+  const { meta, body } = ClackMarkdown.parseFrontmatter(plainText);
+  const html = ClackMarkdown.render(body, meta);
+  requestAnimationFrame(() => document.querySelectorAll('.editor-preview, .editor-preview-side')
+    .forEach(pane => {
+      ClackMarkdown.populateBuildStamps(pane);
+    }));
+  return html;
 }
 
 const mde = new EasyMDE({
@@ -261,19 +254,16 @@ const mde = new EasyMDE({
   toolbar: ['bold', 'italic', 'strikethrough', '|', 'heading', 'quote', 'code', '|',
             'unordered-list', 'ordered-list', 'table', 'horizontal-rule', '|',
             'link', 'image', {
-              name: 'video-embed',
+              name: 'insert-video',
               action: insertVideoEmbed,
-              className: 'video-embed',
               title: 'Insert inline video'
             }, {
-              name: 'kicanvas-embed',
+              name: 'insert-kicanvas',
               action: insertKicanvasEmbed,
-              className: 'kicanvas-embed',
               title: 'Insert inline KiCad design'
             }, {
-              name: 'model-embed',
+              name: 'insert-model',
               action: insertModelEmbed,
-              className: 'model-embed',
               title: 'Insert inline 3D model'
             }, '|', 'preview', 'side-by-side', 'fullscreen', '|',
             'undo', 'redo'],
@@ -309,7 +299,7 @@ const toolbarIcons = {
   heading: 'heading', quote: 'quote-text-inline', code: 'terminal',
   'unordered-list': 'bulletlist', 'ordered-list': 'list-box', table: 'grid-3x3',
   'horizontal-rule': 'minus-box', link: 'link', image: 'image',
-  'video-embed': 'video', 'kicanvas-embed': 'circuit-board', 'model-embed': 'box', preview: 'eye',
+  'insert-video': 'video', 'insert-kicanvas': 'circuit-board', 'insert-model': 'box', preview: 'eye',
   'side-by-side': 'align-horizontal-distribute-center', fullscreen: 'expand',
   undo: 'undo', redo: 'reload'
 };
