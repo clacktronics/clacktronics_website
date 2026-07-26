@@ -10,4 +10,4 @@ There has been a bit of silence recently, this is because I have a new job! assi
 
 As part of this post I have just published a new article on using press'n'peel to make PCB's at home. It is a far more effective method of PCB fabrication than toner transfer with photopaper and requires much less equipment than photoresist.
 
-[Press n Peel Walkthrough](https://clacktronics.co.uk/research/pressnpeel/)
+[Press n Peel Walkthrough](window:file/misc/pressnpeel.md)

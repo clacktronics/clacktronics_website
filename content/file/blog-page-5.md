@@ -23,7 +23,7 @@ There has been a bit of silence recently, this is because I have a new job! assi
 
 As part of this post I have just published a new article on using press'n'peel to make PCB's at home. It is a far more effective method of PCB fabrication than toner transfer with photopaper and requires much less equipment than photoresist.
 
-[Press n Peel Walkthrough](https://clacktronics.co.uk/research/pressnpeel/)
+[Press n Peel Walkthrough](window:file/misc/pressnpeel.md)
 
 ---
 
@@ -57,7 +57,7 @@ Such a shame I really wanted to hear it! it has so many interesting features
 `27 September 2011` · [Open this post on its own](window:file/blog/2011-09-27-lazertran-tutorial.md)
 
 ![](https://clacktronics.co.uk/research/lazertran/643_24_Lazertran_Tutorial_Aluminium_finished.jpg)
-I have written a new [lazertran tutorial](https://clacktronics.co.uk/research/lazertran/) This is how I make a lot of one offs and small batches. Soon I will be moving to screen print , so I will put up info on that. Interestingly I have found information about how you can use it to etch, this could be good for PCB's!
+I have written a new [lazertran tutorial](window:file/misc/lazertran.md) This is how I make a lot of one offs and small batches. Soon I will be moving to screen print , so I will put up info on that. Interestingly I have found information about how you can use it to etch, this could be good for PCB's!
 
 ---
 
@@ -74,7 +74,7 @@ I made this for Owen at [Flesh and Bone Studios](http://www.fleshandbonestudios.
 
 I also made another video for it but this time with a Wasp.
 
-[Watch on YouTube](https://www.youtube.com/watch?v=5F-Rb0QGoxk)
+@[youtube](https://www.youtube.com/watch?v=5F-Rb0QGoxk)
 
 ---
 

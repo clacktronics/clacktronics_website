@@ -23,5 +23,6 @@ Because constraints are clarifying. A 1-bit screen forces every pixel to justify
 
 [Read the blog](window:file/blog.md)
 [Browse EuroClack](window:file/euroclack.md)
+[Misc](window:file/misc.md)
 
 

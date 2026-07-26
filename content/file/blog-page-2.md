@@ -84,7 +84,7 @@ To make it as cheap as possible and easy to adapt for different purposes it is a
 
 What this means though is that you can choose which way up the cap is mounted, if you what the VGA or not and if you are building into an enclosure the pads can be directly soldered.
 
-[Watch on YouTube](https://www.youtube.com/watch?v=iH7NiAvxM0Y)
+@[youtube](https://www.youtube.com/watch?v=iH7NiAvxM0Y)
 
 **Enabling the outputs**
 
@@ -136,7 +136,7 @@ The PCB slotted perfectly into the mount and was held in with hot glue. Details 
 ![Shapeoko2](https://clacktronics.co.uk/assets/Horowitz_chamber.jpg)
 This is a story about what I currently do, I have moved a little bit away from synthesizers but still make audio electronics for artist Haroon Mirza and sometimes other artists. The approach to making artworks are different to designing audio devices, as usually components and circuits are one-off designs or modified items which are usually used against their original intention. The reason I decided to write about this was to document how the system works for this particular work as it is using new technologies that are getting easier to prototype with. I am really impressed with this new microcontroller implementation of Python programming language called Micro Python.
 
-[Watch on YouTube](https://www.youtube.com/watch?v=frSLjx-Af7U)
+@[youtube](https://www.youtube.com/watch?v=frSLjx-Af7U)
 
 Courtesy the Tinguely Museum, Switzerland
 
@@ -156,7 +156,7 @@ There also was a new requirement, for this new work it needed to drive 8 x RGB l
 
 Because Micro Python is very close to Python 3 it was very easy to prototype the program, after initial difficulties of getting all the PWM channels to work and reporting some bugs to Micro Python repository ( which get fixed fantastically fast! ) it was a breeze to prototype the program. As it is Python I could use regular expressions to parse text files this means that the sequences could be human readable (and forgive human error in coding the files) with no need for brackets or other types of programming syntax. The program simply reads the text files line by line and outputs it straight to the LEDs with no noticeable delay! As it is not 8bit but a 32bit ARM another amazing feature was that I could set the pitch of the channels to almost any frequency.
 
-[Watch on YouTube](https://www.youtube.com/watch?v=b5rM0UPVj80)
+@[youtube](https://www.youtube.com/watch?v=b5rM0UPVj80)
 
 ![Howowitz PCB design](https://clacktronics.co.uk/assets/speaker_resistor.jpg)
 

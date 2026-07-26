@@ -60,11 +60,11 @@ I quite often get approached by artists and designers to produce electronic part
 
 First a Series of 3 hoops were made (pictured above, middle frame) theese were very basic white LED chains made from discrete 5mm diffused white LED's. I know it is a bit crazy doing a point to point chain of LEDs but I needed them to be difused! Then for their large performance at Sheppards Bush Empire I made RGB hoops that had smiley faces, I learnt my lesson and theese are RGB tape with epoxy coating to help diffusion. Each segment ( the hoop and the 2 eyes and the mouth ) could be RGB DMX controlled by the lighting engineer.
 
-[Watch on YouTube](https://www.youtube.com/watch?v=OaeqY0oh3iE)
+@[youtube](https://www.youtube.com/watch?v=OaeqY0oh3iE)
 
 Finally I also made an interesting piece of lighting for the artist Ryan Gander, he commissioned me to find a way to make a flickering light that lasts.  As shown below (apologies for the mess!) here is a program I wrote to simulate bulb flicker. My solution is LED so it is completely solid state, the electronics were designed to withstand sub-zero conditions as it had to be used outside during winter in Denmark!
 
-[Watch on YouTube](https://www.youtube.com/watch?v=RRyg7e9cVxA)
+@[youtube](https://www.youtube.com/watch?v=RRyg7e9cVxA)
 
 The code is fairly simple and parametric so it can be modified to make all sorts of flickering. See github link below.
 

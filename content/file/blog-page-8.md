@@ -61,7 +61,7 @@ It really come alive with no input and just feedback as demonstrated below
 
 [Modified Realistic Reverb - No input noise generation](http://soundcloud.com/clacktronics/modified-realistic-reverb-no) by [Clacktronics Repair](http://soundcloud.com/clacktronics)
 
-[Watch on YouTube](https://www.youtube.com/watch?v=Qkex7GeJat4)
+@[youtube](https://www.youtube.com/watch?v=Qkex7GeJat4)
 
 ---
 
