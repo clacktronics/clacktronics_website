@@ -297,10 +297,17 @@ def submenu(label, items):
             % (esc(label), ''.join(items)))
 
 def application_items(items, page_out):
-    """Build the static Applications menu from the same JSON as ClackOS."""
+    """Build the static Applications menu from the same JSON as ClackOS.
+
+    Entries marked "plain": false are desktop-only — they drive the ClackOS
+    shell itself (wallpaper, palette, window contents) and would do nothing
+    opened as a standalone page — so the mirror leaves them out.
+    """
     out = []
     for item in items:
         kind = item.get('type')
+        if item.get('plain') is False:
+            continue
         if kind == 'submenu':
             nested = application_items(item.get('items', []), page_out)
             if nested:

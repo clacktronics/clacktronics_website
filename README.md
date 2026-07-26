@@ -328,7 +328,9 @@ are discovered automatically and given a readable name. `"app"` items open the g
 page from the same menu folder in a desktop window; `multi: true` opens a
 fresh instance every time it's picked from the menu. `integrated: true` is
 reserved for in-desktop system utilities; all other app entries remain iframe
-loadable.
+loadable. `plain: false` keeps an entry out of the [plain HTML
+mirror](#plain-html-mirror)'s Applications menu — for apps that only mean
+anything inside the desktop, like the wallpaper and palette editors.
 
 An app that knows its own natural size can make the window wrap around it
 instead of taking the `width`/`height` from `menu.json` as final: dispatch a
@@ -690,7 +692,11 @@ window's id.
 `plain/` is a no-desktop mirror of all the markdown content — ordinary HTML
 pages with standard links, for readers (and machines) that don't want the
 ClackOS window manager. Its menu contains File (Open, Report bug, and Edit)
-plus the same Applications hierarchy as ClackOS. `window:` links become normal
+plus the same Applications hierarchy as ClackOS, minus the entries marked
+`"plain": false` in `content/applications/menu.json` — apps that only do
+something with a desktop around them (Appearance, Theme Editor, Web Browser,
+File Manager). A submenu left empty by that filter is dropped
+too. `window:` links become normal
 page-to-page links in the current tab, while `app:` links open the standalone
 application as a full page in a new tab. The
 `@[youtube]` / `@[video]` / `@[kicanvas]` embeds still render inline, raw HTML
