@@ -215,7 +215,10 @@ That rewrites two things, both from the posts alone:
   every page. Pages 2 and up are `robots: noindex`, since each post is
   already a page of its own and the list links to all of them.
 * `content/file/blog-list.md` — the list window (File → Open → Blog List):
-  every post as a dated link, newest first, grouped by year.
+  every post as a dated link, newest first, grouped by year, closing with a
+  quiet link to `content/file/blog-template.md` — the skeleton to copy for
+  the next post. That page is hand-written and `robots: noindex`; the list
+  link to it comes from `TEMPLATE_MD` in the script.
 
 Pages are rebuilt from scratch each run, so the count follows the number of
 posts and any page no longer needed is deleted. `POSTS_PER_PAGE` at the top

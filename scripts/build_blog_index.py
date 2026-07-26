@@ -4,7 +4,8 @@
 Run this after adding a post. Posts are named YYYY-MM-DD-slug.md and need a
 `title:` line in their frontmatter. Two things come out of them:
 
-  content/file/blog-list.md      every post, newest first, grouped by year
+  content/file/blog-list.md      every post, newest first, grouped by year,
+                                 ending with a link to blog-template.md
   content/file/blog.md           the blog itself: the newest POSTS_PER_PAGE
   content/file/blog-page-N.md    posts in full, then the next five, and so on
 
@@ -24,6 +25,7 @@ file_dir = root / 'content' / 'file'
 blog = file_dir / 'blog'
 
 LIST_MD = 'blog-list.md'
+TEMPLATE_MD = 'blog-template.md'
 
 
 def page_md(number):
@@ -109,6 +111,12 @@ for date, title, f in posts:
     group.append(f"`{date.strftime('%d %b')}` [{safe_title(title)}](window:file/blog/{f.name})")
 if group:
     lines.append('\n'.join(group))
+
+# a quiet last line pointing at the template for the next post. The text
+# around the link keeps it a paragraph — a block of nothing but links is
+# rendered as the button row, which would be anything but quiet.
+lines.append(f'*Writing the next one? Start from the '
+             f'[post template](window:file/{TEMPLATE_MD}).*')
 
 (file_dir / LIST_MD).write_text(front_matter(
     title='Blog List',

@@ -1,6 +1,6 @@
 ---
 title: Blog (page 3)
-tagline: Posts 11–15 of 44
+tagline: Posts 11–15 of 46
 style: plain
 robots: noindex
 ---
@@ -10,7 +10,86 @@ robots: noindex
 [< Newer posts](window:file/blog-page-2.md)
 [Older posts >](window:file/blog-page-4.md)
 
-Page 3 of 9
+Page 3 of 10
+
+---
+
+## CAD with code (OpenSCAD)
+
+`16 January 2016` · [Open this post on its own](window:file/blog/2016-01-16-Openscad.md)
+
+![OpenSCAD design view](https://clacktronics.co.uk/assets/OpenScad.jpg)
+
+[Open in OpenSCAD](app:applications/openscad.html?code=%2F%2F%20Top%20and%20bottom%20shelves%0D%0Acolor%28%5B255%2C%200%2C%200%2C%201%5D%29%0D%0Atranslate%28%5B0%2C1.2%2C0%5D%29%7B%0D%0Atranslate%28%5B0%2C0%2C0%5D%29%20cube%28%5B20%2C58.8%2C1.2%5D%29%3B%0D%0Atranslate%28%5B0%2C0%2C30%5D%29%20cube%28%5B20%2C58.8%2C1.2%5D%29%3B%0D%0Atranslate%28%5B0%2C0%2C60%5D%29%20cube%28%5B20%2C58.8%2C1.2%5D%29%3B%0D%0A%7D%0D%0A%0D%0A%2F%2F%20sides%0D%0Atranslate%28%5B0%2C0%2C0%5D%29%20cube%28%5B20%2C1.2%2C61.2%5D%29%3B%0D%0Atranslate%28%5B0%2C60%2C0%5D%29%20cube%20%28%5B20%2C1.2%2C61.2%5D%29%3B&render=1)
+
+If you like to think in code this CAD program is great, especially if the design can be broken down into primitives. This is an example of a very basic shelf I designed but I have been using it for everything from designing mounts to hold PIR sensors to a shed that will become the new Clacktronics workshop!
+
+![The final shelf](https://clacktronics.co.uk/assets/openscad_shelves.jpg)
+
+The interesting thing is that you end up with segments of code that can represent the real life segments you need to cut to construct your design. Even better if doing something more complicated you can make it parametric by using variables and even iteration.
+
+I have done slightly more complicated tasks with it apart from shelving! Here is an example of a job I did where I used mini PIR sensors in 3d printed mounts so they could be used to detect human movement but on a narrow beam.
+
+![PIR Sensors](https://clacktronics.co.uk/assets/3d_printed_pir_sensor_housing.jpg)
+
+The PCB slotted perfectly into the mount and was held in with hot glue. Details for this project can be found on the [Clacktronics Github](https://github.com/clacktronics/pir_sensors) page.
+
+![PIR Sensors in OpenSCAD](https://clacktronics.co.uk/assets/OpenScad_PIR_sensor.jpg)
+
+[Open in OpenSCAD](app:applications/openscad.html?code=difference%28%29%0D%0A%7B%0D%0Aunion%28%29%7B%20%0D%0Acylinder%20%2840%2C7.5%2C7.5%2C%24fn%3D100%29%3B%20%0D%0Atranslate%28%5B0%2C-11%2C0%5D%29%7Bcylinder%283%2C5%2C5%29%3B%7D%20%0D%0Atranslate%28%5B0%2C11%2C0%5D%29%20%7Bcylinder%283%2C5%2C5%29%3B%7D%20%0D%0Atranslate%28%5B-5%2C-11%2C0%5D%29%20%7Bcube%20%28%5B10%2C22%2C3%5D%29%3B%7D%0D%0A%7D%0D%0A%0D%0Atranslate%28%5B0%2C0%2C-11%5D%29%7Bcylinder%20%2820.1%2C5.7%2C5.7%2C%24fn%3D100%29%3B%7D%20%0D%0Atranslate%28%5B0%2C0%2C19.9%5D%29%20%7Bcylinder%20%2820.2%2C6%2C6%2C%24fn%3D100%29%3B%7D%20%0D%0Atranslate%28%5B0%2C11%2C1%5D%29%7Bcylinder%20%283.2%2C1.5%2C3%2C%24fn%3D20%29%3B%7D%20%0D%0Atranslate%28%5B0%2C11%2C1%5D%29%20%7Bcylinder%20%283.2%2C1.5%2C3%2C%24fn%3D20%29%3B%7D%0D%0A%7D&render=1)
+
+---
+
+## Colours, Speakers and Pulses
+
+`13 January 2016` · [Open this post on its own](window:file/blog/2016-01-13-Colours-speakers-pw.md)
+
+![Shapeoko2](https://clacktronics.co.uk/assets/Horowitz_chamber.jpg)
+This is a story about what I currently do, I have moved a little bit away from synthesizers but still make audio electronics for artist Haroon Mirza and sometimes other artists. The approach to making artworks are different to designing audio devices, as usually components and circuits are one-off designs or modified items which are usually used against their original intention. The reason I decided to write about this was to document how the system works for this particular work as it is using new technologies that are getting easier to prototype with. I am really impressed with this new microcontroller implementation of Python programming language called Micro Python.
+
+@[youtube](https://www.youtube.com/watch?v=frSLjx-Af7U)
+
+Courtesy the Tinguely Museum, Switzerland
+
+**Background**
+
+[Channa Horowitz](https://en.wikipedia.org/wiki/Channa_Horwitz) . was an American artist who came up with a system called 'Sonakinatography' which is a compound word of sound, motion and notation. According to Wikipedia the system was part of a proposal for a sculpture that she sadly never got to produce, she did produce drawings for the works and although they are scores for works they actually became 'artworks'.
+
+I am not sure if I am allowed to post a photo of an artwork but if you search Sonakinatography in your favourite search engine you will see the drawings. The way the work was interpreted is that each horizontal line of Channa Horowitz's work is treated as a step, like a step sequencer this is fed to 8 RGB LED strips that each sit on top of a 3 channel sound bar (the speakers for TVs). The PWM control of the Red, Green and Blue is also fed into the 3 internal speaker cones od the sound bar ; so left speaker is red, middle green and right is blue.
+
+**Better Specs**
+
+For ages we had been using Arduinos and burning PICs to playback sequences but they had hit memory limits. This was temporarily helped by storing sequences as byte arrays (smaller than integers) and using an Arduino Mega with larger flash memory but as longer and longer sequences were used the devices kept running out of space. Channa Horowitz's work is up to 4000 lines so this would definitely overflow the memory! The only solution for this was to use external memory, ideally I thought was to use a memory card to make it easier to change sequences.
+
+There also was a new requirement, for this new work it needed to drive 8 x RGB leds this means we would need a device to output 24 independent channels this is beyond the Arduino Mega alone. At first I investigated using serial controlled PWM devices such as the SPI controlled TLC5947 but a requirement was that each channel could have its own pitch, something not typically a concern of a PWM controller. Then I remembered I had recently acquired a microcontroller device a bit like Arduino called a PyBoard which is designed to run MicroPython as I mentioned earlier. Sadly it only could handle 20 channels, but surely it could do more! so I asked on the forum (http://forum.micropython.org/viewtopic.php?t=497) and surely enough Damien (who created both the language and the board ) showed me how to kludge 4 extra channels out of it.
+
+**The Program**
+
+Because Micro Python is very close to Python 3 it was very easy to prototype the program, after initial difficulties of getting all the PWM channels to work and reporting some bugs to Micro Python repository ( which get fixed fantastically fast! ) it was a breeze to prototype the program. As it is Python I could use regular expressions to parse text files this means that the sequences could be human readable (and forgive human error in coding the files) with no need for brackets or other types of programming syntax. The program simply reads the text files line by line and outputs it straight to the LEDs with no noticeable delay! As it is not 8bit but a 32bit ARM another amazing feature was that I could set the pitch of the channels to almost any frequency.
+
+@[youtube](https://www.youtube.com/watch?v=b5rM0UPVj80)
+
+![Howowitz PCB design](https://clacktronics.co.uk/assets/speaker_resistor.jpg)
+
+**The Circuit**
+
+The circuit was a little bit different to what I used before, usually I use MOSFETs to drive LED strips, by connecting them to ground. But for this circuit as each LED was also driving a speaker I thought maybe I would try a little less conventional component. I used the L293 H-bridge driver which is typically used for driving stepper motors and relays but as a speaker is quite similar I thought it should be suitable! it also had the added bonus of being able to drive current bi-directionally so I could drive common cathode or common anode LEDs without changing the circuit much. (this is done very simply with a jumper on the PCB ).
+
+Now directly driving speakers with DC PWM works fine but it uses a lot of power which is fairly wasteful and unnecessary so I created a circuit that reduces the power with a limiting resistor and also removes DC with a cap, it also has diodes to prevent inductive kickback from the speakers.
+
+![Howowitz PCB design](https://clacktronics.co.uk/assets/pcb_design.jpg)
+
+**Designing the board**
+
+At first I designed the board to be as tight as possible, but this was a complete mess, routes became very long and I had gangs of tracks adding big borders around the board, I found it much better to lay it out a little more spaced. It made the board quite large, it is a bit bigger than a euro card but much cleaner. Using the Press n Peel method I created a double sided mockup of the board, this was actually used in media images of the show! For the connections to the speakers I went for 3.5mm pluggable terminal blocks, these are great.
+
+The speaker circuits were directly attached to the back of the speaker, I designed a PCB that could be clamped on the terminals of the speaker, this made it very convenient and made it easy to split the signal to the LED and the speakers. It is very important to limit the amount of wiring in installations as the more wiring the more likely they can snag and break!
+Enclosing
+
+Only issue with using terminal blocks is that they need square holes, for speed I decided to get a box lazercut this also allowed me to put markings on it and cutout a fan for a hole.
+
+![Howowitz Enclosure](https://clacktronics.co.uk/assets/the_enclosure.jpg)
+The Enclosure
 
 ---
 
@@ -110,33 +189,7 @@ I hope to release 2 new pedals within the next few months. One is the Wasp Drive
 
 ---
 
-## IRCAM
-
-`02 March 2015` · [Open this post on its own](window:file/blog/2015-03-02-IRCAM.md)
-
-![IRCAM](https://clacktronics.co.uk/assets/IRCAM.jpg)
-As part of a research project involving Boulez's Anthèmes II I managed to visit [IRCAM](http://www.ircam.fr/) in Paris last week and got to see how they put together the piece. It is entirely in Max/MSP with a few ancillary programs. IRCAM is suprisingly minimal, just clear offices and studios with very little equipment in, it seems as if they mainly focus on software based music, which makes sense when you are purely thinking about musical concepts rather than the aesthetic design of instruments.
-
-See the Demo of this system in the youtube video. I managed to listen to it with 6 speakers and it sounds very different!
-
-@[youtube](https://www.youtube.com/watch?v=HSab_znc_y8)
-
-This will be played at the Paris Opera in December. [See listing here](https://web.archive.org/web/20150310125235/http://saison15-16.operadeparis.fr:80/ballet/christopher-wheeldon-wayne-mcgregor-pina-bausch-en-l-honneur-de-pierre-boulez) (wayback mirror)
-
----
-
-## Tottenham to Walthamstow
-
-`07 May 2013` · [Open this post on its own](window:file/blog/2013-05-07-tottenham-to-walthamstow.md)
-
-![clacktronics](../assets/643_clacktronics.jpg)
-After 3 years in Tottenham Hale, I have now moved across the reservoirs to Walthamstow where I can now build a proper Workshop in a shed! Here is my old door sign that I made from PCB material.
-
-I have been working for the last 3 years in a live/work space in Tottenham, which was great but the division of home and work space can be challenging without walls.My hope is that clacktronics can now be in a workshop of its own.
-
----
-
-Page 3 of 9
+Page 3 of 10
 
 [Blog list](window:file/blog-list.md)
 [< Newer posts](window:file/blog-page-2.md)

@@ -1,6 +1,6 @@
 ---
 title: Blog (page 2)
-tagline: Posts 6–10 of 44
+tagline: Posts 6–10 of 46
 style: plain
 robots: noindex
 ---
@@ -10,7 +10,76 @@ robots: noindex
 [< Newer posts](window:file/blog.md)
 [Older posts >](window:file/blog-page-3.md)
 
-Page 2 of 9
+Page 2 of 10
+
+---
+
+## Paris Opera
+
+`26 June 2017` · [Open this post on its own](window:file/blog/2017-06-26-Paris_Opera.md)
+
+![paris opera ceiling -  chagall painting, illuminated by DMX lights](https://clacktronics.co.uk/assets/Palais_garnier_roof_haroon_mirza.gif)
+I had the rare opportunity to be a part of a project at the Palais Garnier, that is one of the main Opera house’s in Paris. I was working with Haroon Mirza to produce a live light and projection installation that interacted with a composition by Pierre Boulez called “Anthèmes II” and was a collaboration with the choreographer Wayne McGregor.
+
+“Anthèmes II” was a fairly early production created at IRCAM by Boulez, using the latest technological research at that time. In fact it actually used early versions of “Max” the visual programming software. I had the opportunity to look at the technical document for that work, it was fascinating to see how the work has been adapted for each new advance in technology. Originally using a number of NeXT machines serial linked and processed with FX processors to now simply running on a single Macbook Pro! There are a lot of technical details in the work that I will skim over, but its basically a program that follows a solo violinist reacting and performing with them according to a score. It does things like passing the violinist sound through various FX and panning the results around 6 speakers, also triggering various samplers. The technicians from IRCAM kindly let us receive data feeds from the MAX/MSP program via open sound control so the elements we control could respond to the live sound. Below is an example of the peice played at the BBC Proms.
+
+@[youtube](https://www.youtube.com/watch?v=TMYDgwNALY8)
+
+The Palais Garnier is a very lavish building, with a complicated baroque style gilt interior. Haroon wanted to work with the internal structure of the auditorium, highlighting parts with lights. We focused on the windows that go around the dome of the auditorium, there were 64 little windows on the edge of the Chagall painting, this is an idea number when working computers! Those were each fitted with PARLED’s. The other element of the work was a projected backdrop on the stage, the idea was to make it look a little bit like an oscilloscope. The data provided to move the beam was quite slow so the movement of the dot was simply a rotating dot. I have recently been learning more about using mathematics to produce graphics from the great youtube series called coding with math by Keith Peters. To produce a rotation all I needed to do was use sine and cosine! The software I used to produce the visualisation was Processing.
+
+Haroon typically produces light / audio works by programming Arduino’s (well AVR’s) built in PWM peripheral. To keep the sound but control the DMX lights I simply established a simple serial link over USB to the control program.
+
+![paris opera control box diagram](https://clacktronics.co.uk/assets/Paris_opera_control_box.png)
+
+Overall this was a very good experience, I got to try out experimental technology in a fairly low tech live production environment. There is little public recordings of the performance but bellow is a small excerpt from the rehearsals showing the projection and the lights performing.
+
+@[youtube](https://www.youtube.com/watch?v=QnbSaL5OvnU)
+
+---
+
+## Cryptocoin ticker
+
+`20 June 2017` · [Open this post on its own](window:file/blog/2017-06-20-cryptocoin_ticker.md)
+
+![Pimoroni's microdot phat displaying Bitcoin program](https://clacktronics.co.uk/assets/microdot_bitcoin.jpg)
+A Quick 5 minute build and possibly a prototype for a future project. I took the Pimoroni micro dot display, which is suitably retro looking, like an 80s/90s stock exchange. Although it is LED, it actually looks a bit like an old [Vacuum fluorescent display](https://en.wikipedia.org/wiki/Vacuum_fluorescent_display)! The code is a very simple Python script that uses Coinmarketcap API (I chose them because they pull all the coins together) which is simply just provided as JSON, the API allows you to request by currency so I just pulled the ones I wanted and fed the details into a single string that loops on the display.
+
+See the python code below, it gets the details of the coins one by one and pulls the dollar value of them, concatenating it into a single string that is fed into the Pimoroni module for loading up text on the display. It only requests new information every 20 loops to lower demand on the API as it is probably request limited.
+
+```python
+from time import sleep
+from microdotphat import write_string, scroll, clear, show
+import json
+import urllib2
+
+# choose currencies to display
+currencies = ['bitcoin', 'litecoin', 'dogecoin']
+
+while True:
+    ticker = ''
+
+    for currency in currencies:
+
+        url = "https://api.coinmarketcap.com/v1/ticker/%s/" % currency
+        data = json.load(urllib2.urlopen(url))[0]
+
+        ticker += '%s ' % data['symbol']
+        ticker += '$%s ' % data['price_usd']
+
+    for i in range(20):
+        clear()
+        write_string(ticker, kerning=False)
+        for c in ticker:
+            show()
+            scroll(amount_x=8)
+            sleep(.5)
+
+    sleep(10)
+```
+
+Here is a Demo of it working, it can simply be run at startup ensuring there is an internet connection.
+
+@[youtube](https://www.youtube.com/watch?v=wlej3YBEKBU)
 
 ---
 
@@ -108,81 +177,7 @@ Crab is going to be a series of circuits that I think are useful repeatable modu
 
 ---
 
-## CAD with code (OpenSCAD)
-
-`16 January 2016` · [Open this post on its own](window:file/blog/2016-01-16-Openscad.md)
-
-![OpenSCAD design view](https://clacktronics.co.uk/assets/OpenScad.jpg)
-If you like to think in code this CAD program is great, especially if the design can be broken down into primitives. This is an example of a very basic shelf I designed but I have been using it for everything from designing mounts to hold PIR sensors to a shed that will become the new Clacktronics workshop!
-
-![The final shelf](https://clacktronics.co.uk/assets/openscad_shelves.jpg)
-
-The interesting thing is that you end up with segments of code that can represent the real life segments you need to cut to construct your design. Even better if doing something more complicated you can make it parametric by using variables and even iteration.
-
-I have done slightly more complicated tasks with it apart from shelving! Here is an example of a job I did where I used mini PIR sensors in 3d printed mounts so they could be used to detect human movement but on a narrow beam.
-
-![PIR Sensors](https://clacktronics.co.uk/assets/3d_printed_pir_sensor_housing.jpg)
-
-The PCB slotted perfectly into the mount and was held in with hot glue. Details for this project can be found on the [Clacktronics Github](https://github.com/clacktronics/pir_sensors) page.
-
-![PIR Sensors in OpenSCAD](https://clacktronics.co.uk/assets/OpenScad_PIR_sensor.jpg)
-
----
-
-## Colours, Speakers and Pulses
-
-`13 January 2016` · [Open this post on its own](window:file/blog/2016-01-13-Colours-speakers-pw.md)
-
-![Shapeoko2](https://clacktronics.co.uk/assets/Horowitz_chamber.jpg)
-This is a story about what I currently do, I have moved a little bit away from synthesizers but still make audio electronics for artist Haroon Mirza and sometimes other artists. The approach to making artworks are different to designing audio devices, as usually components and circuits are one-off designs or modified items which are usually used against their original intention. The reason I decided to write about this was to document how the system works for this particular work as it is using new technologies that are getting easier to prototype with. I am really impressed with this new microcontroller implementation of Python programming language called Micro Python.
-
-@[youtube](https://www.youtube.com/watch?v=frSLjx-Af7U)
-
-Courtesy the Tinguely Museum, Switzerland
-
-**Background**
-
-[Channa Horowitz](https://en.wikipedia.org/wiki/Channa_Horwitz) . was an American artist who came up with a system called 'Sonakinatography' which is a compound word of sound, motion and notation. According to Wikipedia the system was part of a proposal for a sculpture that she sadly never got to produce, she did produce drawings for the works and although they are scores for works they actually became 'artworks'.
-
-I am not sure if I am allowed to post a photo of an artwork but if you search Sonakinatography in your favourite search engine you will see the drawings. The way the work was interpreted is that each horizontal line of Channa Horowitz's work is treated as a step, like a step sequencer this is fed to 8 RGB LED strips that each sit on top of a 3 channel sound bar (the speakers for TVs). The PWM control of the Red, Green and Blue is also fed into the 3 internal speaker cones od the sound bar ; so left speaker is red, middle green and right is blue.
-
-**Better Specs**
-
-For ages we had been using Arduinos and burning PICs to playback sequences but they had hit memory limits. This was temporarily helped by storing sequences as byte arrays (smaller than integers) and using an Arduino Mega with larger flash memory but as longer and longer sequences were used the devices kept running out of space. Channa Horowitz's work is up to 4000 lines so this would definitely overflow the memory! The only solution for this was to use external memory, ideally I thought was to use a memory card to make it easier to change sequences.
-
-There also was a new requirement, for this new work it needed to drive 8 x RGB leds this means we would need a device to output 24 independent channels this is beyond the Arduino Mega alone. At first I investigated using serial controlled PWM devices such as the SPI controlled TLC5947 but a requirement was that each channel could have its own pitch, something not typically a concern of a PWM controller. Then I remembered I had recently acquired a microcontroller device a bit like Arduino called a PyBoard which is designed to run MicroPython as I mentioned earlier. Sadly it only could handle 20 channels, but surely it could do more! so I asked on the forum (http://forum.micropython.org/viewtopic.php?t=497) and surely enough Damien (who created both the language and the board ) showed me how to kludge 4 extra channels out of it.
-
-**The Program**
-
-Because Micro Python is very close to Python 3 it was very easy to prototype the program, after initial difficulties of getting all the PWM channels to work and reporting some bugs to Micro Python repository ( which get fixed fantastically fast! ) it was a breeze to prototype the program. As it is Python I could use regular expressions to parse text files this means that the sequences could be human readable (and forgive human error in coding the files) with no need for brackets or other types of programming syntax. The program simply reads the text files line by line and outputs it straight to the LEDs with no noticeable delay! As it is not 8bit but a 32bit ARM another amazing feature was that I could set the pitch of the channels to almost any frequency.
-
-@[youtube](https://www.youtube.com/watch?v=b5rM0UPVj80)
-
-![Howowitz PCB design](https://clacktronics.co.uk/assets/speaker_resistor.jpg)
-
-**The Circuit**
-
-The circuit was a little bit different to what I used before, usually I use MOSFETs to drive LED strips, by connecting them to ground. But for this circuit as each LED was also driving a speaker I thought maybe I would try a little less conventional component. I used the L293 H-bridge driver which is typically used for driving stepper motors and relays but as a speaker is quite similar I thought it should be suitable! it also had the added bonus of being able to drive current bi-directionally so I could drive common cathode or common anode LEDs without changing the circuit much. (this is done very simply with a jumper on the PCB ).
-
-Now directly driving speakers with DC PWM works fine but it uses a lot of power which is fairly wasteful and unnecessary so I created a circuit that reduces the power with a limiting resistor and also removes DC with a cap, it also has diodes to prevent inductive kickback from the speakers.
-
-![Howowitz PCB design](https://clacktronics.co.uk/assets/pcb_design.jpg)
-
-**Designing the board**
-
-At first I designed the board to be as tight as possible, but this was a complete mess, routes became very long and I had gangs of tracks adding big borders around the board, I found it much better to lay it out a little more spaced. It made the board quite large, it is a bit bigger than a euro card but much cleaner. Using the Press n Peel method I created a double sided mockup of the board, this was actually used in media images of the show! For the connections to the speakers I went for 3.5mm pluggable terminal blocks, these are great.
-
-The speaker circuits were directly attached to the back of the speaker, I designed a PCB that could be clamped on the terminals of the speaker, this made it very convenient and made it easy to split the signal to the LED and the speakers. It is very important to limit the amount of wiring in installations as the more wiring the more likely they can snag and break!
-Enclosing
-
-Only issue with using terminal blocks is that they need square holes, for speed I decided to get a box lazercut this also allowed me to put markings on it and cutout a fan for a hole.
-
-![Howowitz Enclosure](https://clacktronics.co.uk/assets/the_enclosure.jpg)
-The Enclosure
-
----
-
-Page 2 of 9
+Page 2 of 10
 
 [Blog list](window:file/blog-list.md)
 [< Newer posts](window:file/blog.md)

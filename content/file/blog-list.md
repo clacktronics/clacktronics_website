@@ -1,11 +1,16 @@
 ---
 title: Blog List
-tagline: Every one of the 44 posts from the workbench
+tagline: Every one of the 46 posts from the workbench
 style: plain
 ---
 # Blog List
 
 [Read the blog](window:file/blog.md)
+
+## 2024
+
+`27 Jun` [New EuroClack Kits](window:file/blog/2024-06-27-Two-new-kits.md)
+`27 Jun` [Build Your Own Modular](window:file/blog/2024-06-27-Build-Your-Own-Modular-book.md)
 
 ## 2019
 
@@ -71,3 +76,5 @@ style: plain
 `27 Jan` [Small Eddystone / Hammond Enclosures](window:file/blog/2011-01-27-enclosures.md)
 `27 Jan` [Amdek PCK-100](window:file/blog/2011-01-27-amdek-pck-100.md)
 `25 Jan` [Octave Cat SRM Repair](window:file/blog/2011-01-25-octave-cat-srm-repair.md)
+
+*Writing the next one? Start from the [post template](window:file/blog-template.md).*

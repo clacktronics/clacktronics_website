@@ -1,6 +1,6 @@
 ---
 title: Blog (page 4)
-tagline: Posts 16–20 of 44
+tagline: Posts 16–20 of 46
 style: plain
 robots: noindex
 ---
@@ -10,7 +10,33 @@ robots: noindex
 [< Newer posts](window:file/blog-page-3.md)
 [Older posts >](window:file/blog-page-5.md)
 
-Page 4 of 9
+Page 4 of 10
+
+---
+
+## IRCAM
+
+`02 March 2015` · [Open this post on its own](window:file/blog/2015-03-02-IRCAM.md)
+
+![IRCAM](https://clacktronics.co.uk/assets/IRCAM.jpg)
+As part of a research project involving Boulez's Anthèmes II I managed to visit [IRCAM](http://www.ircam.fr/) in Paris last week and got to see how they put together the piece. It is entirely in Max/MSP with a few ancillary programs. IRCAM is suprisingly minimal, just clear offices and studios with very little equipment in, it seems as if they mainly focus on software based music, which makes sense when you are purely thinking about musical concepts rather than the aesthetic design of instruments.
+
+See the Demo of this system in the youtube video. I managed to listen to it with 6 speakers and it sounds very different!
+
+@[youtube](https://www.youtube.com/watch?v=HSab_znc_y8)
+
+This will be played at the Paris Opera in December. [See listing here](https://web.archive.org/web/20150310125235/http://saison15-16.operadeparis.fr:80/ballet/christopher-wheeldon-wayne-mcgregor-pina-bausch-en-l-honneur-de-pierre-boulez) (wayback mirror)
+
+---
+
+## Tottenham to Walthamstow
+
+`07 May 2013` · [Open this post on its own](window:file/blog/2013-05-07-tottenham-to-walthamstow.md)
+
+![clacktronics](../assets/643_clacktronics.jpg)
+After 3 years in Tottenham Hale, I have now moved across the reservoirs to Walthamstow where I can now build a proper Workshop in a shed! Here is my old door sign that I made from PCB material.
+
+I have been working for the last 3 years in a live/work space in Tottenham, which was great but the division of home and work space can be challenging without walls.My hope is that clacktronics can now be in a workshop of its own.
 
 ---
 
@@ -49,43 +75,7 @@ Needless to say, this has given me some ideas on how to make an Arduino like del
 
 ---
 
-## Clacktronics does LED Projects
-
-`04 January 2013` · [Open this post on its own](window:file/blog/2013-01-04-clacktronics-does-led-projects.md)
-
-[![LED hoop](../assets/643_led-hoop.jpg)](../assets/LED-hoop.jpg)
-I quite often get approached by artists and designers to produce electronic parts for them. Recently I seem to have made a lot of LED projects! Above is part of a series of LED hoops that were commissioned for the band Django Django. This was by the artist [Kim Coleman](http://kimcolemanprojects.com/) who needed them as a part of her stage design for the band. 
-
-![Photo credit : Django Django ](../assets/643_ddphoto.jpg) 
-
-First a Series of 3 hoops were made (pictured above, middle frame) theese were very basic white LED chains made from discrete 5mm diffused white LED's. I know it is a bit crazy doing a point to point chain of LEDs but I needed them to be difused! Then for their large performance at Sheppards Bush Empire I made RGB hoops that had smiley faces, I learnt my lesson and theese are RGB tape with epoxy coating to help diffusion. Each segment ( the hoop and the 2 eyes and the mouth ) could be RGB DMX controlled by the lighting engineer.
-
-@[youtube](https://www.youtube.com/watch?v=OaeqY0oh3iE)
-
-Finally I also made an interesting piece of lighting for the artist Ryan Gander, he commissioned me to find a way to make a flickering light that lasts.  As shown below (apologies for the mess!) here is a program I wrote to simulate bulb flicker. My solution is LED so it is completely solid state, the electronics were designed to withstand sub-zero conditions as it had to be used outside during winter in Denmark!
-
-@[youtube](https://www.youtube.com/watch?v=RRyg7e9cVxA)
-
-The code is fairly simple and parametric so it can be modified to make all sorts of flickering. See github link below.
-
-[GitHub - Flicker_box](https://github.com/clacktronics/Flicker_box)
-
----
-
-## Rebel Tech - Stoichea
-
-`01 July 2012` · [Open this post on its own](window:file/blog/2012-07-01-592.md)
-
-[![Rebel Tech - Stoichea](../assets/643_dsc_81401.jpg)](../assets/DSC_81401.jpg)
-Recently I have been working with [Rebel Tech](http://www.rebeltech.org/) to release a new Eurorack module range based in London. It has been really interesting and something I have long been interested in producing. The first module is a dual Euclidean Sequencer and more details can be found on the website here 
-
-[rebeltech.org/modules/stoicheia/](http://www.rebeltech.org/modules/stoicheia/)
-
-Look out for more modules in the future, some influenced by clacktronics!
-
----
-
-Page 4 of 9
+Page 4 of 10
 
 [Blog list](window:file/blog-list.md)
 [< Newer posts](window:file/blog-page-3.md)
