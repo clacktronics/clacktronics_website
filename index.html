@@ -13,6 +13,18 @@
      this page rather than letting it compete with an empty desktop. The link is
      relative so it stays right when the site is served from a subfolder. -->
 <link rel="canonical" href="plain/index.html">
+<!-- Inline @[model] embeds (assets/js/model-embed.js) and the 3D Model Viewer
+     app share one copy of three.js through these bare specifiers. The map costs
+     nothing until a module actually imports them, and it has to be in the
+     document up front: it cannot be added once module loading has started. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"
+  }
+}
+</script>
 <script>
 /* Phones use the generated no-desktop site by default. ?desktop=1 is the
    explicit escape hatch linked from every plain-HTML page. */

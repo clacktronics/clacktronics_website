@@ -416,6 +416,42 @@ pre.code {
   padding: 7px 10px; border-top: 1px solid var(--paper-line);
   color: var(--sage); font-size: 10.5px; line-height: 1.5;
 }
+/* inline 3D models from @[model]. Borderless and transparent by default so the
+   model reads as part of the prose; {border} turns it into a panel like the
+   embeds above, and {left}/{right} float it beside the text. */
+.model-embed { width: 100%; margin: 8px 0 16px; }
+.model-embed-stage { position: relative; width: 100%; }
+.model-embed-stage canvas { display: block; width: 100%; height: 100%; }
+.model-embed-bordered {
+  overflow: hidden; border: 1px solid var(--ink); border-radius: 8px;
+  background: var(--paper-deep);
+}
+.model-embed-bordered .model-embed-stage { border-radius: 8px 8px 0 0; }
+.model-embed-left { float: left; margin: 4px 20px 12px 0; }
+.model-embed-right { float: right; margin: 4px 0 12px 20px; }
+.model-embed figcaption {
+  padding: 7px 10px; color: var(--sage); font-size: 10.5px; line-height: 1.5; text-align: center;
+}
+.model-embed-bordered figcaption { border-top: 1px solid var(--paper-line); text-align: left; }
+.model-embed-status {
+  position: absolute; inset: auto 0 10px; margin: 0;
+  color: var(--sage); font-size: 10.5px; text-align: center;
+}
+.model-embed-status.error { color: #9a3f35; }
+.model-embed-fallback {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: 0 12px; color: var(--leaf-deep); font-size: 11px; text-align: center;
+}
+/* Once the embed script has claimed the placeholder the link is redundant —
+   unless loading actually failed, when it is the way to get the file. */
+.model-embed-stage[data-model-state]:not([data-model-state="error"]) .model-embed-fallback { display: none; }
+@media (max-width: 620px) {
+  .model-embed-left, .model-embed-right { float: none; width: 100%; margin: 8px 0 16px; }
+}
+/* A floated model must not run past the section it was written in. Nothing else
+   in the prose floats, so this is inert everywhere else. */
+.page h1, .plain h1, .page .eyebrow, .plain .eyebrow, .page .rule, .plain .rule { clear: both; }
+
 .html-block { margin-bottom: 14px; }
 .html-block img { max-width: 100%; height: auto; }
 .page [id], .plain [id] { scroll-margin-top: 12px; }

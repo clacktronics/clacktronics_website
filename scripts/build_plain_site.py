@@ -605,6 +605,128 @@ def kicanvas_embed(block, page_out, state):
             '<figcaption>%s</figcaption></figure>'
             % (esc(title), esc(src), esc(title)))
 
+MODEL_LIGHTING = ('studio', 'soft', 'dramatic', 'flat', 'unlit')
+MODEL_CONTROLS = ('none', 'orbit', 'full')
+MODEL_COLOUR_OPTIONS = {'colour': 'colour', 'color': 'colour', 'grid': 'gridcolour',
+                        'key': 'key', 'fill': 'fill', 'sky': 'sky', 'ground': 'ground'}
+
+def is_hex_colour(value):
+    return bool(re.match(r'^#(?:[0-9a-f]{3}|[0-9a-f]{6})$', value, re.I))
+
+def model_embed_settings(text):
+    """Mirror of modelEmbedSettings() in assets/js/clackos.js.
+
+    Returns None for an unrecognised or out-of-range option so the directive is
+    left unrendered rather than quietly ignoring what was asked for.
+    """
+    settings = {'data': {}, 'classes': [], 'caption': False, 'height': 320, 'width': 0}
+
+    def in_range(value, low, high):
+        try:
+            number = float(value)
+        except ValueError:
+            return None
+        return number if low <= number <= high else None
+
+    def as_text(number):
+        return str(int(number)) if number == int(number) else str(number)
+
+    for token in re.split(r'[\s,]+', (text or '').strip()):
+        if not token:
+            continue
+        name, sep, value = token.partition('=')
+        name = name.lower()
+        colour_key = MODEL_COLOUR_OPTIONS.get(name) if sep else None
+        if colour_key:
+            if not is_hex_colour(value):
+                return None
+            settings['data'][colour_key] = value
+            # asking for a grid colour is asking for the grid
+            if colour_key == 'gridcolour':
+                settings['data']['grid'] = 'true'
+            continue
+        if name == 'height':
+            height = in_range(value, 80, 900)
+            if height is None:
+                return None
+            settings['height'] = as_text(height)
+        elif name == 'width':
+            width = in_range(value.rstrip('%'), 10, 100)
+            if width is None:
+                return None
+            settings['width'] = as_text(width)
+        elif name in ('left', 'right'):
+            settings['classes'].append('model-embed-%s' % name)
+            if not settings['width']:
+                settings['width'] = '42'
+        elif name == 'background':
+            if value != 'none' and not is_hex_colour(value):
+                return None
+            settings['data']['background'] = value
+        elif name == 'lighting':
+            if value not in MODEL_LIGHTING:
+                return None
+            settings['data']['lighting'] = value
+        elif name in ('brightness', 'zoom', 'speed'):
+            limits = {'brightness': (20, 400), 'zoom': (0.2, 4), 'speed': (-8, 8)}[name]
+            number = in_range(value, *limits)
+            if number is None:
+                return None
+            settings['data'][name] = as_text(number)
+        elif name == 'controls':
+            if value not in MODEL_CONTROLS:
+                return None
+            settings['data']['controls'] = value
+        elif name == 'static':
+            settings['data']['controls'] = 'none'
+        elif name == 'interactive':
+            settings['data']['controls'] = 'full'
+        elif name in ('grid', 'nogrid'):
+            settings['data']['grid'] = str(name == 'grid').lower()
+        elif name in ('shadows', 'noshadows'):
+            settings['data']['shadows'] = str(name == 'shadows').lower()
+        elif name in ('spin', 'nospin'):
+            settings['data']['rotate'] = str(name == 'spin').lower()
+        elif name == 'wireframe':
+            settings['data']['wireframe'] = 'true'
+        elif name == 'caption':
+            settings['caption'] = True
+        elif name == 'border':
+            settings['classes'].append('model-embed-bordered')
+        else:
+            return None
+    return settings
+
+def model_embed(block, page_out, state):
+    """@[model](part.stl "Caption"){options} -> an inline 3D model placeholder.
+
+    assets/js/model-embed.js turns it into a live viewport built on the same
+    three.js core as the 3D Model Viewer app. With scripting off the placeholder
+    is a plain link to the model file.
+    """
+    m = re.match(r'^@\[model\]\((\S+?)(?:\s+["\']([^"\']+)["\'])?\)(?:\{([^}]*)\})?$', block, re.I)
+    if not m or not re.search(r'\.(?:stl|step|stp|obj|3mf)(?:[?#].*)?$', m.group(1), re.I):
+        return None
+    src = fix_url(m.group(1), page_out, allow_fragment=False)
+    if not src:
+        return None
+    settings = model_embed_settings(m.group(3))
+    if settings is None:
+        return None
+    state['model'] = True
+    title = m.group(2) or 'Interactive 3D model'
+    data = ''.join(' data-%s="%s"' % (name, esc(value))
+                   for name, value in settings['data'].items())
+    width = ' style="width:%s%%"' % settings['width'] if settings['width'] else ''
+    caption = '<figcaption>%s</figcaption>' % esc(title) if settings['caption'] else ''
+    return ('<figure class="%s"%s><div class="model-embed-stage" style="height:%spx" role="img" '
+            'aria-label="%s" data-model-src="%s"%s>'
+            '<a class="model-embed-fallback" href="%s">%s — download the 3D model</a>'
+            '</div>%s</figure>'
+            % (esc(' '.join(['model-embed'] + settings['classes'])), width,
+               esc(settings['height']), esc(title), esc(src), data,
+               esc(src), esc(title), caption))
+
 def build_embed(block):
     """@[build] -> a small stamp of the deployed commit. The values come from
     the environment set by the deploy/mirror workflow (SITE_COMMIT etc.); with
@@ -671,7 +793,8 @@ def md_to_html(body, meta, page_out, state):
 
         fence = re.match(r'^\x00fence(\d+)\x00$', block)
         embed = (youtube_embed(block) or video_embed(block, page_out)
-                 or kicanvas_embed(block, page_out, state) or build_embed(block))
+                 or kicanvas_embed(block, page_out, state)
+                 or model_embed(block, page_out, state) or build_embed(block))
         if fence:
             out.append(fences[int(fence.group(1))])
         elif embed:
@@ -747,7 +870,7 @@ def up_link(md_rel, meta, page_out):
 
 def render_page(md_rel, page_out):
     meta, body = parse_front_matter((content / md_rel).read_text(encoding='utf-8'))
-    state = {'kicanvas': False, 'code': False, 'headings': {}}
+    state = {'kicanvas': False, 'code': False, 'model': False, 'headings': {}}
     article = up_link(md_rel, meta, page_out) + md_to_html(body, meta, page_out, state)
     style_class = 'page' if meta.get('style') == 'page' else 'plain'
     crawl_meta, noindex = head_meta(md_rel, page_out, meta, body)
@@ -755,6 +878,14 @@ def render_page(md_rel, page_out):
     kicanvas = ('<script type="module" src="%s"></script>\n'
                 % esc(resolve_site_url('vendor/kicanvas/kicanvas.js', page_out))
                 if state['kicanvas'] else '')
+    # Inline 3D models: the import map has to be in the document before any
+    # module loads, so it is emitted alongside the embed script itself.
+    model = ('<script type="importmap">\n'
+             '{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",'
+             '"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"}}\n'
+             '</script>\n<script type="module" src="%s"></script>\n'
+             % esc(resolve_site_url('assets/js/model-embed.js', page_out))
+             if state['model'] else '')
     # data-auto tells the highlighter to colour this page's code blocks itself
     highlight = ('<script src="%s" data-auto defer></script>\n'
                  % esc(resolve_site_url('assets/js/highlight.js', page_out))
@@ -774,7 +905,7 @@ def render_page(md_rel, page_out):
 <link rel="stylesheet" href="{css('assets/css/clackos.css')}">
 <link rel="stylesheet" href="{css('assets/themes/' + theme)}">
 <link rel="stylesheet" href="{esc(rel_href(STYLE, page_out))}">
-{kicanvas}{highlight}</head>
+{kicanvas}{model}{highlight}</head>
 <body class="plain-mirror">
 <header id="plain-nav">{menu}</header>
 <main>
