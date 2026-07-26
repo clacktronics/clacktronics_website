@@ -307,6 +307,9 @@ body {
   color: var(--heading); margin-bottom: 8px;
 }
 .page .tagline { font-size: 13px; color: var(--sage); margin-bottom: 24px; }
+/* the link back to the page above, sat over the title */
+.up-link { font-size: 11.5px; margin-bottom: 10px; }
+.up-link a { color: var(--sage); }
 .page .rule { height: 1px; background: var(--ink); margin-bottom: 24px; }
 .page p { font-size: 13px; line-height: 1.85; margin-bottom: 14px; }
 .page .eyebrow {
@@ -327,6 +330,8 @@ body {
   content: counter(item, decimal-leading-zero);
   font-size: 12px; color: var(--leaf-deep); padding-top: 2px; flex: none;
 }
+/* a bulleted list is not numbered: the counter is for ol only */
+ul.list li::before { content: "\25AA"; font-size: 14px; }
 .list li p { font-size: 12.5px; line-height: 1.75; margin: 0; }
 .list b, .page b { font-weight: 600; color: var(--strong-text); }
 .ctas { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0; }

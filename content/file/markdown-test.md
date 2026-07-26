@@ -62,7 +62,7 @@ page.
 
 Inline links come in six flavours: an [external link](https://clacktronics.co.uk)
 (opens in the Web Browser app), a [PDF link](https://example.com/manual.pdf)
-(routed to PDF Reader), a [window link](window:file/catalogue.md), an
+(routed to PDF Reader), a [window link](window:file/euroclack.md), an
 [app link](app:applications/paint.html) (shown with its app icon), an
 [action link](action:tidy) that runs a desktop action, and an
 [anchor link](#edge-cases) that scrolls within this window.
@@ -70,7 +70,7 @@ Inline links come in six flavours: an [external link](https://clacktronics.co.uk
 A paragraph containing **only** links becomes the call-to-action button row —
 first solid, the rest ghosts:
 
-[Open the catalogue](window:file/catalogue.md)
+[Open EuroClack](window:file/euroclack.md)
 [Launch ClackPaint](app:applications/paint.html)
 [Tidy the desktop](action:tidy)
 [clacktronics.co.uk](https://clacktronics.co.uk)

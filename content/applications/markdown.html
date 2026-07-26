@@ -435,7 +435,7 @@ function siteFileName(value, folder) {
 }
 
 function insertWindowLink() {
-  const path = prompt('Markdown path under content/ (for example file/catalogue.md):', 'file/catalogue.md');
+  const path = prompt('Markdown path under content/ (for example file/home.md):', 'file/home.md');
   if (path) insertClackLink('window:' + encodeURI(path.trim()), 'Open page');
 }
 
