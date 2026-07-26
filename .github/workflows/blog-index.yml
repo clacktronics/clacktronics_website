@@ -14,17 +14,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Regenerate content/file/blog.md
+      - name: Regenerate the blog windows
         run: python3 scripts/build_blog_index.py
 
-      - name: Commit the index if it changed
+      - name: Commit the blog if it changed
+        # blog.md and blog-page-N.md are the paginated blog, blog-list.md the
+        # index; a page can appear or disappear as the post count changes, so
+        # this stages additions and deletions, not just edits.
         run: |
-          if ! git diff --quiet content/file/blog.md; then
+          if [ -n "$(git status --porcelain content/file)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add content/file/blog.md
-            git commit -m "Rebuild blog index"
+            git add -A content/file
+            git commit -m "Rebuild blog"
             git push
           else
-            echo "blog.md already up to date"
+            echo "the blog is already up to date"
           fi

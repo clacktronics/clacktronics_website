@@ -7,6 +7,7 @@
       { "type": "window", "md": "catalogue.md", "label": "Open Catalogue", "icon": "article" },
       { "type": "window", "md": "euroclack.md", "label": "Open EuroClack", "icon": "circuit-board" },
       { "type": "window", "md": "blog.md", "label": "Open Blog", "icon": "rss" },
+      { "type": "window", "md": "blog-list.md", "label": "Open Blog List", "icon": "article" },
       { "type": "window", "md": "markdown-test.md", "label": "Open Markdown test", "icon": "file-text" }
     ] },
     { "type": "sep" },

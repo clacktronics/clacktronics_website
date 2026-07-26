@@ -22,7 +22,9 @@ content/
     home.md                 ← the landing window
     readme.md
     catalogue.md
-    blog.md                 ← blog index (generated, see below)
+    blog.md                 ← the blog, page 1 (generated, see below)
+    blog-page-N.md          ← the blog, pages 2+ (generated)
+    blog-list.md            ← index of every post (generated)
     blog/                   ← one post per file: YYYY-MM-DD-slug.md
   edit/                     ← EDIT menu (actions only)
     menu.json
@@ -114,14 +116,27 @@ They were converted from the old Jekyll/WordPress site; images point at
 `https://clacktronics.co.uk/assets/`.
 
 To add a post: drop the file in `content/file/blog/`, then regenerate the
-index window:
+blog windows:
 
 ```sh
 python3 scripts/build_blog_index.py
 ```
 
-This rewrites `content/file/blog.md` (the window behind File → Open Blog),
-listing every post newest-first, grouped by year.
+That rewrites two things, both from the posts alone:
+
+* `content/file/blog.md` and `content/file/blog-page-N.md` — the blog itself
+  (File → Open Blog). Five posts per page in full, newest first, with a
+  Newer/Older button row and a link to the list at the top and bottom of
+  every page. Pages 2 and up are `robots: noindex`, since each post is
+  already a page of its own and the list links to all of them.
+* `content/file/blog-list.md` — the list window (File → Open Blog List):
+  every post as a dated link, newest first, grouped by year.
+
+Pages are rebuilt from scratch each run, so the count follows the number of
+posts and any page no longer needed is deleted. `POSTS_PER_PAGE` at the top
+of the script sets the five. Pushing a post to `content/file/blog/` runs the
+script in CI (`.github/workflows/blog-index.yml`) and commits the result, so
+the blog keeps itself up to date.
 
 ### The events calendar
 
@@ -503,7 +518,8 @@ registered applications, Markdown windows, and desktop actions.
   from `repo`/`branch` in content/site.json — update `branch` if the
   site moves to main. New blog posts committed this way are indexed
   automatically by the GitHub Action in
-  .github/workflows/blog-index.yml, which regenerates blog.md on push. The toolbar icons are plain text glyphs, so nothing is
+  .github/workflows/blog-index.yml, which rebuilds the blog pages and the
+  blog list on push. The toolbar icons are plain text glyphs, so nothing is
   fetched from icon CDNs.
 - `applications/theme.html` (Applications → Theme Editor…) — edits the shared
   colour variables in an isolated live preview, applies them to the desktop and
