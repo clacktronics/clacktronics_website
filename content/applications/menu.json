@@ -32,17 +32,17 @@
       { "type": "app", "page": "resistor.html", "label": "Resistor Calculator", "title": "Resistor Calculator", "icon": "calculator", "width": 760, "height": 620 }
     ] },
     { "type": "submenu", "label": "Internet", "icon": "file-text", "items": [
-      { "type": "app", "page": "browser.html", "label": "Web Browser", "title": "Web Browser", "icon": "link", "width": 1100, "height": 760, "multi": true },
+      { "type": "app", "page": "browser.html", "label": "Web Browser", "title": "Web Browser", "icon": "link", "width": 1100, "height": 760, "multi": true, "plain": false },
       { "type": "app", "page": "pdf-reader/index.html", "label": "PDF Reader", "title": "PDF Reader", "icon": "file-text", "width": 1100, "height": 760, "multi": true },
       { "type": "app", "page": "markdown.html", "label": "Markdown Editor", "title": "Markdown Editor", "icon": "pencil", "multi": true },
       { "type": "app", "page": "chat.html", "label": "ClackChat", "title": "ClackChat", "icon": "message-text", "width": 440, "height": 600 }
     ] },
     { "type": "submenu", "label": "System", "icon": "cpu", "items": [
-      { "type": "app", "page": "files.html", "label": "File Manager", "title": "File Manager", "icon": "folder", "width": 980, "height": 680, "multi": true },
+      { "type": "app", "page": "files.html", "label": "File Manager", "title": "File Manager", "icon": "folder", "width": 980, "height": 680, "multi": true, "plain": false },
       { "type": "app", "page": "text.html", "label": "Text Editor", "title": "Text Editor", "icon": "file-text", "width": 760, "height": 600, "multi": true },
       { "type": "app", "page": "calendar.html", "label": "Calendar", "title": "Calendar", "icon": "calendar", "width": 1060, "height": 720 },
-      { "type": "app", "page": "appearance.html", "label": "Appearance", "title": "Appearance", "icon": "image", "width": 460, "height": 420, "fixed": true, "integrated": true },
-      { "type": "app", "page": "theme.html", "label": "Theme Editor", "title": "Theme Editor", "icon": "colors-swatch", "width": 960, "height": 700, "fixed": true, "multi": true, "integrated": true }
+      { "type": "app", "page": "appearance.html", "label": "Appearance", "title": "Appearance", "icon": "image", "width": 460, "height": 420, "fixed": true, "integrated": true, "plain": false },
+      { "type": "app", "page": "theme.html", "label": "Theme Editor", "title": "Theme Editor", "icon": "colors-swatch", "width": 960, "height": 700, "fixed": true, "multi": true, "integrated": true, "plain": false }
     ] },
     { "type": "sep" },
     { "type": "window", "md": "about.md", "label": "About ClackOS", "icon": "info-box" }
