@@ -20,7 +20,7 @@ For Sale here [http://tinyurl.com/636xfks](http://tinyurl.com/636xfks)
 
 From looking at the circuitry I assume somebody tried to add external CV control to the circuit as there was evidence that a wire had been soldered to the CV input of the filter. What I am guessing is that they put too much current into the VCF as the OTA's were completely busted and I had to replace them both.
 
-[Watch on YouTube](https://www.youtube.com/watch?v=y0aqhcPC-44)
+@[youtube](https://www.youtube.com/watch?v=y0aqhcPC-44)
 
 A problem I also found was that because the rotary switches hold the PCB to the panel after years of holding the weight of the PCB it caused them to split apart and fail. Thankfully Alpha Taiwan make rotary switches that are identical and readily available from most suppliers.
 

@@ -351,7 +351,9 @@ ul.list li::before { content: "\25AA"; font-size: 14px; }
 }
 
 /* ---------- "plain" window style (rendered from markdown) ---------- */
-.plain { padding: 24px 28px 48px; max-width: 980px; margin: 0 auto; font-size: 12.5px; line-height: 1.9; }
+/* Same column as .page — every window reads at one measure, whatever style
+   the markdown asked for. */
+.plain { padding: 34px 38px 48px; max-width: 640px; margin: 0 auto; font-size: 12.5px; line-height: 1.9; }
 .plain h1 {
   font-family: 'Dosis', sans-serif; text-transform: uppercase; letter-spacing: 0.06em;
   font-size: 22px; color: var(--heading); margin-bottom: 12px;
@@ -372,11 +374,15 @@ ul.list li::before { content: "\25AA"; font-size: 14px; }
 }
 
 /* images, code and quotes produced from markdown */
+/* Pictures sit in the middle of the column rather than flowing with the text —
+   most of them are wider than the words around them anyway. */
 .page img, .plain img {
-  max-width: 100%; height: auto;
+  display: block; max-width: 100%; height: auto;
   border: 1px solid var(--ink); border-radius: 6px;
-  margin: 4px 8px 4px 0; vertical-align: top;
+  margin: 14px auto; vertical-align: top;
 }
+/* an image wrapped in a link: the anchor is what needs centring */
+.page a:has(> img), .plain a:has(> img) { display: block; text-align: center; }
 pre.code {
   background: var(--ink); color: var(--menu-text);
   font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; line-height: 1.7;

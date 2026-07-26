@@ -30,6 +30,6 @@ It is for sale [here](http://cgi.ebay.co.uk/MFOS-Soundlab-MIDI-/120733233974?pt=
 
 I am also selling this keyboard puts out 1V/Oct CV and triggers as well as portamento controls also made from circuits at musicfromouterspace. [See here](http://cgi.ebay.co.uk/MFOS-Soundlab-MIDI-/120733233974?pt=UK_Musical_Instruments_Pro_Audio_Synthesisers_CV&hash=item1c1c42f336)
 
-[Watch on YouTube](https://www.youtube.com/watch?v=EGM5uhOYWVY)
+@[youtube](https://www.youtube.com/watch?v=EGM5uhOYWVY)
 
 Mod Details coming soon ....

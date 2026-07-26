@@ -10,7 +10,11 @@ I must seem to be obsessed at them moment , but wasps just keep coming my way! .
 
 Its particularly good putting on portamento because all the oscillators slide at different rates giving a THX style effect.
 
-[Watch on YouTube](https://www.youtube.com/watch?v=jTzpOaEJ114)
-[Watch on YouTube](https://www.youtube.com/watch?v=YyxOUj8sYoE)
-[Watch on YouTube](https://www.youtube.com/watch?v=ErJVEbtLNhY)
-[Watch on YouTube](https://www.youtube.com/watch?v=mbs0FJA8_cQ)
+@[youtube](https://www.youtube.com/watch?v=jTzpOaEJ114)
+
+@[youtube](https://www.youtube.com/watch?v=YyxOUj8sYoE)
+
+@[youtube](https://www.youtube.com/watch?v=ErJVEbtLNhY)
+
+@[youtube](https://www.youtube.com/watch?v=mbs0FJA8_cQ)
+

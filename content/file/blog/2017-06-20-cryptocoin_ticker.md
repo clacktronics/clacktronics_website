@@ -43,4 +43,5 @@ while True:
 
 Here is a Demo of it working, it can simply be run at startup ensuring there is an internet connection.
 
-[Watch on YouTube](https://www.youtube.com/watch?v=wlej3YBEKBU)
+@[youtube](https://www.youtube.com/watch?v=wlej3YBEKBU)
+

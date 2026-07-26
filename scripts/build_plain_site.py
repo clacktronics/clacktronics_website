@@ -826,7 +826,9 @@ body.plain-mirror main { flex: 1; width: 100%; }
   min-height: 34px;
 }
 .plain-menubar {
-  max-width: 980px; margin: 0 auto; padding: 0 8px;
+  /* 640px column + the .plain/.page side padding, so the menu titles line up
+     with the text underneath them */
+  max-width: 716px; margin: 0 auto; padding: 0 8px;
   display: flex; align-items: stretch;
 }
 .plain-menu, .plain-submenu { position: relative; }

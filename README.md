@@ -24,6 +24,8 @@ content/
     blog-page-N.md          ← the blog, pages 2+ (generated)
     blog-list.md            ← index of every post (generated)
     blog/                   ← one post per file: YYYY-MM-DD-slug.md
+    misc.md                 ← the Misc section index
+    misc/                   ← tutorials and odds and ends, one per file
   edit/                     ← EDIT menu (actions only)
     menu.json
   view/                     ← VIEW menu (actions only)
