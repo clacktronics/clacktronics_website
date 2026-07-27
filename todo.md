@@ -4,7 +4,6 @@
 
 * Make entire site downloadable
 * Consistent theme in in apps
-* Within the blog list add "new blog post" that opens markdown editor with a blog post template
 
 ### Non working features and bugs
 
@@ -17,8 +16,6 @@
 * check why it keeps going to http not HTTPS
 * expand kicad panel maker to feature jack and knob layout 
 * add power section to kicad panel maker
-* Markdown editor has insert new page and opens a new window and pastes a link in the original window
-* Make the insert dialogues more like the commit to website with more helpers.
 
 
 ### New Apps
