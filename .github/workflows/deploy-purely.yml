@@ -107,29 +107,89 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Trust the host key
+        # This is the step that makes the deploy flaky. ssh-keyscan gives up
+        # after a five-second connect timeout, prints NOTHING when it does, and
+        # exits 1 — which under the default `bash -e` shell kills the job before
+        # rsync is even attempted. Run 30163207840 (2026-07-25) is exactly that:
+        # the step ran for 5.0s flat, produced no output, exit code 1. The host
+        # was fine either side of it. On shared hosting one slow moment on
+        # port 22 is all it takes, and there was nothing to retry it.
+        #
+        # So: a longer timeout, and up to five attempts with growing backoff.
+        # A keyscan either returns a host key or it doesn't — it changes nothing
+        # on the server — so retrying costs only time.
+        #
+        # Output goes to a temp file and is appended only once the scan has
+        # actually succeeded, so a partial read on a failed attempt can't leave
+        # half a key in known_hosts for the next attempt to trip over.
         run: |
+          set -uo pipefail
           mkdir -p ~/.ssh
-          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          PORT="${SSH_PORT:-22}"
+          for attempt in 1 2 3 4 5; do
+            if ssh-keyscan -T 30 -p "$PORT" -H "$SSH_HOST" >/tmp/hostkeys 2>/tmp/keyscan.err \
+               && [ -s /tmp/hostkeys ]; then
+              cat /tmp/hostkeys >> ~/.ssh/known_hosts
+              echo "Host key collected on attempt $attempt."
+              exit 0
+            fi
+            # Empty stderr here is the timeout case, and is worth saying out
+            # loud — silence in the log is what made this hard to read before.
+            echo "Attempt $attempt failed. ssh-keyscan said:"
+            cat /tmp/keyscan.err
+            if [ ! -s /tmp/keyscan.err ]; then
+              echo "  (nothing — the connection timed out)"
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              sleep $((attempt * 5))
+            fi
+          done
+          echo "::error::Could not read the host key from port $PORT after 5 attempts over ~50s. The host is unreachable rather than misconfigured; re-run the job."
+          exit 1
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
 
       - name: Sync to purely
+        # Retried for the same reason as the host key above, and it matters more
+        # here: this pushes ~30 MB of gzipped Wasm over a single SSH connection,
+        # so it is the step most exposed to a dropped or throttled connection,
+        # and a failure means the host keeps serving the previous commit.
+        #
+        # Retrying is safe because the transfer is idempotent — no --delete (see
+        # the note at the bottom), and rsync skips files already matching on the
+        # far side, so a second attempt re-sends only what didn't make it.
+        #
+        # --timeout=60 is what makes a retry possible at all: without it a
+        # half-open connection hangs until the job's own limit and there is
+        # nothing left to retry with.
         run: |
+          set -uo pipefail
           # SUBDIR comes from the job env at the top of this file, so the upload
           # path and the canonical URLs baked into the mirror cannot drift apart.
           DEST="${DEPLOY_PATH%/}${SUBDIR:+/$SUBDIR}"
-          rsync -avz --human-readable \
-            -e "ssh -p ${SSH_PORT:-22}" \
-            --exclude '.git/' \
-            --exclude '.github/' \
-            --exclude 'scripts/' \
-            --exclude 'README.md' \
-            --exclude 'todo.md' \
-            --exclude 'assets/uploads/' \
-            --exclude 'assets/upload-config.php' \
-            --exclude 'assets/upload-config.example.php' \
-            ./ "${SSH_USER}@${SSH_HOST}:${DEST}/"
+          for attempt in 1 2 3; do
+            if rsync -avz --human-readable --timeout=60 \
+                 -e "ssh -p ${SSH_PORT:-22} -o ConnectTimeout=30 -o ServerAliveInterval=15" \
+                 --exclude '.git/' \
+                 --exclude '.github/' \
+                 --exclude 'scripts/' \
+                 --exclude 'README.md' \
+                 --exclude 'todo.md' \
+                 --exclude 'assets/uploads/' \
+                 --exclude 'assets/upload-config.php' \
+                 --exclude 'assets/upload-config.example.php' \
+                 ./ "${SSH_USER}@${SSH_HOST}:${DEST}/"; then
+              echo "Synced on attempt $attempt."
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "rsync attempt $attempt failed. Retrying — files that already made it will be skipped."
+              sleep $((attempt * 10))
+            fi
+          done
+          echo "::error::rsync failed 3 times. The host is still serving the previous commit."
+          exit 1
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}

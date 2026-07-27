@@ -4,6 +4,45 @@
 # relevant module the directive is skipped and the site serves exactly as it
 # did before.
 
+# ------------------------------------------------------------- Canonical HTTPS
+# The host serves this tree over both http:// and https:// and, left alone,
+# never redirects between them: a visitor who types the bare hostname gets
+# plain HTTP and stays on it for the whole session. The certificate is valid
+# and HTTP/2 is on, so there is nothing to gain from the unencrypted copy.
+#
+# This must come before the Wasm rewrite below — rules run in file order, and
+# an internal rewrite that matched first would carry the [L] and skip this.
+#
+# Two conditions rather than one: %{HTTPS} covers TLS terminated by Apache
+# itself (what purely does today), X-Forwarded-Proto covers TLS terminated by
+# a proxy or CDN in front of it. If only the first were checked and a proxy
+# were later put in front, every request would redirect to a URL that arrives
+# at Apache as HTTP again — an infinite loop. Checking both means the rule
+# stays correct either way.
+#
+# While the site lives under /temp this file lands in <web root>/temp/, so the
+# redirect covers that subtree only. When SUBDIR is emptied in
+# .github/workflows/deploy-purely.yml to go live, the same file lands at the
+# web root and the rule covers the whole site with no change needed here.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+# HSTS is deliberately not set yet. It is what makes a browser go straight to
+# HTTPS without the redirect round trip, but it is close to irreversible: once
+# a client has seen the header it refuses plain HTTP for the domain until
+# max-age expires, no matter what the server later sends. That is a bad trade
+# on a staging path. When /temp becomes the live site and the redirect above
+# has been serving cleanly for a while, uncomment this — starting at a short
+# max-age (300 = five minutes) and raising it only once nothing has broken.
+#
+# <IfModule mod_headers.c>
+#   Header always set Strict-Transport-Security "max-age=300"
+# </IfModule>
+
 # ---------------------------------------------------------------- MIME types
 <IfModule mod_mime.c>
   # Browsers only stream-compile WebAssembly when it arrives as
