@@ -399,6 +399,11 @@ const MINW = 320, MINH = 180;
  * the page's own padding. Explicit pixel sizes in frontmatter, dragging,
  * resizing and maximising are all unaffected. */
 const MAXW = 770, MAXH = 800;
+/* a document window that asks for no particular size opens as a tall column
+ * down the left of the desktop: DOC_W wide (the 640px text column in
+ * content.css plus a comfortable gutter) and clear of the desktop edges — so
+ * of the menubar and taskbar too — by DOC_MARGIN */
+const DOC_W = 800, DOC_MARGIN = 10;
 /* breathing room kept between a shrunk window and the desktop edges */
 const FIT_MARGIN = 16;
 
@@ -577,14 +582,25 @@ async function openWindow(id, restore = null) {
     return Math.min(n || Math.round(Math.min(avail * 0.8, cap)), avail - 24);
   };
   const dw = desktop.clientWidth, dh = desktop.clientHeight;
-  const w = sizeOf(meta.width, dw, MAXW);
-  const h = sizeOf(meta.height, dh, MAXH);
+  /* a document asking for no size of its own gets the tall left-hand column;
+   * anything with a width or height in frontmatter is sized and centred as
+   * before, apps included */
+  const isDoc = !id.startsWith('app:') && meta.width == null && meta.height == null;
+  const w = isDoc ? Math.min(DOC_W, dw - DOC_MARGIN * 2) : sizeOf(meta.width, dw, MAXW);
+  const h = isDoc ? dh - DOC_MARGIN * 2 : sizeOf(meta.height, dh, MAXH);
   el.style.width = w + 'px';
   el.style.height = h + 'px';
-  /* centred, stepped along for the next one, but never stepped off the desktop:
-     a window as wide as the desktop would otherwise hang over the right edge */
-  el.style.left = Math.max(12, Math.min((dw - w) / 2 + spawnOffset, dw - w - 12)) + 'px';
-  el.style.top = Math.max(12, Math.min((dh - h) / 2 - 20 + spawnOffset, dh - h - 12)) + 'px';
+  if (isDoc) {
+    /* pinned to the top-left margin, stepped right for each window after it
+       so a stack of documents is still separable by its titlebars */
+    el.style.left = Math.min(DOC_MARGIN + spawnOffset, Math.max(DOC_MARGIN, dw - w - DOC_MARGIN)) + 'px';
+    el.style.top = DOC_MARGIN + 'px';
+  } else {
+    /* centred, stepped along for the next one, but never stepped off the desktop:
+       a window as wide as the desktop would otherwise hang over the right edge */
+    el.style.left = Math.max(12, Math.min((dw - w) / 2 + spawnOffset, dw - w - 12)) + 'px';
+    el.style.top = Math.max(12, Math.min((dh - h) / 2 - 20 + spawnOffset, dh - h - 12)) + 'px';
+  }
   spawnOffset = (spawnOffset + 28) % 112;
 
   /* fixed windows keep their exact size: no resize handles, no maximise */
