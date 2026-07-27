@@ -653,9 +653,14 @@ registered applications, Markdown windows, and desktop actions.
   files.
 
   The live `/assets/` directory intentionally cannot be enumerated over HTTP,
-  so this drive reads `content/media-index.json`. After adding legacy media
-  references to site content, refresh the catalogue with
-  `python3 scripts/build_media_index.py`.
+  so legacy media comes from `content/media-index.json`. After adding legacy
+  media references to site content, refresh that catalogue with
+  `python3 scripts/build_media_index.py`. Uploaded media is different:
+  File Manager also reads the live `assets/upload.php?list=1` catalogue, which
+  scans the configured uploads directory. Files under
+  `assets/uploads/YYYY/MM/` therefore appear under Website Media → Uploads
+  immediately, including uploads made while the site is staged under `/temp`;
+  no GitHub Action or media-index commit is required.
 - `applications/calendar.html` (Applications → System → Calendar) — the
   website's upcoming events, in a **Month** grid and an **Upcoming** list. The
   calendar is one CSV file, `content/applications/calendar/events.csv`, plus a

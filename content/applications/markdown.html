@@ -189,6 +189,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
     </div></div>
     <div class="rm"><button>Insert</button><div class="rm-dd">
       <button data-cmd="insert-page"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New page&hellip;</button>
+      <button data-cmd="insert-managed-file"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>File from File Manager&hellip;</button>
       <div class="sep"></div>
       <button data-cmd="insert-upload"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload image, video or 3D model&hellip;</button>
       <div class="sep"></div>
@@ -795,13 +796,13 @@ function siteFileName(value, folder) {
   return (at >= 0 ? path.slice(at + marker.length) : path.replace(/^\/+/, '')).replace(/^.*\//, '');
 }
 
-function insertWindowLink() {
+function insertWindowLink(initial = {}) {
   openInsertDialog({
     title: 'Insert Markdown window link',
     intro: 'Opens another Markdown page in a new desktop window.',
     fields: [
-      { name: 'path', label: 'Markdown path under content/', value: 'file/home.md', required: true, spellcheck: false, hint: 'Example: file/home.md' },
-      linkTextField('Open page')
+      { name: 'path', label: 'Markdown path under content/', value: initial.path || 'file/home.md', required: true, spellcheck: false, hint: 'Example: file/home.md' },
+      { ...linkTextField('Open page'), value: initial.label || selectedOr('Open page') }
     ],
     submit: values => insertClackLink('window:' + encodeURI(values.path), values.label)
   });
@@ -891,11 +892,11 @@ function refreshVideoDialog() {
   videoSnippet.textContent = videoEmbedMarkdown();
 }
 
-function insertVideoEmbed() {
+function insertVideoEmbed(initial = {}) {
   const selected = cm.getSelection().trim();
   const looksLikeSource = /^(?:https?:\/\/|[\w./-]+\.(?:mp4|webm|ogv|ogg|mov|m4v))/i.test(selected);
-  videoSrc.value = looksLikeSource ? selected : '';
-  videoTitle.value = looksLikeSource ? '' : selected;
+  videoSrc.value = initial.source || (looksLikeSource ? selected : '');
+  videoTitle.value = initial.title !== undefined ? initial.title : (looksLikeSource ? '' : selected);
   videoLoop.checked = true;
   videoAutoplay.checked = true;
   videoMuted.checked = true;
@@ -924,25 +925,25 @@ document.getElementById('videoGo').addEventListener('click', commitVideoEmbed);
 document.getElementById('videoClose').addEventListener('click', () => videoModal.classList.remove('open'));
 document.getElementById('videoCancel').addEventListener('click', () => videoModal.classList.remove('open'));
 
-function insertKicanvasEmbed() {
+function insertKicanvasEmbed(initial = {}) {
   openInsertDialog({
     title: 'Insert inline KiCanvas design',
     intro: 'Embeds an interactive KiCad schematic or board in the rendered page.',
     fields: [
-      { name: 'source', label: 'KiCad file URL or site-root path', value: 'content/applications/kicad/example.kicad_sch', required: true, spellcheck: false },
-      { name: 'title', label: 'Optional design caption', value: selectedOr('') }
+      { name: 'source', label: 'KiCad file URL or site-root path', value: initial.source || 'content/applications/kicad/example.kicad_sch', required: true, spellcheck: false },
+      { name: 'title', label: 'Optional design caption', value: initial.title !== undefined ? initial.title : selectedOr('') }
     ],
     submit: values => insertMarkdownEmbed('kicanvas', values.source, values.title.replace(/["']/g, ''))
   });
 }
 
-function insertModelEmbed() {
+function insertModelEmbed(initial = {}) {
   openInsertDialog({
     title: 'Insert inline 3D model',
     intro: 'Embeds an STL, STEP, OBJ, or 3MF model. Defaults are borderless, spinning, and transparent.',
     fields: [
-      { name: 'source', label: '3D model URL or site-root path', value: 'content/applications/models/pj3410-round-nut.stl', required: true, spellcheck: false },
-      { name: 'title', label: 'Optional model caption', value: selectedOr('') },
+      { name: 'source', label: '3D model URL or site-root path', value: initial.source || 'content/applications/models/pj3410-round-nut.stl', required: true, spellcheck: false },
+      { name: 'title', label: 'Optional model caption', value: initial.title !== undefined ? initial.title : selectedOr('') },
       { name: 'position', label: 'Position', type: 'select', value: '', options: [
         { value: '', label: 'Inline — full width' },
         { value: 'left', label: 'Float left beside text' },
@@ -1017,13 +1018,13 @@ function insertVideoLink() {
   });
 }
 
-function insertPDFLink() {
+function insertPDFLink(initial = {}) {
   openInsertDialog({
     title: 'Insert PDF Reader file link',
     intro: 'Opens a PDF in the ClackOS PDF Reader application.',
     fields: [
-      { name: 'source', label: 'PDF URL or site-root path', value: 'content/files/manual.pdf', required: true, spellcheck: false },
-      linkTextField('Open in PDF Reader')
+      { name: 'source', label: 'PDF URL or site-root path', value: initial.source || 'content/files/manual.pdf', required: true, spellcheck: false },
+      { ...linkTextField('Open in PDF Reader'), value: initial.label || selectedOr('Open in PDF Reader') }
     ],
     submit: values => insertClackLink(`app:applications/pdf-reader/index.html?file=${encodePart(values.source)}`, values.label)
   });
@@ -1049,38 +1050,38 @@ function insertFalstadLink() {
   });
 }
 
-function insertCircuitLink() {
+function insertCircuitLink(initial = {}) {
   openInsertDialog({
     title: 'Insert Falstad circuit file link',
     intro: 'Opens a saved circuit from content/applications/circuits/.',
     fields: [
-      { name: 'file', label: 'Circuit filename', value: 'example-lrc.txt', required: true, spellcheck: false, hint: 'A full repository path is also accepted; only the filename is used.' },
-      linkTextField('Open circuit simulator')
+      { name: 'file', label: 'Circuit filename', value: initial.file || 'example-lrc.txt', required: true, spellcheck: false, hint: 'A full repository path is also accepted; only the filename is used.' },
+      { ...linkTextField('Open circuit simulator'), value: initial.label || selectedOr('Open circuit simulator') }
     ],
     submit: values => insertClackLink(`app:applications/circuit.html?circuit=${encodePart(siteFileName(values.file, 'circuits'))}`, values.label)
   });
 }
 
-function insertKicadLink() {
+function insertKicadLink(initial = {}) {
   openInsertDialog({
     title: 'Insert KiCad file link',
     intro: 'Opens a saved design from content/applications/kicad/.',
     fields: [
-      { name: 'file', label: 'KiCad filename', value: 'example.kicad_sch', required: true, spellcheck: false, hint: 'A full repository path is also accepted; only the filename is used.' },
-      linkTextField('Open in KiCad Viewer')
+      { name: 'file', label: 'KiCad filename', value: initial.file || 'example.kicad_sch', required: true, spellcheck: false, hint: 'A full repository path is also accepted; only the filename is used.' },
+      { ...linkTextField('Open in KiCad Viewer'), value: initial.label || selectedOr('Open in KiCad Viewer') }
     ],
     submit: values => insertClackLink(`app:applications/kicad.html?file=${encodePart(siteFileName(values.file, 'kicad'))}`, values.label)
   });
 }
 
-function insertOpenscadLink() {
+function insertOpenscadLink(initial = {}) {
   openInsertDialog({
     title: 'Insert OpenSCAD file link',
     intro: 'Opens a saved .scad file in the ClackOS OpenSCAD application.',
     fields: [
-      { name: 'file', label: 'OpenSCAD file path from the site root', value: 'content/applications/openscad/box.scad', required: true, spellcheck: false },
+      { name: 'file', label: 'OpenSCAD file path from the site root', value: initial.file || 'content/applications/openscad/box.scad', required: true, spellcheck: false },
       { name: 'build', label: 'Build the model automatically when opened', type: 'checkbox', value: false },
-      linkTextField('Open in OpenSCAD')
+      { ...linkTextField('Open in OpenSCAD'), value: initial.label || selectedOr('Open in OpenSCAD') }
     ],
     submit: values => insertClackLink(`app:applications/openscad.html?src=${encodePart(values.file)}${values.build ? '&render=1' : ''}`, values.label)
   });
@@ -1230,6 +1231,7 @@ pageModal.addEventListener('keydown', e => {
 
 const insertCommands = {
   'insert-page': insertNewPage,
+  'insert-managed-file': insertManagedFile,
   'insert-upload': startUpload,
   'insert-window': insertWindowLink,
   'insert-action': insertActionLink,
@@ -1394,6 +1396,74 @@ function markdownForFile(item) {
   if (item.kind === 'video') return `@[video](${target} "${label.replace(/"/g, '')}"){noloop controls}`;
   if (item.kind === 'model') return `@[model](${target} "${label.replace(/"/g, '')}")`;
   return `[${label}](${target})`;
+}
+
+function fileDialogSource(item) {
+  return item.drive === 'github' ? item.path : item.url;
+}
+
+function fileDialogLabel(item) {
+  return item.name.replace(/\.[^.]+$/, '').replace(/[\[\]"]/g, '') || 'Open file';
+}
+
+function insertImageFile(initial = {}) {
+  openInsertDialog({
+    title: 'Insert image',
+    intro: 'Adds the selected image to the rendered page.',
+    fields: [
+      { name: 'source', label: 'Image URL or site-root path', value: initial.source || '', required: true, spellcheck: false },
+      { name: 'alt', label: 'Alternative text', value: initial.label || selectedOr('Image'), required: true, hint: 'Briefly describe the image for readers who cannot see it.' }
+    ],
+    submit: values => {
+      cm.replaceSelection(`![${values.alt.replace(/\]/g, '\\]')}](${markdownLinkTarget(values.source)})`);
+      cm.focus();
+    }
+  });
+}
+
+function insertFileLink(initial = {}) {
+  openInsertDialog({
+    title: initial.kind === 'audio' ? 'Insert audio file link' : 'Insert file link',
+    intro: 'Adds a link to the selected file.',
+    fields: [
+      { name: 'source', label: 'File URL or site-root path', value: initial.source || '', required: true, spellcheck: false },
+      { ...linkTextField('Open file'), value: initial.label || selectedOr('Open file') }
+    ],
+    submit: values => insertClackLink(values.source, values.label)
+  });
+}
+
+function openDialogForManagedFile(item) {
+  const source = fileDialogSource(item);
+  const label = fileDialogLabel(item);
+  const extension = item.name.match(/\.([^.]+)$/)?.[1]?.toLowerCase() || '';
+  const lowerPath = String(item.path || '').toLowerCase();
+
+  if (item.kind === 'image') return insertImageFile({ source, label });
+  if (item.kind === 'video') return insertVideoEmbed({ source, title: label });
+  if (item.kind === 'model') return insertModelEmbed({ source, title: label });
+  if (item.kind === 'pdf') return insertPDFLink({ source, label });
+  if (item.kind === 'markdown') {
+    const path = item.drive === 'github' ? source.replace(/^content\//i, '') : source;
+    return insertWindowLink({ path, label });
+  }
+  if (['kicad_sch', 'kicad_pcb', 'kicad_wks'].includes(extension))
+    return insertKicanvasEmbed({ source, title: label });
+  if (extension === 'scad') return insertOpenscadLink({ file: source, label });
+  if (lowerPath.includes('/applications/circuits/') && extension === 'txt')
+    return insertCircuitLink({ file: source, label });
+  if (lowerPath.includes('/applications/kicad/'))
+    return insertKicadLink({ file: source, label });
+  return insertFileLink({ source, label, kind: item.kind });
+}
+
+function insertManagedFile() {
+  window.ClackOSFileManager.open({
+    title: 'Insert file from File Manager',
+    accept: item => item.type === 'file',
+    actionLabel: 'Choose',
+    onSelect: openDialogForManagedFile
+  });
 }
 
 async function useManagedFile(item) {
