@@ -64,9 +64,19 @@ body {
 .menu > button:hover, .menu.open > button { background: var(--leaf-deep); }
 .menu > button:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
 .dropdown {
-  position: absolute; top: 34px; left: 0; min-width: 220px;
+  position: absolute; top: 34px; left: 0;
   background: transparent; color: var(--control-text);
   display: none; padding: 7px 2px; z-index: 9001;
+  /* How much width this menu is allowed. In a roomy browser window that is no
+     constraint at all and the menu is its natural width, no narrower than
+     220px; when the window is too small for the menu (or for the fly-out that
+     has to sit beside it) clackos.js replaces --room with what is really
+     available and the menu narrows to fit, wrapping its labels, rather than
+     disappearing off the edge. Declared here rather than inherited so a
+     fly-out never picks up its parent's allowance. */
+  --room: 100vw;
+  min-width: min(220px, var(--room));
+  max-width: var(--room);
 }
 .dropdown::before {
   content: ''; position: absolute; inset: 0; z-index: -2;
@@ -103,6 +113,12 @@ body {
 .dropdown.sub { top: 0; left: 100%; z-index: 9002; }
 .dropdown.sub::before,
 .dropdown.sub::after { border-radius: 0 8px 8px 8px; }
+/* A menu narrowed to fit the window wraps its labels rather than spilling over
+ * the paper edge, and once it is that tight it also gives the text back the
+ * room normally spent on padding and on the gap out to a shortcut or arrow. */
+.dropdown .menu-item-label { overflow-wrap: anywhere; }
+.dropdown.narrow button { gap: 8px; padding-left: 9px; padding-right: 9px; }
+.dropdown.narrow .menu-item-label { gap: 0.4em; }
 .submenu:hover > .dropdown.sub,
 .submenu.open > .dropdown.sub { display: block; }
 /* ---------- Date pill, clock and the upcoming-events pull-down ---------- */

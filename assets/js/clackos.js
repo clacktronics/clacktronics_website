@@ -1327,6 +1327,46 @@ function refreshDynamicItems() {
   });
 }
 
+/* Menus grow rightwards — a dropdown from its button, a fly-out from the item
+ * that owns it — so in a narrow browser window the right-hand edge starts
+ * cutting them off. Both are measured against that edge as they open and told
+ * how much width is actually going spare (--room, see clackos.css); a menu
+ * that doesn't fit narrows and wraps its labels instead of being clipped.
+ * MENU_MIN_WIDTH is where narrowing stops, since a menu a few characters wide
+ * is no more use than one running off the screen. */
+const MENU_EDGE_GAP = 8;   /* leaves the pixel shadow clear of the window edge */
+const MENU_MIN_WIDTH = 120;
+const MENU_NATURAL_WIDTH = 220;   /* mirrors the min-width of .dropdown in the CSS */
+
+/* room going spare to the right of x, and the CSS to spend it with: below its
+ * natural width a menu is also told to trim its padding (.narrow) */
+function fitTo(el, x) {
+  const room = Math.max(window.innerWidth - MENU_EDGE_GAP - x, MENU_MIN_WIDTH);
+  el.style.setProperty('--room', room + 'px');
+  el.classList.toggle('narrow', room < MENU_NATURAL_WIDTH);
+}
+
+/* Sized as the menu opens rather than as a fly-out is hovered, so the list
+ * never reflows under the pointer. A menu holding fly-outs gives up width for
+ * one first — that way the fly-out lands beside it rather than on top of it —
+ * and if even that leaves too little, the menu slides out from under its button
+ * towards the left of the screen to buy the pair some more. */
+function fitDropdown(menu, dd) {
+  /* the dropdown is still display:none here, but it hangs off the menu button,
+   * which is on screen and therefore measurable */
+  const anchor = menu.getBoundingClientRect().left;
+  const reserve = dd.querySelector('.submenu') ? MENU_MIN_WIDTH : 0;
+  const left = Math.max(0, Math.min(anchor, window.innerWidth - MENU_EDGE_GAP - reserve - MENU_MIN_WIDTH));
+  dd.style.left = (left - anchor) + 'px';
+  fitTo(dd, left + reserve);
+}
+
+function fitSubmenu(sub) {
+  /* a fly-out sits at left:100% of its .submenu wrapper, so the wrapper's right
+   * edge is where it starts — again measurable before the fly-out is shown */
+  fitTo(sub, sub.parentElement.getBoundingClientRect().right);
+}
+
 /* fill a dropdown from a list of items; recurses for nested submenus so the
  * same item vocabulary (window/app/action/sep/wallpapers) works at any depth */
 function buildMenuItems(container, items, folder) {
@@ -1352,12 +1392,14 @@ function buildMenuItems(container, items, folder) {
       sub.className = 'dropdown sub';
       wrap.appendChild(sub);
       buildMenuItems(sub, item.items, folder);
-      /* CSS opens it on hover; a click toggles it so it works by tap too */
+      /* CSS opens it on hover; a click toggles it so it works by tap too. Both
+       * routes size it to the room available before it becomes visible. */
+      wrap.addEventListener('pointerenter', () => fitSubmenu(sub));
       sb.addEventListener('click', e => {
         e.stopPropagation();
         const wasOpen = wrap.classList.contains('open');
         container.querySelectorAll('.submenu.open').forEach(s => s.classList.remove('open'));
-        if (!wasOpen) wrap.classList.add('open');
+        if (!wasOpen) { fitSubmenu(sub); wrap.classList.add('open'); }
       });
       container.appendChild(wrap);
     } else {
@@ -1396,18 +1438,23 @@ function buildMenu(folder, def) {
 
   buildMenuItems(dd, def.items, folder);
 
+  const open = () => {
+    refreshDynamicItems();
+    fitDropdown(m, dd);
+    m.classList.add('open');
+    menuOpen = true;
+  };
+
   btn.addEventListener('click', e => {
     e.stopPropagation();
     const wasOpen = m.classList.contains('open');
     closeMenus();
-    if (!wasOpen) { refreshDynamicItems(); m.classList.add('open'); menuOpen = true; }
+    if (!wasOpen) open();
   });
   btn.addEventListener('pointerenter', () => {
     if (menuOpen && !m.classList.contains('open')) {
       closeMenus();
-      refreshDynamicItems();
-      m.classList.add('open');
-      menuOpen = true;
+      open();
     }
   });
 
@@ -1818,6 +1865,9 @@ function reflowWindows() {
   requestAnimationFrame(() => {
     reflowPending = false;
     windows.forEach(fitWindowToDesktop);
+    /* a menu left open across the resize is re-fitted to the new window */
+    menubar.querySelectorAll('.menu.open').forEach(m => fitDropdown(m, m.querySelector('.dropdown')));
+    menubar.querySelectorAll('.submenu.open > .dropdown.sub').forEach(sub => fitSubmenu(sub));
   });
 }
 window.addEventListener('resize', reflowWindows);

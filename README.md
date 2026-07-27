@@ -514,6 +514,7 @@ the left however many there are.
 { "type": "action", "label": "Undo", "disabled": true }
 { "type": "sep" }
 { "type": "wallpapers" }
+{ "type": "submenu", "label": "Games", "items": [ … ] }
 ```
 
 ```json
@@ -523,6 +524,10 @@ the left however many there are.
 
 Built-in actions: `close-front`, `tidy`, `toggle-taskbar`, `copy`, `restart`,
 `reset`, `copy-desktop-link`, `forget-desktop`.
+`{ "type": "submenu" }` nests the same item vocabulary one level deeper and
+flies out to the right of its label; in a browser window too narrow to hold
+that, the menu and its fly-out narrow themselves and wrap their labels so they
+stay on screen rather than being cut off by the edge.
 `{ "type": "wallpapers" }` expands to the wallpaper picker. Wallpapers are
 bitmap files under `assets/backgrounds/`. Curated names and the default live in
 `content/site.json`; additional bitmap files in the public repository directory
