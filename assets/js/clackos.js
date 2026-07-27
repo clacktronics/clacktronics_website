@@ -394,9 +394,11 @@ let appInstances = 0;
 const MINW = 320, MINH = 180;
 /* largest a window opens at when its size is relative to the desktop: on a
  * very wide browser window a percentage would give an absurdly large window,
- * so relative sizes stop growing here. Explicit pixel sizes in frontmatter,
- * dragging, resizing and maximising are all unaffected. */
-const MAXW = 1100, MAXH = 800;
+ * so relative sizes stop growing here. The width is the 640px text column
+ * ('.page' in content.css) plus about 20%, leaving a gutter either side of
+ * the page's own padding. Explicit pixel sizes in frontmatter, dragging,
+ * resizing and maximising are all unaffected. */
+const MAXW = 770, MAXH = 800;
 /* breathing room kept between a shrunk window and the desktop edges */
 const FIT_MARGIN = 16;
 
