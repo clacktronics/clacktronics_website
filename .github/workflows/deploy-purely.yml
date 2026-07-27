@@ -64,6 +64,16 @@ jobs:
             "$GITHUB_SHA" "${GITHUB_SHA:0:7}" "$BUILT_AT" "$GITHUB_REF_NAME" "$GITHUB_REPOSITORY" "$GITHUB_SHA" \
             > version.json
 
+      - name: Regenerate blog index
+        # blog.md / blog-page-N.md / blog-list.md are built from the posts by
+        # the blog-index workflow, which commits with the automatic
+        # GITHUB_TOKEN — a push that by design does NOT re-trigger this deploy.
+        # So the checkout for a "new post" push still carries the *previous*
+        # blog windows, and shipping it as-is leaves the new post missing from
+        # the blog until some unrelated push happens to come along. Rebuilding
+        # here makes the deploy self-sufficient. Tree-only; nothing is committed.
+        run: python3 scripts/build_blog_index.py
+
       - name: Regenerate plain HTML mirror
         # Build the static plain/ pages from the current content so the deploy
         # always ships an up-to-date mirror, even before the plain-mirror

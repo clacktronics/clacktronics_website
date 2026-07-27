@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="only light">
 <title>Blog (page 3) — Clacktronics</title>
-<meta name="description" content="Posts 11–15 of 46">
+<meta name="description" content="Posts 11–15 of 47">
 <meta name="robots" content="noindex,follow">
 <link rel="canonical" href="https://clacktronics.co.uk/plain/blog-page-3.html">
 <meta property="og:site_name" content="Clacktronics">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Blog (page 3)">
 <meta property="og:url" content="https://clacktronics.co.uk/plain/blog-page-3.html">
-<meta property="og:description" content="Posts 11–15 of 46">
-<meta property="og:image" content="https://clacktronics.co.uk/assets/OpenScad.jpg">
+<meta property="og:description" content="Posts 11–15 of 47">
+<meta property="og:image" content="https://clacktronics.co.uk/assets/Raspberry_pi_VGA.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,10 +30,28 @@
 <div class="plain">
 <p class="up-link"><a href="index.html">↑ clacktronics.co.uk</a></p>
 <h1 id="blog">Blog</h1>
-<p class="tagline">Posts 11–15 of 46</p>
+<p class="tagline">Posts 11–15 of 47</p>
 <div class="rule"></div>
 <div class="ctas"><a class="btn primary" href="blog-list.html">Blog list</a><a class="btn ghost" href="blog-page-2.html">&lt; Newer posts</a><a class="btn ghost" href="blog-page-4.html">Older posts &gt;</a></div>
 <p>Page 3 of 10</p>
+<div class="rule"></div>
+<p class="eyebrow" id="vga-cap">VGA cap</p>
+<p><span class="k">16 January 2016</span> · <a href="blog/2016-01-16-VGA_cap.html">Open this post on its own</a></p>
+<p><img src="https://clacktronics.co.uk/assets/Raspberry_pi_VGA.jpg" alt="Raspberry Pi VGA, audio and composite breakout" loading="lazy"><br>Here is a PCB I have designed, it was made in response to the release of the Raspberry Pi Zero. For a low cost it helps to break out the analogue outputs from the zero. The analogue ports it provides are stereo audio, composite and VGA. This is all on the same edge as the Zero&#x27;s existing connectors. This board is ideal if you want to utilize a computer monitor, especially if it has built in speakers like many &#x27;multimedia&#x27; TFT screens that now cost very little second hand. Apart from the composite output it will also work on any Raspberry Pi that has the 40 pin GPIO header (Raspberry Pi A/B+ and the Raspberry Pi 2) I am fund raising to make a bunch of them on Kickstarter <a href="http://kck.st/1SuGDvV" target="_blank" rel="noopener noreferrer">see here</a></p>
+<p><b>It is a kit</b></p>
+<p>To make it as cheap as possible and easy to adapt for different purposes it is a kit / bare PCB that uses only through-hole components. Due to a lack of space all components are folded this may make it a little fiddly to construct if you have less experience but it is not too hard.</p>
+<p>What this means though is that you can choose which way up the cap is mounted, if you what the VGA or not and if you are building into an enclosure the pads can be directly soldered.</p>
+<div class="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/iH7NiAvxM0Y" title="YouTube video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+<p><b>Enabling the outputs</b></p>
+<p>Full instructions can be found on <a href="http://crab.design" target="_blank" rel="noopener noreferrer">crab.design</a></p>
+<p>Due to space and cost the cap does not have auto configuration EEPROM as defined by the HAT specification. It has to be set up by editing the config.txt and adding files to the /boot/ partition.</p>
+<p>For VGA it uses Gert van loos VGA666 circuit which uses a passive resistor network to perform the Digital to Analogue conversion. The pins it uses are slightly different to allow for the audio to also be broken out of the GPIO header. To activate VGA an &#x27;overlay&#x27; has to be added to the configuration files of the boot partition. These will be provided in the Github repository.</p>
+<p>Analogue audio is the same as the circuit on the Raspberry Pi B+ schematic, but instead the output comes from the GPIO. To activate another &#x27;overlay&#x27; is used that comes with the default Rasbian distribution (pwm-2chan-overlay) If this and the VGA is activated only 4 GPIO pins will remain.</p>
+<p>The composite is simply an extension of the new breakout pins next to the the Zero&#x27;s GPIO header, it is connected by its own socket when the cap is pushed on.</p>
+<p>The parts activated are up to the user by simply disabling and enabling parts in the config.txt file. More information will be up soon at the crab github pages.</p>
+<div class="ctas"><a class="btn primary" href="https://github.com/crab-design/analogue_cap" target="_blank" rel="noopener noreferrer">Github files</a></div>
+<p><b>What is crab?</b></p>
+<p>Crab is going to be a series of circuits that I think are useful repeatable modules for use in installations. That is not strict though, I am also designing circuits and boards that can inspire ideas and teach that may not be so practical.</p>
 <div class="rule"></div>
 <p class="eyebrow" id="cad-with-code-openscad">CAD with code (OpenSCAD)</p>
 <p><span class="k">16 January 2016</span> · <a href="blog/2016-01-16-Openscad.html">Open this post on its own</a></p>
@@ -104,11 +122,6 @@
 <p>I drilled holes in the bottom and compressed more beads inside, I also held the steam on for a lot longer. This worked a lot better and I got a solid shape, it still did not cast flat to the surface and water flows right through it , so it is not closed cell like commercial packaging. But this is a lot better and process perhaps I can create a process to mould EPS into shapes.</p>
 <p><b>How can I improve and go further</b><br>Thats the end of my experiment for tonight, but I am interested into how to take this further, here are my further research points.</p>
 <ul class="list"><li><p>Looking at moulding stage explanation of Plastics.org.nz I notice it mentions a vacuum perhaps this may help expansion or maybe it just to remove water</p></li><li><p>Perhaps my steamer is not hot enough, I will test it with a thermometer</p></li><li><p>The EPS material is almost max-expanded, I see a lot of different grades of polystyrene on Ebay, there may be a better one.</p></li><li><p>Moulding, how to create a device to allow me to make moulds, it may not need to be metal as temperatures are fairly low, perhaps a high temp plastic might work?</p></li></ul>
-<div class="rule"></div>
-<p class="eyebrow" id="new-website">New Website</p>
-<p><span class="k">02 March 2015</span> · <a href="blog/2015-03-02-New_Website.html">Open this post on its own</a></p>
-<p><img src="https://clacktronics.co.uk/assets/Shapeoko2.jpg" alt="Shapeoko2" loading="lazy"><br>2014 nothing happened... Finally I am back, I have been occupied for a while. I decided to move the website away from wordpress as I was geting sick of the constant updates and moved to somthing a little bit more geeky. I am now using <a href="http://jekyllrb.com/" target="_blank" rel="noopener noreferrer">Jekyll</a> a script that generates the website offline using markdown as the templating system. I hope to make the website a little cleaner and more about content. Thigs have advanced a lot since I last updated, I now have a fully working 3d printer (Prusa i2) and a CNC router (shapeoko 2) both aready not the latest model! This means I have much more capability to produce one off objects ( read synthesizer panels! ). Clacktronics is still homeless but by the end of the year (2015) I hope to have a fully functional shed workshop!</p>
-<p>I hope to release 2 new pedals within the next few months. One is the Wasp Drive MKII and the other is called the ArDuinA I leave it upto you to decide what that is!</p>
 <div class="rule"></div>
 <p>Page 3 of 10</p>
 <div class="ctas"><a class="btn primary" href="blog-list.html">Blog list</a><a class="btn ghost" href="blog-page-2.html">&lt; Newer posts</a><a class="btn ghost" href="blog-page-4.html">Older posts &gt;</a></div>
