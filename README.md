@@ -559,7 +559,8 @@ Application links may include a query string. Only pages already registered as
 into an arbitrary iframe launcher. The Markdown Editor's Insert menu creates
 links for Video Lab and PDF Reader files, Falstad exported data or saved
 circuit files, KiCad files, OpenSCAD files or inline OpenSCAD code, generic
-registered applications, Markdown windows, and desktop actions.
+registered applications (chosen from the current Applications menu), Markdown
+windows, and desktop actions.
 
 - `applications/appearance.html` (Applications → System → Appearance) — a
   simple chooser for the registered bitmap background tiles and colour themes.

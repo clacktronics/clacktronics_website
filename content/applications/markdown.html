@@ -1100,12 +1100,65 @@ function insertOpenscadCodeLink() {
   });
 }
 
-function insertAppLink() {
+let knownApplicationOptions = null;
+
+async function getKnownApplicationOptions() {
+  if (knownApplicationOptions) return knownApplicationOptions;
+  const response = await fetch(new URL('menu.json', location.href), { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Could not load the application list (${response.status}).`);
+  const menu = await response.json();
+  const options = [];
+
+  function collect(items, group = '') {
+    (items || []).forEach(item => {
+      if (item.type === 'submenu') {
+        collect(item.items, group ? `${group} › ${item.label}` : item.label);
+      } else if (item.type === 'app' && item.page) {
+        options.push({
+          value: `applications/${String(item.page).replace(/^\/+/, '')}`,
+          label: `${group ? group + ' — ' : ''}${item.label || item.title || item.page}`
+        });
+      }
+    });
+  }
+
+  collect(menu.items);
+  knownApplicationOptions = options;
+  return options;
+}
+
+async function insertAppLink() {
+  let apps = [];
+  try {
+    apps = await getKnownApplicationOptions();
+  } catch (error) {
+    status.textContent = `${error.message} Enter the registered application page manually.`;
+  }
+
+  const pageField = apps.length
+    ? {
+        name: 'page',
+        label: 'Application',
+        type: 'select',
+        value: 'applications/video/index.html',
+        required: true,
+        options: apps
+      }
+    : {
+        name: 'page',
+        label: 'Application page under content/',
+        value: 'applications/video/index.html',
+        required: true,
+        spellcheck: false
+      };
+
   openInsertDialog({
     title: 'Insert application link',
-    intro: 'Opens a registered page as a ClackOS application window.',
+    intro: apps.length
+      ? 'Choose an application registered in the ClackOS Applications menu.'
+      : 'Opens a registered page as a ClackOS application window.',
     fields: [
-      { name: 'page', label: 'Application page under content/', value: 'applications/video/index.html', required: true, spellcheck: false },
+      pageField,
       { name: 'options', label: 'Optional query string', value: '', spellcheck: false, placeholder: 'src=content/media/demo.mp4', hint: 'Do not include the leading ?.' },
       linkTextField('Open application')
     ],
