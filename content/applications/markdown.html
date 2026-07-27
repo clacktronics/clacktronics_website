@@ -164,6 +164,8 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
       <button data-cmd="commit"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Commit to website&hellip;</button>
     </div></div>
     <div class="rm"><button>Insert</button><div class="rm-dd">
+      <button data-cmd="insert-page"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New page&hellip;</button>
+      <div class="sep"></div>
       <button data-cmd="insert-upload"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload image, video or 3D model&hellip;</button>
       <div class="sep"></div>
       <button data-cmd="insert-window"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Markdown window link&hellip;</button>
@@ -208,6 +210,28 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
         <button class="btn primary" id="commitGo"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Commit</button>
         <button class="btn" id="commitCancel">Cancel</button>
         <span class="app-status" id="commitStatus"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="site-modal" id="pageModal">
+  <div class="site-box">
+    <header><span>New page</span><button id="pageClose" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
+    <div class="commit-form">
+      <label id="pageTokenRow">Fine-grained access token <span class="hint">(Contents read/write on this repo only — kept in memory, forgotten when the tab closes)</span>
+        <input type="password" id="pageToken" autocomplete="off">
+      </label>
+      <label>Page name <span class="hint">(its heading, and the text of the link left behind here)</span>
+        <input type="text" id="pageName" spellcheck="false">
+      </label>
+      <label>Repo path <span class="hint">(a markdown file under content/ — filled in from the name)</span>
+        <input type="text" id="pagePath" spellcheck="false">
+      </label>
+      <div class="commit-actions">
+        <button class="btn primary" id="pageGo"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>Create page</button>
+        <button class="btn" id="pageCancel">Cancel</button>
+        <span class="app-status" id="pageStatus"></span>
       </div>
     </div>
   </div>
@@ -807,7 +831,121 @@ function insertAppLink() {
   insertClackLink(`app:${cleanPage}${options.trim() ? '?' + options.trim().replace(/^\?/, '') : ''}`, 'Open application');
 }
 
+/* ---- Insert → New page… ----
+ * Writes a fresh page into the repository, opens it in an editor window of its
+ * own, and leaves a `window:` link to it where the cursor was. The page has to
+ * exist in the repository before the link makes sense, so this asks for the
+ * same fine-grained token File → Commit to website… uses (and reuses it for the
+ * rest of the session once it has been accepted).
+ *
+ * The new window is handed the page's text through its query string rather than
+ * being pointed at the file: the commit has only just happened, and the site
+ * takes about a minute to rebuild, so fetching it would 404. */
+const PAGE_ROOT = 'content/file/';
+const pageModal = document.getElementById('pageModal');
+const pageName = document.getElementById('pageName');
+const pagePath = document.getElementById('pagePath');
+const pageToken = document.getElementById('pageToken');
+const pageStatus = document.getElementById('pageStatus');
+let pagePathEdited = false;   /* stop filling the path in once it is typed in */
+
+function pageSlug(name) {
+  return name.trim().toLowerCase().replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'new-page';
+}
+
+/* a new page is a sibling of the one being edited, when that is known */
+function pageFolder() {
+  if (sitePath && sitePath.startsWith('content/') && sitePath.includes('/'))
+    return sitePath.slice(0, sitePath.lastIndexOf('/') + 1);
+  return PAGE_ROOT;
+}
+
+function newPageBody(name) {
+  return `---
+title: ${name}
+style: page
+---
+# ${name}
+
+This is where the page goes. Write it, then publish it with **Commit to
+website…**.
+`;
+}
+
+/* the same rule the ?repo= query uses: a markdown file, no tricks in the path */
+function safeRepoPath(path) {
+  const rel = path.replace(/^\/+/, '');
+  const parts = rel.split('/');
+  return rel && !/[\\?#\0]/.test(rel) && parts.every(part => part && part !== '.' && part !== '..')
+    && /\.(?:md|markdown)$/i.test(rel) ? rel : '';
+}
+
+function openPageWindow(path, name) {
+  const query = `repo=${encodeURIComponent(path)}&new=page&title=${encodeURIComponent(name)}`;
+  const id = `app:applications/markdown.html?${query}`;
+  if (window.parent !== window) window.parent.postMessage({ type: 'clackos-open-app', id }, location.origin);
+  else window.open(new URL(`markdown.html?${query}`, location.href).href, '_blank', 'noopener');
+}
+
+async function insertNewPage() {
+  try { await getRepoCfg(); } catch (e) { status.textContent = e.message; return; }
+  const selected = cm.getSelection().trim();
+  pageName.value = selected;
+  pagePath.value = selected ? pageFolder() + pageSlug(selected) + '.md' : pageFolder();
+  pagePathEdited = false;
+  document.getElementById('pageTokenRow').style.display = ghToken ? 'none' : 'flex';
+  pageStatus.textContent = `in ${repoCfg.repo} (${repoCfg.branch})`;
+  pageModal.classList.add('open');
+  (ghToken ? pageName : pageToken).focus();
+}
+
+async function createPage() {
+  const name = pageName.value.trim();
+  const token = ghToken || pageToken.value.trim();
+  if (!name) { pageStatus.textContent = 'A page name is needed.'; pageName.focus(); return; }
+  if (!token) { pageStatus.textContent = 'A token is needed.'; pageToken.focus(); return; }
+  let typed = pagePath.value.trim().replace(/^\/+/, '') || pageFolder();
+  if (typed.endsWith('/')) typed += pageSlug(name) + '.md';
+  if (!/\.(?:md|markdown)$/i.test(typed)) typed += '.md';
+  const path = safeRepoPath(typed);
+  if (!path || !path.startsWith('content/')) {
+    pageStatus.textContent = 'Pages live in a markdown file under content/.';
+    pagePath.focus();
+    return;
+  }
+  pageStatus.textContent = 'Creating…';
+  try {
+    await putRepoFile(path, newPageBody(name), `Add ${path}`, token, true);
+    ghToken = token;             /* keep for the rest of the session */
+    pageToken.value = '';
+    pageModal.classList.remove('open');
+    /* the link this page keeps: window: targets are relative to content/ */
+    cm.replaceSelection(`[${name.replace(/\]/g, '\\]')}](`
+      + `${markdownLinkTarget('window:' + encodeURI(path.slice('content/'.length)))})`);
+    cm.focus();
+    openPageWindow(path, name);
+    status.textContent = `Created ${path} — link inserted; the page opened in a window of its own.`;
+  } catch (e) {
+    pageStatus.textContent = e.message;
+  }
+}
+
+/* the path follows the name until someone types their own */
+pageName.addEventListener('input', () => {
+  if (!pagePathEdited) pagePath.value = pageFolder() + pageSlug(pageName.value) + '.md';
+});
+pagePath.addEventListener('input', () => { pagePathEdited = true; });
+document.getElementById('pageGo').addEventListener('click', createPage);
+document.getElementById('pageClose').addEventListener('click', () => pageModal.classList.remove('open'));
+document.getElementById('pageCancel').addEventListener('click', () => pageModal.classList.remove('open'));
+pageModal.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT') createPage();
+  if (e.key === 'Escape') pageModal.classList.remove('open');
+});
+
 const insertCommands = {
+  'insert-page': insertNewPage,
   'insert-upload': startUpload,
   'insert-window': insertWindowLink,
   'insert-action': insertActionLink,
@@ -1026,39 +1164,47 @@ const b64utf8 = s => {
   return btoa(bin);
 };
 
+/* One write to the repository through GitHub's contents API. `mustBeNew` is for
+ * files that are supposed not to exist yet (a new page), so that a name already
+ * in use is reported rather than quietly overwritten. */
+async function putRepoFile(path, text, message, token, mustBeNew = false) {
+  const api = `https://api.github.com/repos/${repoCfg.repo}/contents/${path}`;
+  const headers = {
+    'Authorization': 'Bearer ' + token,
+    'Accept': 'application/vnd.github+json'
+  };
+  /* current sha (absent for a new file); also our conflict check */
+  let sha = null;
+  const cur = await fetch(`${api}?ref=${encodeURIComponent(repoCfg.branch)}`, { headers });
+  if (cur.status === 200) sha = (await cur.json()).sha;
+  else if (cur.status === 401) throw new Error('token was rejected (401)');
+  else if (cur.status !== 404) throw new Error(`could not check current file (${cur.status})`);
+  if (sha && mustBeNew) throw new Error(`${path} already exists — pick another name`);
+
+  const res = await fetch(api, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({
+      message,
+      content: b64utf8(text),
+      branch: repoCfg.branch,
+      ...(sha ? { sha } : {})
+    })
+  });
+  if (res.status === 409) throw new Error('conflict — the file changed on GitHub since you opened it');
+  if (!res.ok) throw new Error(`GitHub said ${res.status}: ${(await res.json()).message || ''}`);
+  return res.json();
+}
+
 async function doCommit() {
   const path = commitPath.value.trim().replace(/^\/+/, '');
   const msg = commitMsg.value.trim() || 'Update ' + fileName;
   const token = ghToken || commitToken.value.trim();
   if (!path) { commitStatus.textContent = 'A repo path is needed.'; return; }
   if (!token) { commitStatus.textContent = 'A token is needed.'; return; }
-  const api = `https://api.github.com/repos/${repoCfg.repo}/contents/${path}`;
-  const headers = {
-    'Authorization': 'Bearer ' + token,
-    'Accept': 'application/vnd.github+json'
-  };
   commitStatus.textContent = 'Committing…';
   try {
-    /* current sha (absent for a new file); also our conflict check */
-    let sha = null;
-    const cur = await fetch(`${api}?ref=${encodeURIComponent(repoCfg.branch)}`, { headers });
-    if (cur.status === 200) sha = (await cur.json()).sha;
-    else if (cur.status === 401) throw new Error('token was rejected (401)');
-    else if (cur.status !== 404) throw new Error(`could not check current file (${cur.status})`);
-
-    const res = await fetch(api, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify({
-        message: msg,
-        content: b64utf8(mde.value()),
-        branch: repoCfg.branch,
-        ...(sha ? { sha } : {})
-      })
-    });
-    if (res.status === 409) throw new Error('conflict — the file changed on GitHub since you opened it');
-    if (!res.ok) throw new Error(`GitHub said ${res.status}: ${(await res.json()).message || ''}`);
-    const out = await res.json();
+    const out = await putRepoFile(path, mde.value(), msg, token);
     ghToken = token;             /* keep for the rest of the session */
     commitToken.value = '';
     sitePath = path;
@@ -1137,10 +1283,30 @@ function showRendered() {
   if (!mde.isPreviewActive()) EasyMDE.togglePreview(mde);
 }
 
+/* The other half of Insert → New page…: the page has just been committed but
+ * the site has not rebuilt yet, so its text is written here from the name it
+ * was given — the same text that was committed — rather than fetched. It knows
+ * its repo path, so File → Commit to website… updates it from the first edit. */
+function newPage(path, name) {
+  const title = name.trim() || path.split('/').pop().replace(/\.(?:md|markdown)$/i, '');
+  mde.value(newPageBody(title));
+  handle = null;
+  sitePath = path;
+  fileName = path.split('/').pop();
+  dirty = false;
+  show();
+  status.textContent = `${path} — new page, already committed; Commit to website… publishes your edits.`;
+  /* land the cursor on the heading rather than in the frontmatter */
+  mde.codemirror.setCursor({ line: 4, ch: 2 + title.length });
+  mde.codemirror.focus();
+}
+
 /* ---- open a file passed in the query string ----
  * `open` remains content-relative for the desktop's File → Edit command;
  * `repo` is a repository-root path supplied by the File Manager;
- * `new=post` starts a dated blog post instead of opening anything. */
+ * `new=post` starts a dated blog post instead of opening anything;
+ * `new=page` with a `repo` path fills in a page just created by another
+ * editor window instead of fetching it. */
 {
   const params = new URLSearchParams(location.search);
   const repositoryPath = params.get('repo'); const contentPath = params.get('open');
@@ -1150,13 +1316,15 @@ function showRendered() {
     newPost();
     if (rendered) showRendered();
   } else if (requested) {
-    const rel = requested.replace(/^\/+/, '');
-    const parts = rel.split('/');
-    if (rel && !/[\\?#\0]/.test(rel) && parts.every(part => part && part !== '.' && part !== '..') && /\.(?:md|markdown)$/i.test(rel))
+    const rel = safeRepoPath(requested);
+    if (!rel) status.textContent = 'Refused to open an unexpected path.';
+    else if (params.get('new') === 'page') {
+      newPage(rel, params.get('title') || '');
+      if (rendered) showRendered();
+    } else
       openRepositoryMarkdown(rel)
         .then(() => { if (rendered) showRendered(); })
         .catch(error => { status.textContent = error.message; });
-    else status.textContent = 'Refused to open an unexpected path.';
   } else if (rendered) showRendered();
 }
 })();
