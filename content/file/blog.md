@@ -1,6 +1,6 @@
 ---
 title: Blog
-tagline: Posts 1–5 of 46
+tagline: Posts 1–5 of 47
 style: plain
 ---
 # Blog
@@ -9,6 +9,20 @@ style: plain
 [Older posts >](window:file/blog-page-2.md)
 
 Page 1 of 10
+
+---
+
+## PCB Heater Design tool
+
+`27 July 2026` · [Open this post on its own](window:file/blog/2026-07-27-new-post.md)
+
+![pcb_heater_design-tool](https://clacktronics.co.uk/temp/assets/uploads/2026/07/20260727-131006-5787af2f-pcb-heater-design-tool.png)
+
+I needed to create a PCB design tool that would work out the trace width and length to heat at an approximate power at a defined voltage. Also whilst I was at it I added features that made nicer infill patterns using well known space filling algorithms. It can then export that design as an inverted image for DIY PCB etching or KiCAD so it can be fabricated.
+
+![Etched heater PCB](https://clacktronics.co.uk/temp/assets/uploads/2026/07/20260727-124521-b609a884-gemini-generated-image-okevd4okevd4okev.png)
+
+Here is what I created, it works fairly close to the intended  power a heats up nicely, I also think the Moore (Hilbert) curve looks nice with round corners!
 
 ---
 
@@ -129,15 +143,6 @@ from flipil import flipil
       panel1._translate()
       panel1.send()
 ```
-
----
-
-## Boldport Club
-
-`02 January 2019` · [Open this post on its own](window:file/blog/2019-01-02-Boldport.md)
-
-![Annanas](https://clacktronics.co.uk/assets/boldport.jpg)
-In 2017 I started working for [Boldport](https://boldport.com) a PCB design company that specialises in attractive circuit boards and runs [boldport club](https://boldport.club) a monthly subscription where you receive a highly designed electronic kit every month. Above is the very first kit I designed called [Ananas](https://www.boldport.com/products/ananas/) it was a challenge to make my first design 3D but it turned out very well! Boldport decided to [Change the way it works](https://www.boldport.com/blog/2018/10/18/boldport-club-is-changing) so I decided to write up how the design process works for a project kit. [Please read this blog post](https://www.boldport.com/blog/2018/11/22/ben-making-a-project) to find out about how this unique design was made *image courtesy Boldport ltd*
 
 ---
 

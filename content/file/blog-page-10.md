@@ -1,6 +1,6 @@
 ---
 title: Blog (page 10)
-tagline: Posts 46–46 of 46
+tagline: Posts 46–47 of 47
 style: plain
 robots: noindex
 ---
@@ -10,6 +10,21 @@ robots: noindex
 [< Newer posts](window:file/blog-page-9.md)
 
 Page 10 of 10
+
+---
+
+## Amdek PCK-100
+
+`27 January 2011` · [Open this post on its own](window:file/blog/2011-01-27-amdek-pck-100.md)
+
+[![](https://clacktronics.co.uk/assets/643_amdek_pck100.jpg)](https://clacktronics.co.uk/assets/Amdek_PCK100.jpg)
+Analogue electronic drum pad by Amdek a DIY kit version of the Boss PC-2. I was asked to build one. Everything was fine. except the rubber pads seem to have some kind of mold.
+
+[![](https://clacktronics.co.uk/assets/643_amdek_pck100_back.jpg)](https://clacktronics.co.uk/assets/Amdek_PCK100_back.jpg)I added a standard tip - guitar DC socket into the back. It originally had an audio jack style connector - which was completely corroded.
+
+Here is a quick video of it hooked upto a practice pad with a Piezo attached to it.... sorry the camera was the wrong way up.
+
+http://www.youtube.com/watch?v=8UCsbIOCBrs
 
 ---
 

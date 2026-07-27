@@ -1,6 +1,6 @@
 ---
 title: Blog (page 7)
-tagline: Posts 31–35 of 46
+tagline: Posts 31–35 of 47
 style: plain
 robots: noindex
 ---
@@ -11,6 +11,16 @@ robots: noindex
 [Older posts >](window:file/blog-page-8.md)
 
 Page 7 of 10
+
+---
+
+## Wasp Drive - First batch complete!!
+
+`04 July 2011` · [Open this post on its own](window:file/blog/2011-07-04-wasp-drive-first-batch-complete.md)
+
+[![](https://clacktronics.co.uk/assets/643_wasp-batch.jpg)](https://clacktronics.co.uk/assets/wasp-batch.jpg)Here is the first batch of Clacktronics new products, it is a Wasp Filter with a driving input, see more info [here](http://clacktronics.co.uk/products/wasp-drive).
+
+http://cgi.ebay.co.uk/ws/eBayISAPI.dll?ViewItem&item=120745511966&ssPageName=STRK%3AMESE%3AIT
 
 ---
 
@@ -100,18 +110,6 @@ Surprisingly the keyboard is in excellent condition, it definitly makes it a far
 
 [EDP Wasp Deluxe Demo after Repair](http://soundcloud.com/clacktronics/edp-wasp-deluxe) by [Clacktronics Repair](http://soundcloud.com/clacktronics)
 [![](https://clacktronics.co.uk/assets/643_edp_wasp_deluxe_bsck643.jpg)](https://clacktronics.co.uk/assets/EDP_Wasp_deluxe_Bsck643.jpg)
-
----
-
-## (Late) Spring Cleanout - AVRsyn
-
-`07 June 2011` · [Open this post on its own](window:file/blog/2011-06-07-late-spring-cleanout-avrsyn.md)
-
-[![](https://clacktronics.co.uk/assets/643_avrsyn-main1.jpg)](https://clacktronics.co.uk/assets/AVRSYN-main1.jpg) Getting rid of items I have been sitting on too long, here is an AVRsyn by Elby Designs. It is an AVR based Analogue Modelling synth. It is quite cool and is up for auction [here](http://cgi.ebay.co.uk/ws/eBayISAPI.dll?ViewItem&item=120735045288&ssPageName=STRK:MESE:IT).
-
-Not particularity good looking but is quite unique nonetheless!
-
-[![](https://clacktronics.co.uk/assets/643_avrsyn-guts1.jpg)](https://clacktronics.co.uk/assets/AVRSYN-guts1.jpg)
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Blog (page 9)
-tagline: Posts 41–45 of 46
+tagline: Posts 41–45 of 47
 style: plain
 robots: noindex
 ---
@@ -11,6 +11,36 @@ robots: noindex
 [Older posts >](window:file/blog-page-10.md)
 
 Page 9 of 10
+
+---
+
+## Realistic Reverb Noismaking Mods
+
+`07 April 2011` · [Open this post on its own](window:file/blog/2011-04-07-realistic-reverb-noismaking-mods.md)
+
+[![](https://clacktronics.co.uk/assets/643_realistic-reverb.jpg)](https://clacktronics.co.uk/assets/Realistic-Reverb.jpg) I found this Realistic Reverb in quite a bad state without a case at a car boot sale, I was intrigued, this is one of those effects that are notorious for all the wrong reasons! Noisy and not really a reverb more of a short delay or flanger (with no modulation.) Once I fixed it up I proceeded to modify a few parts to make it more experimental and push it to its extremes.  The slide pots were completely busted so I had to replace them. I adjusted the controls so that at moderate levels it will operate like normal but also can be pushed to the extreme. In this post I will describe how they work and how you can implement these mods yourself.
+
+[Modified Realistic Reverb - Microphone Input](http://soundcloud.com/clacktronics/modified-realistic-reverb-1) by [Clacktronics Repair](http://soundcloud.com/clacktronics)
+
+[Modified Realistic Reverb - Tibetan Buddihist Rights](http://soundcloud.com/clacktronics/modified-realistic-reverb) by [Clacktronics Repair](http://soundcloud.com/clacktronics)
+
+[![](https://clacktronics.co.uk/assets/643_realistic-reverb-knobs-643.jpg)](https://clacktronics.co.uk/assets/Realistic-Reverb-Knobs-643.jpg)
+
+The face was made by laser printing on Lazertran then wetting , applying then baking in the oven, it creates a very durable graphic. THe DC jack was left in place and is stuck through the enclosure through a square hole.
+
+**Schematic**[
+![](https://clacktronics.co.uk/assets/643_realistic-reverb-schematic-with-mods.gif)](https://clacktronics.co.uk/assets/Realistic-Reverb-Schematic-With-Mods.gif)
+
+It is quite simple, locate R21 (on the board it is simply labeled '21') and replace. then replace VR2 the slider with a IMLog one, you can also use 1m linear if you cannot get a Log one. The switches are optional, they are only really necessary if you need to re-house it or if you want to get rid of the phono input on 'Line.'
+
+[![](https://clacktronics.co.uk/assets/643_realistic-reverb-in-out-643.jpg)](https://clacktronics.co.uk/assets/Realistic-Reverb-IN-OUT-643.jpg)
+[![](https://clacktronics.co.uk/assets/643_realistic-reverb-dc-643.jpg)](https://clacktronics.co.uk/assets/Realistic-Reverb-DC-643.jpg)
+
+It really come alive with no input and just feedback as demonstrated below
+
+[Modified Realistic Reverb - No input noise generation](http://soundcloud.com/clacktronics/modified-realistic-reverb-no) by [Clacktronics Repair](http://soundcloud.com/clacktronics)
+
+@[youtube](https://www.youtube.com/watch?v=Qkex7GeJat4)
 
 ---
 
@@ -82,21 +112,6 @@ Just bought samples of Hammond Enclosures Eddystone 11451 and 27969 they would m
 See here for some amazing uses of these boxes in the related 1590a Hammond box ( eddystone is the uk branch that was bought out by Hammond in the late ninties )
 
 [DIY   Stompboxes 1590a thread ](http://www.diystompboxes.com/smfforum/index.php?topic=64752.0)
-
----
-
-## Amdek PCK-100
-
-`27 January 2011` · [Open this post on its own](window:file/blog/2011-01-27-amdek-pck-100.md)
-
-[![](https://clacktronics.co.uk/assets/643_amdek_pck100.jpg)](https://clacktronics.co.uk/assets/Amdek_PCK100.jpg)
-Analogue electronic drum pad by Amdek a DIY kit version of the Boss PC-2. I was asked to build one. Everything was fine. except the rubber pads seem to have some kind of mold.
-
-[![](https://clacktronics.co.uk/assets/643_amdek_pck100_back.jpg)](https://clacktronics.co.uk/assets/Amdek_PCK100_back.jpg)I added a standard tip - guitar DC socket into the back. It originally had an audio jack style connector - which was completely corroded.
-
-Here is a quick video of it hooked upto a practice pad with a Piezo attached to it.... sorry the camera was the wrong way up.
-
-http://www.youtube.com/watch?v=8UCsbIOCBrs
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Blog (page 5)
-tagline: Posts 21–25 of 46
+tagline: Posts 21–25 of 47
 style: plain
 robots: noindex
 ---
@@ -11,6 +11,20 @@ robots: noindex
 [Older posts >](window:file/blog-page-6.md)
 
 Page 5 of 10
+
+---
+
+## Maplin ADA Delay
+
+`04 January 2013` · [Open this post on its own](window:file/blog/2013-01-04-maplin-ada-delay.md)
+
+[![Maplin ADA](https://clacktronics.co.uk/assets/643_maplin-ada.jpg)](../assets/Maplin-ADA.jpg)
+I had this one sitting on my desk a while. Whilst at the [Music Hackspace](http://musichackspace.org/) in London another member ([Bioni Samp](https://bionisamp.wordpress.com/)) showed me this to look at. At first I thought it must just be another BBD or specialist IC delay but upon looking inside I realised it was a discrete 8 bit digital delay using an 8k x 8 sram IC as its memory. It was broken and I didnt really have enough time to fix it but because it was so interesting I took it.
+
+[![Maplin ADA inside](https://clacktronics.co.uk/assets/643_maplin-ada-inside.jpg)](../assets/Maplin-ADA-inside.jpg)
+It was a kit from Maplins called ADA Delay, I started to trace it but then discovered a member of [Sdiy mailing list](https://web.archive.org/web/20131014142208/http://dropmix.xs4all.nl/mailman/listinfo/synth-diy/) (wayback mirror) had a copy of the original article. It was written by Robert Penfold for Maplin Magazine (will attach soon). It has also been modified with a LFO that modulates the clock rate of the delay therefore changing its delay time. This is great and kind of turns the delay into a phaser. Issue was that the ADC had blown, pulling a lot of current from the -5v rail and in turn blown its regulator. Easy fix, just replaced the (now quite expensive) ZN448 ADC and the regulator. The bulb was a minature "grain of rice" type incandescent bulb so I replaced it with a white LED.
+
+Needless to say, this has given me some ideas on how to make an Arduino like delay, possibly by just controlling the address of the digital signal to the RAM you could come up with some interesting delay effects.
 
 ---
 
@@ -69,22 +83,6 @@ As part of this post I have just published a new article on using press'n'peel t
 
 [![](https://clacktronics.co.uk/assets/643_synare3large_147-e1317332821202.jpg)](https://clacktronics.co.uk/assets/synare3large_147-e1317332821202.jpg)
 New Page on the [Star Synare 3](https://clacktronics.co.uk/research/drumlab/star-synare-3) in the Analog Drum Lab project - making a DIY PCB soon so watch out! If you have any information on this drum or you own it please get into contact.
-
----
-
-## Oxford OSCar
-
-`27 September 2011` · [Open this post on its own](window:file/blog/2011-09-27-oxford-oscar.md)
-
-![](https://clacktronics.co.uk/assets/643_oscar3.jpg)
-Sadly I ran out of time on this one, the problem was it had suffered a power supply failure. The positive 5v rail was completely down and it seemed some component (on the densely packed main board) had caused this. I cosmetically fixed it up and didn't charge the owner.
-
-Designed and released by Chris Hugget after the collapse of EDP it is a very interesting design electronically and mechanically. I really like the way the keyboard is slightly tilted up and the way everything is held together with metal bars and big chunks of moulded rubber. Sad to say the rubber doesn't last, on this one it was very brittle, so taking it apart was difficult!
-
-Such a shame I really wanted to hear it! it has so many interesting features
-
-![](https://clacktronics.co.uk/assets/643_oscar2.jpg)
-![](https://clacktronics.co.uk/assets/643_oscar1.jpg)
 
 ---
 

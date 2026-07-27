@@ -1,6 +1,6 @@
 ---
 title: Blog (page 4)
-tagline: Posts 16–20 of 46
+tagline: Posts 16–20 of 47
 style: plain
 robots: noindex
 ---
@@ -11,6 +11,17 @@ robots: noindex
 [Older posts >](window:file/blog-page-5.md)
 
 Page 4 of 10
+
+---
+
+## New Website
+
+`02 March 2015` · [Open this post on its own](window:file/blog/2015-03-02-New_Website.md)
+
+![Shapeoko2](https://clacktronics.co.uk/assets/Shapeoko2.jpg)
+2014 nothing happened... Finally I am back, I have been occupied for a while. I decided to move the website away from wordpress as I was geting sick of the constant updates and moved to somthing a little bit more geeky. I am now using [Jekyll](http://jekyllrb.com/) a script that generates the website offline using markdown as the templating system. I hope to make the website a little cleaner and more about content. Thigs have advanced a lot since I last updated, I now have a fully working 3d printer (Prusa i2) and a CNC router (shapeoko 2) both aready not the latest model! This means I have much more capability to produce one off objects ( read synthesizer panels! ). Clacktronics is still homeless but by the end of the year (2015) I hope to have a fully functional shed workshop!
+
+I hope to release 2 new pedals within the next few months. One is the Wasp Drive MKII and the other is called the ArDuinA I leave it upto you to decide what that is!
 
 ---
 
@@ -58,20 +69,6 @@ I found this at work, at first it looked like some kind of intercom but then I r
 
 [![Clacktronics Reprap](https://clacktronics.co.uk/assets/643_clacktronics-reprap.jpg)](../assets/Clacktronics-Reprap.jpg)
 Yes, I have also been swept up in the hype, after a few years of looking at them and wishing I could afford to make one I took the plunge as I worked out it could easily be done for around £350. It is mainly made from kit parts as it was almost the same price as sourcing the parts myself. I have some ideas for miniature leslie speakers and other such electro-mechanical gimmicks. watch this space!
-
----
-
-## Maplin ADA Delay
-
-`04 January 2013` · [Open this post on its own](window:file/blog/2013-01-04-maplin-ada-delay.md)
-
-[![Maplin ADA](https://clacktronics.co.uk/assets/643_maplin-ada.jpg)](../assets/Maplin-ADA.jpg)
-I had this one sitting on my desk a while. Whilst at the [Music Hackspace](http://musichackspace.org/) in London another member ([Bioni Samp](https://bionisamp.wordpress.com/)) showed me this to look at. At first I thought it must just be another BBD or specialist IC delay but upon looking inside I realised it was a discrete 8 bit digital delay using an 8k x 8 sram IC as its memory. It was broken and I didnt really have enough time to fix it but because it was so interesting I took it.
-
-[![Maplin ADA inside](https://clacktronics.co.uk/assets/643_maplin-ada-inside.jpg)](../assets/Maplin-ADA-inside.jpg)
-It was a kit from Maplins called ADA Delay, I started to trace it but then discovered a member of [Sdiy mailing list](https://web.archive.org/web/20131014142208/http://dropmix.xs4all.nl/mailman/listinfo/synth-diy/) (wayback mirror) had a copy of the original article. It was written by Robert Penfold for Maplin Magazine (will attach soon). It has also been modified with a LFO that modulates the clock rate of the delay therefore changing its delay time. This is great and kind of turns the delay into a phaser. Issue was that the ADC had blown, pulling a lot of current from the -5v rail and in turn blown its regulator. Easy fix, just replaced the (now quite expensive) ZN448 ADC and the regulator. The bulb was a minature "grain of rice" type incandescent bulb so I replaced it with a white LED.
-
-Needless to say, this has given me some ideas on how to make an Arduino like delay, possibly by just controlling the address of the digital signal to the RAM you could come up with some interesting delay effects.
 
 ---
 

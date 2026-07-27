@@ -1,11 +1,15 @@
 ---
 title: Blog List
-tagline: Every one of the 46 posts from the workbench
+tagline: Every one of the 47 posts from the workbench
 style: plain
 ---
 # Blog List
 
 [Read the blog](window:file/blog.md)
+
+## 2026
+
+`27 Jul` [PCB Heater Design tool](window:file/blog/2026-07-27-new-post.md)
 
 ## 2024
 

@@ -1,6 +1,6 @@
 ---
 title: Blog (page 2)
-tagline: Posts 6–10 of 46
+tagline: Posts 6–10 of 47
 style: plain
 robots: noindex
 ---
@@ -11,6 +11,15 @@ robots: noindex
 [Older posts >](window:file/blog-page-3.md)
 
 Page 2 of 10
+
+---
+
+## Boldport Club
+
+`02 January 2019` · [Open this post on its own](window:file/blog/2019-01-02-Boldport.md)
+
+![Annanas](https://clacktronics.co.uk/assets/boldport.jpg)
+In 2017 I started working for [Boldport](https://boldport.com) a PCB design company that specialises in attractive circuit boards and runs [boldport club](https://boldport.club) a monthly subscription where you receive a highly designed electronic kit every month. Above is the very first kit I designed called [Ananas](https://www.boldport.com/products/ananas/) it was a challenge to make my first design 3D but it turned out very well! Boldport decided to [Change the way it works](https://www.boldport.com/blog/2018/10/18/boldport-club-is-changing) so I decided to write up how the design process works for a project kit. [Please read this blog post](https://www.boldport.com/blog/2018/11/22/ben-making-a-project) to find out about how this unique design was made *image courtesy Boldport ltd*
 
 ---
 
@@ -137,43 +146,6 @@ This seemed good as all I need is a cheap bit of MDF cut to size and then I can 
 ![Shapeoko after routing](https://clacktronics.co.uk/assets/shapeoko_2_clamping_table_routed.jpg)
 
 My router slipped a little when I was cutting it as the guide is awful, I had to switch to using a bar of wood as a rail. It doesn't matter though, just looks ugly! Then I just used the supplied waste board as a guide for the bolt holes to bolt it into the frames. Next I will be making some clamps with the Shapeoko!
-
----
-
-## VGA cap
-
-`16 January 2016` · [Open this post on its own](window:file/blog/2016-01-16-VGA_cap.md)
-
-![Raspberry Pi VGA, audio and composite breakout](https://clacktronics.co.uk/assets/Raspberry_pi_VGA.jpg)
-Here is a PCB I have designed, it was made in response to the release of the Raspberry Pi Zero. For a low cost it helps to break out the analogue outputs from the zero. The analogue ports it provides are stereo audio, composite and VGA. This is all on the same edge as the Zero's existing connectors. This board is ideal if you want to utilize a computer monitor, especially if it has built in speakers like many 'multimedia' TFT screens that now cost very little second hand. Apart from the composite output it will also work on any Raspberry Pi that has the 40 pin GPIO header (Raspberry Pi A/B+ and the Raspberry Pi 2) I am fund raising to make a bunch of them on Kickstarter [see here](http://kck.st/1SuGDvV)
-
-**It is a kit**
-
-To make it as cheap as possible and easy to adapt for different purposes it is a kit / bare PCB that uses only through-hole components. Due to a lack of space all components are folded this may make it a little fiddly to construct if you have less experience but it is not too hard.
-
-What this means though is that you can choose which way up the cap is mounted, if you what the VGA or not and if you are building into an enclosure the pads can be directly soldered.
-
-@[youtube](https://www.youtube.com/watch?v=iH7NiAvxM0Y)
-
-**Enabling the outputs**
-
-Full instructions can be found on [crab.design](http://crab.design)
-
-Due to space and cost the cap does not have auto configuration EEPROM as defined by the HAT specification. It has to be set up by editing the config.txt and adding files to the /boot/ partition.
-
-For VGA it uses Gert van loos VGA666 circuit which uses a passive resistor network to perform the Digital to Analogue conversion. The pins it uses are slightly different to allow for the audio to also be broken out of the GPIO header. To activate VGA an 'overlay' has to be added to the configuration files of the boot partition. These will be provided in the Github repository.
-
-Analogue audio is the same as the circuit on the Raspberry Pi B+ schematic, but instead the output comes from the GPIO. To activate another 'overlay' is used that comes with the default Rasbian distribution (pwm-2chan-overlay) If this and the VGA is activated only 4 GPIO pins will remain.
-
-The composite is simply an extension of the new breakout pins next to the the Zero's GPIO header, it is connected by its own socket when the cap is pushed on.
-
-The parts activated are up to the user by simply disabling and enabling parts in the config.txt file. More information will be up soon at the crab github pages.
-
-[Github files](https://github.com/crab-design/analogue_cap)
-
-**What is crab?**
-
-Crab is going to be a series of circuits that I think are useful repeatable modules for use in installations. That is not strict though, I am also designing circuits and boards that can inspire ideas and teach that may not be so practical.
 
 ---
 

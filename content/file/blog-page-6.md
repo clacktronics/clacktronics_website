@@ -1,6 +1,6 @@
 ---
 title: Blog (page 6)
-tagline: Posts 26–30 of 46
+tagline: Posts 26–30 of 47
 style: plain
 robots: noindex
 ---
@@ -11,6 +11,22 @@ robots: noindex
 [Older posts >](window:file/blog-page-7.md)
 
 Page 6 of 10
+
+---
+
+## Oxford OSCar
+
+`27 September 2011` · [Open this post on its own](window:file/blog/2011-09-27-oxford-oscar.md)
+
+![](https://clacktronics.co.uk/assets/643_oscar3.jpg)
+Sadly I ran out of time on this one, the problem was it had suffered a power supply failure. The positive 5v rail was completely down and it seemed some component (on the densely packed main board) had caused this. I cosmetically fixed it up and didn't charge the owner.
+
+Designed and released by Chris Hugget after the collapse of EDP it is a very interesting design electronically and mechanically. I really like the way the keyboard is slightly tilted up and the way everything is held together with metal bars and big chunks of moulded rubber. Sad to say the rubber doesn't last, on this one it was very brittle, so taking it apart was difficult!
+
+Such a shame I really wanted to hear it! it has so many interesting features
+
+![](https://clacktronics.co.uk/assets/643_oscar2.jpg)
+![](https://clacktronics.co.uk/assets/643_oscar1.jpg)
 
 ---
 
@@ -68,16 +84,6 @@ Its particularly good putting on portamento because all the oscillators slide at
 > the WASP Patch Pad [was] manufactured, with the approval of Adrian Wagner  in fact they sold some on their 1981EDP roadshow. I still have a few left which I put on ebay or the VEMIA auction from time to time. I did an original design which included a wipeable laminated back that you could perfect your settings on and then transfer them to the permanent patch on paper. The pages where punched so they could be put in a loose leaf folder. - Michael
 
 See his website and details here [synfinity.biz](https://web.archive.org/web/20100502024209/http://www.synfinity.eu:80/) (wayback mirror)
-
----
-
-## Wasp Drive - First batch complete!!
-
-`04 July 2011` · [Open this post on its own](window:file/blog/2011-07-04-wasp-drive-first-batch-complete.md)
-
-[![](https://clacktronics.co.uk/assets/643_wasp-batch.jpg)](https://clacktronics.co.uk/assets/wasp-batch.jpg)Here is the first batch of Clacktronics new products, it is a Wasp Filter with a driving input, see more info [here](http://clacktronics.co.uk/products/wasp-drive).
-
-http://cgi.ebay.co.uk/ws/eBayISAPI.dll?ViewItem&item=120745511966&ssPageName=STRK%3AMESE%3AIT
 
 ---
 

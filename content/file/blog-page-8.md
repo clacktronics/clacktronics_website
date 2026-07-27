@@ -1,6 +1,6 @@
 ---
 title: Blog (page 8)
-tagline: Posts 36–40 of 46
+tagline: Posts 36–40 of 47
 style: plain
 robots: noindex
 ---
@@ -11,6 +11,18 @@ robots: noindex
 [Older posts >](window:file/blog-page-9.md)
 
 Page 8 of 10
+
+---
+
+## (Late) Spring Cleanout - AVRsyn
+
+`07 June 2011` · [Open this post on its own](window:file/blog/2011-06-07-late-spring-cleanout-avrsyn.md)
+
+[![](https://clacktronics.co.uk/assets/643_avrsyn-main1.jpg)](https://clacktronics.co.uk/assets/AVRSYN-main1.jpg) Getting rid of items I have been sitting on too long, here is an AVRsyn by Elby Designs. It is an AVR based Analogue Modelling synth. It is quite cool and is up for auction [here](http://cgi.ebay.co.uk/ws/eBayISAPI.dll?ViewItem&item=120735045288&ssPageName=STRK:MESE:IT).
+
+Not particularity good looking but is quite unique nonetheless!
+
+[![](https://clacktronics.co.uk/assets/643_avrsyn-guts1.jpg)](https://clacktronics.co.uk/assets/AVRSYN-guts1.jpg)
 
 ---
 
@@ -85,36 +97,6 @@ For those of you who don't know this is an etch resistant transfer film for maki
 [![](https://clacktronics.co.uk/assets/643_wasp-sockets.jpg)](https://clacktronics.co.uk/assets/wasp-sockets.jpg) I am currently re-building a Wasp from the ground up, it was stripped completely of components so I could scan and make my own copy of it for personal use. When it is complete it will be in very good electronic condition compared to most other wasps having all brand new components! There is no point in replacing resistors really, I would not have taken them out for a straight refurbishment.
 
 Here I have just completed the mammoth task of soldering all the IC footprints with sockets. I was forced into using turned pin sockets as they are best if you have pads on both sides of the board and no through hole plating. I will check that the power supply (also soldered in the photo above) is reaching all IC's then I will proceed to bring each section up and running starting at the Keyboard scanning ending with the speaker amp.
-
----
-
-## Realistic Reverb Noismaking Mods
-
-`07 April 2011` · [Open this post on its own](window:file/blog/2011-04-07-realistic-reverb-noismaking-mods.md)
-
-[![](https://clacktronics.co.uk/assets/643_realistic-reverb.jpg)](https://clacktronics.co.uk/assets/Realistic-Reverb.jpg) I found this Realistic Reverb in quite a bad state without a case at a car boot sale, I was intrigued, this is one of those effects that are notorious for all the wrong reasons! Noisy and not really a reverb more of a short delay or flanger (with no modulation.) Once I fixed it up I proceeded to modify a few parts to make it more experimental and push it to its extremes.  The slide pots were completely busted so I had to replace them. I adjusted the controls so that at moderate levels it will operate like normal but also can be pushed to the extreme. In this post I will describe how they work and how you can implement these mods yourself.
-
-[Modified Realistic Reverb - Microphone Input](http://soundcloud.com/clacktronics/modified-realistic-reverb-1) by [Clacktronics Repair](http://soundcloud.com/clacktronics)
-
-[Modified Realistic Reverb - Tibetan Buddihist Rights](http://soundcloud.com/clacktronics/modified-realistic-reverb) by [Clacktronics Repair](http://soundcloud.com/clacktronics)
-
-[![](https://clacktronics.co.uk/assets/643_realistic-reverb-knobs-643.jpg)](https://clacktronics.co.uk/assets/Realistic-Reverb-Knobs-643.jpg)
-
-The face was made by laser printing on Lazertran then wetting , applying then baking in the oven, it creates a very durable graphic. THe DC jack was left in place and is stuck through the enclosure through a square hole.
-
-**Schematic**[
-![](https://clacktronics.co.uk/assets/643_realistic-reverb-schematic-with-mods.gif)](https://clacktronics.co.uk/assets/Realistic-Reverb-Schematic-With-Mods.gif)
-
-It is quite simple, locate R21 (on the board it is simply labeled '21') and replace. then replace VR2 the slider with a IMLog one, you can also use 1m linear if you cannot get a Log one. The switches are optional, they are only really necessary if you need to re-house it or if you want to get rid of the phono input on 'Line.'
-
-[![](https://clacktronics.co.uk/assets/643_realistic-reverb-in-out-643.jpg)](https://clacktronics.co.uk/assets/Realistic-Reverb-IN-OUT-643.jpg)
-[![](https://clacktronics.co.uk/assets/643_realistic-reverb-dc-643.jpg)](https://clacktronics.co.uk/assets/Realistic-Reverb-DC-643.jpg)
-
-It really come alive with no input and just feedback as demonstrated below
-
-[Modified Realistic Reverb - No input noise generation](http://soundcloud.com/clacktronics/modified-realistic-reverb-no) by [Clacktronics Repair](http://soundcloud.com/clacktronics)
-
-@[youtube](https://www.youtube.com/watch?v=Qkex7GeJat4)
 
 ---
 
