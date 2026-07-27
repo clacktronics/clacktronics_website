@@ -5,26 +5,13 @@ name: Mirror Luma events
 # reads as an ordinary file from its own origin.
 
 on:
-  schedule:
-    # Hourly. A new event should show up on the site while it is still news, and
-    # a run that finds nothing changed writes nothing and commits nothing, so the
-    # cost of asking often is two small HTTP requests.
-    - cron: '17 * * * *'
   workflow_dispatch:
-  push:
-    # only on the live branch: a push to a feature branch should not land a bot
-    # commit on it. Use "Run workflow" to refresh from anywhere.
-    branches:
-      - main
-    paths:
-      - 'scripts/fetch_luma_events.py'
-      - '.github/workflows/luma-events.yml'
 
 permissions:
   contents: write
   actions: write                # to start the deploy below
 
-# A run started by the schedule must not race one started by a push.
+# Do not allow two manually started refreshes to race each other.
 concurrency:
   group: luma-events
   cancel-in-progress: false
@@ -61,8 +48,7 @@ jobs:
         # A push made with the automatic GITHUB_TOKEN deliberately does not
         # trigger other workflows, so the commit above cannot start the deploy by
         # itself — without this the new event would sit in the repository until
-        # something else happened to push to main. Asking for the deploy directly
-        # is the whole point of mirroring on a schedule.
+        # something else happened to push to main.
         if: steps.commit.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
