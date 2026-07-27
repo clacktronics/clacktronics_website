@@ -22,7 +22,9 @@ I needed to create a PCB design tool that would work out the trace width and len
 
 ![Etched heater PCB](https://clacktronics.co.uk/temp/assets/uploads/2026/07/20260727-124521-b609a884-gemini-generated-image-okevd4okevd4okev.png)
 
-Here is what I created, it works fairly close to the intended  power a heats up nicely, I also think the Moore (Hilbert) curve looks nice with round corners!
+Here is what I created, it works fairly close to the intended  power a heats up nicely, I also think the Moore (Hilbert) curve looks nice with round corners! 
+
+[Check out the app yourself!](app:applications/pcb-heater.html)
 
 ---
 
