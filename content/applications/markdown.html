@@ -130,7 +130,31 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 .commit-form label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--control-text); font-weight: 500; }
 .commit-form .hint { font-weight: 400; font-size: 11px; color: var(--sage); }
 .commit-form input { width: 100%; }
+.commit-form .check-row {
+  display: grid; grid-template-columns: 18px 1fr; align-items: start; gap: 8px;
+  cursor: pointer;
+}
+.commit-form .check-row input { width: auto; margin: 2px 0 0; }
+.commit-form .check-row .hint { grid-column: 2; margin-top: -3px; }
+.commit-form [hidden] { display: none !important; }
 .commit-actions { display: flex; align-items: center; gap: 14px; }
+.insert-form { padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.insert-form > .insert-intro { margin: 0; color: var(--sage); font-size: 11px; line-height: 1.55; }
+.insert-fields { display: flex; flex-direction: column; gap: 12px; }
+.insert-fields label {
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: 12px; color: var(--control-text); font-weight: 500;
+}
+.insert-fields .hint { font-weight: 400; font-size: 11px; color: var(--sage); line-height: 1.45; }
+.insert-fields input:not([type="checkbox"]), .insert-fields select, .insert-fields textarea { width: 100%; }
+.insert-fields textarea { min-height: 82px; resize: vertical; }
+.insert-fields .check-row {
+  display: grid; grid-template-columns: 18px 1fr; align-items: start; gap: 8px;
+  font-weight: 500; cursor: pointer;
+}
+.insert-fields .check-row input { width: auto; margin: 2px 0 0; }
+.insert-fields .check-row .hint { grid-column: 2; margin-top: -3px; }
+.insert-error { min-height: 1.2em; }
 .rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
 
 /* ---- the inline-video options dialog ---- */
@@ -267,8 +291,16 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
   <div class="site-box">
     <header><span>Upload media</span><button id="uploadClose" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
     <div class="commit-form">
-      <label>Upload token <span class="hint">(the secret set in upload-config.php on the web host — kept in memory, forgotten when the tab closes)</span>
+      <label>Image, video, audio, or 3D model
+        <input type="file" id="uploadFileInput" accept="image/*,video/*,audio/*,.stl,.step,.stp,.obj,.3mf">
+      </label>
+      <label id="uploadTokenRow">Upload token <span class="hint">(the secret set in upload-config.php on the web host — kept in memory, forgotten when the tab closes)</span>
         <input type="password" id="uploadTokenInput" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="check-row" id="uploadLargeRow" hidden>
+        <input type="checkbox" id="uploadLargeOkay">
+        <span>Try uploading this large file anyway</span>
+        <span class="hint">Web hosts often reject uploads over 64 MB.</span>
       </label>
       <div class="commit-actions">
         <button class="btn primary" id="uploadTokenGo"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload</button>
@@ -276,6 +308,21 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
         <span class="app-status" id="uploadStatus"></span>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="site-modal" id="insertModal">
+  <div class="site-box">
+    <header><span id="insertTitle">Insert</span><button id="insertClose" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
+    <form class="insert-form" id="insertForm">
+      <p class="insert-intro" id="insertIntro"></p>
+      <div class="insert-fields" id="insertFields"></div>
+      <div class="commit-actions">
+        <button class="btn primary" id="insertGo" type="submit"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Insert</button>
+        <button class="btn" id="insertCancel" type="button">Cancel</button>
+        <span class="app-status insert-error" id="insertError"></span>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -608,17 +655,123 @@ function newPost() {
 /* ---- ClackOS links inserted into Markdown ---- */
 const cm = mde.codemirror;
 
-function linkLabel(fallback) {
-  const selected = cm.getSelection().trim();
-  if (selected) return selected.replace(/\]/g, '\\]');
-  const label = prompt('Link text:', fallback);
-  return label ? label.replace(/\]/g, '\\]') : null;
+const insertModal = document.getElementById('insertModal');
+const insertForm = document.getElementById('insertForm');
+const insertFields = document.getElementById('insertFields');
+const insertError = document.getElementById('insertError');
+let activeInsert = null;
+
+function openInsertDialog({ title, intro, fields, submit }) {
+  document.getElementById('insertTitle').textContent = title;
+  document.getElementById('insertIntro').textContent = intro || '';
+  document.getElementById('insertIntro').hidden = !intro;
+  insertFields.replaceChildren();
+  insertError.textContent = '';
+  activeInsert = { fields, submit };
+
+  fields.forEach(field => {
+    const label = document.createElement('label');
+    if (field.type === 'checkbox') {
+      label.className = 'check-row';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.name = field.name;
+      input.checked = Boolean(field.value);
+      const text = document.createElement('span');
+      text.textContent = field.label;
+      label.append(input, text);
+      if (field.hint) {
+        const hint = document.createElement('span');
+        hint.className = 'hint';
+        hint.textContent = field.hint;
+        label.appendChild(hint);
+      }
+      insertFields.appendChild(label);
+      return;
+    }
+
+    label.append(document.createTextNode(field.label));
+    let input;
+    if (field.type === 'textarea') {
+      input = document.createElement('textarea');
+    } else if (field.type === 'select') {
+      input = document.createElement('select');
+      field.options.forEach(option => {
+        const element = document.createElement('option');
+        const spec = typeof option === 'string' ? { value: option, label: option } : option;
+        element.value = spec.value;
+        element.textContent = spec.label;
+        input.appendChild(element);
+      });
+    } else {
+      input = document.createElement('input');
+      input.type = field.type || 'text';
+      input.spellcheck = field.spellcheck !== false;
+    }
+    input.name = field.name;
+    input.value = field.value || '';
+    input.placeholder = field.placeholder || '';
+    if (field.min !== undefined) input.min = field.min;
+    if (field.max !== undefined) input.max = field.max;
+    if (field.step !== undefined) input.step = field.step;
+    if (field.required) input.setAttribute('aria-required', 'true');
+    label.appendChild(input);
+    if (field.hint) {
+      const hint = document.createElement('span');
+      hint.className = 'hint';
+      hint.textContent = field.hint;
+      label.appendChild(hint);
+    }
+    insertFields.appendChild(label);
+  });
+
+  insertModal.classList.add('open');
+  const first = insertFields.querySelector('input:not([type="checkbox"]), textarea, select');
+  if (first) { first.focus(); if (first.select) first.select(); }
 }
 
-function insertClackLink(href, fallbackLabel) {
-  const label = linkLabel(fallbackLabel);
-  if (!label) return;
-  cm.replaceSelection(`[${label}](${markdownLinkTarget(href)})`);
+function closeInsertDialog() {
+  insertModal.classList.remove('open');
+  activeInsert = null;
+}
+
+insertForm.addEventListener('submit', event => {
+  event.preventDefault();
+  if (!activeInsert) return;
+  const data = {};
+  activeInsert.fields.forEach(field => {
+    const input = insertForm.elements.namedItem(field.name);
+    data[field.name] = field.type === 'checkbox' ? input.checked : input.value.trim();
+  });
+  const missing = activeInsert.fields.find(field => field.required && !data[field.name]);
+  if (missing) {
+    insertError.textContent = `${missing.label} is required.`;
+    insertForm.elements.namedItem(missing.name).focus();
+    return;
+  }
+  const result = activeInsert.submit(data);
+  if (typeof result === 'string') { insertError.textContent = result; return; }
+  closeInsertDialog();
+});
+document.getElementById('insertClose').addEventListener('click', closeInsertDialog);
+document.getElementById('insertCancel').addEventListener('click', closeInsertDialog);
+insertModal.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeInsertDialog();
+});
+
+function selectedOr(fallback) {
+  return cm.getSelection().trim() || fallback;
+}
+
+function linkTextField(fallback) {
+  return {
+    name: 'label', label: 'Link text', value: selectedOr(fallback), required: true,
+    hint: 'This is the text readers will see in the Markdown document.'
+  };
+}
+
+function insertClackLink(href, label) {
+  cm.replaceSelection(`[${label.replace(/\]/g, '\\]')}](${markdownLinkTarget(href)})`);
   cm.focus();
 }
 
@@ -643,24 +796,38 @@ function siteFileName(value, folder) {
 }
 
 function insertWindowLink() {
-  const path = prompt('Markdown path under content/ (for example file/home.md):', 'file/home.md');
-  if (path) insertClackLink('window:' + encodeURI(path.trim()), 'Open page');
+  openInsertDialog({
+    title: 'Insert Markdown window link',
+    intro: 'Opens another Markdown page in a new desktop window.',
+    fields: [
+      { name: 'path', label: 'Markdown path under content/', value: 'file/home.md', required: true, spellcheck: false, hint: 'Example: file/home.md' },
+      linkTextField('Open page')
+    ],
+    submit: values => insertClackLink('window:' + encodeURI(values.path), values.label)
+  });
 }
 
 function insertActionLink() {
-  const action = prompt('Desktop action: close-front, tidy, plain-html, copy, or restart', 'tidy');
-  if (action) insertClackLink('action:' + encodePart(action), action === 'tidy' ? 'Tidy windows' : 'Run action');
+  openInsertDialog({
+    title: 'Insert desktop action link',
+    intro: 'Runs a built-in ClackOS desktop action when the link is clicked.',
+    fields: [
+      { name: 'action', label: 'Desktop action', type: 'select', value: 'tidy', options: [
+        { value: 'tidy', label: 'Tidy windows' },
+        { value: 'close-front', label: 'Close front window' },
+        { value: 'plain-html', label: 'Open plain HTML version' },
+        { value: 'copy', label: 'Copy page link' },
+        { value: 'restart', label: 'Restart desktop' }
+      ]},
+      linkTextField('Tidy windows')
+    ],
+    submit: values => insertClackLink('action:' + encodePart(values.action), values.label)
+  });
 }
 
 function markdownEmbedTarget(value) {
   return value.trim().replace(/\s/g, '%20').replace(/[()]/g, character =>
     '%' + character.charCodeAt(0).toString(16).toUpperCase());
-}
-
-function markdownEmbedTitle() {
-  const selected = cm.getSelection().trim();
-  const title = prompt('Optional video title:', selected);
-  return title === null ? null : title.trim().replace(/["']/g, '');
 }
 
 function insertMarkdownEmbed(kind, source, title, options = '') {
@@ -671,11 +838,15 @@ function insertMarkdownEmbed(kind, source, title, options = '') {
 }
 
 function insertYouTubeEmbed() {
-  const source = prompt('YouTube URL:', 'https://youtu.be/VIDEO_ID');
-  if (!source) return;
-  const title = markdownEmbedTitle();
-  if (title === null) return;
-  insertMarkdownEmbed('youtube', source, title);
+  openInsertDialog({
+    title: 'Insert inline YouTube video',
+    intro: 'Embeds a YouTube player directly in the rendered page.',
+    fields: [
+      { name: 'source', label: 'YouTube URL', value: 'https://youtu.be/VIDEO_ID', required: true, spellcheck: false },
+      { name: 'title', label: 'Optional video title', value: selectedOr(''), hint: 'Used as the accessible title for the embedded player.' }
+    ],
+    submit: values => insertMarkdownEmbed('youtube', values.source, values.title.replace(/["']/g, ''))
+  });
 }
 
 /* The playback options are four yes/no choices, but the markdown only spells out
@@ -754,81 +925,194 @@ document.getElementById('videoClose').addEventListener('click', () => videoModal
 document.getElementById('videoCancel').addEventListener('click', () => videoModal.classList.remove('open'));
 
 function insertKicanvasEmbed() {
-  const source = prompt('KiCad file URL or path from the site root:', 'content/applications/kicad/example.kicad_sch');
-  if (!source) return;
-  const selected = cm.getSelection().trim();
-  const title = prompt('Optional design caption:', selected);
-  if (title === null) return;
-  insertMarkdownEmbed('kicanvas', source, title.trim().replace(/["']/g, ''));
+  openInsertDialog({
+    title: 'Insert inline KiCanvas design',
+    intro: 'Embeds an interactive KiCad schematic or board in the rendered page.',
+    fields: [
+      { name: 'source', label: 'KiCad file URL or site-root path', value: 'content/applications/kicad/example.kicad_sch', required: true, spellcheck: false },
+      { name: 'title', label: 'Optional design caption', value: selectedOr('') }
+    ],
+    submit: values => insertMarkdownEmbed('kicanvas', values.source, values.title.replace(/["']/g, ''))
+  });
 }
 
-/* The viewer's own defaults are the borderless inline ones, so an empty options
-   answer is the common case; anything typed is passed through as written and
-   validated when the page renders. */
 function insertModelEmbed() {
-  const source = prompt('3D model URL or path from the site root (STL, STEP, OBJ or 3MF):', 'content/applications/models/pj3410-round-nut.stl');
-  if (!source) return;
-  const selected = cm.getSelection().trim();
-  const title = prompt('Optional model caption:', selected);
-  if (title === null) return;
-  const options = prompt('Optional settings, space separated — for example: height=260 colour=#c98a3a grid caption border right lighting=dramatic zoom=1.2 nospin interactive', '');
-  if (options === null) return;
-  insertMarkdownEmbed('model', source, title.trim().replace(/["']/g, ''),
-    options.trim().replace(/[{}]/g, ''));
+  openInsertDialog({
+    title: 'Insert inline 3D model',
+    intro: 'Embeds an STL, STEP, OBJ, or 3MF model. Defaults are borderless, spinning, and transparent.',
+    fields: [
+      { name: 'source', label: '3D model URL or site-root path', value: 'content/applications/models/pj3410-round-nut.stl', required: true, spellcheck: false },
+      { name: 'title', label: 'Optional model caption', value: selectedOr('') },
+      { name: 'position', label: 'Position', type: 'select', value: '', options: [
+        { value: '', label: 'Inline — full width' },
+        { value: 'left', label: 'Float left beside text' },
+        { value: 'right', label: 'Float right beside text' }
+      ]},
+      { name: 'height', label: 'Height in pixels', type: 'number', value: '320', min: 80, max: 900, step: 10 },
+      { name: 'width', label: 'Optional width percentage', type: 'number', value: '', min: 10, max: 100, step: 1, hint: 'Leave blank for full width, or 42% when floated.' },
+      { name: 'colour', label: 'Optional model colour', value: '', placeholder: '#c98a3a', spellcheck: false },
+      { name: 'background', label: 'Optional background colour', value: '', placeholder: '#f3ecd1 or none', spellcheck: false },
+      { name: 'lighting', label: 'Lighting', type: 'select', value: '', options: [
+        { value: '', label: 'Studio — default' },
+        { value: 'soft', label: 'Soft' },
+        { value: 'dramatic', label: 'Dramatic' },
+        { value: 'flat', label: 'Flat' },
+        { value: 'unlit', label: 'Unlit' }
+      ]},
+      { name: 'brightness', label: 'Optional brightness percentage', type: 'number', value: '', min: 20, max: 400, step: 10 },
+      { name: 'controls', label: 'Interaction', type: 'select', value: '', options: [
+        { value: '', label: 'Drag to orbit — default' },
+        { value: 'interactive', label: 'Full orbit, zoom, and pan' },
+        { value: 'static', label: 'Static — no interaction' }
+      ]},
+      { name: 'zoom', label: 'Optional framing multiplier', type: 'number', value: '', min: 0.2, max: 4, step: 0.1, placeholder: '1' },
+      { name: 'speed', label: 'Optional rotation speed', type: 'number', value: '', min: -8, max: 8, step: 0.1, placeholder: '0.9' },
+      { name: 'axes', label: 'Source axes', type: 'select', value: '', options: [
+        { value: '', label: 'Automatic for file format' },
+        { value: 'xyz', label: 'XYZ' }, { value: 'xzy', label: 'XZY' },
+        { value: 'yxz', label: 'YXZ' }, { value: 'yzx', label: 'YZX' },
+        { value: 'zxy', label: 'ZXY' }, { value: 'zyx', label: 'ZYX' }
+      ]},
+      { name: 'caption', label: 'Show the caption below the model', type: 'checkbox', value: false },
+      { name: 'border', label: 'Draw a border around the viewer', type: 'checkbox', value: false },
+      { name: 'grid', label: 'Show the ground grid', type: 'checkbox', value: false },
+      { name: 'wireframe', label: 'Render as wireframe', type: 'checkbox', value: false },
+      { name: 'shadows', label: 'Cast shadows', type: 'checkbox', value: true },
+      { name: 'spin', label: 'Rotate automatically', type: 'checkbox', value: true }
+    ],
+    submit: values => {
+      const options = [
+        values.position,
+        values.height && values.height !== '320' && `height=${values.height}`,
+        values.width && `width=${values.width}`,
+        values.colour && `colour=${values.colour}`,
+        values.background && `background=${values.background}`,
+        values.lighting && `lighting=${values.lighting}`,
+        values.brightness && `brightness=${values.brightness}`,
+        values.controls,
+        values.zoom && `zoom=${values.zoom}`,
+        values.speed && `speed=${values.speed}`,
+        values.axes && `axes=${values.axes}`,
+        values.caption && 'caption',
+        values.border && 'border',
+        values.grid && 'grid',
+        values.wireframe && 'wireframe',
+        !values.shadows && 'noshadows',
+        !values.spin && 'nospin'
+      ].filter(Boolean).join(' ');
+      insertMarkdownEmbed('model', values.source, values.title.replace(/["']/g, ''), options);
+    }
+  });
 }
 
 function insertVideoLink() {
-  const source = prompt('Video URL or path from the site root (for example content/media/demo.mp4):', 'content/media/demo.mp4');
-  if (source) insertClackLink(`app:applications/video/index.html?src=${encodePart(source)}`, 'Open in Video Lab');
+  openInsertDialog({
+    title: 'Insert Video Lab file link',
+    intro: 'Opens a video file in the ClackOS Video Lab application.',
+    fields: [
+      { name: 'source', label: 'Video URL or site-root path', value: 'content/media/demo.mp4', required: true, spellcheck: false },
+      linkTextField('Open in Video Lab')
+    ],
+    submit: values => insertClackLink(`app:applications/video/index.html?src=${encodePart(values.source)}`, values.label)
+  });
 }
 
 function insertPDFLink() {
-  const source = prompt('PDF URL or path from the site root (for example content/files/manual.pdf):', 'content/files/manual.pdf');
-  if (source) insertClackLink(`app:applications/pdf-reader/index.html?file=${encodePart(source)}`, 'Open in PDF Reader');
+  openInsertDialog({
+    title: 'Insert PDF Reader file link',
+    intro: 'Opens a PDF in the ClackOS PDF Reader application.',
+    fields: [
+      { name: 'source', label: 'PDF URL or site-root path', value: 'content/files/manual.pdf', required: true, spellcheck: false },
+      linkTextField('Open in PDF Reader')
+    ],
+    submit: values => insertClackLink(`app:applications/pdf-reader/index.html?file=${encodePart(values.source)}`, values.label)
+  });
 }
 
 function insertFalstadLink() {
-  const value = prompt('Paste a Falstad exported link, its ?ctz= value, or the compressed data:');
-  if (!value) return;
-  let ctz = value.trim();
-  try {
-    const parsed = new URL(ctz, location.href);
-    ctz = parsed.searchParams.get('ctz') || ctz;
-  } catch {}
-  if (/^\??ctz=/i.test(ctz)) ctz = ctz.replace(/^\??ctz=/i, '').split('&')[0];
-  insertClackLink(`app:applications/circuit.html?ctz=${encodePart(ctz)}`, 'Open circuit simulator');
+  openInsertDialog({
+    title: 'Insert Falstad exported link',
+    intro: 'Accepts a complete Falstad link, a ?ctz= value, or the compressed circuit data.',
+    fields: [
+      { name: 'value', label: 'Exported circuit', type: 'textarea', required: true, spellcheck: false, placeholder: 'https://falstad.com/circuit/circuitjs.html?ctz=…' },
+      linkTextField('Open circuit simulator')
+    ],
+    submit: values => {
+      let ctz = values.value;
+      try {
+        const parsed = new URL(ctz, location.href);
+        ctz = parsed.searchParams.get('ctz') || ctz;
+      } catch {}
+      if (/^\??ctz=/i.test(ctz)) ctz = ctz.replace(/^\??ctz=/i, '').split('&')[0];
+      insertClackLink(`app:applications/circuit.html?ctz=${encodePart(ctz)}`, values.label);
+    }
+  });
 }
 
 function insertCircuitLink() {
-  const file = prompt('Circuit file under content/applications/circuits/:', 'example-lrc.txt');
-  if (file) insertClackLink(`app:applications/circuit.html?circuit=${encodePart(siteFileName(file, 'circuits'))}`, 'Open circuit simulator');
+  openInsertDialog({
+    title: 'Insert Falstad circuit file link',
+    intro: 'Opens a saved circuit from content/applications/circuits/.',
+    fields: [
+      { name: 'file', label: 'Circuit filename', value: 'example-lrc.txt', required: true, spellcheck: false, hint: 'A full repository path is also accepted; only the filename is used.' },
+      linkTextField('Open circuit simulator')
+    ],
+    submit: values => insertClackLink(`app:applications/circuit.html?circuit=${encodePart(siteFileName(values.file, 'circuits'))}`, values.label)
+  });
 }
 
 function insertKicadLink() {
-  const file = prompt('KiCad file under content/applications/kicad/:', 'example.kicad_sch');
-  if (file) insertClackLink(`app:applications/kicad.html?file=${encodePart(siteFileName(file, 'kicad'))}`, 'Open in KiCad Viewer');
+  openInsertDialog({
+    title: 'Insert KiCad file link',
+    intro: 'Opens a saved design from content/applications/kicad/.',
+    fields: [
+      { name: 'file', label: 'KiCad filename', value: 'example.kicad_sch', required: true, spellcheck: false, hint: 'A full repository path is also accepted; only the filename is used.' },
+      linkTextField('Open in KiCad Viewer')
+    ],
+    submit: values => insertClackLink(`app:applications/kicad.html?file=${encodePart(siteFileName(values.file, 'kicad'))}`, values.label)
+  });
 }
 
 function insertOpenscadLink() {
-  const file = prompt('OpenSCAD file path from the site root (for example content/applications/openscad/box.scad):', 'content/applications/openscad/box.scad');
-  if (!file) return;
-  const build = confirm('Build the model automatically when the link is opened?');
-  insertClackLink(`app:applications/openscad.html?src=${encodePart(file)}${build ? '&render=1' : ''}`, 'Open in OpenSCAD');
+  openInsertDialog({
+    title: 'Insert OpenSCAD file link',
+    intro: 'Opens a saved .scad file in the ClackOS OpenSCAD application.',
+    fields: [
+      { name: 'file', label: 'OpenSCAD file path from the site root', value: 'content/applications/openscad/box.scad', required: true, spellcheck: false },
+      { name: 'build', label: 'Build the model automatically when opened', type: 'checkbox', value: false },
+      linkTextField('Open in OpenSCAD')
+    ],
+    submit: values => insertClackLink(`app:applications/openscad.html?src=${encodePart(values.file)}${values.build ? '&render=1' : ''}`, values.label)
+  });
 }
 
 function insertOpenscadCodeLink() {
-  const code = prompt('Paste the OpenSCAD source to embed in the link (kept short — long code is better saved as a .scad file):', 'cube([20, 20, 20], center = true);');
-  if (!code) return;
-  const build = confirm('Build the model automatically when the link is opened?');
-  insertClackLink(`app:applications/openscad.html?code=${encodeURIComponent(code)}${build ? '&render=1' : ''}`, 'Open in OpenSCAD');
+  openInsertDialog({
+    title: 'Insert OpenSCAD code link',
+    intro: 'Embeds short OpenSCAD source in the link. Save long programs as .scad files instead.',
+    fields: [
+      { name: 'code', label: 'OpenSCAD source', type: 'textarea', value: 'cube([20, 20, 20], center = true);', required: true, spellcheck: false },
+      { name: 'build', label: 'Build the model automatically when opened', type: 'checkbox', value: false },
+      linkTextField('Open in OpenSCAD')
+    ],
+    submit: values => insertClackLink(`app:applications/openscad.html?code=${encodeURIComponent(values.code)}${values.build ? '&render=1' : ''}`, values.label)
+  });
 }
 
 function insertAppLink() {
-  const page = prompt('Registered application page under content/ (for example applications/video/index.html):', 'applications/video/index.html');
-  if (!page) return;
-  const options = prompt('Optional query string, without the leading ?:', '') || '';
-  const cleanPage = page.trim().replace(/^content\//, '').replace(/^\/+/, '');
-  insertClackLink(`app:${cleanPage}${options.trim() ? '?' + options.trim().replace(/^\?/, '') : ''}`, 'Open application');
+  openInsertDialog({
+    title: 'Insert application link',
+    intro: 'Opens a registered page as a ClackOS application window.',
+    fields: [
+      { name: 'page', label: 'Application page under content/', value: 'applications/video/index.html', required: true, spellcheck: false },
+      { name: 'options', label: 'Optional query string', value: '', spellcheck: false, placeholder: 'src=content/media/demo.mp4', hint: 'Do not include the leading ?.' },
+      linkTextField('Open application')
+    ],
+    submit: values => {
+      const cleanPage = values.page.replace(/^content\//, '').replace(/^\/+/, '');
+      insertClackLink(`app:${cleanPage}${values.options ? '?' + values.options.replace(/^\?/, '') : ''}`, values.label);
+    }
+  });
 }
 
 /* ---- Insert → New page… ----
@@ -970,22 +1254,15 @@ const insertCommands = {
  * a public URL, which is inserted as the right Markdown for its media type:
  * an image, a video, an inline 3D model, or a plain link. */
 const uploadModal = document.getElementById('uploadModal');
+const uploadFileInput = document.getElementById('uploadFileInput');
 const uploadTokenInput = document.getElementById('uploadTokenInput');
+const uploadTokenRow = document.getElementById('uploadTokenRow');
+const uploadLargeRow = document.getElementById('uploadLargeRow');
+const uploadLargeOkay = document.getElementById('uploadLargeOkay');
 const uploadStatus = document.getElementById('uploadStatus');
 let uploadToken = null;          /* secret, memory only, per session */
 let assetUploadUrl = null;       /* resolved endpoint URL, or '' if unset */
 let pendingUpload = null;        /* the File waiting to be sent */
-
-const uploadPicker = document.createElement('input');
-uploadPicker.type = 'file';
-/* Models have no useful MIME type of their own, so they are listed by
-   extension; the server identifies them from their contents either way. */
-uploadPicker.accept = 'image/*,video/*,audio/*,.stl,.step,.stp,.obj,.3mf';
-uploadPicker.addEventListener('change', () => {
-  const f = uploadPicker.files[0];
-  uploadPicker.value = '';
-  if (f) beginUpload(f);
-});
 
 async function getAssetUploadUrl() {
   if (assetUploadUrl !== null) return assetUploadUrl;
@@ -1003,31 +1280,41 @@ async function startUpload() {
     status.textContent = 'Uploads are not configured — add "assetUpload" to content/site.json.';
     return;
   }
-  uploadPicker.click();
+  pendingUpload = null;
+  uploadFileInput.value = '';
+  uploadTokenInput.value = '';
+  uploadTokenRow.hidden = Boolean(uploadToken);
+  uploadLargeRow.hidden = true;
+  uploadLargeOkay.checked = false;
+  uploadStatus.textContent = 'Choose a file to upload.';
+  uploadModal.classList.add('open');
+  uploadFileInput.focus();
 }
 
 /* Many shared hosts cap uploads around 64 MB (PHP upload_max_filesize /
    post_max_size), so warn before attempting anything larger. */
 const UPLOAD_WARN_BYTES = 64 * 1024 * 1024;
 
-function beginUpload(file) {
-  if (file.size > UPLOAD_WARN_BYTES) {
-    const mb = (file.size / 1048576).toFixed(1);
-    if (!confirm(`${file.name} is ${mb} MB. Web hosts often reject uploads larger than 64 MB, so this may fail. Try uploading anyway?`)) {
-      status.textContent = 'Upload cancelled — file over 64 MB.';
-      return;
-    }
-  }
+function beginUpload(file, openDialog = true) {
   pendingUpload = file;
-  if (uploadToken) doUpload();
-  else openUploadModal();
+  uploadLargeRow.hidden = file.size <= UPLOAD_WARN_BYTES;
+  uploadLargeOkay.checked = false;
+  uploadTokenRow.hidden = Boolean(uploadToken);
+  uploadStatus.textContent = file.size > UPLOAD_WARN_BYTES
+    ? `${file.name} is ${(file.size / 1048576).toFixed(1)} MB. Confirm the large upload below.`
+    : `Ready: ${file.name}`;
+  if (openDialog) openUploadModal();
 }
 
 function openUploadModal() {
   uploadModal.classList.add('open');
-  uploadStatus.textContent = pendingUpload ? `Ready: ${pendingUpload.name}` : '';
-  uploadTokenInput.focus();
+  (pendingUpload ? (uploadToken ? document.getElementById('uploadTokenGo') : uploadTokenInput) : uploadFileInput).focus();
 }
+
+uploadFileInput.addEventListener('change', () => {
+  const file = uploadFileInput.files[0];
+  if (file) beginUpload(file, false);
+});
 
 async function doUpload() {
   const file = pendingUpload;
@@ -1043,6 +1330,7 @@ async function doUpload() {
     if (!res.ok || !data.ok) throw new Error(data.error || `server said ${res.status}`);
     insertUploadedMedia(data, file.name);
     uploadModal.classList.remove('open');
+    uploadFileInput.value = '';
     uploadTokenInput.value = '';
     pendingUpload = null;
     status.textContent = `Uploaded ${data.name} — link inserted.`;
@@ -1050,7 +1338,11 @@ async function doUpload() {
     uploadStatus.textContent = e.message;
     status.textContent = `Upload failed: ${e.message}`;
     /* a rejected token is the likely cause — forget it and ask again */
-    if (/token/i.test(e.message)) { uploadToken = null; openUploadModal(); }
+    if (/token/i.test(e.message)) {
+      uploadToken = null;
+      uploadTokenRow.hidden = false;
+      openUploadModal();
+    }
   }
 }
 
@@ -1069,9 +1361,17 @@ function insertUploadedMedia(data, name) {
 }
 
 document.getElementById('uploadTokenGo').addEventListener('click', () => {
-  const t = uploadTokenInput.value.trim();
-  if (!t) { uploadStatus.textContent = 'Enter your upload token.'; return; }
-  uploadToken = t;
+  if (!pendingUpload) { uploadStatus.textContent = 'Choose an image, video, audio, or 3D model file.'; return; }
+  if (pendingUpload.size > UPLOAD_WARN_BYTES && !uploadLargeOkay.checked) {
+    uploadStatus.textContent = 'Tick the large-file confirmation before uploading.';
+    uploadLargeOkay.focus();
+    return;
+  }
+  if (!uploadToken) {
+    const t = uploadTokenInput.value.trim();
+    if (!t) { uploadStatus.textContent = 'Enter your upload token.'; return; }
+    uploadToken = t;
+  }
   doUpload();
 });
 /* Closing only happens through the title bar × or Cancel: a stray click on the
