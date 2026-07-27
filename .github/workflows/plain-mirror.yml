@@ -15,6 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Regenerate blog index first
+        # This job and the blog-index job start from the same push, so the tree
+        # checked out here still has the old blog windows: mirroring them would
+        # publish a blog listing without the post that triggered the run, and
+        # the bot commit that fixes content/file does not re-trigger this
+        # workflow. Build them here so the mirror is made from current content,
+        # then hand content/file back to the blog-index job, which owns it.
+        run: python3 scripts/build_blog_index.py
+
       - name: Regenerate plain/
         # No SITE_* env here: the committed mirror stays unstamped ("dev") so
         # about.html doesn't churn on every push. The deploy workflow rebuilds
@@ -25,6 +34,12 @@ jobs:
         # sitemap.xml and robots.txt are generated alongside the mirror (they
         # list its pages), so they are committed with it.
         run: |
+          # Drop the blog windows rebuilt above; committing them here would
+          # collide with the blog-index job pushing the same files.
+          # (clean too: a changed post count can add a blog-page-N.md, which
+          # checkout leaves behind as an untracked file and git pull trips on.)
+          git checkout -- content/file
+          git clean -fd content/file
           if [ -n "$(git status --porcelain plain sitemap.xml robots.txt)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
