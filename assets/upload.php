@@ -42,7 +42,7 @@ $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if ($origin !== '' && in_array($origin, $ALLOWED, true)) {
     header('Access-Control-Allow-Origin: ' . $origin);
     header('Vary: Origin');
-    header('Access-Control-Allow-Methods: POST, OPTIONS');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('Access-Control-Allow-Headers: X-Upload-Token, Content-Type');
     header('Access-Control-Max-Age: 600');
 }
@@ -50,8 +50,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
+
+// The uploaded files are already public website assets. This read-only
+// catalogue lets File Manager discover both existing and future uploads
+// without a GitHub commit, workflow, or public directory listing.
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['list'])) {
+    send_upload_catalogue($STORE_DIR, $PUBLIC_BASE !== null ? $PUBLIC_BASE : derive_base());
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    send_json(405, ['ok' => false, 'error' => 'Use POST.']);
+    send_json(405, ['ok' => false, 'error' => 'Use POST to upload or GET ?list=1 to list uploaded media.']);
 }
 
 // ---- authenticate ----------------------------------------------------------
@@ -196,6 +204,53 @@ function derive_base() {
     $dir    = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
     $dir    = rtrim($dir, '/');
     return $scheme . '://' . $host . $dir . '/uploads';
+}
+
+function send_upload_catalogue($root, $public_base) {
+    $kinds = [
+        'jpg' => 'image', 'jpeg' => 'image', 'png' => 'image',
+        'gif' => 'image', 'webp' => 'image', 'bmp' => 'image',
+        'mp4' => 'video', 'webm' => 'video', 'mov' => 'video',
+        'mkv' => 'video', 'ogv' => 'video',
+        'mp3' => 'audio', 'wav' => 'audio', 'ogg' => 'audio',
+        'weba' => 'audio',
+        'stl' => 'model', 'step' => 'model', 'stp' => 'model',
+        'obj' => 'model', '3mf' => 'model',
+    ];
+    $files = [];
+    if (is_dir($root)) {
+        try {
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)
+            );
+            foreach ($iterator as $file) {
+                if (!$file->isFile()) continue;
+                $extension = strtolower($file->getExtension());
+                if (!isset($kinds[$extension])) continue;
+                $relative = str_replace('\\', '/', substr($file->getPathname(), strlen($root) + 1));
+                $url_path = implode('/', array_map('rawurlencode', explode('/', $relative)));
+                $files[] = [
+                    'name' => $file->getFilename(),
+                    'path' => 'Uploads/' . $relative,
+                    'url' => rtrim($public_base, '/') . '/' . $url_path,
+                    'kind' => $kinds[$extension],
+                    'size' => $file->getSize(),
+                    'modified' => gmdate('c', $file->getMTime()),
+                    'source' => 'Uploaded media',
+                ];
+            }
+        } catch (UnexpectedValueException $error) {
+            send_json(500, ['ok' => false, 'error' => 'Could not read the uploads directory.']);
+        }
+    }
+    usort($files, function ($a, $b) {
+        return strcmp($b['modified'], $a['modified']);
+    });
+    send_json(200, [
+        'ok' => true,
+        'baseUrl' => rtrim($public_base, '/') . '/',
+        'files' => $files,
+    ]);
 }
 
 function harden_uploads_dir($root) {

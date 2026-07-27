@@ -139,21 +139,35 @@
   }
 
   async function mediaFiles() {
-    if (cache.media) return cache.media;
     const site = await config();
     const indexPath = site.media?.index || 'content/media-index.json';
     const response = await fetch(new URL(indexPath, SITE_ROOT), { cache: 'no-store' });
     if (!response.ok) throw new Error(`Could not read the website media index (${response.status})`);
     const data = await response.json();
-    return (cache.media = (data.files || []).map(entry => {
+    const entries = [...(data.files || [])];
+    const uploadsIndex = site.media?.uploadsIndex;
+    if (uploadsIndex) {
+      try {
+        const uploadsResponse = await fetch(new URL(uploadsIndex, SITE_ROOT), { cache: 'no-store' });
+        if (!uploadsResponse.ok) throw new Error(`HTTP ${uploadsResponse.status}`);
+        const uploads = await uploadsResponse.json();
+        if (Array.isArray(uploads.files)) entries.push(...uploads.files);
+      } catch (error) {
+        console.warn(`Uploaded media catalogue unavailable: ${error.message || error}`);
+      }
+    }
+    const unique = new Map();
+    entries.forEach(entry => {
       const url = mediaUrl(entry.url);
-      return ({
+      if (!url) return;
+      unique.set(url.toLowerCase(), {
       drive: 'media', type: 'file', name: entry.name || entry.url.split('/').pop(),
-      path: `${entry.kind || kindFor(entry.url)}s/${entry.name || entry.url.split('/').pop()}`,
+      path: entry.path || `${entry.kind || kindFor(entry.url)}s/${entry.name || entry.url.split('/').pop()}`,
       kind: entry.kind || kindFor(entry.url), size: entry.size,
       url, downloadUrl: url, source: entry.source
+      });
     });
-    }).sort((a, b) => a.path.localeCompare(b.path)));
+    return (cache.media = [...unique.values()].sort((a, b) => a.path.localeCompare(b.path)));
   }
 
   class Explorer {
