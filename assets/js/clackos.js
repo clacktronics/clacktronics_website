@@ -392,6 +392,11 @@ let appInstances = 0;
  * shrink below will not push a window past (unless the desktop itself is
  * narrower than that, in which case the desktop wins) */
 const MINW = 320, MINH = 180;
+/* largest a window opens at when its size is relative to the desktop: on a
+ * very wide browser window a percentage would give an absurdly large window,
+ * so relative sizes stop growing here. Explicit pixel sizes in frontmatter,
+ * dragging, resizing and maximising are all unaffected. */
+const MAXW = 1100, MAXH = 800;
 /* breathing room kept between a shrunk window and the desktop edges */
 const FIT_MARGIN = 16;
 
@@ -560,16 +565,18 @@ async function openWindow(id, restore = null) {
   el.setAttribute('aria-label', title);
 
   /* windows open at 80% of the desktop unless frontmatter says otherwise;
-   * width/height accept px numbers or percentages ("width: 60%") */
-  const sizeOf = (v, avail) => {
+   * width/height accept px numbers or percentages ("width: 60%"). Sizes
+   * relative to the desktop are capped at MAXW/MAXH so a very wide browser
+   * window gives a sensibly sized window rather than a huge one. */
+  const sizeOf = (v, avail, cap) => {
     v = v == null ? '' : String(v);
-    if (v.trim().endsWith('%')) return Math.round(avail * parseFloat(v) / 100);
+    if (v.trim().endsWith('%')) return Math.round(Math.min(avail * parseFloat(v) / 100, cap));
     const n = parseInt(v, 10);
-    return Math.min(n || Math.round(avail * 0.8), avail - 24);
+    return Math.min(n || Math.round(Math.min(avail * 0.8, cap)), avail - 24);
   };
   const dw = desktop.clientWidth, dh = desktop.clientHeight;
-  const w = sizeOf(meta.width, dw);
-  const h = sizeOf(meta.height, dh);
+  const w = sizeOf(meta.width, dw, MAXW);
+  const h = sizeOf(meta.height, dh, MAXH);
   el.style.width = w + 'px';
   el.style.height = h + 'px';
   /* centred, stepped along for the next one, but never stepped off the desktop:
