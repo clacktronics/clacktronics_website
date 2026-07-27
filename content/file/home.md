@@ -5,24 +5,45 @@ tagline: Hardware for people who fail to read the datasheet twice.
 ---
 # Clacktronics
 
-![matts_pyramid](http://clacktronics.co.uk/temp/assets/uploads/2026/07/20260722-145524-048308cf-matts-pyramid.png)
+Welcome to CLACKTRONICS a project and company site for all things made by Ben Barwise. Based in a shed of North-East London in Epping forest I build and design electronic equipment and solutions for Artists and musicians. I have 20+ years experience as a technologist in music and art and am a PCB design specialist.
 
-[Open in OpenSCAD](app:applications/openscad.html?code=%24fa%3D1%3B%0D%0A%24fs%3D0.5%3B%0D%0A%0D%0Adifference%28%29%20%7B%0D%0A%20%20cylinder%28d%3D30%2C%20h%3D5%2C%20center%3Dtrue%29%3B%0D%0A%20%20cylinder%28d%3D25%2C%20h%3D6%2C%20center%3Dtrue%29%3B%0D%0A%7D%0D%0A%0D%0Adifference%28%29%20%7B%0D%0A%20%20cylinder%28d%3D15%2C%20h%3D5%2C%20center%3Dtrue%29%3B%0D%0A%20%20cylinder%28d%3D10%2C%20h%3D6%2C%20center%3Dtrue%29%3B%0D%0A%7D%0D%0A%0D%0Afor%28t%3D%5B0%3A30%3A369%5D%29%0D%0A%20%20rotate%28%5B0%2C0%2Ct%5D%29%0D%0A%20%20%20%20translate%28%5B10%2C0%2C0%5D%29%0D%0A%20%20%20%20%20%20sphere%28d%3D5%2C%20center%3Dtrue%29%3B&render=1)
+---
 
-Clacktronics designs and builds open, hackable electronics from a small workshop in the north of England. We make Eurorack modules, development boards and firmware libraries built around the [RP2350](https://google.com) — machines that do one![](https://) thing well and tell you exactly how they do it.
+## What is clackOS?
 
-Every board ships with schematics, source code and a written explanation of the design decisions. No black boxes. No cloud accounts. If it stops working, you can fix it — and we'll show you how.
+A corny mock operating system that has a number of useful apps and content for music, art and just about anything else I can think of. I admit I created it using LLM coding tools Claude, ChatGPT and Gemini and credited and checked the licence of every bit of code I have repurposed and hosted. Every thing is client side and managed using an open Github repository. If you see any issues please let me know in the bug report found in the File menu.
 
-## // What we make
+## Euroclack
 
-1. **EuroClack Green Screen 2350.** A dual-board Eurorack module with a real display, CV in and out, USB host, and dual-core headroom to spare. Sequence, visualise, misuse.
+![Euroclack synthesizer on a desk with a keyboard and the book](https://clacktronics.co.uk/byom/images/BYOM_built_closeup.jpg)
 
-## // Why monochrome
+The main electronic output I create at the moment are my modular synthesizer projects, mostly open source. Please look at the calendar top right for upcoming events where I will be showing new in development work, click below to have a look at all the relavent projects. 
 
-Because constraints are clarifying. A 1-bit screen forces every pixel to justify itself, and we think documentation should work the same way. This site contains no tracking, no scripts it doesn't need, and nothing that won't render on a machine from 1984 — in spirit, at least.
+[Browse EuroClack](window:file/euroclack.md)
+
+## The Blog
+
+![643_edp_wasp_deluxe_main643](http://clacktronics.co.uk/assets/643_edp_wasp_deluxe_main643.jpg)
+
+Some of this information is ported over from my last site, which in turn was imported from the Wordpress site before that, I hope to update the blog more frequently  that I have previously, it has been 10 years of no movement on this website at publishing.
 
 [Read the blog](window:file/blog.md)
-[Browse EuroClack](window:file/euroclack.md)
-[Misc](window:file/misc.md)
+
+
+
+## The rest
+
+![Press'n'peel](https://clacktronics.co.uk/research/pressnpeel/643_press-n-peel-blue-pcb.jpg)
+
+Below are articles and bits that dont fit in, reverse engineering, thoughts, articles etc..
+
+[Misc](window:file/misc.md) 
+[Archive](window:file/misc.md)
+[Links](window:file/Links.md)
+
+Misc old webpages and other interesting historic captures of my work.
+Links assosiated links and clacktronics on the rest of the web
+
+
 
 
