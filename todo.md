@@ -14,12 +14,11 @@
 
 * Add sliders text sizes, maybe also font choser?
 * at the end introduced optimisation scripts and changes
-* need better html helpers for inline media
 * check why it keeps going to http not HTTPS
 * expand kicad panel maker to feature jack and knob layout 
 * add power section to kicad panel maker
-* Make the windows responsive to outer window size
 * Markdown editor has insert new page and opens a new window and pastes a link in the original window
+* Make the insert dialogues more like the commit to website with more helpers.
 
 
 ### New Apps
