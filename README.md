@@ -196,6 +196,18 @@ a page follows a link; the taskbar entry and titlebar follow along. The File
 menu still opens a new window, and a page already open in another window is
 raised rather than duplicated.
 
+Windows shrink to fit the browser. Every window remembers the box it was last
+deliberately given — opened at, dragged to, resized to, tidied into or restored
+from a saved desktop — and whenever the browser window changes size each window
+is re-fitted against it: squeezed down (and nudged back inside) when the
+browser gets smaller, eased back out towards that remembered box when it gets
+larger, and never grown past it. A window is only ever as large as someone
+asked for it to be. The usual 320×180 minimum gives way on a desktop too small
+to hold it, so windows still fit on a phone; maximised windows simply follow
+the desktop, and the size saved into a session is the remembered box rather
+than the squeezed one, so a desktop last seen on a narrow screen comes back
+full-size on a wide one.
+
 ### Blog posts
 
 Posts live in `content/file/blog/` as `YYYY-MM-DD-slug.md` files with the

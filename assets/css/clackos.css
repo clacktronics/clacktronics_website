@@ -228,7 +228,10 @@ body {
 .window {
   position: absolute; display: flex; flex-direction: column;
   background: transparent; border-radius: 10px; padding: 2px;
-  min-width: 320px; min-height: 180px;
+  /* the usual floor for dragging a window smaller, but never wider or taller
+     than the desktop itself: on a phone the desktop wins, so windows can still
+     shrink all the way down to fit the screen */
+  min-width: min(320px, calc(100% - 16px)); min-height: min(180px, calc(100% - 16px));
   opacity: 1; transition: opacity 0.15s ease, transform 0.15s ease;
 }
 .window::before {

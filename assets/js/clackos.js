@@ -388,6 +388,29 @@ const windowIcons = new Map();
 let spawnOffset = 0;
 let appInstances = 0;
 
+/* smallest a window may be dragged to — also the floor the responsive
+ * shrink below will not push a window past (unless the desktop itself is
+ * narrower than that, in which case the desktop wins) */
+const MINW = 320, MINH = 180;
+/* breathing room kept between a shrunk window and the desktop edges */
+const FIT_MARGIN = 16;
+
+/* Every window remembers the box it was last *put* at deliberately — opened,
+ * dragged, resized, tidied or restored. A browser window that gets smaller
+ * shrinks windows to fit inside it; one that gets bigger lets them grow back
+ * towards this remembered box but never past it, so a window is only ever as
+ * large as someone asked for it to be. */
+function rememberWindowBox(rec) {
+  if (!rec || rec.maxed) return;
+  const el = rec.el;
+  /* a minimised window has no layout to read — keep the box it had */
+  if (!el.offsetWidth || !el.offsetHeight) return;
+  rec.desired = {
+    left: el.offsetLeft, top: el.offsetTop,
+    width: el.offsetWidth, height: el.offsetHeight
+  };
+}
+
 /* A few small system utilities are part of the desktop itself. They still
  * retain standalone HTML entry points, but inside ClackOS their markup runs in
  * an isolated shadow root instead of a nested browsing context. All other apps
@@ -624,13 +647,13 @@ async function openWindow(id, restore = null) {
       document.body.classList.remove('win-drag');
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      rememberWindowBox(rec);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
   });
 
   /* resize — all edges and corners */
-  const MINW = 320, MINH = 180;
   el.querySelectorAll('.rs').forEach(handle => {
     handle.addEventListener('pointerdown', e => {
       e.preventDefault();
@@ -638,19 +661,22 @@ async function openWindow(id, restore = null) {
       focusWindow(el);
       document.body.classList.add('win-drag');
       const dir = handle.dataset.dir;
+      /* the floor gives way on a desktop too small to hold it */
+      const minW = Math.min(MINW, desktop.clientWidth - FIT_MARGIN);
+      const minH = Math.min(MINH, desktop.clientHeight - FIT_MARGIN);
       const startX = e.clientX, startY = e.clientY;
       const orig = { l: el.offsetLeft, t: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
       const move = ev => {
         const dx = ev.clientX - startX, dy = ev.clientY - startY;
         let { l, t, w, h } = orig;
-        if (dir.includes('e')) w = Math.max(MINW, orig.w + dx);
-        if (dir.includes('s')) h = Math.max(MINH, orig.h + dy);
+        if (dir.includes('e')) w = Math.max(minW, orig.w + dx);
+        if (dir.includes('s')) h = Math.max(minH, orig.h + dy);
         if (dir.includes('w')) {
-          w = Math.max(MINW, orig.w - dx);
+          w = Math.max(minW, orig.w - dx);
           l = orig.l + (orig.w - w);
         }
         if (dir.includes('n')) {
-          h = Math.max(MINH, orig.h - dy);
+          h = Math.max(minH, orig.h - dy);
           t = orig.t + (orig.h - h);
           if (t < 0) { h += t; t = 0; }  /* don't grow under the menu bar */
         }
@@ -664,6 +690,7 @@ async function openWindow(id, restore = null) {
         document.body.classList.remove('win-drag');
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
+        rememberWindowBox(rec);
         scheduleSessionSave();
       };
       window.addEventListener('pointermove', move);
@@ -672,6 +699,10 @@ async function openWindow(id, restore = null) {
   });
 
   focusWindow(el);
+  rememberWindowBox(rec);
+  /* a window opened on a desktop too small for it starts out squeezed, and
+   * knows the size to grow back to if the browser is widened */
+  fitWindowToDesktop(rec);
   if (restore) applyWindowEntry(rec, restore);
   updateTaskbar();
 }
@@ -694,6 +725,35 @@ function fitWindowToContent(rec, contentWidth, contentHeight) {
   el.style.height = h + 'px';
   el.style.left = Math.max(8, Math.min(el.offsetLeft, dw - w - 8)) + 'px';
   el.style.top = Math.max(8, Math.min(el.offsetTop, dh - h - 8)) + 'px';
+  rememberWindowBox(rec);
+}
+
+/* Size one window against the desktop it currently sits on: never wider or
+ * taller than the box it was last deliberately given, never larger than the
+ * desktop can hold, and kept fully on screen. Shrinking the browser squeezes
+ * windows down; widening it lets them ease back out to — and stop at — the
+ * size they had before. */
+function fitWindowToDesktop(rec) {
+  const el = rec.el;
+  const dw = desktop.clientWidth, dh = desktop.clientHeight;
+  if (rec.maxed) {
+    /* a maximised window simply follows the desktop */
+    el.style.left = '8px';
+    el.style.top = '8px';
+    el.style.width = (dw - 16) + 'px';
+    el.style.height = (dh - 16) + 'px';
+    return;
+  }
+  const want = rec.desired;
+  if (!want) return;
+  /* the CSS minimum ('.window' min-width/min-height) is itself capped to the
+   * desktop, so this can shrink a window the whole way down on a phone */
+  const w = Math.round(Math.min(want.width, dw - FIT_MARGIN));
+  const h = Math.round(Math.min(want.height, dh - FIT_MARGIN));
+  el.style.width = w + 'px';
+  el.style.height = h + 'px';
+  el.style.left = Math.round(Math.max(0, Math.min(want.left, dw - w - 8))) + 'px';
+  el.style.top = Math.round(Math.max(0, Math.min(want.top, dh - h - 8))) + 'px';
 }
 
 function focusWindow(el) {
@@ -775,6 +835,8 @@ function toggleMax(id) {
   if (rec.maxed) {
     Object.assign(el.style, rec.maxed);
     rec.maxed = null;
+    /* the desktop may have shrunk while the window was maximised */
+    fitWindowToDesktop(rec);
   } else {
     rec.maxed = { left: el.style.left, top: el.style.top, width: el.style.width, height: el.style.height };
     el.style.left = '8px';
@@ -835,6 +897,7 @@ function placeWindow(rec, left, top, width, height) {
   s.top = Math.round(top) + 'px';
   if (width != null) s.width = Math.round(width) + 'px';
   if (height != null) s.height = Math.round(height) + 'px';
+  rememberWindowBox(rec);
   scheduleSessionSave();
 }
 
@@ -927,8 +990,12 @@ function captureSession() {
   const list = [];
   windows.forEach(rec => {
     const el = rec.el;
-    /* a maximised window is stored at the size it will return to, plus a flag */
-    const box = rec.maxed || el.style;
+    /* a maximised window is stored at the size it will return to, plus a flag.
+     * Otherwise the *desired* box is stored, not the on-screen one: a window
+     * squeezed by a narrow browser should reopen at its full size on a wide
+     * one, rather than being permanently shrunk by having once been viewed
+     * small. */
+    const box = rec.maxed || rec.desired || el.style;
     const entry = {
       id: rec.id,
       x: px(box.left), y: px(box.top), w: px(box.width), h: px(box.height),
@@ -1004,15 +1071,19 @@ async function resetClackOS() {
  * saved on, especially when the snapshot arrived as a link. */
 function applyWindowEntry(rec, entry) {
   const el = rec.el;
-  const dw = desktop.clientWidth, dh = desktop.clientHeight;
+  /* the saved box is what the window wants to be; fitWindowToDesktop then
+   * squeezes it into the desktop it has landed on, and a later widening of the
+   * browser lets it come back out to exactly this */
+  rec.desired = rec.desired || { left: el.offsetLeft, top: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight };
   if (entry.w > 0 && !el.classList.contains('fixed')) {
-    el.style.width = Math.min(entry.w, dw - 16) + 'px';
-    el.style.height = Math.min(entry.h, dh - 16) + 'px';
+    rec.desired.width = entry.w;
+    rec.desired.height = entry.h;
   }
   if (Number.isFinite(entry.x)) {
-    el.style.left = Math.max(0, Math.min(entry.x, dw - 80)) + 'px';
-    el.style.top = Math.max(0, Math.min(entry.y, dh - 40)) + 'px';
+    rec.desired.left = Math.max(0, entry.x);
+    rec.desired.top = Math.max(0, entry.y);
   }
+  fitWindowToDesktop(rec);
   if (entry.max) toggleMax(rec.id);
   if (entry.scroll) {
     const winbody = el.querySelector('.winbody');
@@ -1712,12 +1783,20 @@ window.addEventListener('storage', e => {
   }
 });
 
-window.addEventListener('resize', () => {
-  windows.forEach(rec => {
-    if (rec.maxed !== null) return;
-    const el = rec.el;
-    if (el.offsetLeft > desktop.clientWidth - 80) el.style.left = (desktop.clientWidth - 100) + 'px';
-    if (el.offsetTop > desktop.clientHeight - 40) el.style.top = (desktop.clientHeight - 60) + 'px';
+/* The desktop is elastic: every window re-fits itself whenever the browser
+ * window changes size. Coalesced into an animation frame so a slow drag of the
+ * browser edge doesn't relayout every window on every pixel. */
+let reflowPending = false;
+function reflowWindows() {
+  if (reflowPending) return;
+  reflowPending = true;
+  requestAnimationFrame(() => {
+    reflowPending = false;
+    windows.forEach(fitWindowToDesktop);
   });
-});
+}
+window.addEventListener('resize', reflowWindows);
+/* orientation changes and mobile browser chrome sliding away don't always fire
+ * a resize; watching the desktop itself catches those too */
+if (window.ResizeObserver) new ResizeObserver(reflowWindows).observe(desktop);
 })();
