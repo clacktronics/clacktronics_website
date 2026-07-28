@@ -13,11 +13,8 @@
 ### New Features and featurettes
 
 * Add sliders text sizes, maybe also font choser?
-* at the end introduced optimisation scripts and changes
-* check why it keeps going to http not HTTPS
 * expand kicad panel maker to feature jack and knob layout 
 * add power section to kicad panel maker
-* in mobile view make the menu open downwards 
 * automatic image resizing tool and enlarge preview 
 * window animations for close and open
 
