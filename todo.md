@@ -8,6 +8,7 @@
 ### Non working features and bugs
 
 * Open app to video is not working
+* migrate the old images to the new location
 
 ### New Features and featurettes
 
@@ -30,4 +31,10 @@
 * Waveacity
 * SSTV encoder and decoder
 * AFSK encoder and decoder
+
+# Final launch tasks
+
+* error checking, smoke tests?
+* Compression of data scripts, removing comments and whitespace
+* Move to root dir
 
