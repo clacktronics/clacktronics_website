@@ -238,6 +238,15 @@ async function loadContent(id) {
   return rec;
 }
 
+/* Rendered markdown that has just been put into a window: fill in the build
+ * stamps, and let a picture the window is showing smaller than its file offer
+ * that file in a new browser window (assets/js/image-zoom.js). The images are
+ * re-measured as the window is resized, so this is the only call it needs. */
+function contentMounted(root) {
+  populateBuildStamps(root);
+  window.ClackImageZoom?.enhance(root);
+}
+
 /* An app: link shows its application's icon, and an external link that ClackOS
  * can display opens in the in-OS browser or PDF reader instead of a new tab.
  * Both need desktop state, so the renderer calls back into here. */
@@ -629,7 +638,7 @@ async function openWindow(id, restore = null) {
 
   const winbody = el.querySelector('.winbody');
   if (mount) mount(winbody, { onClose: fn => rec.cleanups.push(fn) });
-  else { winbody.innerHTML = contentHtml; populateBuildStamps(winbody); }
+  else { winbody.innerHTML = contentHtml; contentMounted(winbody); }
 
   const titlebar = el.querySelector('.titlebar');
 
@@ -830,7 +839,7 @@ async function navigateWindow(rec, id) {
 
   const winbody = rec.el.querySelector('.winbody');
   winbody.innerHTML = content.html;
-  populateBuildStamps(winbody);
+  contentMounted(winbody);
   winbody.scrollTop = 0;
   focusWindow(rec.el);
   updateTaskbar();

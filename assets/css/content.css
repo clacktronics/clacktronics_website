@@ -88,6 +88,8 @@ ul.list li::before { content: "\25AA"; font-size: 14px; }
 }
 /* an image wrapped in a link: the anchor is what needs centring */
 .page a:has(> img), .plain a:has(> img) { display: block; text-align: center; }
+/* (the wrapper a picture bigger than the column gets is `.image-zoom`, styled
+   with the link rules below — it has to come after them to keep its cursor) */
 pre.code {
   background: var(--ink); color: var(--menu-text);
   font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; line-height: 1.7;
@@ -217,3 +219,28 @@ pre.code {
   display: inline-flex; align-items: center; gap: 7px;
 }
 .app-link .pixel-icon { width: 16px; height: 16px; flex: none; }
+
+/* A picture with more detail in the file than the column can show gets a link
+   to the file itself, added by assets/js/image-zoom.js once it has compared the
+   two — an image that already fits never gets one, so none of this applies to
+   it. The anchor shrinks to the picture so the badge sits on its corner rather
+   than the corner of the text column. */
+.page a.image-zoom, .plain a.image-zoom {
+  position: relative; width: fit-content; max-width: 100%;
+  margin: 0 auto; cursor: zoom-in;
+}
+.page a.image-zoom > img, .plain a.image-zoom > img { margin-left: 0; margin-right: 0; }
+.image-zoom::before, .image-zoom::after {
+  content: ''; position: absolute; top: 8px; right: 8px;
+  pointer-events: none; opacity: 0.6; transition: opacity 0.15s ease;
+}
+.image-zoom::before { width: 26px; height: 26px; border-radius: 5px; background: var(--ink); }
+/* the same "opens in a new window" arrow the rest of the OS uses */
+.image-zoom::after {
+  width: 16px; height: 16px; margin: 5px; background-color: var(--menu-text);
+  -webkit-mask: url('../icons/pixelarticons/open.svg') center / contain no-repeat;
+  mask: url('../icons/pixelarticons/open.svg') center / contain no-repeat;
+}
+.image-zoom:hover::before, .image-zoom:hover::after,
+.image-zoom:focus-visible::before, .image-zoom:focus-visible::after { opacity: 1; }
+.image-zoom:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }

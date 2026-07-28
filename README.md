@@ -402,7 +402,10 @@ same date and title: a CSV entry wins over the mirrored one.
 - `**bold**`, `*italic*`
 - `` `text` `` — green keyword highlight (used for `$`, part numbers, hex colours)
 - `1. item` — numbered feature list, rendered as the bordered `01/02/03` box
-- `![alt](src)` — image (linked images `[![](thumb)](full)` work too)
+- `![alt](src)` — image (linked images `[![](thumb)](full)` work too). An image
+  whose file holds more than the page is showing gets a link to the full-size
+  file, opening in a new browser window — see
+  [Images bigger than the page shows](#images-bigger-than-the-page-shows)
 - `@[youtube](https://youtu.be/VIDEO_ID "Optional title")` — responsive inline
   YouTube player (regular, Shorts, embed, and `youtu.be` URLs are accepted)
 - `@[video](content/media/demo.mp4 "Optional title")` — inline video file. By
@@ -479,6 +482,39 @@ same date and title: a CSV entry wins over the mirrored one.
 - `---` — horizontal rule; a `---` before the final paragraph turns that
   paragraph into the window footer (one `<span>` per line)
 - Single line breaks inside a paragraph are kept as `<br>`
+
+### Images bigger than the page shows
+
+Nothing has to be written for this: every `![alt](src)` in every markdown file
+is checked, on the desktop and in the plain mirror alike.
+
+A picture is drawn at the width of the text column, and most photographs and
+screenshots are wider than that. `assets/js/image-zoom.js` compares each image's
+file with the size it was actually drawn at once the page has laid out, and
+where the file holds more detail it wraps the image in a link to the file, shown
+by a `zoom-in` cursor and the small open-in-a-new-window badge the rest of the
+OS uses, in the picture's top right corner. Clicking it opens
+the full-size image in a new browser window (a real window — not the in-OS Web
+Browser, so the picture arrives at the browser's own size and zoom controls).
+
+An image that is already being shown whole gets nothing at all: no link, no
+badge, no change of cursor. The threshold is deliberately generous — the file
+has to be half as wide again as the drawn image, and at least 64 pixels wider —
+so that a picture only a little larger than the column is not advertised as if
+there were more to see. Because the test is about the size the image ends up at,
+it is repeated whenever that changes: dragging a ClackOS window wider until the
+picture is shown whole removes the link, and narrowing it brings it back.
+
+Three kinds of image are left alone. One the author has already linked by hand
+(`[![thumb](small.png)](big.png)`) belongs to that link. One written inside a
+raw HTML block — the BYOM hero photographs and system map on the EuroClack pages,
+say — belongs to the layout around it, which is what decides how big it should
+be; link it by hand there if it should open. And SVGs have no full size to open
+in the first place, being drawn at whatever size the page gives them.
+
+The same script runs in the desktop (`contentMounted` in `assets/js/clackos.js`),
+in the Markdown Editor's preview, and on the [plain HTML mirror](#plain-html-mirror),
+where `scripts/build_plain_site.py` adds it to any page that has an image.
 
 ### The right-hand end of the menu bar
 
