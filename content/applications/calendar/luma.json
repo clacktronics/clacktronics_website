@@ -1,6 +1,6 @@
 {
   "source": "https://luma.com/user/clacktronics",
-  "updated": "2026-07-25T21:48:56Z",
+  "updated": "2026-07-28T12:39:08Z",
   "events": [
     {
       "id": "evt-o6HGwpNU7HkRPbN",
@@ -144,6 +144,17 @@
       "notes": "Located on the south bound exit next to the flower shop.\n\n[Details and RSVP on Luma](https://luma.com/ujapjuzs)",
       "timezone": "Europe/London",
       "end": "2026-08-04 22:00"
+    },
+    {
+      "id": "evt-00C311VkRkpeFtO",
+      "title": "Clacktronics - Solder Station 14",
+      "date": "2026-09-08 19:00",
+      "location": "Highams Park Station Rooms, London",
+      "map": "https://www.google.com/maps/search/?api=1&query=51.608216%2C-0.000148",
+      "url": "https://luma.com/dcjhace2",
+      "notes": "Located on the south bound exit next to the flower shop.\n\n[Details and RSVP on Luma](https://luma.com/dcjhace2)",
+      "timezone": "Europe/London",
+      "end": "2026-09-08 22:00"
     }
   ]
 }
