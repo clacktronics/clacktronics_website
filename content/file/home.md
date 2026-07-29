@@ -33,7 +33,7 @@ Some of this information is ported over from my last site, which in turn was imp
 
 ## The rest
 
-![Press'n'peel](https://clacktronics.co.uk/research/pressnpeel/643_press-n-peel-blue-pcb.jpg)
+![Press'n'peel](https://clacktronics.co.uk/content/file/misc/pressnpeel/images/643_press-n-peel-blue-pcb.jpg)
 
 Below are articles and bits that dont fit in, reverse engineering, thoughts, articles etc..
 

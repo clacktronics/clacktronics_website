@@ -68,7 +68,7 @@ Look out for more modules in the future, some influenced by clacktronics!
 
 `25 January 2012` · [Open this post on its own](window:file/blog/2012-01-25-clacktronics-back-in-new-year.md)
 
-![](https://clacktronics.co.uk/research/pressnpeel/643_press_n_peel_ferric_chloride_fade.jpg)
+![](https://clacktronics.co.uk/content/file/misc/pressnpeel/images/643_press_n_peel_ferric_chloride_fade.jpg)
 There has been a bit of silence recently, this is because I have a new job! assisting in the design and installation of electronic works for the artist [Haroon Mirza](http://www.clickfolio.com/haroon/). But Clacktronics is still going, soon there should be a new pedal release and I have been getting into [Arduino](http://www.arduino.cc/) so expect some exciting new things and posts soon, including updates to the Analogue Drum Lab.
 
 As part of this post I have just published a new article on using press'n'peel to make PCB's at home. It is a far more effective method of PCB fabrication than toner transfer with photopaper and requires much less equipment than photoresist.
@@ -82,7 +82,7 @@ As part of this post I have just published a new article on using press'n'peel t
 `29 September 2011` · [Open this post on its own](window:file/blog/2011-09-29-star-synare-3-page.md)
 
 [![](assets/old_assets/643_synare3large_147-e1317332821202.jpg)](assets/old_assets/synare3large_147-e1317332821202.jpg)
-New Page on the [Star Synare 3](https://clacktronics.co.uk/research/drumlab/star-synare-3) in the Analog Drum Lab project - making a DIY PCB soon so watch out! If you have any information on this drum or you own it please get into contact.
+New Page on the [Star Synare 3](https://clacktronics.co.uk/archive/clacktronics2015/research/drumlab/star-synare-3) in the Analog Drum Lab project - making a DIY PCB soon so watch out! If you have any information on this drum or you own it please get into contact.
 
 ---
 
