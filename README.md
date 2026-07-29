@@ -701,8 +701,7 @@ windows, and desktop actions.
   File Manager also reads the live `assets/upload.php?list=1` catalogue, which
   scans the configured uploads directory. Files under
   `assets/uploads/YYYY/MM/` therefore appear under Website Media → Uploads
-  immediately, including uploads made while the site is staged under `/temp`;
-  no GitHub Action or media-index commit is required.
+  immediately; no GitHub Action or media-index commit is required.
 - `applications/calendar.html` (Applications → System → Calendar) — the
   website's upcoming events, in a **Month** grid and an **Upcoming** list. The
   calendar is one CSV file, `content/applications/calendar/events.csv`, plus a
@@ -1019,13 +1018,13 @@ the build needs to know where the pages will be served from:
 
 - `"siteUrl"` in `content/site.json` is the default (the live root);
 - the `SITE_URL` environment variable overrides it. The deploy workflow derives
-  `SITE_URL` from its own `SUBDIR`, so a staged build under `temp/` emits
-  `/temp/` URLs instead of pointing crawlers at a root that isn't live yet.
+  `SITE_URL` from its own `SUBDIR`, so a build staged in a subfolder emits URLs
+  under that subfolder instead of pointing crawlers at pages it isn't serving.
 
-When the site goes live at the web root, set `SUBDIR` to an empty string in
-`.github/workflows/deploy-purely.yml` (one job-level knob now drives both the
-rsync destination and the URLs) and redirect the old `/temp/…` paths to their
-root equivalents so anything already indexed follows across.
+`SUBDIR` is now empty, so the deploy publishes to the web root and the two
+agree. To stage a build somewhere harmless again, set `SUBDIR` to a folder name
+in `.github/workflows/deploy-purely.yml` — that one job-level knob drives both
+the rsync destination and the URLs.
 
 ## Deploying to a web host (purely.website)
 
@@ -1034,8 +1033,24 @@ web host so everything is served from one origin. `.github/workflows/deploy-pure
 runs on every push to `main` (and can be run by hand from the Actions tab) and
 `rsync`s the repo to the host over SSH. It uploads only changed files, never
 deletes on the host, and excludes VCS/CI files, `scripts/`, the notes, and the
-upload folders. It publishes to a `temp/` subfolder by default (set `SUBDIR=""`
-in the workflow to go live at the web root).
+upload folders. It publishes to the web root; set `SUBDIR` in the workflow to a
+folder name to stage a build in a subfolder instead.
+
+### The move from `/temp/` to the root
+
+The site was staged under `https://clacktronics.co.uk/temp/` while it was being
+built out. Emptying `SUBDIR` moves the deploy to the web root, and the root
+`.htaccess` 301s `/temp/…` to the matching root path so indexed and pasted links
+follow across. Two things on the host have to be done by hand, because the
+deploy never deletes and never touches `assets/uploads/`:
+
+1. **Move the uploads.** `mv public_html/temp/assets/uploads public_html/assets/uploads`
+   — media uploaded during staging lives only on the host, and the post bodies
+   now link to it at the root path.
+2. **Delete the old copy.** `rm -rf public_html/temp` once the root is serving.
+   Until it is gone the stale tree keeps answering `/temp/…` (a subdirectory's
+   `.htaccess` rewrite rules are not inherited from the parent, so the redirect
+   above cannot reach inside it) and search engines see the whole site twice.
 
 It needs these repository secrets (Settings → Secrets and variables → Actions):
 `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` (a key whose public half is in the
@@ -1073,8 +1088,9 @@ On the host, next to `upload.php`, copy `upload-config.example.php` to
 `upload-config.php` and set a strong `token` (e.g. `openssl rand -hex 32`). That
 file is git-ignored and excluded from deploys, so it never leaves the server.
 Paste the same token into the editor's upload dialog (kept in memory for the
-session only). To keep links stable while the site is staged under `temp/`, also
-set `base` and `dir` in the config to the canonical live paths.
+session only). The site is served from the web root, so the returned URLs are
+already canonical and `base`/`dir` can stay unset; they only matter if you stage
+the site in a subfolder again.
 
 **How malicious uploads are prevented.** Every request needs the secret token
 (constant-time checked); only an allow-list of image/video/audio types is

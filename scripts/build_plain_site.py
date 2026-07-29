@@ -32,9 +32,10 @@ SITE_NAME = 'Clacktronics'
 # Absolute base URL for canonical links, Open Graph URLs and sitemap entries —
 # all three have to be absolute, so the build needs to know where the pages
 # will actually be served from. The deploy workflow exports SITE_URL derived
-# from its SUBDIR, so a staged build under /temp/ emits /temp/ URLs rather than
-# pointing search engines at a root that isn't live yet; otherwise site.json's
-# "siteUrl" decides.
+# from its SUBDIR, so a build staged in a subfolder emits URLs under that
+# subfolder rather than pointing search engines at pages it isn't serving;
+# otherwise site.json's "siteUrl" decides. The deploy publishes to the root
+# today, so both normally agree.
 SITE_URL = (os.environ.get('SITE_URL', '').strip()
             or site.get('siteUrl', 'https://clacktronics.co.uk/')).rstrip('/') + '/'
 
