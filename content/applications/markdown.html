@@ -330,6 +330,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 <script src="../../vendor/easymde/easymde.min.js"></script>
 <script src="../../assets/js/highlight.js"></script>
 <script src="../../assets/js/markdown.js"></script>
+<script src="../../assets/js/image-zoom.js"></script>
 <script src="../../assets/js/file-manager.js"></script>
 <script>
 (() => {
@@ -355,6 +356,7 @@ function renderPreview(plainText) {
   requestAnimationFrame(() => document.querySelectorAll('.editor-preview, .editor-preview-side')
     .forEach(pane => {
       ClackMarkdown.populateBuildStamps(pane);
+      ClackImageZoom.enhance(pane);
     }));
   return html;
 }

@@ -914,6 +914,12 @@ def render_page(md_rel, page_out):
     highlight = ('<script src="%s" data-auto defer></script>\n'
                  % esc(resolve_site_url('assets/js/highlight.js', page_out))
                  if state['code'] else '')
+    # Pictures the column shows smaller than the file get a link to the file.
+    # That has to be decided in the browser, because it depends on the width the
+    # page ends up with; only pages with a picture on them carry the script.
+    zoom = ('<script src="%s" data-auto defer></script>\n'
+            % esc(resolve_site_url('assets/js/image-zoom.js', page_out))
+            if '<img ' in article else '')
     theme = site.get('theme', 'clackos.css')
     css = lambda path: esc(resolve_site_url(path, page_out))
     page = f'''<!DOCTYPE html>
@@ -930,7 +936,7 @@ def render_page(md_rel, page_out):
 <link rel="stylesheet" href="{css('assets/css/content.css')}">
 <link rel="stylesheet" href="{css('assets/themes/' + theme)}">
 <link rel="stylesheet" href="{esc(rel_href(STYLE, page_out))}">
-{kicanvas}{model}{highlight}</head>
+{kicanvas}{model}{highlight}{zoom}</head>
 <body class="plain-mirror">
 <header id="plain-nav">{menu}</header>
 <main>

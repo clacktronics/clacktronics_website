@@ -92,12 +92,22 @@ parentheses — the link parser counts nesting rather than stopping at the first
 
 ## // Images
 
-A plain image:
+A plain image. This one is an 80px tile shown at 80px, so it is already whole:
+no zoom-in cursor, no badge, nothing to click.
 
 ![Circuit trace tile](assets/backgrounds/circuit-trace.png)
 
+This photograph is 2744px wide and the column is not, so it should show the
+badge in its top right corner, take a `zoom-in` cursor, and open the
+full-size file in a new browser window when clicked. Dragging this window wider
+than the picture would take all of that away again — which needs a very wide
+screen at 2744px, but the same happens at any size the picture fits in.
+
+![A 3D-printed PIR sensor housing](https://clacktronics.co.uk/assets/3d_printed_pir_sensor_housing.jpg)
+
 A linked image (thumbnail that opens the full file) — clicking it should open
-the image, not follow a broken link:
+the image, not follow a broken link. An image the author has linked by hand is
+left alone by the zoom script, so it gets no badge of its own:
 
 [![Cracked earth tile](assets/backgrounds/cracked-earth.png)](assets/backgrounds/cracked-earth.png)
 
@@ -227,6 +237,13 @@ A block starting with an HTML tag is passed through the sanitiser:
   <abbr title="Voltage Controlled Oscillator">VCO</abbr> and
   <a href="https://clacktronics.co.uk">links</a> are all allowed.</p>
 </details>
+
+<figure>
+  <img src="https://clacktronics.co.uk/assets/3d_printed_pir_sensor_housing.jpg" alt="The same photograph inside a raw HTML block">
+  <figcaption>A picture written as raw HTML belongs to the markup around it, so
+  it keeps whatever size that markup gives it and gets no zoom link of its own —
+  even though it is the same oversized photograph as above.</figcaption>
+</figure>
 
 <a id="explicit-anchor"></a>
 <p>Raw HTML can define an explicit anchor, so
