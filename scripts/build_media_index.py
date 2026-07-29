@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 """Build the read-only legacy website media catalogue used by File Manager.
 
-The live /assets/ directory intentionally has no public directory listing, so
-the catalogue is derived from media URLs referenced by the site's content.
-Run this after adding or changing legacy asset links in Markdown/HTML files.
+The legacy assets/old_assets/ directory intentionally has no public directory
+listing, so the catalogue is derived from media URLs referenced by the site's
+content. Run this after adding or changing legacy asset links in Markdown/HTML
+files.
+
+Content links to that media relatively (assets/old_assets/NAME), which is what
+the pattern below looks for. The absolute https://clacktronics.co.uk/assets/
+form the media used to carry is still matched so a link written before the move
+— or pasted from an old post — is still catalogued rather than silently
+dropped; either way the entry is stored in the relative form.
 """
 
 from __future__ import annotations
@@ -17,8 +24,11 @@ from urllib.parse import unquote, urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 CONTENT = ROOT / "content"
 OUTPUT = CONTENT / "media-index.json"
+MEDIA_BASE = "assets/old_assets/"
 MEDIA_URL = re.compile(
-    r"https?://(?:www\.)?clacktronics\.co\.uk/assets/[^\s\)\]\}\"'<>]+",
+    r"(?:https?://(?:www\.)?clacktronics\.co\.uk/assets/+(?!uploads/)"
+    r"|(?<![\w./-])assets/old_assets/)"
+    r"[^\s\)\]\}\"'<>]+",
     re.IGNORECASE,
 )
 MEDIA_EXTENSIONS = {
@@ -52,7 +62,16 @@ def main() -> None:
             kind = MEDIA_EXTENSIONS.get(Path(parsed.path).suffix.lower())
             if not name or not kind:
                 continue
-            canonical = f"https://clacktronics.co.uk{parsed.path}"
+            # Store one form regardless of how the link was written: strip the
+            # old absolute prefix or the relative base off the front and put the
+            # relative base back on, so the two spellings of the same file
+            # collapse to a single entry.
+            tail = parsed.path.lstrip("/")
+            for prefix in (MEDIA_BASE, "assets/"):
+                if tail.lower().startswith(prefix):
+                    tail = tail[len(prefix):]
+                    break
+            canonical = MEDIA_BASE + tail
             if parsed.query:
                 canonical += f"?{parsed.query}"
             found[canonical.lower()] = {
@@ -64,8 +83,8 @@ def main() -> None:
 
     files = sorted(found.values(), key=lambda item: (item["kind"], item["name"].lower(), item["url"]))
     payload = {
-        "baseUrl": "https://clacktronics.co.uk/assets/",
-        "note": "Generated from public media references because the live assets directory is not listable.",
+        "baseUrl": MEDIA_BASE,
+        "note": "Generated from public media references because the legacy assets directory is not listable.",
         "files": files,
     }
     OUTPUT.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

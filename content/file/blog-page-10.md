@@ -17,10 +17,10 @@ Page 10 of 10
 
 `27 January 2011` · [Open this post on its own](window:file/blog/2011-01-27-amdek-pck-100.md)
 
-[![](https://clacktronics.co.uk/assets/643_amdek_pck100.jpg)](https://clacktronics.co.uk/assets/Amdek_PCK100.jpg)
+[![](assets/old_assets/643_amdek_pck100.jpg)](assets/old_assets/Amdek_PCK100.jpg)
 Analogue electronic drum pad by Amdek a DIY kit version of the Boss PC-2. I was asked to build one. Everything was fine. except the rubber pads seem to have some kind of mold.
 
-[![](https://clacktronics.co.uk/assets/643_amdek_pck100_back.jpg)](https://clacktronics.co.uk/assets/Amdek_PCK100_back.jpg)I added a standard tip - guitar DC socket into the back. It originally had an audio jack style connector - which was completely corroded.
+[![](assets/old_assets/643_amdek_pck100_back.jpg)](assets/old_assets/Amdek_PCK100_back.jpg)I added a standard tip - guitar DC socket into the back. It originally had an audio jack style connector - which was completely corroded.
 
 Here is a quick video of it hooked upto a practice pad with a Piezo attached to it.... sorry the camera was the wrong way up.
 
@@ -32,21 +32,21 @@ http://www.youtube.com/watch?v=8UCsbIOCBrs
 
 `25 January 2011` · [Open this post on its own](window:file/blog/2011-01-25-octave-cat-srm-repair.md)
 
-![](https://clacktronics.co.uk/assets/octave_cat_srm_back.jpg)[![](https://clacktronics.co.uk/assets/643_octave_cat_srm.jpg)](https://clacktronics.co.uk/assets/octave_cat_srm.jpg)
+![](assets/old_assets/octave_cat_srm_back.jpg)[![](assets/old_assets/643_octave_cat_srm.jpg)](assets/old_assets/octave_cat_srm.jpg)
 This keyboard has a strange duophonic mode that is fun but slightly useless, it assigns one VCO to the lower pressed key and the other VCO to the upper pressed key but doesn't touch anything else. So rather than 2 'Voices' it is 2 pitches. Its quite well known that Arp sued them claiming it was a copy of their Oddesey design 1. Great thing about the design is that there is almost every type of modulation you could wish for and it has both an ADSR and AR both assignable anywhere at the flick of a switch. Making the VCO's modulate each other is particularly interesting, there are therefore quite a lot of FM sound opportunities.
 
-[![](https://clacktronics.co.uk/assets/643_octave_cat_srm_back.jpg)](https://clacktronics.co.uk/assets/octave_cat_srm_back-e1296051016222.jpg)
+[![](assets/old_assets/643_octave_cat_srm_back.jpg)](assets/old_assets/octave_cat_srm_back-e1296051016222.jpg)
 
 This particular unit had a few major faults but was still sort of usable. First problem was that the pitch would drop down super low when the key was released, I realized this was because the 'hold' capacitor was broken. Other problems were the S&H was broken and the LFO delay was not working.
 
-[![](https://clacktronics.co.uk/assets/643_octave_cat_board_b.jpg)](https://clacktronics.co.uk/assets/octave_cat_board_b.jpg)
+[![](assets/old_assets/643_octave_cat_board_b.jpg)](assets/old_assets/octave_cat_board_b.jpg)
 
-[![](https://clacktronics.co.uk/assets/643_cat_pcb_board_a_manual-300x231.jpg)![](https://clacktronics.co.uk/assets/643_cat_pcb_board_a-300x225.jpg)](https://clacktronics.co.uk/assets/cat_pcb_board_a.jpg)
+[![](assets/old_assets/643_cat_pcb_board_a_manual-300x231.jpg)![](assets/old_assets/643_cat_pcb_board_a-300x225.jpg)](assets/old_assets/cat_pcb_board_a.jpg)
 
 Opening the synth up is quite easy, but its a pain to get to the top of the PCB, you have to pull they keyboard out the way and detach it from the power supply whilst balancing the unit on 2 books so that it doesn't damage the knobs. Any testing whilst it is on has to be done with a separate power supply or by knowing were the components are and testing it on the other side of the board!
 
-[![](https://clacktronics.co.uk/assets/643_octave_cat_logo.jpg)](https://clacktronics.co.uk/assets/octave_cat_logo.jpg)
-[![](https://clacktronics.co.uk/assets/643_octave_cat_knobs.jpg)](https://clacktronics.co.uk/assets/octave_cat_knobs.jpg)
+[![](assets/old_assets/643_octave_cat_logo.jpg)](assets/old_assets/octave_cat_logo.jpg)
+[![](assets/old_assets/643_octave_cat_knobs.jpg)](assets/old_assets/octave_cat_knobs.jpg)
 
 **Schematics**
 

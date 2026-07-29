@@ -5,7 +5,7 @@ style: plain
 ---
 # Video Synthesis Part 1 : Getting into Video Circuits
 
-![](https://clacktronics.co.uk/assets/643_gieskes.gif) Frame from video by [Gijs Gieskes](http://gieskes.nl) Just recently I have been researching how to work with analogue video, specifically Composite (the yellow phono connector you get on a lot of consumer video equipment.) Here is some information I have found out.
+![](assets/old_assets/643_gieskes.gif) Frame from video by [Gijs Gieskes](http://gieskes.nl) Just recently I have been researching how to work with analogue video, specifically Composite (the yellow phono connector you get on a lot of consumer video equipment.) Here is some information I have found out.
 
 Firstly composite video is far more complex than audio, the reason being that to represent a sound electronically you only need 2 dimensions amplitude over time. It is easily represented by voltage, making it possible to create quite interesting effects and adjustments to the sound with very little and low cost circuitry. Where as composite video is a 2 dimensional image (X,Y) over time with Brightness (luminance) and Colour (chrominance) information is still represented by a voltage, but it has to hold all that information in a 2 dimensional signal. To do this it is constructed of a repeating (scanning) waveform that contains triggers, frequency bursts and a DC voltage that each represent a different component of the image.
 
@@ -17,7 +17,7 @@ Ideally what you need to do is separate the parts (usually sync from luminosity 
 
 There is a lot out there on what can be achieved with circuitry, but not a lot on how. Then I found this excellent book by [Elektor ](http://Elektor.com)that describes to the modern user (released 2011) on how it all works including how to decode and encode composite video! Also touches on lost historical technologies such as mechanical TV and spiral scanning.
 
-[![](https://clacktronics.co.uk/assets/643_analogue-video-300.jpg)](https://clacktronics.co.uk/assets/Analogue-Video-300.jpg)Copyright Elektor
+[![](assets/old_assets/643_analogue-video-300.jpg)](assets/old_assets/Analogue-Video-300.jpg)Copyright Elektor
 
 Below is some of the best bits I could find that certainly seem to have legs for direct video manipulation with circuitry.
 

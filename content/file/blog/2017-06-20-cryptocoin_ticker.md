@@ -5,7 +5,7 @@ style: plain
 ---
 # Cryptocoin ticker
 
-![Pimoroni's microdot phat displaying Bitcoin program](https://clacktronics.co.uk/assets/microdot_bitcoin.jpg)
+![Pimoroni's microdot phat displaying Bitcoin program](assets/old_assets/microdot_bitcoin.jpg)
 A Quick 5 minute build and possibly a prototype for a future project. I took the Pimoroni micro dot display, which is suitably retro looking, like an 80s/90s stock exchange. Although it is LED, it actually looks a bit like an old [Vacuum fluorescent display](https://en.wikipedia.org/wiki/Vacuum_fluorescent_display)! The code is a very simple Python script that uses Coinmarketcap API (I chose them because they pull all the coins together) which is simply just provided as JSON, the API allows you to request by currency so I just pulled the ones I wanted and fed the details into a single string that loops on the display.
 
 See the python code below, it gets the details of the coins one by one and pulls the dollar value of them, concatenating it into a single string that is fed into the Pimoroni module for loading up text on the display. It only requests new information every 20 loops to lower demand on the API as it is probably request limited.

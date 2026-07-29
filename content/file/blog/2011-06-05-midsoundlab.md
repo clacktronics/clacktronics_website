@@ -5,7 +5,7 @@ style: plain
 ---
 # MFOS Soundlab Synthesizer with MIDI
 
-[![](https://clacktronics.co.uk/assets/643_midi-mfos-soundlab.jpg)](https://clacktronics.co.uk/assets/MIDI-MFOS-Soundlab.jpg)
+[![](assets/old_assets/643_midi-mfos-soundlab.jpg)](assets/old_assets/MIDI-MFOS-Soundlab.jpg)
 This was a one off project to see if I could fit MIDI into the simple MFOS  soundlab (Designed by Ray Wilson see [musicfromouterspace.com ](http://musicfromouterspace.com)) it was built from parts I had  laying around including a MIDImplant ([midimplant.com](http://midimplant.com)), basically I was attempting to try and make it perform like a monosynth. Below is a list of  the modifications done.
 	
   * MIDI control of pitch and trigger
@@ -26,7 +26,7 @@ The  Soundlab is capable of some fantastic analogue vintage sounds as well  as s
 
 It is for sale [here](http://cgi.ebay.co.uk/MFOS-Soundlab-MIDI-/120733233974?pt=UK_Musical_Instruments_Pro_Audio_Synthesisers_CV&hash=item1c1c42f336)
 
-[![](https://clacktronics.co.uk/assets/643_mfos-wooden-keyboard-s.jpg)](https://clacktronics.co.uk/assets/MFOS-Wooden-Keyboard-s.jpg)
+[![](assets/old_assets/643_mfos-wooden-keyboard-s.jpg)](assets/old_assets/MFOS-Wooden-Keyboard-s.jpg)
 
 I am also selling this keyboard puts out 1V/Oct CV and triggers as well as portamento controls also made from circuits at musicfromouterspace. [See here](http://cgi.ebay.co.uk/MFOS-Soundlab-MIDI-/120733233974?pt=UK_Musical_Instruments_Pro_Audio_Synthesisers_CV&hash=item1c1c42f336)
 

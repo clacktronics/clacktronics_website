@@ -70,8 +70,17 @@
       const isClackHost = host => /(^|\.)clacktronics\.co\.uk$/i.test(host);
       if (isClackHost(location.hostname) && isClackHost(url.hostname))
         return new URL(`${url.pathname}${url.search}${url.hash}`, location.origin).href;
+      return value;
     } catch (_) {}
-    return value;
+    // Not absolute: the legacy catalogue lists media relatively
+    // (assets/old_assets/NAME), and those entries are relative to the site
+    // root, not to whichever app is hosting the explorer — content/applications
+    // pages would otherwise resolve them a couple of levels too deep.
+    try {
+      return new URL(value, SITE_ROOT).href;
+    } catch (_) {
+      return value;
+    }
   }
 
   async function config() {

@@ -178,6 +178,7 @@ jobs:
                  --exclude 'README.md' \
                  --exclude 'todo.md' \
                  --exclude 'assets/uploads/' \
+                 --exclude 'assets/old_assets/' \
                  --exclude 'assets/upload-config.php' \
                  --exclude 'assets/upload-config.example.php' \
                  ./ "${SSH_USER}@${SSH_HOST}:${DEST}/"; then
@@ -201,9 +202,11 @@ jobs:
 # ----------------
 # This job intentionally does NOT pass --delete, so it never removes files on
 # the host. That means it will never touch assets/uploads/ (your direct-uploaded
-# images/video) or anything else you keep on the server outside Git — but it
-# also won't clean up files you delete from the repo.
+# images/video), assets/old_assets/ (the legacy WordPress-era media the posts
+# link to, which lives only on the host) or anything else you keep on the server
+# outside Git — but it also won't clean up files you delete from the repo.
 #
 # If you later want the host to mirror the repo exactly, add --delete AND keep
-# the `--exclude 'assets/uploads/'` line: rsync protects excluded paths from
-# deletion, so your uploads survive. Test with `--dry-run` the first time.
+# the `--exclude 'assets/uploads/'` and `--exclude 'assets/old_assets/'` lines:
+# rsync protects excluded paths from deletion, so the media that is not in Git
+# survives. Test with `--dry-run` the first time.

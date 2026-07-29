@@ -213,7 +213,10 @@ full-size on a wide one.
 Posts live in `content/file/blog/` as `YYYY-MM-DD-slug.md` files with the
 same frontmatter as any window (use `tagline:` for the displayed date).
 They were converted from the old Jekyll/WordPress site; images point at
-`https://clacktronics.co.uk/assets/`.
+`assets/old_assets/` — a site-root-relative path, not an absolute URL, so the
+same link works on the live site, on GitHub Pages under a project subpath, and
+in a local checkout. New media goes to `assets/uploads/` via the upload
+endpoint instead (see “Uploading images, video and 3D models”).
 
 To add a post: drop the file in `content/file/blog/`, then regenerate the
 blog windows:
@@ -673,8 +676,8 @@ windows, and desktop actions.
 - `applications/files.html` (Applications → System → File Manager) — a shared,
   read-only faux file manager with two drives. **GitHub** browses the complete
   repository tree with folder navigation; **Website Media** browses legacy
-  images, video, and audio hosted at `clacktronics.co.uk/assets/` rather than in
-  the repository. The same explorer powers File → Open from website in the
+  images, video, and audio hosted in `assets/old_assets/` on the web host rather
+  than in the repository. The same explorer powers File → Open from website in the
   Markdown Editor, ClackPaint, and PDF Reader. Markdown opens `.md` files and
   inserts links/media for other selections, Paint accepts images, and PDF
   Reader accepts PDFs. The standalone File Manager opens recognised files in
@@ -694,9 +697,9 @@ windows, and desktop actions.
   website-file browsing, and startup association for `.txt` and related text
   files.
 
-  The live `/assets/` directory intentionally cannot be enumerated over HTTP,
-  so legacy media comes from `content/media-index.json`. After adding legacy
-  media references to site content, refresh that catalogue with
+  The live `assets/old_assets/` directory intentionally cannot be enumerated
+  over HTTP, so legacy media comes from `content/media-index.json`. After adding
+  legacy media references to site content, refresh that catalogue with
   `python3 scripts/build_media_index.py`. Uploaded media is different:
   File Manager also reads the live `assets/upload.php?list=1` catalogue, which
   scans the configured uploads directory. Files under
@@ -1044,13 +1047,30 @@ built out. Emptying `SUBDIR` moves the deploy to the web root, and the root
 follow across. Two things on the host have to be done by hand, because the
 deploy never deletes and never touches `assets/uploads/`:
 
-1. **Move the uploads.** `mv public_html/temp/assets/uploads public_html/assets/uploads`
+1. **Move the legacy media into `assets/old_assets/`.** The WordPress-era
+   images sat directly in `public_html/assets/`, which is the same directory
+   the repo's own `assets/` (CSS, JS, themes) now deploys into — so they are
+   filed one level down, out of the way:
+
+   ```sh
+   cd public_html/assets
+   mkdir -p old_assets
+   # everything that was there before the repo's assets/ landed on top of it
+   mv 643_*.jpg *.gif thumb_*.jpg … old_assets/
+   ```
+
+   The post bodies link to `assets/old_assets/NAME` (site-root-relative), so
+   nothing needs re-editing once the files are in place.
+2. **Move the uploads.** `mv public_html/temp/assets/uploads public_html/assets/uploads`
    — media uploaded during staging lives only on the host, and the post bodies
    now link to it at the root path.
-2. **Delete the old copy.** `rm -rf public_html/temp` once the root is serving.
+3. **Delete the old copy.** `rm -rf public_html/temp` once the root is serving.
    Until it is gone the stale tree keeps answering `/temp/…` (a subdirectory's
    `.htaccess` rewrite rules are not inherited from the parent, so the redirect
    above cannot reach inside it) and search engines see the whole site twice.
+
+Neither `assets/uploads/` nor `assets/old_assets/` is in Git, and the deploy
+excludes both, so a later deploy will never overwrite or remove them.
 
 It needs these repository secrets (Settings → Secrets and variables → Actions):
 `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` (a key whose public half is in the

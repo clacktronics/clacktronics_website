@@ -5,7 +5,7 @@ style: plain
 ---
 # Colours, Speakers and Pulses
 
-![Shapeoko2](https://clacktronics.co.uk/assets/Horowitz_chamber.jpg)
+![Shapeoko2](assets/old_assets/Horowitz_chamber.jpg)
 This is a story about what I currently do, I have moved a little bit away from synthesizers but still make audio electronics for artist Haroon Mirza and sometimes other artists. The approach to making artworks are different to designing audio devices, as usually components and circuits are one-off designs or modified items which are usually used against their original intention. The reason I decided to write about this was to document how the system works for this particular work as it is using new technologies that are getting easier to prototype with. I am really impressed with this new microcontroller implementation of Python programming language called Micro Python.
 
 @[youtube](https://www.youtube.com/watch?v=frSLjx-Af7U)
@@ -30,7 +30,7 @@ Because Micro Python is very close to Python 3 it was very easy to prototype the
 
 @[youtube](https://www.youtube.com/watch?v=b5rM0UPVj80)
 
-![Howowitz PCB design](https://clacktronics.co.uk/assets/speaker_resistor.jpg)
+![Howowitz PCB design](assets/old_assets/speaker_resistor.jpg)
 
 ## The Circuit
 
@@ -38,7 +38,7 @@ The circuit was a little bit different to what I used before, usually I use MOSF
 
 Now directly driving speakers with DC PWM works fine but it uses a lot of power which is fairly wasteful and unnecessary so I created a circuit that reduces the power with a limiting resistor and also removes DC with a cap, it also has diodes to prevent inductive kickback from the speakers.
 
-![Howowitz PCB design](https://clacktronics.co.uk/assets/pcb_design.jpg)
+![Howowitz PCB design](assets/old_assets/pcb_design.jpg)
 
 ## Designing the board
 
@@ -49,5 +49,5 @@ Enclosing
 
 Only issue with using terminal blocks is that they need square holes, for speed I decided to get a box lazercut this also allowed me to put markings on it and cutout a fan for a hole.
 
-![Howowitz Enclosure](https://clacktronics.co.uk/assets/the_enclosure.jpg)
+![Howowitz Enclosure](assets/old_assets/the_enclosure.jpg)
 The Enclosure
