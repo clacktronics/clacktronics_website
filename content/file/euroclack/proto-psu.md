@@ -9,7 +9,7 @@ Part of [EuroClack](window:file/euroclack.md).
 
 ## Description and specs
 
-![Proto-PSU assembled in a breadboard](https://clacktronics.co.uk/euroclack/proto_PSU/images/07a_final_assembled_in_breadboard.jpg)
+![Proto-PSU assembled in a breadboard](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/07a_final_assembled_in_breadboard.jpg)
 
 Proto-PSU is an easy-to-assemble DIY kit that is designed to make it easier and cheaper to have a dual-rail power supply, typical of DIY synths, for prototyping purposes. Its 4-layer PCB design uses through-hole components that are clear and easy to solder. It is versatile: it can be a breadboard-attached supply, an internal case supply or a module-style power supply depending on how you configure it. There is no need for a specialist AC supply or to use mains electricity — it runs off a 15VDC adaptor. It comes with two resistors for R1 so you can either keep the PSU cool at a limited 80mA for -12V or drive it a little harder, keeping an eye on how hot it gets. I recommend keeping to 1Ω for R1 and then replacing it with the smaller resistor if you need more.
 
@@ -81,43 +81,43 @@ The assembly instructions are shown for the complete kit that is for sale. If yo
 
 You should have the following components.
 
-![Kit components](https://clacktronics.co.uk/euroclack/proto_PSU/images/kit_componetns.jpg)
+![Kit components](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/kit_componetns.jpg)
 
 ## Hardware
 
 All the hardware, PCB and panel.
 
-![Kit hardware](https://clacktronics.co.uk/euroclack/proto_PSU/images/kit_hardware.jpg)
+![Kit hardware](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/kit_hardware.jpg)
 
 ## 01 — Mount capacitors
 
 Make sure you get them the right way around. Also note there is 100uF and 10uF — get them in the right place.
 
-![Add capacitors](https://clacktronics.co.uk/euroclack/proto_PSU/images/01_add_capacitors.jpg)
+![Add capacitors](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/01_add_capacitors.jpg)
 
 ## 02 — Mount resistors
 
 Next resistors. Note the colour values; if you are unsure, use a multimeter to check the values.
 
-![Add resistors](https://clacktronics.co.uk/euroclack/proto_PSU/images/02_add_resistors.jpg)
+![Add resistors](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/02_add_resistors.jpg)
 
 ## 03 — Diodes and fuses
 
 Diodes are polarised — stripe goes to stripe on the PCB. Fuses are not polarised and can go either way around.
 
-![Add ceramic, diodes and fuses](https://clacktronics.co.uk/euroclack/proto_PSU/images/03_add_ceramic_diodes_and_fuses.jpg)
+![Add ceramic, diodes and fuses](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/03_add_ceramic_diodes_and_fuses.jpg)
 
 ## 04 — Inductor and regulators
 
 There are three regulators — make sure you put the right ones in the right places: 7812, 7912 and 7805.
 
-![Socket, inductor and regulators](https://clacktronics.co.uk/euroclack/proto_PSU/images/04_socket_inductor_and_regulators.jpg)
+![Socket, inductor and regulators](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/04_socket_inductor_and_regulators.jpg)
 
 ## 05 — Connectors and terminal
 
 Hold the connectors in with a ball of blu-tack or your hand and tack it in place with a blob of solder on your iron to make sure it is all in place before committing to soldering all the pins.
 
-![IDC connectors and screw terminal](https://clacktronics.co.uk/euroclack/proto_PSU/images/05_idc-connectors_screw_terminal.jpg)
+![IDC connectors and screw terminal](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/05_idc-connectors_screw_terminal.jpg)
 
 ## Wait, stop! The assembly now diverges depending on how you want it built
 
@@ -125,38 +125,38 @@ Go to 06A to build the breadboard version, or 06B to complete it as a panel vers
 
 ## 06A — Fit socket and LED
 
-![DC socket and LED](https://clacktronics.co.uk/euroclack/proto_PSU/images/06a_dc_scoket_and_led.jpg)
+![DC socket and LED](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/06a_dc_scoket_and_led.jpg)
 
 ## 07A — Breadboard version finished!
 
-![Final assembled in breadboard](https://clacktronics.co.uk/euroclack/proto_PSU/images/07a_final_assembled_in_breadboard.jpg)
+![Final assembled in breadboard](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/07a_final_assembled_in_breadboard.jpg)
 
 ## 06B — Add spacers
 
 Screw in the spacers to the PCB. We want to attach the panel first, so the panel-dependent components will fit nicely. Solder in the LED at the height you like — I like them sticking out, but you could do them flush.
 
-![Add spacers](https://clacktronics.co.uk/euroclack/proto_PSU/images/06b_add_spacers.jpg)
+![Add spacers](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/06b_add_spacers.jpg)
 
 ## 07B — Put on the panel and fit DC and LED
 
 Put the panel on with the LEDs and align it all so that it will look nice.
 
-![Add panel, LED and barrel socket](https://clacktronics.co.uk/euroclack/proto_PSU/images/07b_add_panel_led_and_barrelt_socket.jpg)
+![Add panel, LED and barrel socket](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/07b_add_panel_led_and_barrelt_socket.jpg)
 
 ## 08B — Double check alignment before soldering
 
-![Check socket alignment](https://clacktronics.co.uk/euroclack/proto_PSU/images/08b_check_socket_alignment.jpg)
+![Check socket alignment](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/08b_check_socket_alignment.jpg)
 
 ## 09B — Finished!
 
-![Panel, slanted view](https://clacktronics.co.uk/euroclack/proto_PSU/images/panel_slant.jpg)
+![Panel, slanted view](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/panel_slant.jpg)
 
 ## Downloads and Resources
 
-- [iBOM](https://clacktronics.co.uk/euroclack/proto_PSU/ibom.html) (right click to save)
+- [iBOM](https://clacktronics.co.uk/content/file/euroclack/proto_psu/ibom.html) (right click to save)
 - [Schematic](https://raw.githubusercontent.com/clacktronics/Euroclack_proto_PSU/main/Documentation/Euroclack_proto_psu_schematic_V1.pdf) (right click to save)
 - [GitHub page](https://github.com/clacktronics/Euroclack_proto_PSU)
 - [Texas Instruments LM7800 series product page](https://www.ti.com/product/LM7800?keyMatch=LM7800)
 - [Texas Instruments LM7900 series product page](https://www.ti.com/product/LM79)
 - [Texas Instruments MC34063 product page](https://www.ti.com/product/MC34063A)
-- [JPEG front view](https://clacktronics.co.uk/euroclack/proto_PSU/images/HIRES_final_assembled_in_breadboard.jpg) (796KB)
+- [JPEG front view](https://clacktronics.co.uk/content/file/euroclack/proto_psu/images/HIRES_final_assembled_in_breadboard.jpg) (796KB)
