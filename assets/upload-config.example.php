@@ -16,10 +16,11 @@ return [
     // REQUIRED — the shared secret. Long and random. Keep it secret.
     'token' => 'PUT-A-LONG-RANDOM-TOKEN-HERE',
 
-    // OPTIONAL — force stable public URLs and a fixed storage directory so
-    // links stay valid even while the site is staged under /temp. If you leave
-    // these out, uploads land next to this script and the URL is derived from
-    // the request (which will include /temp during staging).
+    // OPTIONAL — force stable public URLs and a fixed storage directory. If you
+    // leave these out, uploads land next to this script and the URL is derived
+    // from the request, which is what you want now the site is served from the
+    // web root. Set them only if you stage the site in a subfolder again, so
+    // links keep pointing at the canonical root paths.
     // 'base' => 'https://clacktronics.co.uk/assets/uploads',
     // 'dir'  => '/home/YOURUSER/public_html/assets/uploads',
 

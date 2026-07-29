@@ -16,11 +16,11 @@ Page 1 of 10
 
 `27 July 2026` · [Open this post on its own](window:file/blog/2026-07-27-new-post.md)
 
-![pcb_heater_design-tool](https://clacktronics.co.uk/temp/assets/uploads/2026/07/20260727-131006-5787af2f-pcb-heater-design-tool.png)
+![pcb_heater_design-tool](https://clacktronics.co.uk/assets/uploads/2026/07/20260727-131006-5787af2f-pcb-heater-design-tool.png)
 
 I needed to create a PCB design tool that would work out the trace width and length to heat at an approximate power at a defined voltage. Also whilst I was at it I added features that made nicer infill patterns using well known space filling algorithms. It can then export that design as an inverted image for DIY PCB etching or KiCAD so it can be fabricated.
 
-![Etched heater PCB](https://clacktronics.co.uk/temp/assets/uploads/2026/07/20260727-124521-b609a884-gemini-generated-image-okevd4okevd4okev.png)
+![Etched heater PCB](https://clacktronics.co.uk/assets/uploads/2026/07/20260727-124521-b609a884-gemini-generated-image-okevd4okevd4okev.png)
 
 Here is what I created, it works fairly close to the intended  power a heats up nicely, I also think the Moore (Hilbert) curve looks nice with round corners! 
 

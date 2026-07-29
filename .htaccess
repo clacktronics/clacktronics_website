@@ -20,10 +20,9 @@
 # at Apache as HTTP again — an infinite loop. Checking both means the rule
 # stays correct either way.
 #
-# While the site lives under /temp this file lands in <web root>/temp/, so the
-# redirect covers that subtree only. When SUBDIR is emptied in
-# .github/workflows/deploy-purely.yml to go live, the same file lands at the
-# web root and the rule covers the whole site with no change needed here.
+# The site now deploys to the web root (SUBDIR is empty in
+# .github/workflows/deploy-purely.yml), so this file lands at <web root>/ and
+# the rule covers the whole site.
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteCond %{HTTPS} !=on
@@ -31,12 +30,28 @@
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 </IfModule>
 
+# ------------------------------------------------------- Old staging path
+# The site was staged under /temp/ for a while and those URLs were indexed (and
+# pasted into posts), so send them to their root equivalents rather than let
+# them 404. An absolute https:// target means an http://…/temp/… request lands
+# on the canonical URL in one hop instead of bouncing through the rule above.
+#
+# This only fires once the old <web root>/temp/ directory is gone from the
+# host: while it is still there, requests under it are served by the stale copy
+# of this file that shipped inside it, and per-directory rewrite rules are not
+# inherited from the parent. The deploy never deletes anything, so removing
+# /temp is a manual step on the host — see the README.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^temp(?:/(.*))?$ https://%{HTTP_HOST}/$1 [R=301,L]
+</IfModule>
+
 # HSTS is deliberately not set yet. It is what makes a browser go straight to
 # HTTPS without the redirect round trip, but it is close to irreversible: once
 # a client has seen the header it refuses plain HTTP for the domain until
 # max-age expires, no matter what the server later sends. That is a bad trade
-# on a staging path. When /temp becomes the live site and the redirect above
-# has been serving cleanly for a while, uncomment this — starting at a short
+# on a staging path. Now that the site is at the live root, uncomment this once
+# the redirect above has been serving cleanly for a while — starting at a short
 # max-age (300 = five minutes) and raising it only once nothing has broken.
 #
 # <IfModule mod_headers.c>
