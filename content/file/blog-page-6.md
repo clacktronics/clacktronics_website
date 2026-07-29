@@ -34,7 +34,7 @@ Such a shame I really wanted to hear it! it has so many interesting features
 
 `27 September 2011` · [Open this post on its own](window:file/blog/2011-09-27-lazertran-tutorial.md)
 
-![](https://clacktronics.co.uk/research/lazertran/643_24_Lazertran_Tutorial_Aluminium_finished.jpg)
+![](https://clacktronics.co.uk/content/file/misc/lazertran/images/643_24_Lazertran_Tutorial_Aluminium_finished.jpg)
 I have written a new [lazertran tutorial](window:file/misc/lazertran.md) This is how I make a lot of one offs and small batches. Soon I will be moving to screen print , so I will put up info on that. Interestingly I have found information about how you can use it to etch, this could be good for PCB's!
 
 ---
@@ -44,7 +44,7 @@ I have written a new [lazertran tutorial](window:file/misc/lazertran.md) Thi
 `05 September 2011` · [Open this post on its own](window:file/blog/2011-09-05-modded-realistic-reverb-2.md)
 
 [![](assets/old_assets/643_realistic-reverb-2.jpg)](assets/old_assets/Realistic-Reverb-2.jpg)
-I made this for Owen at [Flesh and Bone Studios](http://www.fleshandbonestudios.com/) in Hackney after he saw [this original post](https://clacktronics.co.uk/2011/realistic-reverb-noismaking-mods.html). I had a bit more time to make it properly and I tried to make it look a bit more like the original case - it strangely ended up looking a bit more like a Roger Mayer pedal. Pretty much the same mods so see the link to the original post.
+I made this for Owen at [Flesh and Bone Studios](http://www.fleshandbonestudios.com/) in Hackney after he saw [this original post](window:file/blog/2011-04-07-realistic-reverb-noismaking-mods.md). I had a bit more time to make it properly and I tried to make it look a bit more like the original case - it strangely ended up looking a bit more like a Roger Mayer pedal. Pretty much the same mods so see the link to the original post.
 
 [![](assets/old_assets/643_rr-blank.jpg)](assets/old_assets/RR-blank.jpg)The enclosure came out quite nice - the process was to apply lazertran and fuse it on in the oven for 2 hours then I sprayed a few light layers of Acrylic Laquer which created a really nice stippled effect.
 
