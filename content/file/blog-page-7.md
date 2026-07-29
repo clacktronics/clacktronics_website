@@ -57,12 +57,12 @@ There is a lot out there on what can be achieved with circuitry, but not a lot o
 Below is some of the best bits I could find that certainly seem to have legs for direct video manipulation with circuitry.
 
 **gieskes.nl**
-http://vimeo.com/20876345
+@[video](http://vimeo.com/20876345){noautoplay controls}
 
 Gijs Gieskes created this fantastic swiping circuit based around micro-controllers that seem to work by switching between 2 video sources very quickly to create interesting fade patterns. His website is [gieskes.nl](http://gieskes.nl/visual-equipment/?file=vm1).
 
 **256byteram**
-http://youtu.be/W5wv7RbJ3EQ
+@[video](http://youtu.be/W5wv7RbJ3EQ){noautoplay controls}
 
 Taking the idea of switches this video demonstrates using a comparator to super-impose video. His youtube channel is [256byteram](http://www.youtube.com/user/256byteram)
 
