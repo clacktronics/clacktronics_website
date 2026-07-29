@@ -15,7 +15,7 @@ A corny mock operating system that has a number of useful apps and content for m
 
 ## Euroclack
 
-![Euroclack synthesizer on a desk with a keyboard and the book](https://clacktronics.co.uk/byom/images/BYOM_built_closeup.jpg)
+![Euroclack synthesizer on a desk with a keyboard and the book](https://clacktronics.co.uk/content/file/euroclack/byom/images/BYOM_built_closeup.jpg)
 
 The main electronic output I create at the moment are my modular synthesizer projects, mostly open source. Please look at the calendar top right for upcoming events where I will be showing new in development work, click below to have a look at all the relavent projects. 
 
