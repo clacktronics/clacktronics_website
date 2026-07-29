@@ -18,7 +18,7 @@ Page 3 of 10
 
 `16 January 2016` · [Open this post on its own](window:file/blog/2016-01-16-VGA_cap.md)
 
-![Raspberry Pi VGA, audio and composite breakout](https://clacktronics.co.uk/assets/Raspberry_pi_VGA.jpg)
+![Raspberry Pi VGA, audio and composite breakout](assets/old_assets/Raspberry_pi_VGA.jpg)
 Here is a PCB I have designed, it was made in response to the release of the Raspberry Pi Zero. For a low cost it helps to break out the analogue outputs from the zero. The analogue ports it provides are stereo audio, composite and VGA. This is all on the same edge as the Zero's existing connectors. This board is ideal if you want to utilize a computer monitor, especially if it has built in speakers like many 'multimedia' TFT screens that now cost very little second hand. Apart from the composite output it will also work on any Raspberry Pi that has the 40 pin GPIO header (Raspberry Pi A/B+ and the Raspberry Pi 2) I am fund raising to make a bunch of them on Kickstarter [see here](http://kck.st/1SuGDvV)
 
 **It is a kit**
@@ -55,23 +55,23 @@ Crab is going to be a series of circuits that I think are useful repeatable modu
 
 `16 January 2016` · [Open this post on its own](window:file/blog/2016-01-16-Openscad.md)
 
-![OpenSCAD design view](https://clacktronics.co.uk/assets/OpenScad.jpg)
+![OpenSCAD design view](assets/old_assets/OpenScad.jpg)
 
 [Open in OpenSCAD](app:applications/openscad.html?code=%2F%2F%20Top%20and%20bottom%20shelves%0D%0Acolor%28%5B255%2C%200%2C%200%2C%201%5D%29%0D%0Atranslate%28%5B0%2C1.2%2C0%5D%29%7B%0D%0Atranslate%28%5B0%2C0%2C0%5D%29%20cube%28%5B20%2C58.8%2C1.2%5D%29%3B%0D%0Atranslate%28%5B0%2C0%2C30%5D%29%20cube%28%5B20%2C58.8%2C1.2%5D%29%3B%0D%0Atranslate%28%5B0%2C0%2C60%5D%29%20cube%28%5B20%2C58.8%2C1.2%5D%29%3B%0D%0A%7D%0D%0A%0D%0A%2F%2F%20sides%0D%0Atranslate%28%5B0%2C0%2C0%5D%29%20cube%28%5B20%2C1.2%2C61.2%5D%29%3B%0D%0Atranslate%28%5B0%2C60%2C0%5D%29%20cube%20%28%5B20%2C1.2%2C61.2%5D%29%3B&render=1)
 
 If you like to think in code this CAD program is great, especially if the design can be broken down into primitives. This is an example of a very basic shelf I designed but I have been using it for everything from designing mounts to hold PIR sensors to a shed that will become the new Clacktronics workshop!
 
-![The final shelf](https://clacktronics.co.uk/assets/openscad_shelves.jpg)
+![The final shelf](assets/old_assets/openscad_shelves.jpg)
 
 The interesting thing is that you end up with segments of code that can represent the real life segments you need to cut to construct your design. Even better if doing something more complicated you can make it parametric by using variables and even iteration.
 
 I have done slightly more complicated tasks with it apart from shelving! Here is an example of a job I did where I used mini PIR sensors in 3d printed mounts so they could be used to detect human movement but on a narrow beam.
 
-![PIR Sensors](https://clacktronics.co.uk/assets/3d_printed_pir_sensor_housing.jpg)
+![PIR Sensors](assets/old_assets/3d_printed_pir_sensor_housing.jpg)
 
 The PCB slotted perfectly into the mount and was held in with hot glue. Details for this project can be found on the [Clacktronics Github](https://github.com/clacktronics/pir_sensors) page.
 
-![PIR Sensors in OpenSCAD](https://clacktronics.co.uk/assets/OpenScad_PIR_sensor.jpg)
+![PIR Sensors in OpenSCAD](assets/old_assets/OpenScad_PIR_sensor.jpg)
 
 [Open in OpenSCAD](app:applications/openscad.html?code=difference%28%29%0D%0A%7B%0D%0Aunion%28%29%7B%20%0D%0Acylinder%20%2840%2C7.5%2C7.5%2C%24fn%3D100%29%3B%20%0D%0Atranslate%28%5B0%2C-11%2C0%5D%29%7Bcylinder%283%2C5%2C5%29%3B%7D%20%0D%0Atranslate%28%5B0%2C11%2C0%5D%29%20%7Bcylinder%283%2C5%2C5%29%3B%7D%20%0D%0Atranslate%28%5B-5%2C-11%2C0%5D%29%20%7Bcube%20%28%5B10%2C22%2C3%5D%29%3B%7D%0D%0A%7D%0D%0A%0D%0Atranslate%28%5B0%2C0%2C-11%5D%29%7Bcylinder%20%2820.1%2C5.7%2C5.7%2C%24fn%3D100%29%3B%7D%20%0D%0Atranslate%28%5B0%2C0%2C19.9%5D%29%20%7Bcylinder%20%2820.2%2C6%2C6%2C%24fn%3D100%29%3B%7D%20%0D%0Atranslate%28%5B0%2C11%2C1%5D%29%7Bcylinder%20%283.2%2C1.5%2C3%2C%24fn%3D20%29%3B%7D%20%0D%0Atranslate%28%5B0%2C11%2C1%5D%29%20%7Bcylinder%20%283.2%2C1.5%2C3%2C%24fn%3D20%29%3B%7D%0D%0A%7D&render=1)
 
@@ -81,7 +81,7 @@ The PCB slotted perfectly into the mount and was held in with hot glue. Details 
 
 `13 January 2016` · [Open this post on its own](window:file/blog/2016-01-13-Colours-speakers-pw.md)
 
-![Shapeoko2](https://clacktronics.co.uk/assets/Horowitz_chamber.jpg)
+![Shapeoko2](assets/old_assets/Horowitz_chamber.jpg)
 This is a story about what I currently do, I have moved a little bit away from synthesizers but still make audio electronics for artist Haroon Mirza and sometimes other artists. The approach to making artworks are different to designing audio devices, as usually components and circuits are one-off designs or modified items which are usually used against their original intention. The reason I decided to write about this was to document how the system works for this particular work as it is using new technologies that are getting easier to prototype with. I am really impressed with this new microcontroller implementation of Python programming language called Micro Python.
 
 @[youtube](https://www.youtube.com/watch?v=frSLjx-Af7U)
@@ -106,7 +106,7 @@ Because Micro Python is very close to Python 3 it was very easy to prototype the
 
 @[youtube](https://www.youtube.com/watch?v=b5rM0UPVj80)
 
-![Howowitz PCB design](https://clacktronics.co.uk/assets/speaker_resistor.jpg)
+![Howowitz PCB design](assets/old_assets/speaker_resistor.jpg)
 
 **The Circuit**
 
@@ -114,7 +114,7 @@ The circuit was a little bit different to what I used before, usually I use MOSF
 
 Now directly driving speakers with DC PWM works fine but it uses a lot of power which is fairly wasteful and unnecessary so I created a circuit that reduces the power with a limiting resistor and also removes DC with a cap, it also has diodes to prevent inductive kickback from the speakers.
 
-![Howowitz PCB design](https://clacktronics.co.uk/assets/pcb_design.jpg)
+![Howowitz PCB design](assets/old_assets/pcb_design.jpg)
 
 **Designing the board**
 
@@ -125,7 +125,7 @@ Enclosing
 
 Only issue with using terminal blocks is that they need square holes, for speed I decided to get a box lazercut this also allowed me to put markings on it and cutout a fan for a hole.
 
-![Howowitz Enclosure](https://clacktronics.co.uk/assets/the_enclosure.jpg)
+![Howowitz Enclosure](assets/old_assets/the_enclosure.jpg)
 The Enclosure
 
 ---
@@ -134,7 +134,7 @@ The Enclosure
 
 `25 March 2015` · [Open this post on its own](window:file/blog/2015-03-25-Star-synare-tympani-lo-tom.md)
 
-![](https://clacktronics.co.uk/assets/Star_Synare_Tympani_Lo-Tom.jpg)
+![](assets/old_assets/Star_Synare_Tympani_Lo-Tom.jpg)
 Clacktronics is trying to improve the [Analogue drum lab](https://clacktronics.co.uk/research/drumlab) and I am looking for information about them. This could be in schematic in repair manual form ( might possibly be none existent ) or perhaps you own a unit? Even if it is broken I am interested, I will repair if for free! Otherwise I am even interested if all you can provide is photograph of the PCB top and bottom. This is also a notice that lots of new information will be uploaded soon to the drum lab!
 
 Star Instruments created some very interesting designs in the mid-70's until the 80's. Because of when they were designed ( an probably on a budget ) many of the parts are quite basic and off the shelf rather than the bespoke chip Roland drum machines you see. Luckily that means quite a lot of the parts are still available today such as OTA's and CMOS chips. Which makes them perfect material for re-construction and analysis.
@@ -147,7 +147,7 @@ The Sounds are quite typical but get interesting when the pitch is pushed right 
 
 `18 March 2015` · [Open this post on its own](window:file/blog/2015-03-18-casting_expanded_polystyrene.md)
 
-![](https://clacktronics.co.uk/assets/casting_polystyrene.jpg)
+![](assets/old_assets/casting_polystyrene.jpg)
 I am currently designing a small desktop rotating speaker, it is basically a miniature version of a rotating polystyrene Leslie baffle that is found in the guts of a cheap 70's electric organ. I will show some results of this soon but first I want to share an idea about how to DIY mould polystyrene.
 
 To make maquettes of the design I have been using 3d printed PLA shapes, I can produce them quite lightweight as 3d printing allows me to them very hollow, but I couldn't help wondering how to make a polystyrene one. Especially as I think polystyrene is probably more dampening to sound which is ideal for this device that I am making. As a bonus it is also  used for the original speaker. I have a CNC so I could carve it out of a machinable foam ( expanded polystyrene is a bit tricky! ) but looking at polystyrene packaging I noticed it is actually moulded in a very similar way to injection moulding.
@@ -160,7 +160,7 @@ Polystyrene is a plastic, basic polystyrene is a pretty hard and brittle, CD jew
 
 But how are shapes formed with these pellets? I initially thought that perhaps a machine somehow pushes the beads into a space then compresses it under heat, but experiments with heating a bead or two up showed me they just dissolve back to their original density! Information on the factory process is pretty scarce so after a bit of searching I found this small explanation below of the entire process.
 
-![](https://clacktronics.co.uk/assets/casting_EPS_DIY.png)
+![](assets/old_assets/casting_EPS_DIY.png)
 
 >EPS is manufactured from styrene monomer, derivative of ethylene and benzene, using a polymerisation process which produces translucent spherical beads of polystyrene, about the size of sugar granules. During this process a low boiling point hydrocarbon, usually pentane gas, is added to the material to assist expansion during subsequent processing. Beads are delivered to EPS processors usually in boxes of 600kg or 1000kg.
 >
@@ -180,7 +180,7 @@ So it mentions that there are 2 stages, making the beads and casting the beads. 
 
 **Experiments**
 
-![](https://clacktronics.co.uk/assets/casting_polystyrene_mould.jpg)
+![](assets/old_assets/casting_polystyrene_mould.jpg)
 
 To simulate the casting process I used the following
 
@@ -188,7 +188,7 @@ To simulate the casting process I used the following
 * water tight Tupperware container
 * 'virgin' bean bag beads
 
-![](https://clacktronics.co.uk/assets/casting_polystyrene_test_1.jpg)
+![](assets/old_assets/casting_polystyrene_test_1.jpg)
 
 Test 1
 ======
@@ -198,7 +198,7 @@ Test 1
 
 Success! it held together, well sort of. It didn't really expand tightly to the sides and only half of it cast, it also breaks apart quite easily. So I thought perhaps I need to drill holes in the bottom to let the steam flow through and not cool and compress more beads inside when I load it up.
 
-![](https://clacktronics.co.uk/assets/casting_polystyrene_test_2.jpg)
+![](assets/old_assets/casting_polystyrene_test_2.jpg)
 
 Test 2
 ======

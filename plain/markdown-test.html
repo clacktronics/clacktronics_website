@@ -68,7 +68,7 @@
 <p>A plain image. This one is an 80px tile shown at 80px, so it is already whole:<br>no zoom-in cursor, no badge, nothing to click.</p>
 <p><img src="../assets/backgrounds/circuit-trace.png" alt="Circuit trace tile" loading="lazy"></p>
 <p>This photograph is 2744px wide and the column is not, so it should show the<br>badge in its top right corner, take a <span class="k">zoom-in</span> cursor, and open the<br>full-size file in a new browser window when clicked. Dragging this window wider<br>than the picture would take all of that away again — which needs a very wide<br>screen at 2744px, but the same happens at any size the picture fits in.</p>
-<p><img src="https://clacktronics.co.uk/assets/3d_printed_pir_sensor_housing.jpg" alt="A 3D-printed PIR sensor housing" loading="lazy"></p>
+<p><img src="../assets/old_assets/3d_printed_pir_sensor_housing.jpg" alt="A 3D-printed PIR sensor housing" loading="lazy"></p>
 <p>A linked image (thumbnail that opens the full file) — clicking it should open<br>the image, not follow a broken link. An image the author has linked by hand is<br>left alone by the zoom script, so it gets no badge of its own:</p>
 <p><a href="../assets/backgrounds/cracked-earth.png" target="_blank" rel="noopener noreferrer"><img src="../assets/backgrounds/cracked-earth.png" alt="Cracked earth tile" loading="lazy"></a></p>
 <p>An image with an unsafe source is dropped entirely, leaving nothing behind:</p>
@@ -105,11 +105,11 @@ void setup() {
 <p>Short links and Shorts/embed URLs are accepted by the same directive:</p>
 <div class="youtube-embed"><iframe src="https://www.youtube-nocookie.com/embed/9yssRi2fjQk" title="Proto-PSU kit assembly" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
 <p>An inline video — the default is an animated GIF in all but name: looping,<br>muted, playing on its own, with no controls. It should be moving already:</p>
-<div class="video-embed"><video src="https://clacktronics.co.uk/assets/flipdots.mp4" aria-label="Flipdots flipping" preload="auto" playsinline loop autoplay muted></video></div>
+<div class="video-embed"><video src="../assets/old_assets/flipdots.mp4" aria-label="Flipdots flipping" preload="auto" playsinline loop autoplay muted></video></div>
 <p>The same video as an ordinary player, so it waits on its first frame until it is<br>started, then plays through once with sound:</p>
-<div class="video-embed"><video src="https://clacktronics.co.uk/assets/flipdots.mp4" aria-label="Flipdots with controls" preload="metadata" playsinline controls></video></div>
+<div class="video-embed"><video src="../assets/old_assets/flipdots.mp4" aria-label="Flipdots with controls" preload="metadata" playsinline controls></video></div>
 <p>A looping clip that still waits to be started, and keeps its controls — the<br><span class="k">noautoplay</span> option overrides what looping implies:</p>
-<div class="video-embed"><video src="https://clacktronics.co.uk/assets/flipdots.mp4" aria-label="Flipdots on request" preload="metadata" playsinline loop controls></video></div>
+<div class="video-embed"><video src="../assets/old_assets/flipdots.mp4" aria-label="Flipdots on request" preload="metadata" playsinline loop controls></video></div>
 <p>An interactive KiCad schematic viewer:</p>
 <figure class="kicanvas-embed"><kicanvas-embed controls="full" aria-label="Example schematic"><kicanvas-source src="../content/applications/kicad/example.kicad_sch"></kicanvas-source></kicanvas-embed><figcaption>Example schematic</figcaption></figure>
 <p>An inline 3D model — borderless and transparent, so it sits in the text rather<br>than in a panel:</p>
@@ -138,7 +138,7 @@ void setup() {
   <a href="https://clacktronics.co.uk" target="_blank" rel="noopener noreferrer">links</a> are all allowed.</p>
 </details></div>
 <div class="html-block"><figure>
-  <img src="https://clacktronics.co.uk/assets/3d_printed_pir_sensor_housing.jpg" alt="The same photograph inside a raw HTML block" loading="lazy">
+  <img src="../assets/old_assets/3d_printed_pir_sensor_housing.jpg" alt="The same photograph inside a raw HTML block" loading="lazy">
   <figcaption>A picture written as raw HTML belongs to the markup around it, so
   it keeps whatever size that markup gives it and gets no zoom link of its own —
   even though it is the same oversized photograph as above.</figcaption>

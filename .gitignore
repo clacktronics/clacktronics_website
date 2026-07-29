@@ -4,6 +4,10 @@ assets/upload-config.php
 # Media uploaded via the upload endpoint lives on the web host, not in Git
 assets/uploads/
 
+# Legacy WordPress-era media the old posts link to. Also host-only — ignored so
+# a local copy pulled down for testing can never be committed by accident.
+assets/old_assets/
+
 # Build stamp written by the deploy workflow; not part of the source
 version.json
 

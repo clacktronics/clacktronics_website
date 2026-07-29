@@ -5,7 +5,7 @@ style: plain
 ---
 # Casting expanded polystyrene
 
-![](https://clacktronics.co.uk/assets/casting_polystyrene.jpg)
+![](assets/old_assets/casting_polystyrene.jpg)
 I am currently designing a small desktop rotating speaker, it is basically a miniature version of a rotating polystyrene Leslie baffle that is found in the guts of a cheap 70's electric organ. I will show some results of this soon but first I want to share an idea about how to DIY mould polystyrene.
 
 To make maquettes of the design I have been using 3d printed PLA shapes, I can produce them quite lightweight as 3d printing allows me to them very hollow, but I couldn't help wondering how to make a polystyrene one. Especially as I think polystyrene is probably more dampening to sound which is ideal for this device that I am making. As a bonus it is also  used for the original speaker. I have a CNC so I could carve it out of a machinable foam ( expanded polystyrene is a bit tricky! ) but looking at polystyrene packaging I noticed it is actually moulded in a very similar way to injection moulding.
@@ -18,7 +18,7 @@ Polystyrene is a plastic, basic polystyrene is a pretty hard and brittle, CD jew
 
 But how are shapes formed with these pellets? I initially thought that perhaps a machine somehow pushes the beads into a space then compresses it under heat, but experiments with heating a bead or two up showed me they just dissolve back to their original density! Information on the factory process is pretty scarce so after a bit of searching I found this small explanation below of the entire process.
 
-![](https://clacktronics.co.uk/assets/casting_EPS_DIY.png)
+![](assets/old_assets/casting_EPS_DIY.png)
 
 >EPS is manufactured from styrene monomer, derivative of ethylene and benzene, using a polymerisation process which produces translucent spherical beads of polystyrene, about the size of sugar granules. During this process a low boiling point hydrocarbon, usually pentane gas, is added to the material to assist expansion during subsequent processing. Beads are delivered to EPS processors usually in boxes of 600kg or 1000kg.
 >
@@ -38,7 +38,7 @@ So it mentions that there are 2 stages, making the beads and casting the beads. 
 
 ## Experiments
 
-![](https://clacktronics.co.uk/assets/casting_polystyrene_mould.jpg)
+![](assets/old_assets/casting_polystyrene_mould.jpg)
 
 To simulate the casting process I used the following
 
@@ -46,7 +46,7 @@ To simulate the casting process I used the following
 * water tight Tupperware container
 * 'virgin' bean bag beads
 
-![](https://clacktronics.co.uk/assets/casting_polystyrene_test_1.jpg)
+![](assets/old_assets/casting_polystyrene_test_1.jpg)
 
 Test 1
 ======
@@ -56,7 +56,7 @@ Test 1
 
 Success! it held together, well sort of. It didn't really expand tightly to the sides and only half of it cast, it also breaks apart quite easily. So I thought perhaps I need to drill holes in the bottom to let the steam flow through and not cool and compress more beads inside when I load it up.
 
-![](https://clacktronics.co.uk/assets/casting_polystyrene_test_2.jpg)
+![](assets/old_assets/casting_polystyrene_test_2.jpg)
 
 Test 2
 ======

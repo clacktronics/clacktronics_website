@@ -56,7 +56,7 @@
   "assetUpload": "assets/upload.php",
   "media": {
     "label": "Website Media",
-    "baseUrl": "https://clacktronics.co.uk/assets/",
+    "baseUrl": "assets/old_assets/",
     "index": "content/media-index.json",
     "uploadsIndex": "assets/upload.php?list=1"
   }

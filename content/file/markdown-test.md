@@ -103,7 +103,7 @@ full-size file in a new browser window when clicked. Dragging this window wider
 than the picture would take all of that away again — which needs a very wide
 screen at 2744px, but the same happens at any size the picture fits in.
 
-![A 3D-printed PIR sensor housing](https://clacktronics.co.uk/assets/3d_printed_pir_sensor_housing.jpg)
+![A 3D-printed PIR sensor housing](assets/old_assets/3d_printed_pir_sensor_housing.jpg)
 
 A linked image (thumbnail that opens the full file) — clicking it should open
 the image, not follow a broken link. An image the author has linked by hand is
@@ -175,17 +175,17 @@ Short links and Shorts/embed URLs are accepted by the same directive:
 An inline video — the default is an animated GIF in all but name: looping,
 muted, playing on its own, with no controls. It should be moving already:
 
-@[video](https://clacktronics.co.uk/assets/flipdots.mp4 "Flipdots flipping")
+@[video](assets/old_assets/flipdots.mp4 "Flipdots flipping")
 
 The same video as an ordinary player, so it waits on its first frame until it is
 started, then plays through once with sound:
 
-@[video](https://clacktronics.co.uk/assets/flipdots.mp4 "Flipdots with controls"){noloop controls}
+@[video](assets/old_assets/flipdots.mp4 "Flipdots with controls"){noloop controls}
 
 A looping clip that still waits to be started, and keeps its controls — the
 `noautoplay` option overrides what looping implies:
 
-@[video](https://clacktronics.co.uk/assets/flipdots.mp4 "Flipdots on request"){noautoplay controls}
+@[video](assets/old_assets/flipdots.mp4 "Flipdots on request"){noautoplay controls}
 
 An interactive KiCad schematic viewer:
 
@@ -239,7 +239,7 @@ A block starting with an HTML tag is passed through the sanitiser:
 </details>
 
 <figure>
-  <img src="https://clacktronics.co.uk/assets/3d_printed_pir_sensor_housing.jpg" alt="The same photograph inside a raw HTML block">
+  <img src="assets/old_assets/3d_printed_pir_sensor_housing.jpg" alt="The same photograph inside a raw HTML block">
   <figcaption>A picture written as raw HTML belongs to the markup around it, so
   it keeps whatever size that markup gives it and gets no zoom link of its own —
   even though it is the same oversized photograph as above.</figcaption>

@@ -1,774 +1,840 @@
 {
-  "baseUrl": "https://clacktronics.co.uk/assets/",
-  "note": "Generated from public media references because the live assets directory is not listable.",
+  "baseUrl": "assets/old_assets/",
+  "note": "Generated from public media references because the legacy assets directory is not listable.",
   "files": [
     {
       "name": "1.jpg",
-      "url": "https://clacktronics.co.uk/assets/1.jpg",
+      "url": "assets/old_assets/1.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-23-roland-sre555.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "3d_printed_pir_sensor_housing.jpg",
-      "url": "https://clacktronics.co.uk/assets/3d_printed_pir_sensor_housing.jpg",
+      "url": "assets/old_assets/3d_printed_pir_sensor_housing.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-01-16-Openscad.md"
+      "source": "content/file/markdown-test.md"
     },
     {
       "name": "643_1.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_1.jpg",
+      "url": "assets/old_assets/643_1.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-23-roland-sre555.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "643_2_edp_wasps.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_2_edp_wasps.jpg",
+      "url": "assets/old_assets/643_2_edp_wasps.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-08-30-another-day-another-couple-of-wasps.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "643_akg-bx-20-psu.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_akg-bx-20-psu.jpg",
+      "url": "assets/old_assets/643_akg-bx-20-psu.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-02-07-akg-bx-20-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_akg-bx20.gif",
-      "url": "https://clacktronics.co.uk/assets/643_akg-bx20.gif",
+      "url": "assets/old_assets/643_akg-bx20.gif",
       "kind": "image",
-      "source": "content/file/blog/2011-02-07-akg-bx-20-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_amdek_pck100.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_amdek_pck100.jpg",
+      "url": "assets/old_assets/643_amdek_pck100.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-27-amdek-pck-100.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "643_amdek_pck100_back.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_amdek_pck100_back.jpg",
+      "url": "assets/old_assets/643_amdek_pck100_back.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-27-amdek-pck-100.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "643_analogue-video-300.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_analogue-video-300.jpg",
+      "url": "assets/old_assets/643_analogue-video-300.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-22-video-synthesis-part-1-getting-into-video-circuits.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "643_avrsyn-guts1.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_avrsyn-guts1.jpg",
+      "url": "assets/old_assets/643_avrsyn-guts1.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-07-late-spring-cleanout-avrsyn.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "643_avrsyn-main1.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_avrsyn-main1.jpg",
+      "url": "assets/old_assets/643_avrsyn-main1.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-07-late-spring-cleanout-avrsyn.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "643_cat_pcb_board_a-300x225.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_cat_pcb_board_a-300x225.jpg",
+      "url": "assets/old_assets/643_cat_pcb_board_a-300x225.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "643_cat_pcb_board_a_manual-300x231.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_cat_pcb_board_a_manual-300x231.jpg",
+      "url": "assets/old_assets/643_cat_pcb_board_a_manual-300x231.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "643_clacktronics-reprap.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_clacktronics-reprap.jpg",
+      "url": "assets/old_assets/643_clacktronics-reprap.jpg",
       "kind": "image",
-      "source": "content/file/blog/2013-01-09-the-3d-printed-bandwagon.md"
+      "source": "content/file/blog-page-4.md"
+    },
+    {
+      "name": "643_clacktronics.jpg",
+      "url": "assets/old_assets/643_clacktronics.jpg",
+      "kind": "image",
+      "source": "content/file/blog-page-4.md"
     },
     {
       "name": "643_cleaning_pot.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_cleaning_pot.jpg",
+      "url": "assets/old_assets/643_cleaning_pot.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_cri_call_tube_baby_monitor_back.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_cri_call_tube_baby_monitor_back.jpg",
+      "url": "assets/old_assets/643_cri_call_tube_baby_monitor_back.jpg",
       "kind": "image",
-      "source": "content/file/blog/2013-02-16-cri-baby-call.md"
+      "source": "content/file/blog-page-4.md"
     },
     {
       "name": "643_cri_call_tube_baby_monitor_front.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_cri_call_tube_baby_monitor_front.jpg",
+      "url": "assets/old_assets/643_cri_call_tube_baby_monitor_front.jpg",
       "kind": "image",
-      "source": "content/file/blog/2013-02-16-cri-baby-call.md"
+      "source": "content/file/blog-page-4.md"
     },
     {
       "name": "643_cri_call_tube_baby_monitor_tubes.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_cri_call_tube_baby_monitor_tubes.jpg",
+      "url": "assets/old_assets/643_cri_call_tube_baby_monitor_tubes.jpg",
       "kind": "image",
-      "source": "content/file/blog/2013-02-16-cri-baby-call.md"
+      "source": "content/file/blog-page-4.md"
+    },
+    {
+      "name": "643_ddphoto.jpg",
+      "url": "assets/old_assets/643_ddphoto.jpg",
+      "kind": "image",
+      "source": "content/file/blog-page-5.md"
+    },
+    {
+      "name": "643_dsc_81401.jpg",
+      "url": "assets/old_assets/643_dsc_81401.jpg",
+      "kind": "image",
+      "source": "content/file/blog-page-5.md"
     },
     {
       "name": "643_eddystone_enclosures.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_eddystone_enclosures.jpg",
+      "url": "assets/old_assets/643_eddystone_enclosures.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-27-enclosures.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_edp_wasp_deluxe-643.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_edp_wasp_deluxe-643.jpg",
+      "url": "assets/old_assets/643_edp_wasp_deluxe-643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-08-edp-wasp-deluxe.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "643_edp_wasp_deluxe_bsck643.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_edp_wasp_deluxe_bsck643.jpg",
+      "url": "assets/old_assets/643_edp_wasp_deluxe_bsck643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-08-edp-wasp-deluxe.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "643_edp_wasp_deluxe_con643.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_edp_wasp_deluxe_con643.jpg",
+      "url": "assets/old_assets/643_edp_wasp_deluxe_con643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-08-edp-wasp-deluxe.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "643_edp_wasp_deluxe_main643.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_edp_wasp_deluxe_main643.jpg",
+      "url": "assets/old_assets/643_edp_wasp_deluxe_main643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-08-edp-wasp-deluxe.md"
+      "source": "content/file/home.md"
     },
     {
       "name": "643_gieskes.gif",
-      "url": "https://clacktronics.co.uk/assets/643_gieskes.gif",
+      "url": "assets/old_assets/643_gieskes.gif",
       "kind": "image",
-      "source": "content/file/blog/2011-06-22-video-synthesis-part-1-getting-into-video-circuits.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "643_img_20110418_153559.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_img_20110418_153559.jpg",
+      "url": "assets/old_assets/643_img_20110418_153559.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-23-roland-sre555.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "643_juno60.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_juno60.jpg",
+      "url": "assets/old_assets/643_juno60.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-03-14-juno-60-memory-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_juno60_ram.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_juno60_ram.jpg",
+      "url": "assets/old_assets/643_juno60_ram.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-03-14-juno-60-memory-repair.md"
+      "source": "content/file/blog-page-9.md"
+    },
+    {
+      "name": "643_led-hoop.jpg",
+      "url": "assets/old_assets/643_led-hoop.jpg",
+      "kind": "image",
+      "source": "content/file/blog-page-5.md"
     },
     {
       "name": "643_maplin-ada-inside.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_maplin-ada-inside.jpg",
+      "url": "assets/old_assets/643_maplin-ada-inside.jpg",
       "kind": "image",
-      "source": "content/file/blog/2013-01-04-maplin-ada-delay.md"
+      "source": "content/file/blog-page-5.md"
     },
     {
       "name": "643_maplin-ada.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_maplin-ada.jpg",
+      "url": "assets/old_assets/643_maplin-ada.jpg",
       "kind": "image",
-      "source": "content/file/blog/2013-01-04-maplin-ada-delay.md"
+      "source": "content/file/blog-page-5.md"
     },
     {
       "name": "643_mfos-wooden-keyboard-s.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_mfos-wooden-keyboard-s.jpg",
+      "url": "assets/old_assets/643_mfos-wooden-keyboard-s.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-05-midsoundlab.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "643_midi-mfos-soundlab.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_midi-mfos-soundlab.jpg",
+      "url": "assets/old_assets/643_midi-mfos-soundlab.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-05-midsoundlab.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "643_octave_cat_board_b.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_octave_cat_board_b.jpg",
+      "url": "assets/old_assets/643_octave_cat_board_b.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "643_octave_cat_knobs.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_octave_cat_knobs.jpg",
+      "url": "assets/old_assets/643_octave_cat_knobs.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "643_octave_cat_logo.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_octave_cat_logo.jpg",
+      "url": "assets/old_assets/643_octave_cat_logo.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "643_octave_cat_srm.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_octave_cat_srm.jpg",
+      "url": "assets/old_assets/643_octave_cat_srm.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "643_octave_cat_srm_back.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_octave_cat_srm_back.jpg",
+      "url": "assets/old_assets/643_octave_cat_srm_back.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "643_octave_kitten_main_634.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_octave_kitten_main_634.jpg",
+      "url": "assets/old_assets/643_octave_kitten_main_634.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-22-octave-kitten-repair.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "643_oscar1.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_oscar1.jpg",
+      "url": "assets/old_assets/643_oscar1.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-27-oxford-oscar.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "643_oscar2.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_oscar2.jpg",
+      "url": "assets/old_assets/643_oscar2.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-27-oxford-oscar.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "643_oscar3.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_oscar3.jpg",
+      "url": "assets/old_assets/643_oscar3.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-27-oxford-oscar.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "643_realistic-reverb-2.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_realistic-reverb-2.jpg",
+      "url": "assets/old_assets/643_realistic-reverb-2.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-05-modded-realistic-reverb-2.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "643_realistic-reverb-dc-643.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_realistic-reverb-dc-643.jpg",
+      "url": "assets/old_assets/643_realistic-reverb-dc-643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-07-realistic-reverb-noismaking-mods.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_realistic-reverb-in-out-643.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_realistic-reverb-in-out-643.jpg",
+      "url": "assets/old_assets/643_realistic-reverb-in-out-643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-07-realistic-reverb-noismaking-mods.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_realistic-reverb-knobs-643.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_realistic-reverb-knobs-643.jpg",
+      "url": "assets/old_assets/643_realistic-reverb-knobs-643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-07-realistic-reverb-noismaking-mods.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_realistic-reverb-schematic-with-mods.gif",
-      "url": "https://clacktronics.co.uk/assets/643_realistic-reverb-schematic-with-mods.gif",
+      "url": "assets/old_assets/643_realistic-reverb-schematic-with-mods.gif",
       "kind": "image",
-      "source": "content/file/blog/2011-04-07-realistic-reverb-noismaking-mods.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_realistic-reverb.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_realistic-reverb.jpg",
+      "url": "assets/old_assets/643_realistic-reverb.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-07-realistic-reverb-noismaking-mods.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_rolandre201.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_rolandre201.jpg",
+      "url": "assets/old_assets/643_rolandre201.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_rolandre201_blue_backlight.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_rolandre201_blue_backlight.jpg",
+      "url": "assets/old_assets/643_rolandre201_blue_backlight.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_rolandre201_under_lid.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_rolandre201_under_lid.jpg",
+      "url": "assets/old_assets/643_rolandre201_under_lid.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "643_rr-blank.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_rr-blank.jpg",
+      "url": "assets/old_assets/643_rr-blank.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-05-modded-realistic-reverb-2.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "643_rr-stipple.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_rr-stipple.jpg",
+      "url": "assets/old_assets/643_rr-stipple.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-05-modded-realistic-reverb-2.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "643_synare3large_147-e1317332821202.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_synare3large_147-e1317332821202.jpg",
+      "url": "assets/old_assets/643_synare3large_147-e1317332821202.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-29-star-synare-3-page.md"
+      "source": "content/file/blog-page-5.md"
     },
     {
       "name": "643_wasp-batch.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_wasp-batch.jpg",
+      "url": "assets/old_assets/643_wasp-batch.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-07-04-wasp-drive-first-batch-complete.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "643_wasp-sockets.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_wasp-sockets.jpg",
+      "url": "assets/old_assets/643_wasp-sockets.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-20-edp-wasp-restoration-part-1.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "643_wasp_patch_pad.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_wasp_patch_pad.jpg",
+      "url": "assets/old_assets/643_wasp_patch_pad.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-07-28-wasp-patch-pad.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "643_yamaha_cs80_sub_octave_mod.jpg",
-      "url": "https://clacktronics.co.uk/assets/643_yamaha_cs80_sub_octave_mod.jpg",
+      "url": "assets/old_assets/643_yamaha_cs80_sub_octave_mod.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-22-yamahacs10.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "Amdek_PCK100.jpg",
-      "url": "https://clacktronics.co.uk/assets/Amdek_PCK100.jpg",
+      "url": "assets/old_assets/Amdek_PCK100.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-27-amdek-pck-100.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "Amdek_PCK100_back.jpg",
-      "url": "https://clacktronics.co.uk/assets/Amdek_PCK100_back.jpg",
+      "url": "assets/old_assets/Amdek_PCK100_back.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-27-amdek-pck-100.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "Analogue-Video-300.jpg",
-      "url": "https://clacktronics.co.uk/assets/Analogue-Video-300.jpg",
+      "url": "assets/old_assets/Analogue-Video-300.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-22-video-synthesis-part-1-getting-into-video-circuits.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "AVRSYN-guts1.jpg",
-      "url": "https://clacktronics.co.uk/assets/AVRSYN-guts1.jpg",
+      "url": "assets/old_assets/AVRSYN-guts1.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-07-late-spring-cleanout-avrsyn.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "AVRSYN-main1.jpg",
-      "url": "https://clacktronics.co.uk/assets/AVRSYN-main1.jpg",
+      "url": "assets/old_assets/AVRSYN-main1.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-07-late-spring-cleanout-avrsyn.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "boldport.jpg",
-      "url": "https://clacktronics.co.uk/assets/boldport.jpg",
+      "url": "assets/old_assets/boldport.jpg",
       "kind": "image",
-      "source": "content/file/blog/2019-01-02-Boldport.md"
+      "source": "content/file/blog-page-2.md"
+    },
+    {
+      "name": "byom.jpg",
+      "url": "assets/old_assets/byom.jpg",
+      "kind": "image",
+      "source": "content/file/blog.md"
     },
     {
       "name": "casting_EPS_DIY.png",
-      "url": "https://clacktronics.co.uk/assets/casting_EPS_DIY.png",
+      "url": "assets/old_assets/casting_EPS_DIY.png",
       "kind": "image",
-      "source": "content/file/blog/2015-03-18-casting_expanded_polystyrene.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "casting_polystyrene.jpg",
-      "url": "https://clacktronics.co.uk/assets/casting_polystyrene.jpg",
+      "url": "assets/old_assets/casting_polystyrene.jpg",
       "kind": "image",
-      "source": "content/file/blog/2015-03-18-casting_expanded_polystyrene.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "casting_polystyrene_mould.jpg",
-      "url": "https://clacktronics.co.uk/assets/casting_polystyrene_mould.jpg",
+      "url": "assets/old_assets/casting_polystyrene_mould.jpg",
       "kind": "image",
-      "source": "content/file/blog/2015-03-18-casting_expanded_polystyrene.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "casting_polystyrene_test_1.jpg",
-      "url": "https://clacktronics.co.uk/assets/casting_polystyrene_test_1.jpg",
+      "url": "assets/old_assets/casting_polystyrene_test_1.jpg",
       "kind": "image",
-      "source": "content/file/blog/2015-03-18-casting_expanded_polystyrene.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "casting_polystyrene_test_2.jpg",
-      "url": "https://clacktronics.co.uk/assets/casting_polystyrene_test_2.jpg",
+      "url": "assets/old_assets/casting_polystyrene_test_2.jpg",
       "kind": "image",
-      "source": "content/file/blog/2015-03-18-casting_expanded_polystyrene.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "cat_pcb_board_a.jpg",
-      "url": "https://clacktronics.co.uk/assets/cat_pcb_board_a.jpg",
+      "url": "assets/old_assets/cat_pcb_board_a.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
+    },
+    {
+      "name": "Clacktronics-Reprap.jpg",
+      "url": "assets/old_assets/Clacktronics-Reprap.jpg",
+      "kind": "image",
+      "source": "content/file/blog-page-4.md"
     },
     {
       "name": "Cri_Call_Tube_baby_monitor_back.jpg",
-      "url": "https://clacktronics.co.uk/assets/Cri_Call_Tube_baby_monitor_back.jpg",
+      "url": "assets/old_assets/Cri_Call_Tube_baby_monitor_back.jpg",
       "kind": "image",
-      "source": "content/file/blog/2013-02-16-cri-baby-call.md"
+      "source": "content/file/blog-page-4.md"
     },
     {
       "name": "Cri_Call_Tube_baby_monitor_front.jpg",
-      "url": "https://clacktronics.co.uk/assets/Cri_Call_Tube_baby_monitor_front.jpg",
+      "url": "assets/old_assets/Cri_Call_Tube_baby_monitor_front.jpg",
       "kind": "image",
-      "source": "content/file/blog/2013-02-16-cri-baby-call.md"
+      "source": "content/file/blog-page-4.md"
     },
     {
       "name": "Cri_Call_Tube_baby_monitor_tubes.jpg",
-      "url": "https://clacktronics.co.uk/assets/Cri_Call_Tube_baby_monitor_tubes.jpg",
+      "url": "assets/old_assets/Cri_Call_Tube_baby_monitor_tubes.jpg",
       "kind": "image",
-      "source": "content/file/blog/2013-02-16-cri-baby-call.md"
+      "source": "content/file/blog-page-4.md"
+    },
+    {
+      "name": "DSC_81401.jpg",
+      "url": "assets/old_assets/DSC_81401.jpg",
+      "kind": "image",
+      "source": "content/file/blog-page-5.md"
     },
     {
       "name": "EDP_Wasp_deluxe-643.jpg",
-      "url": "https://clacktronics.co.uk/assets/EDP_Wasp_deluxe-643.jpg",
+      "url": "assets/old_assets/EDP_Wasp_deluxe-643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-08-edp-wasp-deluxe.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "EDP_Wasp_deluxe_Bsck643.jpg",
-      "url": "https://clacktronics.co.uk/assets/EDP_Wasp_deluxe_Bsck643.jpg",
+      "url": "assets/old_assets/EDP_Wasp_deluxe_Bsck643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-08-edp-wasp-deluxe.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "EDP_Wasp_deluxe_Con643.jpg",
-      "url": "https://clacktronics.co.uk/assets/EDP_Wasp_deluxe_Con643.jpg",
+      "url": "assets/old_assets/EDP_Wasp_deluxe_Con643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-08-edp-wasp-deluxe.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "EDP_Wasp_deluxe_Main643.jpg",
-      "url": "https://clacktronics.co.uk/assets//EDP_Wasp_deluxe_Main643.jpg",
+      "url": "assets/old_assets/EDP_Wasp_deluxe_Main643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-08-edp-wasp-deluxe.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "Foxall_scanner.jpg",
-      "url": "https://clacktronics.co.uk/assets/Foxall_scanner.jpg",
+      "url": "assets/old_assets/Foxall_scanner.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-05-18-Scanner_Cloud.md"
+      "source": "content/file/blog-page-2.md"
     },
     {
       "name": "Foxall_scanner_pile.jpg",
-      "url": "https://clacktronics.co.uk/assets/Foxall_scanner_pile.jpg",
+      "url": "assets/old_assets/Foxall_scanner_pile.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-05-18-Scanner_Cloud.md"
+      "source": "content/file/blog-page-2.md"
     },
     {
       "name": "Foxall_scanner_prints.jpg",
-      "url": "https://clacktronics.co.uk/assets/Foxall_scanner_prints.jpg",
+      "url": "assets/old_assets/Foxall_scanner_prints.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-05-18-Scanner_Cloud.md"
+      "source": "content/file/blog-page-2.md"
     },
     {
       "name": "Horowitz_chamber.jpg",
-      "url": "https://clacktronics.co.uk/assets/Horowitz_chamber.jpg",
+      "url": "assets/old_assets/Horowitz_chamber.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-01-13-Colours-speakers-pw.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "IMG_20110417_014811.jpg",
-      "url": "https://clacktronics.co.uk/assets/IMG_20110417_014811.jpg",
+      "url": "assets/old_assets/IMG_20110417_014811.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-23-roland-sre555.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "IMG_20110418_153559.jpg",
-      "url": "https://clacktronics.co.uk/assets/IMG_20110418_153559.jpg",
+      "url": "assets/old_assets/IMG_20110418_153559.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-23-roland-sre555.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "IRCAM.jpg",
-      "url": "https://clacktronics.co.uk/assets/IRCAM.jpg",
+      "url": "assets/old_assets/IRCAM.jpg",
       "kind": "image",
-      "source": "content/file/blog/2015-03-02-IRCAM.md"
+      "source": "content/file/blog-page-4.md"
+    },
+    {
+      "name": "LED-hoop.jpg",
+      "url": "assets/old_assets/LED-hoop.jpg",
+      "kind": "image",
+      "source": "content/file/blog-page-5.md"
+    },
+    {
+      "name": "Maplin-ADA-inside.jpg",
+      "url": "assets/old_assets/Maplin-ADA-inside.jpg",
+      "kind": "image",
+      "source": "content/file/blog-page-5.md"
+    },
+    {
+      "name": "Maplin-ADA.jpg",
+      "url": "assets/old_assets/Maplin-ADA.jpg",
+      "kind": "image",
+      "source": "content/file/blog-page-5.md"
     },
     {
       "name": "MFOS-Wooden-Keyboard-s.jpg",
-      "url": "https://clacktronics.co.uk/assets/MFOS-Wooden-Keyboard-s.jpg",
+      "url": "assets/old_assets/MFOS-Wooden-Keyboard-s.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-05-midsoundlab.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "microdot_bitcoin.jpg",
-      "url": "https://clacktronics.co.uk/assets/microdot_bitcoin.jpg",
+      "url": "assets/old_assets/microdot_bitcoin.jpg",
       "kind": "image",
-      "source": "content/file/blog/2017-06-20-cryptocoin_ticker.md"
+      "source": "content/file/blog-page-2.md"
     },
     {
       "name": "MIDI-MFOS-Soundlab.jpg",
-      "url": "https://clacktronics.co.uk/assets/MIDI-MFOS-Soundlab.jpg",
+      "url": "assets/old_assets/MIDI-MFOS-Soundlab.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-05-midsoundlab.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "octave_cat_board_b.jpg",
-      "url": "https://clacktronics.co.uk/assets/octave_cat_board_b.jpg",
+      "url": "assets/old_assets/octave_cat_board_b.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "octave_cat_knobs.jpg",
-      "url": "https://clacktronics.co.uk/assets/octave_cat_knobs.jpg",
+      "url": "assets/old_assets/octave_cat_knobs.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "octave_cat_logo.jpg",
-      "url": "https://clacktronics.co.uk/assets/octave_cat_logo.jpg",
+      "url": "assets/old_assets/octave_cat_logo.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "octave_cat_srm.jpg",
-      "url": "https://clacktronics.co.uk/assets/octave_cat_srm.jpg",
+      "url": "assets/old_assets/octave_cat_srm.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "octave_cat_srm_back-e1296051016222.jpg",
-      "url": "https://clacktronics.co.uk/assets/octave_cat_srm_back-e1296051016222.jpg",
+      "url": "assets/old_assets/octave_cat_srm_back-e1296051016222.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "octave_cat_srm_back.jpg",
-      "url": "https://clacktronics.co.uk/assets/octave_cat_srm_back.jpg",
+      "url": "assets/old_assets/octave_cat_srm_back.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-25-octave-cat-srm-repair.md"
+      "source": "content/file/blog-page-10.md"
     },
     {
       "name": "Octave_Kitten_main_634.jpg",
-      "url": "https://clacktronics.co.uk/assets/Octave_Kitten_main_634.jpg",
+      "url": "assets/old_assets/Octave_Kitten_main_634.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-22-octave-kitten-repair.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "OpenScad.jpg",
-      "url": "https://clacktronics.co.uk/assets/OpenScad.jpg",
+      "url": "assets/old_assets/OpenScad.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-01-16-Openscad.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "OpenScad_PIR_sensor.jpg",
-      "url": "https://clacktronics.co.uk/assets/OpenScad_PIR_sensor.jpg",
+      "url": "assets/old_assets/OpenScad_PIR_sensor.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-01-16-Openscad.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "openscad_shelves.jpg",
-      "url": "https://clacktronics.co.uk/assets/openscad_shelves.jpg",
+      "url": "assets/old_assets/openscad_shelves.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-01-16-Openscad.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "Palais_garnier_roof_haroon_mirza.gif",
-      "url": "https://clacktronics.co.uk/assets/Palais_garnier_roof_haroon_mirza.gif",
+      "url": "assets/old_assets/Palais_garnier_roof_haroon_mirza.gif",
       "kind": "image",
-      "source": "content/file/blog/2017-06-26-Paris_Opera.md"
+      "source": "content/file/blog-page-2.md"
     },
     {
       "name": "Paris_opera_control_box.png",
-      "url": "https://clacktronics.co.uk/assets/Paris_opera_control_box.png",
+      "url": "assets/old_assets/Paris_opera_control_box.png",
       "kind": "image",
-      "source": "content/file/blog/2017-06-26-Paris_Opera.md"
+      "source": "content/file/blog-page-2.md"
     },
     {
       "name": "pcb_design.jpg",
-      "url": "https://clacktronics.co.uk/assets/pcb_design.jpg",
+      "url": "assets/old_assets/pcb_design.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-01-13-Colours-speakers-pw.md"
+      "source": "content/file/blog-page-3.md"
+    },
+    {
+      "name": "proto_psu.jpg",
+      "url": "assets/old_assets/proto_psu.jpg",
+      "kind": "image",
+      "source": "content/file/blog.md"
     },
     {
       "name": "Raspberry_pi_VGA.jpg",
-      "url": "https://clacktronics.co.uk/assets/Raspberry_pi_VGA.jpg",
+      "url": "assets/old_assets/Raspberry_pi_VGA.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-01-16-VGA_cap.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "Realistic-Reverb-2.jpg",
-      "url": "https://clacktronics.co.uk/assets/Realistic-Reverb-2.jpg",
+      "url": "assets/old_assets/Realistic-Reverb-2.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-05-modded-realistic-reverb-2.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "Realistic-Reverb-DC-643.jpg",
-      "url": "https://clacktronics.co.uk/assets/Realistic-Reverb-DC-643.jpg",
+      "url": "assets/old_assets/Realistic-Reverb-DC-643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-07-realistic-reverb-noismaking-mods.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "Realistic-Reverb-IN-OUT-643.jpg",
-      "url": "https://clacktronics.co.uk/assets/Realistic-Reverb-IN-OUT-643.jpg",
+      "url": "assets/old_assets/Realistic-Reverb-IN-OUT-643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-07-realistic-reverb-noismaking-mods.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "Realistic-Reverb-Knobs-643.jpg",
-      "url": "https://clacktronics.co.uk/assets/Realistic-Reverb-Knobs-643.jpg",
+      "url": "assets/old_assets/Realistic-Reverb-Knobs-643.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-07-realistic-reverb-noismaking-mods.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "Realistic-Reverb-Schematic-With-Mods.gif",
-      "url": "https://clacktronics.co.uk/assets/Realistic-Reverb-Schematic-With-Mods.gif",
+      "url": "assets/old_assets/Realistic-Reverb-Schematic-With-Mods.gif",
       "kind": "image",
-      "source": "content/file/blog/2011-04-07-realistic-reverb-noismaking-mods.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "Realistic-Reverb.jpg",
-      "url": "https://clacktronics.co.uk/assets/Realistic-Reverb.jpg",
+      "url": "assets/old_assets/Realistic-Reverb.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-07-realistic-reverb-noismaking-mods.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "RolandRE201_inside.jpg",
-      "url": "https://clacktronics.co.uk/assets/RolandRE201_inside.jpg",
+      "url": "assets/old_assets/RolandRE201_inside.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "RolandRE201_inside_on_side.jpg",
-      "url": "https://clacktronics.co.uk/assets/RolandRE201_inside_on_side.jpg",
+      "url": "assets/old_assets/RolandRE201_inside_on_side.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "RolandRE201_PCB.jpg",
-      "url": "https://clacktronics.co.uk/assets/RolandRE201_PCB.jpg",
+      "url": "assets/old_assets/RolandRE201_PCB.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "RolandRE201_tape.jpg",
-      "url": "https://clacktronics.co.uk/assets/RolandRE201_tape.jpg",
+      "url": "assets/old_assets/RolandRE201_tape.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "RR-blank.jpg",
-      "url": "https://clacktronics.co.uk/assets/RR-blank.jpg",
+      "url": "assets/old_assets/RR-blank.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-05-modded-realistic-reverb-2.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "RR-stipple.jpg",
-      "url": "https://clacktronics.co.uk/assets/RR-stipple.jpg",
+      "url": "assets/old_assets/RR-stipple.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-05-modded-realistic-reverb-2.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "Shapeoko2.jpg",
-      "url": "https://clacktronics.co.uk/assets/Shapeoko2.jpg",
+      "url": "assets/old_assets/Shapeoko2.jpg",
       "kind": "image",
-      "source": "content/file/blog/2015-03-02-New_Website.md"
+      "source": "content/file/blog-page-4.md"
     },
     {
       "name": "shapeoko_2_clamping_table.jpg",
-      "url": "https://clacktronics.co.uk/assets/shapeoko_2_clamping_table.jpg",
+      "url": "assets/old_assets/shapeoko_2_clamping_table.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-03-20-Shapeoko-2-clamping-wasteboard.md"
+      "source": "content/file/blog-page-2.md"
     },
     {
       "name": "shapeoko_2_clamping_table_bolt.jpg",
-      "url": "https://clacktronics.co.uk/assets/shapeoko_2_clamping_table_bolt.jpg",
+      "url": "assets/old_assets/shapeoko_2_clamping_table_bolt.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-03-20-Shapeoko-2-clamping-wasteboard.md"
+      "source": "content/file/blog-page-2.md"
     },
     {
       "name": "shapeoko_2_clamping_table_routed.jpg",
-      "url": "https://clacktronics.co.uk/assets/shapeoko_2_clamping_table_routed.jpg",
+      "url": "assets/old_assets/shapeoko_2_clamping_table_routed.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-03-20-Shapeoko-2-clamping-wasteboard.md"
+      "source": "content/file/blog-page-2.md"
     },
     {
       "name": "speaker_resistor.jpg",
-      "url": "https://clacktronics.co.uk/assets/speaker_resistor.jpg",
+      "url": "assets/old_assets/speaker_resistor.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-01-13-Colours-speakers-pw.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "Star_Synare_Tympani_Lo-Tom.jpg",
-      "url": "https://clacktronics.co.uk/assets/Star_Synare_Tympani_Lo-Tom.jpg",
+      "url": "assets/old_assets/Star_Synare_Tympani_Lo-Tom.jpg",
       "kind": "image",
-      "source": "content/file/blog/2015-03-25-Star-synare-tympani-lo-tom.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "synare3large_147-e1317332821202.jpg",
-      "url": "https://clacktronics.co.uk/assets/synare3large_147-e1317332821202.jpg",
+      "url": "assets/old_assets/synare3large_147-e1317332821202.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-09-29-star-synare-3-page.md"
+      "source": "content/file/blog-page-5.md"
     },
     {
       "name": "the_enclosure.jpg",
-      "url": "https://clacktronics.co.uk/assets/the_enclosure.jpg",
+      "url": "assets/old_assets/the_enclosure.jpg",
       "kind": "image",
-      "source": "content/file/blog/2016-01-13-Colours-speakers-pw.md"
+      "source": "content/file/blog-page-3.md"
     },
     {
       "name": "thumb_RolandRE201_inside.jpg",
-      "url": "https://clacktronics.co.uk/assets/thumb_RolandRE201_inside.jpg",
+      "url": "assets/old_assets/thumb_RolandRE201_inside.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "thumb_RolandRE201_inside_on_side.jpg",
-      "url": "https://clacktronics.co.uk/assets/thumb_RolandRE201_inside_on_side.jpg",
+      "url": "assets/old_assets/thumb_RolandRE201_inside_on_side.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "thumb_RolandRE201_PCB.jpg",
-      "url": "https://clacktronics.co.uk/assets/thumb_RolandRE201_PCB.jpg",
+      "url": "assets/old_assets/thumb_RolandRE201_PCB.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "thumb_RolandRE201_tape.jpg",
-      "url": "https://clacktronics.co.uk/assets/thumb_RolandRE201_tape.jpg",
+      "url": "assets/old_assets/thumb_RolandRE201_tape.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-01-31-roland-re201-repair.md"
+      "source": "content/file/blog-page-9.md"
     },
     {
       "name": "wasp-batch.jpg",
-      "url": "https://clacktronics.co.uk/assets/wasp-batch.jpg",
+      "url": "assets/old_assets/wasp-batch.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-07-04-wasp-drive-first-batch-complete.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "wasp-sockets.jpg",
-      "url": "https://clacktronics.co.uk/assets/wasp-sockets.jpg",
+      "url": "assets/old_assets/wasp-sockets.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-04-20-edp-wasp-restoration-part-1.md"
+      "source": "content/file/blog-page-8.md"
     },
     {
       "name": "Wasp_patch_pad.jpg",
-      "url": "https://clacktronics.co.uk/assets/Wasp_patch_pad.jpg",
+      "url": "assets/old_assets/Wasp_patch_pad.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-07-28-wasp-patch-pad.md"
+      "source": "content/file/blog-page-6.md"
     },
     {
       "name": "Yamaha_CS80_Sub_octave_mod.jpg",
-      "url": "https://clacktronics.co.uk/assets/Yamaha_CS80_Sub_octave_mod.jpg",
+      "url": "assets/old_assets/Yamaha_CS80_Sub_octave_mod.jpg",
       "kind": "image",
-      "source": "content/file/blog/2011-06-22-yamahacs10.md"
+      "source": "content/file/blog-page-7.md"
     },
     {
       "name": "flipdots.mp4",
-      "url": "https://clacktronics.co.uk/assets/flipdots.mp4",
+      "url": "assets/old_assets/flipdots.mp4",
       "kind": "video",
-      "source": "content/file/blog/2019-01-03-flipdots.md"
+      "source": "content/file/markdown-test.md"
     }
   ]
 }

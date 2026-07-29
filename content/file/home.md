@@ -23,7 +23,7 @@ The main electronic output I create at the moment are my modular synthesizer pro
 
 ## The Blog
 
-![643_edp_wasp_deluxe_main643](http://clacktronics.co.uk/assets/643_edp_wasp_deluxe_main643.jpg)
+![643_edp_wasp_deluxe_main643](assets/old_assets/643_edp_wasp_deluxe_main643.jpg)
 
 Some of this information is ported over from my last site, which in turn was imported from the Wordpress site before that, I hope to update the blog more frequently  that I have previously, it has been 10 years of no movement on this website at publishing.
 

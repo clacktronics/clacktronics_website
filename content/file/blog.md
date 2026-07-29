@@ -32,7 +32,7 @@ Here is what I created, it works fairly close to the intended  power a heats up 
 
 `27 June 2024` · [Open this post on its own](window:file/blog/2024-06-27-Two-new-kits.md)
 
-![Proto PSU on a breadboard](https://clacktronics.co.uk/assets/proto_psu.jpg)
+![Proto PSU on a breadboard](assets/old_assets/proto_psu.jpg)
 
 There are two new Eurorack kits, one is called [ProtoPSU](window:file/euroclack/proto-psu.md) which is a breadboardable power supply to create +-12V and 5V from a 15V supply. The other is [Analogue Meter](window:file/euroclack/analogue-meter.md) which is a physical meter for Eurorack to observe DC and slow moving voltages.
 
@@ -42,7 +42,7 @@ There are two new Eurorack kits, one is called [ProtoPSU](window:file/euroclack/
 
 `27 June 2024` · [Open this post on its own](window:file/blog/2024-06-27-Build-Your-Own-Modular-book.md)
 
-![modular synth with keyboard](https://clacktronics.co.uk/assets/byom.jpg)
+![modular synth with keyboard](assets/old_assets/byom.jpg)
 
 I have just released a new projects called BUILD YOUR OWN MODULAR, it is a ring binder book that contains all the PCBs and the documentation to build your own complete Eurorack modular. See the complete project page and where to buy here! [BUILD YOUR OWN MODULAR - Project page](window:file/euroclack/byom.md)
 
@@ -62,7 +62,7 @@ I am back to producing audio equipment! There is a new section under "Reasearch"
 
 `03 January 2019` · [Open this post on its own](window:file/blog/2019-01-03-flipdots.md)
 
-@[video](https://clacktronics.co.uk/assets/flipdots.mp4 "Flipdots Flippin")
+@[video](assets/old_assets/flipdots.mp4 "Flipdots Flippin")
 
 I have been working on a project for an artist that uses flip dot display panels. Flip dot/disc displays are a [bygone technology](https://en.wikipedia.org/wiki/Flip-disc_display) that were typically used in places such as airports and stock exchanges, anywhere there was a need for dynamically displayed information. They were great for power efficiency as they retain their image with the power removed, therefore would have been much less power hungry than the light based displays of the time. Now superseded by LED displays that are just as efficient, but need less maintenance, they are still manufactured by *Alfa-Zeta* and used for more creative / nostalgic purposes. For this work I needed to create a program to show images on the panels, initially I was unsure of the source of the images, could it be a video? or programatically generated? So I decided to go as high level as possible and use Python on a Raspberry Pi. That way I would not have to re-write the program every time the ideas or the dimensions changed. I thought it would be great to be able to use *Python Imaging Library* [pillow fork](https://github.com/python-pillow/Pillow) to manipulate the dots, that way I could draw shapes and text trivially, plus if any changes were needed I could write them quickly on the fly. I came up with [FliPIL](https://github.com/clacktronics/flipPIL)  a sort of wrapper between PIL and the flip dot's protocol.
 

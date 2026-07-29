@@ -5,10 +5,10 @@ style: plain
 ---
 # Clacktronics does LED Projects
 
-[![LED hoop](../assets/643_led-hoop.jpg)](../assets/LED-hoop.jpg)
+[![LED hoop](assets/old_assets/643_led-hoop.jpg)](assets/old_assets/LED-hoop.jpg)
 I quite often get approached by artists and designers to produce electronic parts for them. Recently I seem to have made a lot of LED projects! Above is part of a series of LED hoops that were commissioned for the band Django Django. This was by the artist [Kim Coleman](http://kimcolemanprojects.com/) who needed them as a part of her stage design for the band. 
 
-![Photo credit : Django Django ](../assets/643_ddphoto.jpg) 
+![Photo credit : Django Django ](assets/old_assets/643_ddphoto.jpg) 
 
 First a Series of 3 hoops were made (pictured above, middle frame) theese were very basic white LED chains made from discrete 5mm diffused white LED's. I know it is a bit crazy doing a point to point chain of LEDs but I needed them to be difused! Then for their large performance at Sheppards Bush Empire I made RGB hoops that had smiley faces, I learnt my lesson and theese are RGB tape with epoxy coating to help diffusion. Each segment ( the hoop and the 2 eyes and the mouth ) could be RGB DMX controlled by the lighting engineer.
 
