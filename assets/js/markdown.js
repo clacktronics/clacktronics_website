@@ -229,6 +229,10 @@ function kicanvasEmbed(markdown) {
  */
 const MODEL_LIGHTING = ['studio', 'soft', 'dramatic', 'flat', 'unlit'];
 
+const MODEL_ANIMATIONS = ['none', 'turntable', 'swing', 'jump', 'hover', 'tumble', 'rock'];
+
+const MODEL_FINISHES = ['authored', 'colour', 'clay', 'chrome', 'normals'];
+
 const MODEL_CONTROLS = ['none', 'orbit', 'full'];
 const MODEL_AXIS_ORDERS = ['xyz', 'xzy', 'yxz', 'yzx', 'zxy', 'zyx'];
 
@@ -311,6 +315,14 @@ function modelEmbedSettings(text) {
         if (!MODEL_AXIS_ORDERS.includes(value)) return null;
         settings.data.axes = value;
         break;
+      case 'animation':
+        if (!MODEL_ANIMATIONS.includes(value)) return null;
+        settings.data.animation = value;
+        break;
+      case 'material':
+        if (!MODEL_FINISHES.includes(value)) return null;
+        settings.data.finish = value;
+        break;
       case 'static': settings.data.controls = 'none'; break;
       case 'interactive': settings.data.controls = 'full'; break;
       case 'grid': settings.data.grid = 'true'; break;
@@ -318,6 +330,8 @@ function modelEmbedSettings(text) {
       case 'shadows': settings.data.shadows = 'true'; break;
       case 'noshadows': settings.data.shadows = 'false'; break;
       case 'wireframe': settings.data.wireframe = 'true'; break;
+      /* spin/nospin predate the animation option and stay the short way to
+         ask for the default turntable, or for nothing at all. */
       case 'spin': settings.data.rotate = 'true'; break;
       case 'nospin': settings.data.rotate = 'false'; break;
       case 'caption': settings.caption = true; break;

@@ -138,8 +138,31 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" data-cmd="reset"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Reset view</button>
         <div class="sep"></div>
         <button type="button" data-cmd="wireframe" id="wireframe" aria-pressed="false"><span class="pixel-icon" data-icon="eye" aria-hidden="true"></span>Wireframe<span class="mi-check"></span></button>
-        <button type="button" data-cmd="autorotate" id="autorotate" aria-pressed="true"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Auto-rotate<span class="mi-check"></span></button>
         <button type="button" data-cmd="grid" id="grid-toggle" aria-pressed="true"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Show grid<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="squish" id="squish" aria-pressed="false"><span class="pixel-icon" data-icon="lasso" aria-hidden="true"></span>Squish &mdash; drag to pull<span class="mi-check"></span></button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Animation</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="anim-none" id="anim-none" aria-pressed="false"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>None<span class="mi-check"></span></button>
+        <button type="button" data-cmd="anim-turntable" id="anim-turntable" aria-pressed="true"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Turntable<span class="mi-check"></span></button>
+        <button type="button" data-cmd="anim-swing" id="anim-swing" aria-pressed="false"><span class="pixel-icon" data-icon="undo" aria-hidden="true"></span>Swing<span class="mi-check"></span></button>
+        <button type="button" data-cmd="anim-jump" id="anim-jump" aria-pressed="false"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Jump &amp; turn<span class="mi-check"></span></button>
+        <button type="button" data-cmd="anim-hover" id="anim-hover" aria-pressed="false"><span class="pixel-icon" data-icon="align-vertical-distribute-center" aria-hidden="true"></span>Hover<span class="mi-check"></span></button>
+        <button type="button" data-cmd="anim-tumble" id="anim-tumble" aria-pressed="false"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span>Tumble<span class="mi-check"></span></button>
+        <button type="button" data-cmd="anim-rock" id="anim-rock" aria-pressed="false"><span class="pixel-icon" data-icon="align-horizontal-distribute-center" aria-hidden="true"></span>Rock<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <div class="mi-row">
+          <label for="anim-speed">Speed</label>
+          <input type="range" id="anim-speed" min="10" max="300" step="5" value="100">
+        </div>
+        <button type="button" data-cmd="anim-reverse" id="anim-reverse" aria-pressed="false"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Reverse<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <!-- Only means anything for a file that brought its own animation; it
+             stays disabled for the rest. -->
+        <button type="button" data-cmd="anim-clips" id="anim-clips" aria-pressed="false" disabled><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Model’s own animation<span class="mi-check"></span></button>
       </div>
     </div>
     <div class="rm">
@@ -153,6 +176,16 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" data-cmd="axes-zyx" id="axes-zyx" aria-pressed="false"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>Z Y X<span class="mi-check"></span></button>
         <div class="sep"></div>
         <button type="button" data-cmd="axes-default"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Use this format's default</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Material</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="finish-authored" id="finish-authored" aria-pressed="true"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>As authored<span class="mi-check"></span></button>
+        <button type="button" data-cmd="finish-colour" id="finish-colour" aria-pressed="false"><span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span>Model colour<span class="mi-check"></span></button>
+        <button type="button" data-cmd="finish-clay" id="finish-clay" aria-pressed="false"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span>Clay<span class="mi-check"></span></button>
+        <button type="button" data-cmd="finish-chrome" id="finish-chrome" aria-pressed="false"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Chrome<span class="mi-check"></span></button>
+        <button type="button" data-cmd="finish-normals" id="finish-normals" aria-pressed="false"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Normals<span class="mi-check"></span></button>
       </div>
     </div>
     <div class="rm">
@@ -258,7 +291,8 @@ document.addEventListener('DOMContentLoaded', () => {
    is the application shell around them — menus, status bar and file handling. */
 import {
   createModelScene, LIGHTING_PRESETS, SCENE_COLOUR_KEYS, LIGHT_COLOUR_KEYS,
-  AXIS_ORDERS, axisOrderFor, asHex, formatFor, THREE
+  AXIS_ORDERS, ANIMATION_NAMES, FINISH_NAMES, DEFAULT_ANIMATION_SPEED,
+  axisOrderFor, asHex, formatFor, THREE
 } from '../../assets/js/model-scene.js';
 
 const stage = document.getElementById('viewer-stage');
@@ -269,7 +303,10 @@ const nameEl = document.getElementById('model-name');
 const statsEl = document.getElementById('model-stats');
 const messageEl = document.getElementById('viewer-message');
 const wireButton = document.getElementById('wireframe');
-const rotateButton = document.getElementById('autorotate');
+const clipsButton = document.getElementById('anim-clips');
+const squishButton = document.getElementById('squish');
+const reverseButton = document.getElementById('anim-reverse');
+const speedInput = document.getElementById('anim-speed');
 const gridButtons = [...document.querySelectorAll('[data-cmd="grid"]')];
 const shadowButton = document.getElementById('shadows');
 const colourInputs = {
@@ -288,8 +325,10 @@ const DEFAULT_MODEL_FILE = 'pj3410-round-nut.stl';
 
 const viewer = createModelScene(stage);
 
-/* Models start spinning when they load, unless the user has turned it off. */
-let autoRotateWanted = true;
+/* Models start on the turntable when they load, unless the user has picked
+   something else — the choice outlives the model it was made against. */
+let animationWanted = 'turntable';
+let reversed = false;
 let wireframeWanted = false;
 /* The bytes behind what is on screen, kept so File → Upload to website can send
    the exact file that was opened. */
@@ -311,9 +350,54 @@ function setWireframe(enabled) {
   setToggleState(wireButton, enabled);
 }
 
-function setAutoRotate(enabled) {
-  viewer.setAutoRotate(enabled);
-  setToggleState(rotateButton, enabled);
+/* Speed is a percentage of the viewer's default in the menu, and negative when
+   Reverse is on, which every animation reads as running backwards. */
+function applyAnimationSpeed() {
+  const magnitude = DEFAULT_ANIMATION_SPEED * Number(speedInput.value) / 100;
+  viewer.setAnimationSpeed(reversed ? -magnitude : magnitude);
+  setToggleState(reverseButton, reversed);
+}
+
+function setAnimation(name) {
+  animationWanted = name;
+  viewer.setAnimation(name);
+  ANIMATION_NAMES.forEach(entry =>
+    setToggleState(document.getElementById(`anim-${entry}`), entry === name));
+}
+
+/* Squish is a module of its own, fetched the first time it is asked for. While
+   it is on, left-drag takes hold of the model and orbiting moves to the right
+   button — the viewer says so, because nothing else would. */
+function setSquish(enabled) {
+  setToggleState(squishButton, enabled);
+  viewer.setSquish(enabled).then(() => {
+    showMessage(enabled
+      ? 'Squish on — drag the model to pull it about, right-drag to orbit.'
+      : 'Squish off.');
+  }).catch(error => {
+    console.error(error);
+    showMessage('The squish module could not be downloaded.', true);
+    setToggleState(squishButton, false);
+  });
+}
+
+/* Chrome has a reflection to build before it can be drawn, which means a
+   network fetch the first time; everything else is immediate. */
+function setFinish(name) {
+  FINISH_NAMES.forEach(entry =>
+    setToggleState(document.getElementById(`finish-${entry}`), entry === name));
+  viewer.setFinish(name).catch(error => {
+    console.error(error);
+    showMessage('The chrome finish needs a reflection map, which could not be downloaded.', true);
+    setFinish('authored');
+  });
+}
+
+/* A file's own animation is a property of the file, so the toggle enables
+   itself around whatever is loaded rather than being remembered. */
+function syncClipsButton() {
+  clipsButton.disabled = !viewer.hasClips;
+  setToggleState(clipsButton, viewer.clipsPlaying);
 }
 
 function setGridVisible(visible) {
@@ -332,10 +416,12 @@ function setLightingPreset(name) {
     setToggleState(document.getElementById(`light-${preset}`), preset === name));
 }
 
-function setModel(root) {
-  viewer.setModel(root);
+function setModel(root, animations) {
+  viewer.setModel(root, { animations });
   viewer.setWireframe(wireframeWanted);
-  setAutoRotate(autoRotateWanted);
+  setAnimation(animationWanted);
+  applyAnimationSpeed();
+  syncClipsButton();
 }
 
 /* three.js is Y-up, while STL, STEP and 3MF come out of CAD and slicers Z-up,
@@ -350,9 +436,9 @@ function setAxisOrder(order) {
 
 /* Loading a file re-reads the default for its format, so opening an OBJ after
    an STL does not leave the OBJ lying on its side. */
-function loadedModel(root, name) {
+function loadedModel(root, name, animations) {
   viewer.setAxisOrder(axisOrderFor(name), { refit: false });
-  setModel(root);
+  setModel(root, animations);
   setAxisOrder(viewer.axisOrder);
 }
 
@@ -414,13 +500,14 @@ async function openFile(file) {
     const parsed = await viewer.parse(buffer, file.name, message => { busy.textContent = message; });
     currentFile = { name: file.name, buffer, type: file.type };
     wireframeWanted = false;
-    loadedModel(parsed.root, file.name);
+    loadedModel(parsed.root, file.name, parsed.animations);
     setWireframe(false);
     nameEl.textContent = file.name;
     fileNameEl.textContent = file.name;
     const parts = parsed.parts ? ` · ${parsed.parts.toLocaleString()} parts` : '';
     const colours = parsed.ownColours ? ' · file colours' : '';
-    statsEl.textContent = `${parsed.label} · ${parsed.triangles.toLocaleString()} triangles${parts}${colours}`;
+    const animated = parsed.animations?.length ? ' · animated' : '';
+    statsEl.textContent = `${parsed.label} · ${parsed.triangles.toLocaleString()} triangles${parts}${colours}${animated}`;
     /* Where a file names its own colours or materials they are what is drawn, so
        say so: the Colours → Model swatch only reaches the parts that don't. */
     showMessage(parsed.ownColours
@@ -463,11 +550,13 @@ const viewerCommands = {
   fit: () => viewer.fitView(false),
   reset: () => viewer.fitView(true),
   wireframe: () => setWireframe(wireButton.getAttribute('aria-pressed') !== 'true'),
-  autorotate: () => {
-    autoRotateWanted = !viewer.autoRotate;
-    setAutoRotate(autoRotateWanted);
-  },
   grid: () => setGridVisible(!viewer.gridVisible),
+  squish: () => setSquish(squishButton.getAttribute('aria-pressed') !== 'true'),
+  'anim-reverse': () => { reversed = !reversed; applyAnimationSpeed(); },
+  'anim-clips': () => {
+    viewer.setClipsPlaying(!viewer.clipsPlaying);
+    syncClipsButton();
+  },
   'colours-reset': () => resetColours(SCENE_COLOUR_KEYS),
   'lighting-reset': () => resetColours(LIGHT_COLOUR_KEYS),
   'light-studio': () => setLightingPreset('studio'),
@@ -479,6 +568,8 @@ const viewerCommands = {
   shadows: () => setShadows(shadowButton.getAttribute('aria-pressed') !== 'true')
 };
 AXIS_ORDERS.forEach(order => { viewerCommands[`axes-${order}`] = () => setAxisOrder(order); });
+ANIMATION_NAMES.forEach(name => { viewerCommands[`anim-${name}`] = () => setAnimation(name); });
+FINISH_NAMES.forEach(name => { viewerCommands[`finish-${name}`] = () => setFinish(name); });
 
 document.addEventListener('viewer-command', event => viewerCommands[event.detail]?.());
 
@@ -486,6 +577,7 @@ Object.entries(colourInputs).forEach(([key, input]) =>
   input.addEventListener('input', event => viewer.setColour(key, event.target.value)));
 brightnessInput.addEventListener('input', event =>
   viewer.setBrightness(Number(event.target.value) / 100));
+speedInput.addEventListener('input', applyAnimationSpeed);
 
 /* ---- upload the open model to the web host ----
  * Models are large binaries, so they go to the endpoint named by "assetUpload"
@@ -608,7 +700,7 @@ async function loadDefaultModel() {
     const buffer = await response.arrayBuffer();
     const parsed = await viewer.parse(buffer, DEFAULT_MODEL_FILE);
     currentFile = { name: DEFAULT_MODEL_FILE, buffer, type: 'application/octet-stream' };
-    loadedModel(parsed.root, DEFAULT_MODEL_FILE);
+    loadedModel(parsed.root, DEFAULT_MODEL_FILE, parsed.animations);
     nameEl.textContent = DEFAULT_MODEL_NAME;
     fileNameEl.textContent = DEFAULT_MODEL_NAME;
     statsEl.textContent = `STL · ${parsed.triangles.toLocaleString()} triangles · sample`;

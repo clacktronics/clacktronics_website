@@ -452,8 +452,10 @@ same date and title: a CSV entry wins over the mirrored one.
   | `brightness=100` | `100` | Light intensity percentage (20–400) |
   | `key=` `fill=` `sky=` `ground=` | theme | Individual light colours |
   | `wireframe` | off | Render as wireframe |
-  | `spin` / `nospin` | `spin` | Auto-rotation (paused while off-screen) |
-  | `speed=0.9` | `0.9` | Rotation speed (−8–8; negative reverses) |
+  | `animation=hover` | `turntable` | Idle animation: `none`, `turntable`, `swing`, `jump`, `hover`, `tumble`, `rock` |
+  | `material=clay` | `authored` | One finish over the whole model: `authored`, `colour`, `clay`, `chrome`, `normals` |
+  | `spin` / `nospin` | `spin` | The short way to ask for the turntable, or for nothing |
+  | `speed=0.9` | `0.9` | Animation speed (−8–8; negative reverses). A GLB's own animation plays at its authored speed at `0.9` |
   | `zoom=1` | `1` | Framing multiplier; above 1 fills more of the frame |
   | `static` / `interactive` | drag to orbit | `static` disables input entirely; `interactive` (`controls=full`) adds wheel zoom and panning |
   | `axes=xzy` | per format | Which source axis becomes world X, Y, Z. STL, STEP and 3MF default to `xzy` (Z up, as CAD draws it); OBJ and GLB default to `xyz` |
@@ -760,7 +762,31 @@ windows, and desktop actions.
   `assets/js/model-scene.js`, shared with the inline `@[model]` embeds, so both
   render identically. View fits, resets, wireframes and auto-rotates; Colours
   and Lighting follow the ClackOS palette until overridden, with five lighting
-  presets, a brightness slider and shadows. **Axes** maps the file's axes onto
+  presets, a brightness slider and shadows. **Animation** idles the model the
+  way the old Windows 3D Viewer did — Turntable (the long-standing behaviour,
+  which walks the camera round so the ground grid stays still), Swing, Jump &
+  turn, Hover, Tumble and Rock, all of which move the model itself — with a
+  speed slider and a Reverse toggle. The same set is available to inline embeds
+  as `{animation=…}`. **Material** puts one finish over the whole model in place
+  of whatever it came with, which is how you read a shape rather than its
+  decoration: As authored, Model colour (the palette accent, still driven by
+  Colours → Model), Clay (matte and near-white, like a plaster cast), Chrome and
+  Normals (each face coloured by the direction it points, which makes flipped
+  faces and bad smoothing obvious). **View → Squish** makes the model springy:
+  left-drag takes hold of it and pulls it out of shape, letting go springs it
+  back, and the overshoot ripples across it before it settles (orbiting moves
+  to the right button while it is on). The model itself is never simulated —
+  imported meshes are hollow shells, and STL and OBJ have no shared vertices to
+  hang springs from at all — so the springs live in a 5x5x5 cage around it
+  (`assets/js/model-squish.js`, fetched the first time squish is switched on),
+  and the mesh follows by trilinear interpolation of that cage in the vertex
+  shader. The simulation therefore costs the same for three thousand triangles
+  as for three hundred thousand, and the deformation itself is free. Only the
+  application offers it; inline embeds have no gesture to spare. Chrome is the one that needs something to
+  reflect, so the first time it is picked the viewer builds a reflection map
+  from three's own studio-room scene, fetched alongside the rest of the addons;
+  the other finishes are immediate. Embeds take the same set as
+  `{material=…}`. **Axes** maps the file's axes onto
   the world's: three.js is Y-up while CAD and slicers write Z-up, so STL, STEP
   and 3MF are turned a quarter turn as they load (OBJ is left alone) and any of
   the six orders can be picked by hand (GLB is Y-up by specification, so it is
@@ -772,8 +798,9 @@ windows, and desktop actions.
   GLB extras are handled where they can be and dropped where they cannot: Draco
   and meshopt compression and KTX2 textures are decoded (their decoders are
   fetched from the same three build on first use), the file's own lights are
-  dropped in favour of the viewer's rig, and animations are ignored — a rigged
-  model shows its bind pose. `.gltf` is deliberately not accepted: the JSON form
+  dropped in favour of the viewer's rig, and a file that brought its own
+  animation plays it (Animation → Model's own animation turns it off; the entry
+  stays disabled for a file that has none). `.gltf` is deliberately not accepted: the JSON form
   points at its buffers and textures as separate files, which does not survive
   being passed round as a single upload. File → Upload to website… sends the open
   model to the web host through the same endpoint ClackPaint and the Markdown

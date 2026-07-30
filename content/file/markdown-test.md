@@ -209,6 +209,18 @@ A bordered, fully interactive one — wheel to zoom, right-drag to pan:
 
 @[model](content/applications/models/pj3410-round-nut.stl "Interactive, bordered"){border caption interactive background=#f3ecd1 nospin}
 
+An idle animation other than the default turntable — `{animation=hover}` floats
+the model instead of spinning it, and `swing`, `jump`, `tumble` and `rock` are
+the rest of the set:
+
+@[model](content/applications/models/pj3410-round-nut.stl "Hovering"){animation=hover grid caption}
+
+`{material=…}` drops the file's own colours and textures for one finish over the
+whole model — `clay` here, with `chrome`, `normals`, `colour` and the default
+`authored` making up the rest:
+
+@[model](content/applications/models/pj3410-round-nut.stl "Clay"){material=clay grid caption}
+
 The build stamp, filled in from `version.json` after the window mounts (reads
 "dev" on a raw checkout):
 

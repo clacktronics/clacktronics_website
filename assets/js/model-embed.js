@@ -77,7 +77,10 @@ async function hydrate(stage) {
     viewer.renderer.domElement.style.touchAction = 'pan-y';
   }
 
-  const spins = flag(stage, 'rotate', true);
+  /* {animation=hover} picks one by name; {spin}/{nospin} are the older, shorter
+     way of asking for the turntable or for nothing. */
+  const animation = stage.dataset.animation
+    || (flag(stage, 'rotate', true) ? 'turntable' : 'none');
   const speed = number(stage.dataset.speed, 0.9);
 
   const themeChanged = () => viewer.refreshTheme();
@@ -85,14 +88,14 @@ async function hydrate(stage) {
   const resizes = new ResizeObserver(() => viewer.resize());
   resizes.observe(stage);
 
-  /* Spinning off-screen burns frames for nothing, so the rotation follows
-     visibility. Hydration starts a screen early, so an embed can finish loading
-     before it is actually in view. */
-  let visible = false;
-  const applyRotation = () => viewer.setAutoRotate(spins && visible, speed);
+  /* Animating off-screen burns frames for nothing, so the loop follows
+     visibility — paused rather than stopped, so a model's own animation carries
+     on from where it was rather than restarting on every scroll past.
+     Hydration starts a screen early, so an embed can finish loading before it
+     is actually in view. */
+  viewer.setPlaying(false);
   const visibility = new IntersectionObserver(entries => {
-    visible = entries[entries.length - 1].isIntersecting;
-    applyRotation();
+    viewer.setPlaying(entries[entries.length - 1].isIntersecting);
   });
   visibility.observe(stage);
 
@@ -111,9 +114,14 @@ async function hydrate(stage) {
       message => statusLine(stage, message));
     /* Z-up formats are turned as they load; {axes=…} overrides that. */
     viewer.setAxisOrder(stage.dataset.axes || axisOrderFor(src), { refit: false });
-    viewer.setModel(parsed.root);
+    viewer.setModel(parsed.root, { animations: parsed.animations });
     viewer.setWireframe(flag(stage, 'wireframe', false));
-    applyRotation();
+    viewer.setAnimation(animation, speed);
+    /* Chrome resolves once its reflection has been built; the rest are
+       immediate, and a failure leaves the model as the file authored it. */
+    if (stage.dataset.finish) {
+      viewer.setFinish(stage.dataset.finish).catch(error => console.error(error));
+    }
     statusLine(stage, '');
     stage.dataset.modelState = 'ready';
   } catch (error) {
