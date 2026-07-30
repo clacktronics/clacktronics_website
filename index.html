@@ -25,21 +25,8 @@
   }
 }
 </script>
-<script>
-/* Phones use the generated no-desktop site by default. ?desktop=1 is the
-   explicit escape hatch linked from every plain-HTML page. */
-(() => {
-  const params = new URLSearchParams(location.search);
-  const ua = navigator.userAgent || '';
-  const mobile = (navigator.userAgentData && navigator.userAgentData.mobile) ||
-    /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(ua) ||
-    (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
-  /* a saved-desktop link (#desktop=…) means nothing to the plain mirror */
-  const hash = location.hash.startsWith('#desktop=') ? '' : location.hash;
-  if (mobile && !params.has('desktop'))
-    location.replace(`plain/index.html${hash}`);
-})();
-</script>
+<!-- Phones get the same desktop as everyone else: the windows shrink to fit the
+     screen. The plain mirror is still one tap away in the taskbar. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">

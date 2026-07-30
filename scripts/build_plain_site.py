@@ -1034,6 +1034,10 @@ body.plain-mirror main { flex: 1; width: 100%; }
 .plain-menu-panel hr { border: 0; border-top: 1px solid var(--paper-line); margin: 5px 0; }
 
 @media (max-width: 640px) {
+  /* the panels span the bar rather than sitting under their own title, so they
+     hang off the bar itself — #plain-nav has to be the containing block, or
+     `top: 100%` measures against the whole page and drops them off-screen */
+  #plain-nav { position: relative; }
   .plain-menu { position: static; }
   .plain-menu > .plain-menu-panel {
     left: 8px; right: 8px; min-width: 0; max-height: calc(100vh - 48px); overflow: auto;
