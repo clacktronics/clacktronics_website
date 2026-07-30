@@ -784,11 +784,22 @@ windows, and desktop actions.
   the vertex shader. The simulation therefore costs the same for three thousand
   triangles as for three hundred thousand, and the deformation itself is free.
   How local a pinch stays is set by how far a pull spreads through the cage
-  before the springs pull it home, which works out at about a cell and a half.
-  Because the cage moves vertices, it can only show detail the model already
-  has — a flat CAD face is two big triangles with nothing between their corners
-  to lift — so squish subdivides the model while it holds it, within a triangle
-  budget, and puts the original geometry back when it lets go. Only the
+  before the springs pull it home, and the **Squish area** slider beside the
+  toggle sets that: it is the width of the pinch as a percentage of the model,
+  from 3% — a single feature lifted on its own, and as tight as a 9x9x9 cage can
+  be asked to hold — up to 60%, where the whole body sways. The springs are
+  retuned to match, so the pull home always gives out at about the width being
+  asked for and the damping stays at the same fraction of critical, which keeps
+  a small pinch quick and a large one slow rather than either going dead. The
+  shadow follows all of it: the shadow map is a separate depth pass that knows
+  nothing about a material's own vertex work, so it is given the same cage
+  lookup. Because the cage moves vertices, it can only show detail the model
+  already has — a flat CAD face is two big triangles with nothing between their
+  corners to lift — so squish subdivides the model while it holds it, to
+  whichever is smaller of a cage cell and the pinch itself, within a triangle
+  budget, and puts the original geometry back when it lets go. Moving the slider
+  can therefore call for finer triangles than are on screen; the re-cut waits
+  for the next grab rather than running on every tick of the slider. Only the
   application offers it; inline embeds have no gesture to spare. Chrome is the one that needs something to
   reflect, so the first time it is picked the viewer builds a reflection map
   from three's own studio-room scene, fetched alongside the rest of the addons;

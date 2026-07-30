@@ -7,13 +7,13 @@
  * or three hundred thousand, it can arrive welded or as loose triangles (STL
  * and OBJ have no shared vertices at all, so there are no edges to hang springs
  * from), and a hollow imported shell with springs only on its surface crumples
- * rather than wobbles. So the springs go in a cage instead: a 5x5x5 grid of
+ * rather than wobbles. So the springs go in a cage instead: a 9x9x9 grid of
  * control points around the model, simulated on the CPU, with the mesh carried
  * along by trilinear interpolation of the cage in the vertex shader.
  *
  * That buys three things. The simulation costs the same whatever the model is —
- * 125 points and 300 links. The mesh deformation is free, because it happens on
- * the GPU. And the movement is real rather than canned: displacement spreads
+ * 729 points and their links. The mesh deformation is free, because it happens
+ * on the GPU. And the movement is real rather than canned: displacement spreads
  * through the links, so the far side of the model lags, overshoots and ripples
  * on its way back to rest.
  *
@@ -40,15 +40,25 @@ const STRIDE = 4;
  * quickly the shape returns, the pull between neighbours is what carries a
  * disturbance across the model as a ripple, and the damping decides how many
  * times it swings past before it settles. */
-/* How far a pull spreads is sqrt(LINK / HOME) in cells — the length over which
- * neighbours can drag each other before being pulled home instead. Around a
- * cell and a half keeps a pinch to the part of the model being pinched, while
- * still leaving enough coupling for the release to travel outwards as a ripple
- * rather than snapping back on the spot. */
-const HOME_STIFFNESS = 60;
+/* How far a pull spreads is sqrt(LINK / home) in cells — the length over which
+ * neighbours can drag each other before being pulled home instead. That is the
+ * whole difference between pulling a bit of the model out and swinging the
+ * model about, so it is not a constant: the pull home is set from the size of
+ * the pinch itself, so that the area the slider asks for is the area that
+ * actually moves. Only the pull between neighbours is fixed. */
 const LINK_STIFFNESS = 130;
 const GRAB_STIFFNESS = 700;
-const DAMPING = 2.0;                  // per second
+/* The cage cannot hold a disturbance tighter than the cell it lives in, so
+   asking for less only stiffens the springs for nothing. */
+const SPREAD_FLOOR = 1;               // cells
+/* Damping is held at the same fraction of critical however the pull home is
+   set, so a fine pinch wobbles quickly and a broad one slowly, rather than one
+   of the two ending up dead or ringing for ever. */
+const DAMPING_RATIO = 0.13;
+/* A slack enough spring would keep that fraction by ringing for twenty seconds,
+   which stops being a wobble and starts being a distraction, so the widest
+   settings are damped by the clock instead. */
+const DAMPING_FLOOR = 1.0;            // per second
 
 /* A fixed step keeps the springs behaving the same on a 144Hz screen as on a
  * 30Hz one. The cap stops a long stall (a background tab, a slow load) from
@@ -66,9 +76,14 @@ const SETTLED_OFFSET = 0.001;
 const SETTLED_SPEED = 0.01;
 
 /* How much of the model comes with the pointer, and how far it can be taken,
- * as fractions of the model's size. The reach is the pinch itself: a fifth of
- * the model, so what lifts is a patch rather than the whole thing. */
-const GRAB_REACH = 0.2;
+ * as fractions of the model's size. The reach is the pinch itself, and is what
+ * the viewer's slider changes: a fifth of the model lifts a patch of it, a
+ * twentieth lifts something closer to a single feature. The bounds are what the
+ * cage and the springs can actually tell apart — past the top the whole model
+ * simply sways, and below the bottom every setting looks the same. */
+const DEFAULT_GRAB_REACH = 0.2;
+const MIN_GRAB_REACH = 0.03;
+const MAX_GRAB_REACH = 0.6;
 const GRAB_LIMIT = 0.5;
 
 /* The cage moves vertices, so it can only show detail the model already has: a
@@ -77,8 +92,13 @@ const GRAB_LIMIT = 0.5;
  * is subdivided as squish takes hold of it, until a triangle is smaller than
  * the patch a pinch acts over, and put back as it was when squish lets go.
  * The budget is what stops that from being a problem on a model that arrives
- * finely triangulated already — those need no subdividing anyway. */
+ * finely triangulated already — those need no subdividing anyway.
+ *
+ * A triangle has to be smaller than the pinch as well as smaller than a cell,
+ * or a fine setting on the slider has nothing to bend: whichever of the two is
+ * the tighter is the one worth cutting to. */
 const TARGET_EDGE = 0.5;              // of a cage cell
+const TARGET_PER_GRAB = 1 / 3;        // of the pinch's radius
 const MAX_LEVELS = 3;
 const TRIANGLE_BUDGET = 260000;
 
@@ -298,14 +318,26 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
 
   /* The shadow is drawn from a separate depth pass, which knows nothing about a
      material's own vertex work — so it needs the same deformation, or the model
-     stretches while its shadow stays put. */
+     stretches while its shadow stays put. It is hooked up here rather than
+     through prepareMaterial below, because there is one of it for the whole
+     model and it has no earlier onBeforeCompile to put back. */
   const depthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+  depthMaterial.onBeforeCompile = shader => inject(shader);
 
   const prepared = new Map();     // material -> the onBeforeCompile it had before
   let modelRoot = null;
   let enabled = false;
   let moving = false;             // the springs still have somewhere to go
   let leftover = 0;               // simulation time carried between frames
+
+  /* The model's own size, the pinch's size as a fraction of it, and the two
+     spring settings that follow from the pair. Everything but the fraction is
+     worked out by retune() as soon as there is a model to measure. */
+  let reach = 80;
+  let grabReach = DEFAULT_GRAB_REACH;
+  let homeStiffness = LINK_STIFFNESS;
+  let damping = DAMPING_FLOOR;
+  let tessellatedTarget = 0;      // the triangle size the geometry was last cut to
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
@@ -351,13 +383,22 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
     mesh.customDepthMaterial = depthMaterial;
   }
 
+  /* How small a triangle has to be for the pinch the slider is currently
+     asking for to have something to bend. */
+  function tessellationTarget() {
+    const cell = reach / (SIZE - 1);
+    return Math.min(cell * TARGET_EDGE, reach * grabReach * TARGET_PER_GRAB);
+  }
+
   /* Subdivision is spent on the meshes with the coarsest triangles first, so a
      model that is one fine part and one flat plate puts its budget where it
      shows. Each mesh keeps the geometry it arrived with, to go back to. */
-  function tessellate(cell) {
+  function tessellate() {
     /* Only while squish is switched on: a model that is merely being looked at
        keeps the triangles it was loaded with. */
     if (!enabled || !modelRoot) return;
+    const target = tessellationTarget();
+    tessellatedTarget = target;
     const meshes = [];
     modelRoot.traverse(object => {
       if (!object.isMesh) return;
@@ -371,7 +412,7 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
       const original = mesh.geometry;
       const loose = original.index ? original.toNonIndexed() : original;
       const share = Math.max(Math.floor(budget / Math.max(meshes.length, 1)), 0);
-      const levels = subdivisionLevels(loose, cell * TARGET_EDGE, share);
+      const levels = subdivisionLevels(loose, target, share);
       if (levels === 0 && loose === original) return;
 
       let geometry = loose;
@@ -387,8 +428,22 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
     });
   }
 
+  /* Cutting the geometry again is far too slow to do on every tick of a slider,
+     so a change of reach only marks it, and the re-cut waits for the next grab
+     — by which time the slider has stopped moving and the pause is hidden by
+     the pointer going down. Nothing happens at all unless the triangles the new
+     setting wants are meaningfully different from the ones already there. */
+  function retessellate() {
+    if (!enabled || !modelRoot) return;
+    const target = tessellationTarget();
+    if (Math.abs(target - tessellatedTarget) <= tessellatedTarget * 0.05) return;
+    detessellate();
+    tessellate();
+  }
+
   /* Puts back the geometry each mesh arrived with. */
   function detessellate() {
+    tessellatedTarget = 0;
     modelRoot?.traverse(object => {
       const original = object.userData?.squishGeometry;
       if (!original) return;
@@ -441,7 +496,9 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
     box.expandByVector(size.max(new THREE.Vector3(0.5, 0.5, 0.5)));
 
     const span = box.getSize(new THREE.Vector3());
-    tessellate(Math.max(span.x, span.y, span.z) / (SIZE - 1));
+    reach = Math.max(span.x, span.y, span.z);
+    retune();
+    tessellate();
     uniforms.squishMin.value.copy(box.min);
     uniforms.squishScale.value.set(
       (SIZE - 1) / Math.max(span.x, 1e-4),
@@ -458,15 +515,32 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
         }
       }
     }
-    reach = Math.max(span.x, span.y, span.z);
   }
 
-  let reach = 80;
+  /* Sets the pull home so that a disturbance spreads about as far as the pinch
+     is wide and no further, which is what keeps a small setting to the bit
+     being pulled instead of taking the model with it, and the damping so that
+     the wobble it produces has the same character at every setting. */
+  function retune() {
+    const cell = reach / (SIZE - 1);
+    const spread = Math.max(reach * grabReach / cell, SPREAD_FLOOR);
+    homeStiffness = LINK_STIFFNESS / (spread * spread);
+    damping = Math.max(2 * DAMPING_RATIO * Math.sqrt(homeStiffness), DAMPING_FLOOR);
+  }
+
+  /* The area a grab takes hold of, as a fraction of the model's size. */
+  function setReach(fraction) {
+    const wanted = Number(fraction);
+    grabReach = Math.min(Math.max(
+      Number.isFinite(wanted) ? wanted : DEFAULT_GRAB_REACH,
+      MIN_GRAB_REACH), MAX_GRAB_REACH);
+    retune();
+  }
 
   /* ---- simulation ---- */
 
   function integrate(dt) {
-    const damp = Math.exp(-DAMPING * dt);
+    const damp = Math.exp(-damping * dt);
     previous.set(offsets);
     for (let z = 0; z < SIZE; z += 1) {
       for (let y = 0; y < SIZE; y += 1) {
@@ -492,9 +566,9 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
             }
           }
 
-          let fx = LINK_STIFFNESS * lx - HOME_STIFFNESS * previous[at];
-          let fy = LINK_STIFFNESS * ly - HOME_STIFFNESS * previous[at + 1];
-          let fz = LINK_STIFFNESS * lz - HOME_STIFFNESS * previous[at + 2];
+          let fx = LINK_STIFFNESS * lx - homeStiffness * previous[at];
+          let fy = LINK_STIFFNESS * ly - homeStiffness * previous[at + 1];
+          let fz = LINK_STIFFNESS * lz - homeStiffness * previous[at + 2];
 
           if (grabbing && weights[here] > 0) {
             const pull = GRAB_STIFFNESS * weights[here];
@@ -581,6 +655,9 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
        is when a grab normally starts. */
     const [hit] = raycaster.intersectObject(modelRoot, true);
     if (!hit) return;
+    /* Whatever the slider has been moved to since the last grab is honoured
+       from here on, geometry included. */
+    retessellate();
 
     grabbing = true;
     moving = true;
@@ -595,7 +672,7 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
        its neighbours, which is what stretches the model. */
     toLattice.copy(modelRoot.matrixWorld).invert();
     const held = scratchTwo.copy(grabPoint).applyMatrix4(toLattice);
-    const radius = reach * GRAB_REACH;
+    const radius = reach * grabReach;
     for (let i = 0; i < POINTS; i += 1) {
       const distance = Math.hypot(
         home[i * STRIDE] - held.x,
@@ -603,6 +680,31 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
         home[i * STRIDE + 2] - held.z);
       const near = Math.max(0, 1 - distance / radius);
       weights[i] = near * near;
+    }
+
+    /* A pinch finer than a cage cell can fall between the control points and
+       take hold of nothing at all, leaving the model unmoved at the tight end
+       of the slider. So the eight corners of the cell the grab landed in are
+       always held as well, by the same trilinear weights the shader reads the
+       cage with — the smallest thing this cage can pull. At the wider settings
+       the falloff above is already larger than these, so it changes nothing. */
+    const min = uniforms.squishMin.value;
+    const scale = uniforms.squishScale.value;
+    const edge = SIZE - 1 - 1e-4;
+    const along = ['x', 'y', 'z'].map(axis =>
+      Math.min(Math.max((held[axis] - min[axis]) * scale[axis], 0), edge));
+    const corner = along.map(Math.floor);
+    const frac = along.map((value, i) => value - corner[i]);
+    for (let dz = 0; dz < 2; dz += 1) {
+      for (let dy = 0; dy < 2; dy += 1) {
+        for (let dx = 0; dx < 2; dx += 1) {
+          const share = (dx ? frac[0] : 1 - frac[0])
+            * (dy ? frac[1] : 1 - frac[1])
+            * (dz ? frac[2] : 1 - frac[2]);
+          const point = index(corner[0] + dx, corner[1] + dy, corner[2] + dz);
+          weights[point] = Math.max(weights[point], share);
+        }
+      }
     }
 
     renderer.domElement.setPointerCapture(event.pointerId);
@@ -676,7 +778,7 @@ export function createSquish({ camera, renderer, controls, render, wake }) {
   }
 
   return {
-    prepare, reset, update, enable, disable, dispose,
+    prepare, reset, update, enable, disable, dispose, setReach,
     get busy() { return enabled && moving; },
     get grabbing() { return grabbing; }
   };
