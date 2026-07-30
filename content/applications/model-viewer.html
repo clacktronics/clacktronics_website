@@ -177,6 +177,16 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
     <div class="rm">
+      <button type="button">Material</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="finish-authored" id="finish-authored" aria-pressed="true"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>As authored<span class="mi-check"></span></button>
+        <button type="button" data-cmd="finish-colour" id="finish-colour" aria-pressed="false"><span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span>Model colour<span class="mi-check"></span></button>
+        <button type="button" data-cmd="finish-clay" id="finish-clay" aria-pressed="false"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span>Clay<span class="mi-check"></span></button>
+        <button type="button" data-cmd="finish-chrome" id="finish-chrome" aria-pressed="false"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Chrome<span class="mi-check"></span></button>
+        <button type="button" data-cmd="finish-normals" id="finish-normals" aria-pressed="false"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Normals<span class="mi-check"></span></button>
+      </div>
+    </div>
+    <div class="rm">
       <button type="button">Colours</button>
       <div class="rm-dd">
         <div class="mi-row">
@@ -279,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
    is the application shell around them — menus, status bar and file handling. */
 import {
   createModelScene, LIGHTING_PRESETS, SCENE_COLOUR_KEYS, LIGHT_COLOUR_KEYS,
-  AXIS_ORDERS, ANIMATION_NAMES, DEFAULT_ANIMATION_SPEED,
+  AXIS_ORDERS, ANIMATION_NAMES, FINISH_NAMES, DEFAULT_ANIMATION_SPEED,
   axisOrderFor, asHex, formatFor, THREE
 } from '../../assets/js/model-scene.js';
 
@@ -350,6 +360,18 @@ function setAnimation(name) {
   viewer.setAnimation(name);
   ANIMATION_NAMES.forEach(entry =>
     setToggleState(document.getElementById(`anim-${entry}`), entry === name));
+}
+
+/* Chrome has a reflection to build before it can be drawn, which means a
+   network fetch the first time; everything else is immediate. */
+function setFinish(name) {
+  FINISH_NAMES.forEach(entry =>
+    setToggleState(document.getElementById(`finish-${entry}`), entry === name));
+  viewer.setFinish(name).catch(error => {
+    console.error(error);
+    showMessage('The chrome finish needs a reflection map, which could not be downloaded.', true);
+    setFinish('authored');
+  });
 }
 
 /* A file's own animation is a property of the file, so the toggle enables
@@ -527,6 +549,7 @@ const viewerCommands = {
 };
 AXIS_ORDERS.forEach(order => { viewerCommands[`axes-${order}`] = () => setAxisOrder(order); });
 ANIMATION_NAMES.forEach(name => { viewerCommands[`anim-${name}`] = () => setAnimation(name); });
+FINISH_NAMES.forEach(name => { viewerCommands[`finish-${name}`] = () => setFinish(name); });
 
 document.addEventListener('viewer-command', event => viewerCommands[event.detail]?.());
 

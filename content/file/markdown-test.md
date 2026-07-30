@@ -215,6 +215,12 @@ the rest of the set:
 
 @[model](content/applications/models/pj3410-round-nut.stl "Hovering"){animation=hover grid caption}
 
+`{material=…}` drops the file's own colours and textures for one finish over the
+whole model — `clay` here, with `chrome`, `normals`, `colour` and the default
+`authored` making up the rest:
+
+@[model](content/applications/models/pj3410-round-nut.stl "Clay"){material=clay grid caption}
+
 The build stamp, filled in from `version.json` after the window mounts (reads
 "dev" on a raw checkout):
 

@@ -453,6 +453,7 @@ same date and title: a CSV entry wins over the mirrored one.
   | `key=` `fill=` `sky=` `ground=` | theme | Individual light colours |
   | `wireframe` | off | Render as wireframe |
   | `animation=hover` | `turntable` | Idle animation: `none`, `turntable`, `swing`, `jump`, `hover`, `tumble`, `rock` |
+  | `material=clay` | `authored` | One finish over the whole model: `authored`, `colour`, `clay`, `chrome`, `normals` |
   | `spin` / `nospin` | `spin` | The short way to ask for the turntable, or for nothing |
   | `speed=0.9` | `0.9` | Animation speed (−8–8; negative reverses). A GLB's own animation plays at its authored speed at `0.9` |
   | `zoom=1` | `1` | Framing multiplier; above 1 fills more of the frame |
@@ -766,7 +767,16 @@ windows, and desktop actions.
   which walks the camera round so the ground grid stays still), Swing, Jump &
   turn, Hover, Tumble and Rock, all of which move the model itself — with a
   speed slider and a Reverse toggle. The same set is available to inline embeds
-  as `{animation=…}`. **Axes** maps the file's axes onto
+  as `{animation=…}`. **Material** puts one finish over the whole model in place
+  of whatever it came with, which is how you read a shape rather than its
+  decoration: As authored, Model colour (the palette accent, still driven by
+  Colours → Model), Clay (matte and near-white, like a plaster cast), Chrome and
+  Normals (each face coloured by the direction it points, which makes flipped
+  faces and bad smoothing obvious). Chrome is the one that needs something to
+  reflect, so the first time it is picked the viewer builds a reflection map
+  from three's own studio-room scene, fetched alongside the rest of the addons;
+  the other finishes are immediate. Embeds take the same set as
+  `{material=…}`. **Axes** maps the file's axes onto
   the world's: three.js is Y-up while CAD and slicers write Z-up, so STL, STEP
   and 3MF are turned a quarter turn as they load (OBJ is left alone) and any of
   the six orders can be picked by hand (GLB is Y-up by specification, so it is

@@ -231,6 +231,8 @@ const MODEL_LIGHTING = ['studio', 'soft', 'dramatic', 'flat', 'unlit'];
 
 const MODEL_ANIMATIONS = ['none', 'turntable', 'swing', 'jump', 'hover', 'tumble', 'rock'];
 
+const MODEL_FINISHES = ['authored', 'colour', 'clay', 'chrome', 'normals'];
+
 const MODEL_CONTROLS = ['none', 'orbit', 'full'];
 const MODEL_AXIS_ORDERS = ['xyz', 'xzy', 'yxz', 'yzx', 'zxy', 'zyx'];
 
@@ -316,6 +318,10 @@ function modelEmbedSettings(text) {
       case 'animation':
         if (!MODEL_ANIMATIONS.includes(value)) return null;
         settings.data.animation = value;
+        break;
+      case 'material':
+        if (!MODEL_FINISHES.includes(value)) return null;
+        settings.data.finish = value;
         break;
       case 'static': settings.data.controls = 'none'; break;
       case 'interactive': settings.data.controls = 'full'; break;

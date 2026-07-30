@@ -117,6 +117,11 @@ async function hydrate(stage) {
     viewer.setModel(parsed.root, { animations: parsed.animations });
     viewer.setWireframe(flag(stage, 'wireframe', false));
     viewer.setAnimation(animation, speed);
+    /* Chrome resolves once its reflection has been built; the rest are
+       immediate, and a failure leaves the model as the file authored it. */
+    if (stage.dataset.finish) {
+      viewer.setFinish(stage.dataset.finish).catch(error => console.error(error));
+    }
     statusLine(stage, '');
     stage.dataset.modelState = 'ready';
   } catch (error) {

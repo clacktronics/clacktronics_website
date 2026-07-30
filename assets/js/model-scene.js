@@ -457,6 +457,47 @@ export const ANIMATIONS = {
 
 export const ANIMATION_NAMES = Object.keys(ANIMATIONS);
 
+/* ------------------------------------------------------------------ finishes */
+
+/* One material over the whole model, in place of whatever it came with. Useful
+ * for reading a shape rather than its decoration: a textured GLB or a
+ * multi-coloured STEP assembly is easier to judge in plain clay, and a chrome
+ * pass shows up surface faults that a matte finish hides.
+ *
+ * `authored` is the way out: it puts back the materials the file specified,
+ * which for the CAD formats means the viewer's own themed material anyway.
+ * `build` receives the scene's themed material factory so `colour` can follow
+ * the palette and the colour picker like any other themed surface. */
+export const FINISHES = {
+  authored: { label: 'As authored' },
+  colour: { label: 'Model colour', build: material => material(null) },
+  clay: {
+    label: 'Clay',
+    /* Matte and near-white, the way a shape is photographed for its form
+       rather than its finish. */
+    build: () => new THREE.MeshStandardMaterial({
+      color: 0xe6e1d6, roughness: 0.92, metalness: 0, side: THREE.DoubleSide
+    })
+  },
+  chrome: {
+    label: 'Chrome',
+    /* A mirror has nothing of its own to show, so this is the one finish that
+       needs an environment to reflect — see loadEnvironment(). */
+    environment: true,
+    build: () => new THREE.MeshStandardMaterial({
+      color: 0xffffff, roughness: 0.05, metalness: 1, side: THREE.DoubleSide
+    })
+  },
+  normals: {
+    label: 'Normals',
+    /* Straight from three: each face is coloured by the direction it points, so
+       flipped faces, faceting and bad smoothing are obvious at a glance. */
+    build: () => new THREE.MeshNormalMaterial({ side: THREE.DoubleSide })
+  }
+};
+
+export const FINISH_NAMES = Object.keys(FINISHES);
+
 /* The speed the frequencies above are tuned around, and the viewer's default. */
 export const DEFAULT_ANIMATION_SPEED = 0.9;
 
@@ -547,6 +588,11 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
   let axisOrder = 'xyz';
   let lightingPreset = 'studio';
   let brightness = 1;
+  let finish = 'authored';
+  let wireframe = false;
+  const finishMaterials = {};   // built on demand, one per finish, disposed with the scene
+  let environment = null;       // the reflection chrome needs, built once
+  let environmentPromise = null;
   let animation = 'none';
   let animationSpeed = DEFAULT_ANIMATION_SPEED;
   let phase = 0;            // the animation's own clock, in seconds
@@ -665,12 +711,84 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     render();
   }
 
-  function setWireframe(enabled) {
+  function applyWireframe() {
     modelRoot?.traverse(object => {
       const materials = Array.isArray(object.material) ? object.material : [object.material];
-      materials.filter(Boolean).forEach(entry => { entry.wireframe = enabled; });
+      materials.filter(Boolean).forEach(entry => { entry.wireframe = wireframe; });
     });
+  }
+
+  function setWireframe(enabled) {
+    wireframe = enabled;
+    applyWireframe();
     render();
+  }
+
+  /* ---- finishes ---- */
+
+  /* A mirror reflects its surroundings, and a scene lit only by three abstract
+     lights has none, so chrome would come out black. This builds one: a plain
+     studio room, pre-filtered into the map three.js reflects off metal. The
+     room comes from three's own addons, fetched on the first chrome pass. */
+  function loadEnvironment() {
+    if (environmentPromise) return environmentPromise;
+    environmentPromise = (async () => {
+      const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+      const generator = new THREE.PMREMGenerator(renderer);
+      const room = new RoomEnvironment();
+      environment = generator.fromScene(room, 0.04).texture;
+      generator.dispose();
+      disposeObject(room);
+      return environment;
+    })().catch(error => {
+      environmentPromise = null;
+      throw error;
+    });
+    return environmentPromise;
+  }
+
+  function finishMaterial(name) {
+    if (!finishMaterials[name]) finishMaterials[name] = FINISHES[name].build(material);
+    return finishMaterials[name];
+  }
+
+  /* Swapping a finish in keeps each mesh's own materials on the mesh, so going
+     back to `authored` restores exactly what the file asked for — including the
+     per-face material arrays a STEP assembly carries. A mesh whose material is
+     not an array draws its whole geometry with that one material, groups and
+     all, which is what makes a single override work over them. */
+  function applyFinish() {
+    if (!modelRoot) return;
+    const override = FINISHES[finish]?.build ? finishMaterial(finish) : null;
+    modelRoot.traverse(object => {
+      if (!object.isMesh) return;
+      if (object.userData.authoredMaterial === undefined) {
+        object.userData.authoredMaterial = object.material;
+      }
+      object.material = override || object.userData.authoredMaterial;
+    });
+    applyWireframe();
+    applyModelColour();
+  }
+
+  /* Returns a promise because chrome cannot be drawn until its reflection has
+     been built; every other finish resolves immediately. */
+  function setFinish(name) {
+    if (!FINISHES[name]) return Promise.resolve();
+    finish = name;
+    if (!FINISHES[name].environment) {
+      scene.environment = null;
+      applyFinish();
+      render();
+      return Promise.resolve();
+    }
+    return loadEnvironment().then(map => {
+      /* the finish may have been changed again while the room was fetched */
+      if (finish !== name) return;
+      scene.environment = map;
+      applyFinish();
+      render();
+    });
   }
 
   /* ---- idle animation ---- */
@@ -848,7 +966,10 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     const disposed = new Set();
     root.traverse(object => {
       if (object.geometry) object.geometry.dispose();
-      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      /* What belongs to the model is what it was loaded with: a finish override
+         is the scene's, shared with every other mesh, and outlives the model. */
+      const owned = object.userData?.authoredMaterial ?? object.material;
+      const materials = Array.isArray(owned) ? owned : [owned];
       materials.filter(entry => entry && !disposed.has(entry)).forEach(entry => {
         disposed.add(entry);
         disposeMaterial(entry);
@@ -881,6 +1002,8 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     });
     clips = Array.isArray(animations) ? animations : [];
     if (clips.length) setClipsPlaying(true);
+    /* A chosen finish outlives the model it was chosen against. */
+    applyFinish();
     fitView(true);
     startAnimation();
   }
@@ -917,6 +1040,8 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     mixer = null;
     controls.dispose();
     if (modelRoot) disposeObject(modelRoot);
+    Object.values(finishMaterials).forEach(entry => entry.dispose());
+    environment?.dispose();
     grid.geometry.dispose();
     grid.material.dispose();
     renderer.dispose();
@@ -941,8 +1066,9 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     colour, material, parse, render, resize, dispose,
     setModel, fitView, setColour, setWireframe, setAutoRotate, setGridVisible,
     setShadows, setLightingPreset, setBrightness, setAxisOrder, refreshTheme,
-    setAnimation, setAnimationSpeed, setPlaying, setClipsPlaying,
+    setAnimation, setAnimationSpeed, setPlaying, setClipsPlaying, setFinish,
     get modelRoot() { return modelRoot; },
+    get finish() { return finish; },
     get animation() { return animation; },
     get animationSpeed() { return animationSpeed; },
     get hasClips() { return clips.length > 0; },
