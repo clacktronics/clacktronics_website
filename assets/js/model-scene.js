@@ -996,6 +996,9 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     const disposed = new Set();
     root.traverse(object => {
       if (object.geometry) object.geometry.dispose();
+      /* squish swaps in a subdivided geometry and stands the original aside;
+         both belong to the model. */
+      object.userData?.squishGeometry?.dispose();
       /* What belongs to the model is what it was loaded with: a finish override
          is the scene's, shared with every other mesh, and outlives the model. */
       const owned = object.userData?.authoredMaterial ?? object.material;

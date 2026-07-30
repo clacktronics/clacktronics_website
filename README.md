@@ -773,15 +773,22 @@ windows, and desktop actions.
   Colours → Model), Clay (matte and near-white, like a plaster cast), Chrome and
   Normals (each face coloured by the direction it points, which makes flipped
   faces and bad smoothing obvious). **View → Squish** makes the model springy:
-  left-drag takes hold of it and pulls it out of shape, letting go springs it
-  back, and the overshoot ripples across it before it settles (orbiting moves
-  to the right button while it is on). The model itself is never simulated —
-  imported meshes are hollow shells, and STL and OBJ have no shared vertices to
-  hang springs from at all — so the springs live in a 5x5x5 cage around it
-  (`assets/js/model-squish.js`, fetched the first time squish is switched on),
-  and the mesh follows by trilinear interpolation of that cage in the vertex
-  shader. The simulation therefore costs the same for three thousand triangles
-  as for three hundred thousand, and the deformation itself is free. Only the
+  left-drag takes hold of a patch of it and pulls that patch out of shape, the
+  way you would pinch an inch of something soft; letting go springs it back, and
+  the overshoot ripples outwards from the pinch before it settles (orbiting
+  moves to the right button while it is on). The model itself is never
+  simulated — imported meshes are hollow shells, and STL and OBJ have no shared
+  vertices to hang springs from at all — so the springs live in a 9x9x9 cage
+  around it (`assets/js/model-squish.js`, fetched the first time squish is
+  switched on), and the mesh follows by trilinear interpolation of that cage in
+  the vertex shader. The simulation therefore costs the same for three thousand
+  triangles as for three hundred thousand, and the deformation itself is free.
+  How local a pinch stays is set by how far a pull spreads through the cage
+  before the springs pull it home, which works out at about a cell and a half.
+  Because the cage moves vertices, it can only show detail the model already
+  has — a flat CAD face is two big triangles with nothing between their corners
+  to lift — so squish subdivides the model while it holds it, within a triangle
+  budget, and puts the original geometry back when it lets go. Only the
   application offers it; inline embeds have no gesture to spare. Chrome is the one that needs something to
   reflect, so the first time it is picked the viewer builds a reflection map
   from three's own studio-room scene, fetched alongside the rest of the addons;
