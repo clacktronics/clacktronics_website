@@ -1064,7 +1064,16 @@ deploy never deletes and never touches `assets/uploads/`:
 2. **Move the uploads.** `mv public_html/temp/assets/uploads public_html/assets/uploads`
    — media uploaded during staging lives only on the host, and the post bodies
    now link to it at the root path.
-3. **Delete the old copy.** `rm -rf public_html/temp` once the root is serving.
+3. **Move the upload config.** `mv public_html/temp/assets/upload-config.php ~/upload-config.php`
+   — the upload token is git-ignored and excluded from deploys, so it too stayed
+   behind in the old tree, and without it every upload fails with *“Upload
+   endpoint is not configured on the server”*. Putting it in your home directory
+   rather than back inside `assets/` is deliberate: `upload.php` searches upwards
+   as well as beside itself (see “Uploading images, video and 3D models”), so one
+   copy above the web root survives this move and any future one. If it sets
+   `base`/`dir`, drop those lines — they still point into `/temp`, and uploads
+   would keep landing there.
+4. **Delete the old copy.** `rm -rf public_html/temp` once the root is serving.
    Until it is gone the stale tree keeps answering `/temp/…` (a subdirectory's
    `.htaccess` rewrite rules are not inherited from the parent, so the redirect
    above cannot reach inside it) and search engines see the whole site twice.
@@ -1104,13 +1113,26 @@ no CORS needed once the site is on the host). It stores files under
 `assets/uploads/YYYY/MM/`, which the deploy never touches and Git ignores.
 
 **One-time server setup.** Because the repo is public, the secret is not in it.
-On the host, next to `upload.php`, copy `upload-config.example.php` to
-`upload-config.php` and set a strong `token` (e.g. `openssl rand -hex 32`). That
-file is git-ignored and excluded from deploys, so it never leaves the server.
-Paste the same token into the editor's upload dialog (kept in memory for the
-session only). The site is served from the web root, so the returned URLs are
-already canonical and `base`/`dir` can stay unset; they only matter if you stage
-the site in a subfolder again.
+On the host, copy `upload-config.example.php` to `upload-config.php` and set a
+strong `token` (e.g. `openssl rand -hex 32`). That file is git-ignored and
+excluded from deploys, so it never leaves the server. Paste the same token into
+the editor's upload dialog (kept in memory for the session only). The site is
+served from the web root, so the returned URLs are already canonical and
+`base`/`dir` can stay unset; they only matter if you stage the site in a
+subfolder again.
+
+`upload.php` looks for the config in the path in `$CLACKOS_UPLOAD_CONFIG` (if
+that is set, e.g. by `SetEnv` in `.htaccess`), then beside itself, then in each
+directory above it, four levels up. **Keep it above the web root** —
+`/home/USER/upload-config.php`, outside the deployed tree — and it is found
+wherever the site is served from, so moving or restaging the site cannot leave
+the token behind. Uploads themselves are unaffected by where the config lives:
+with `dir` unset they always go into an `uploads/` folder beside `upload.php`.
+
+If uploads fail, the endpoint now says which of these it is rather than a flat
+"not configured": no config file found (and the exact list of places it looked),
+a config that does not return a settings array or fails to parse, an unset
+`token`, or the example placeholder token still in place.
 
 **How malicious uploads are prevented.** Every request needs the secret token
 (constant-time checked); only an allow-list of image/video/audio types is

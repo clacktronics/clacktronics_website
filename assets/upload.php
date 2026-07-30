@@ -22,14 +22,13 @@
  *     or overwriting of existing files is possible.
  *
  * This file is public and contains no secrets. All secret/host-specific settings
- * come from upload-config.php next to it (copy upload-config.example.php).
+ * come from upload-config.php (copy upload-config.example.php), which is looked
+ * for next to this script and then in each directory above it — see
+ * find_upload_config().
  */
 
 // ---- load server-only config (secret token + optional overrides) -----------
-$config = @include __DIR__ . '/upload-config.php';
-if (!is_array($config) || empty($config['token'])) {
-    send_json(500, ['ok' => false, 'error' => 'Upload endpoint is not configured on the server.']);
-}
+$config = load_upload_config();   // sends a 500 explaining itself if unusable
 
 $TOKEN       = (string) $config['token'];
 $ALLOWED     = isset($config['origins']) && is_array($config['origins']) ? $config['origins'] : [];
@@ -187,6 +186,101 @@ function sniff_model($path, $size) {
     if (preg_match('/^solid\b/i', $text) && stripos($head, 'facet') !== false) return 'stl';
     if (preg_match('/^v(?:[ \t]+[-+0-9.eE]+){3}[ \t]*$/m', $head)) return 'obj';
     return null;
+}
+
+/**
+ * Find upload-config.php, in this order:
+ *   1. the path in the CLACKOS_UPLOAD_CONFIG environment variable, if set
+ *      (Apache: `SetEnv CLACKOS_UPLOAD_CONFIG /home/USER/upload-config.php`);
+ *   2. next to this script;
+ *   3. in each directory above this one, four levels up.
+ *
+ * The upward search is what makes moving the site harmless. A config kept above
+ * the web root — /home/USER/upload-config.php — is found whether the site is
+ * served from the root, staged in a subfolder, or copied somewhere else
+ * entirely, because every one of those places is below it. A config sitting
+ * *inside* the old copy of the site is not, which is exactly why moving the site
+ * used to break uploads with nothing to go on but "not configured".
+ *
+ * Returns [$found_path_or_null, $labels]: the labels describe the places that
+ * were tried relative to this script, so a failure can say where it looked
+ * without publishing the host's directory layout to anyone who asks.
+ */
+function find_upload_config() {
+    $candidates = [];
+    $env = getenv('CLACKOS_UPLOAD_CONFIG');
+    if (is_string($env) && $env !== '') {
+        $candidates[] = ['path' => $env, 'label' => 'the path in $CLACKOS_UPLOAD_CONFIG'];
+    }
+
+    $dir    = __DIR__;
+    $prefix = '';
+    for ($up = 0; $up <= 4; $up++) {
+        $candidates[] = ['path' => $dir . '/upload-config.php', 'label' => $prefix . 'upload-config.php'];
+        $parent = dirname($dir);
+        if ($parent === $dir) break;   // reached the filesystem root
+        $dir     = $parent;
+        $prefix .= '../';
+    }
+
+    $labels = array_column($candidates, 'label');
+    foreach ($candidates as $candidate) {
+        // Silenced: under open_basedir, probing a parent directory is a warning,
+        // not an error, and "not there" is the answer either way.
+        if (@is_file($candidate['path']) && @is_readable($candidate['path'])) {
+            return [$candidate['path'], $labels];
+        }
+    }
+    return [null, $labels];
+}
+
+/**
+ * Load the server-only settings, or fail with a message that says which of the
+ * possible causes it actually is. Every exit here is a 500 the caller shows
+ * verbatim, so each one has to name the fix rather than just the symptom.
+ */
+function load_upload_config() {
+    list($path, $labels) = find_upload_config();
+
+    if ($path === null) {
+        send_json(500, ['ok' => false, 'error' =>
+            'Upload endpoint is not configured on the server: no upload-config.php was found. '
+            . 'Looked for ' . implode(', ', $labels) . ' — the relative paths are from the folder '
+            . 'upload.php is in. Copy upload-config.example.php to one of them on the host and set '
+            . 'a token. If the site has just been moved, the old copy is still in the previous '
+            . 'location: it is git-ignored and never deployed, so a deploy to a new path does not '
+            . 'bring it along.']);
+    }
+
+    // A syntax error in the config throws ParseError rather than returning, and
+    // uncaught it ends the request with an empty 500 the caller can only report
+    // as "server said 500" — the very dead end this function exists to avoid.
+    try {
+        $config = @include $path;
+    } catch (\Throwable $error) {
+        // Keep the host's directory layout out of the response even here.
+        $why = str_replace(dirname($path) . '/', '', $error->getMessage());
+        send_json(500, ['ok' => false, 'error' =>
+            'Upload endpoint is misconfigured: upload-config.php could not be loaded ('
+            . get_class($error) . ': ' . $why . '). Check it against upload-config.example.php.']);
+    }
+    if (!is_array($config)) {
+        send_json(500, ['ok' => false, 'error' =>
+            'Upload endpoint is misconfigured: upload-config.php was found but did not return a '
+            . 'settings array. It has to be a PHP file whose only statement is '
+            . '`return [ ... ];` — see upload-config.example.php.']);
+    }
+    if (empty($config['token']) || !is_string($config['token'])) {
+        send_json(500, ['ok' => false, 'error' =>
+            'Upload endpoint is not configured on the server: upload-config.php has no "token" set.']);
+    }
+    if (strpos($config['token'], 'PUT-A-LONG-RANDOM-TOKEN-HERE') !== false) {
+        send_json(500, ['ok' => false, 'error' =>
+            'Upload endpoint is not configured on the server: upload-config.php still has the '
+            . 'example placeholder token. Replace it with a real one (openssl rand -hex 32) and '
+            . 'paste the same value into the upload dialog.']);
+    }
+    return $config;
 }
 
 function send_json($status, $payload) {
