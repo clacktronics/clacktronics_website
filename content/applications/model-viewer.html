@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
     <span class="viewer-file-name" id="viewer-file-name">PJ3410 round nut</span>
-    <input id="model-file" type="file" accept=".stl,.step,.stp,.obj,.3mf" aria-label="Open an STL, STEP, OBJ or 3MF model" hidden>
+    <input id="model-file" type="file" accept=".stl,.step,.stp,.obj,.3mf,.glb" aria-label="Open an STL, STEP, OBJ, 3MF or GLB model" hidden>
   </nav>
 
   <main class="viewer-stage" id="viewer-stage" aria-label="Interactive 3D model viewport">
@@ -402,7 +402,7 @@ function showMessage(text, error = false) {
 
 async function openFile(file) {
   if (!formatFor(file.name)) {
-    showMessage('Choose an STL, STEP, OBJ or 3MF file.', true);
+    showMessage('Choose an STL, STEP, OBJ, 3MF or GLB file.', true);
     return;
   }
 
@@ -421,8 +421,10 @@ async function openFile(file) {
     const parts = parsed.parts ? ` · ${parsed.parts.toLocaleString()} parts` : '';
     const colours = parsed.ownColours ? ' · file colours' : '';
     statsEl.textContent = `${parsed.label} · ${parsed.triangles.toLocaleString()} triangles${parts}${colours}`;
+    /* Where a file names its own colours or materials they are what is drawn, so
+       say so: the Colours → Model swatch only reaches the parts that don't. */
     showMessage(parsed.ownColours
-      ? 'Loaded locally — the model’s own colours are shown.'
+      ? 'Loaded locally — the file’s own colours and materials are shown.'
       : 'Loaded locally — nothing was uploaded.');
   } catch (error) {
     console.error(error);

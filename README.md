@@ -432,8 +432,8 @@ same date and title: a CSV entry wins over the mirrored one.
   accepted; remote sources must allow cross-origin requests.
 - `@[model](content/applications/models/part.stl "Optional caption")` — an
   inline 3D model, rendered by the same three.js core as the 3D Model Viewer
-  application (`assets/js/model-scene.js`). `.stl`, `.step`/`.stp`, `.obj` and
-  `.3mf` sources are accepted. It is deliberately borderless and transparent so
+  application (`assets/js/model-scene.js`). `.stl`, `.step`/`.stp`, `.obj`,
+  `.3mf` and `.glb` sources are accepted. It is deliberately borderless and transparent so
   it reads as part of the prose; options in `{}` after it change any of the
   viewer's settings:
 
@@ -444,7 +444,7 @@ same date and title: a CSV entry wins over the mirrored one.
   | `left` / `right` | — | Float beside the text (width defaults to 42%) |
   | `caption` | off | Show the title under the model |
   | `border` | off | Draw the bordered panel the other embeds use |
-  | `colour=#c98a3a` | theme accent | Model colour (`color=` also works) |
+  | `colour=#c98a3a` | theme accent | Model colour (`color=` also works). Parts that name their own colour — STEP faces, GLB materials and textures — keep it |
   | `background=#f3ecd1` | `none` | Backdrop; `none` lets the page show through |
   | `grid` / `nogrid` | `nogrid` | Ground grid; `grid=#276b47` turns it on in that colour |
   | `shadows` / `noshadows` | `shadows` | Shadow casting |
@@ -456,7 +456,7 @@ same date and title: a CSV entry wins over the mirrored one.
   | `speed=0.9` | `0.9` | Rotation speed (−8–8; negative reverses) |
   | `zoom=1` | `1` | Framing multiplier; above 1 fills more of the frame |
   | `static` / `interactive` | drag to orbit | `static` disables input entirely; `interactive` (`controls=full`) adds wheel zoom and panning |
-  | `axes=xzy` | per format | Which source axis becomes world X, Y, Z. STL, STEP and 3MF default to `xzy` (Z up, as CAD draws it); OBJ defaults to `xyz` |
+  | `axes=xzy` | per format | Which source axis becomes world X, Y, Z. STL, STEP and 3MF default to `xzy` (Z up, as CAD draws it); OBJ and GLB default to `xyz` |
 
   Dragging orbits the model by default, while the wheel and one-finger touch
   stay with the page so scrolling past an embed still works. An unknown or
@@ -754,7 +754,7 @@ windows, and desktop actions.
   once works), or link to a file kept in `content/applications/kicad/`
   with `kicad.html?file=<name>`.
 - `applications/model-viewer.html` (Applications → 3D Model Viewer) — an STL,
-  STEP, OBJ and 3MF viewer built on three.js (loaded from a CDN; STEP is
+  STEP, OBJ, 3MF and GLB viewer built on three.js (loaded from a CDN; STEP is
   triangulated by `occt-import-js`). Files are read in the browser and never
   uploaded unless you ask. The scene, loaders and lighting rig live in
   `assets/js/model-scene.js`, shared with the inline `@[model]` embeds, so both
@@ -763,7 +763,19 @@ windows, and desktop actions.
   presets, a brightness slider and shadows. **Axes** maps the file's axes onto
   the world's: three.js is Y-up while CAD and slicers write Z-up, so STL, STEP
   and 3MF are turned a quarter turn as they load (OBJ is left alone) and any of
-  the six orders can be picked by hand. File → Upload to website… sends the open
+  the six orders can be picked by hand (GLB is Y-up by specification, so it is
+  left alone too). Colours a file brings with it win over the palette and are
+  shown as authored: STEP carries a colour per part and per b-rep face, which
+  become one material per colour; GLB carries whole PBR materials, kept
+  untouched, textures and all. Only geometry that names no colour of its own
+  follows Colours → Model, and the status bar says which you are looking at.
+  GLB extras are handled where they can be and dropped where they cannot: Draco
+  and meshopt compression and KTX2 textures are decoded (their decoders are
+  fetched from the same three build on first use), the file's own lights are
+  dropped in favour of the viewer's rig, and animations are ignored — a rigged
+  model shows its bind pose. `.gltf` is deliberately not accepted: the JSON form
+  points at its buffers and textures as separate files, which does not survive
+  being passed round as a single upload. File → Upload to website… sends the open
   model to the web host through the same endpoint ClackPaint and the Markdown
   Editor use, and hands back the public URL plus a ready-made `@[model]`
   directive — including `{axes=…}` when the viewer is not on the format default.
@@ -789,8 +801,8 @@ windows, and desktop actions.
   saving); elsewhere saving downloads the file. Drag-and-drop works,
   Ctrl+S saves. File → Open from website… opens the shared file manager:
   Markdown files load into the editor, while other files insert a suitable
-  link or media embed (a `.stl`, `.step`, `.stp`, `.obj` or `.3mf` file inserts
-  an inline `@[model]` viewer). A file passed as `?repo=` (or `?open=`) with
+  link or media embed (a `.stl`, `.step`, `.stp`, `.obj`, `.3mf` or `.glb` file
+  inserts an inline `@[model]` viewer). A file passed as `?repo=` (or `?open=`) with
   `view=rendered` opens straight into the rendered preview — what the File
   Manager's Markdown Viewer entry does — and the toolbar's preview button
   switches back to the source. `?new=post` opens a blog post dated today
@@ -1137,11 +1149,12 @@ a config that does not return a settings array or fails to parse, an unset
 **How malicious uploads are prevented.** Every request needs the secret token
 (constant-time checked); only an allow-list of image/video/audio types is
 accepted, with the stored extension taken from the file's *sniffed* content type
-rather than its name; 3D models (STL, STEP, OBJ, 3MF) have no MIME type of their
+rather than its name; 3D models (STL, STEP, OBJ, 3MF, GLB) have no MIME type of their
 own that `finfo` reports, so they are matched on their actual content instead —
 a binary STL's triangle count must account for its exact byte length, a STEP
 must open with `ISO-10303-21;`, a 3MF must be a zip containing a
-`3dmodel.model` part, and so on, with the filename still trusted for nothing; filenames are generated server-side (date + random) so
+`3dmodel.model` part, a GLB's header must declare a total length equal to the
+file's own, and so on, with the filename still trusted for nothing; filenames are generated server-side (date + random) so
 there is no path traversal or overwriting; a size cap applies (100 MB default,
 subject to the host's `upload_max_filesize`/`post_max_size`); and `upload.php`
 drops a `.htaccess` into the uploads folder that disables script execution, so

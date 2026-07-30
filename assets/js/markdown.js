@@ -347,7 +347,7 @@ function modelEmbed(markdown) {
   const match = /^@\[model\]\((\S+?)(?:\s+["']([^"']+)["'])?\)(?:\{([^}]*)\})?$/i.exec(markdown.trim());
   if (!match) return '';
   const src = siteUrl(safeWebUrl(match[1], false));
-  if (!src || !/\.(?:stl|step|stp|obj|3mf)(?:[?#].*)?$/i.test(src)) return '';
+  if (!src || !/\.(?:stl|step|stp|obj|3mf|glb)(?:[?#].*)?$/i.test(src)) return '';
   const settings = modelEmbedSettings(match[3]);
   if (!settings) return '';
   if (!document.getElementById('model-embed-module')) {

@@ -722,7 +722,7 @@ def model_embed(block, page_out, state):
     is a plain link to the model file.
     """
     m = re.match(r'^@\[model\]\((\S+?)(?:\s+["\']([^"\']+)["\'])?\)(?:\{([^}]*)\})?$', block, re.I)
-    if not m or not re.search(r'\.(?:stl|step|stp|obj|3mf)(?:[?#].*)?$', m.group(1), re.I):
+    if not m or not re.search(r'\.(?:stl|step|stp|obj|3mf|glb)(?:[?#].*)?$', m.group(1), re.I):
         return None
     src = fix_url(m.group(1), page_out, allow_fragment=False)
     if not src:

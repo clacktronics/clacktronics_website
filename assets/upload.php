@@ -13,7 +13,7 @@
  *     it is never in the public repository.
  *   - Only an allow-list of image/video/audio types is accepted, and the stored
  *     extension is taken from the file's *sniffed* MIME type, not its name.
- *   - 3D models (STL, STEP, OBJ, 3MF) have no MIME type of their own that finfo
+ *   - 3D models (STL, STEP, OBJ, 3MF, GLB) have no MIME type of their own that finfo
  *     can report, so they are matched on their actual content instead — see
  *     sniff_model(). The filename is still never trusted for anything.
  *   - The uploads directory gets a .htaccess that disables script execution, so
@@ -114,7 +114,7 @@ if ($ext === null) {
     if ($ext !== null) $kind = 'model';
 }
 if ($ext === null) {
-    send_json(415, ['ok' => false, 'error' => 'Only images, video, audio and 3D models (STL, STEP, OBJ, 3MF) are accepted (got "' . $mime . '").']);
+    send_json(415, ['ok' => false, 'error' => 'Only images, video, audio and 3D models (STL, STEP, OBJ, 3MF, GLB) are accepted (got "' . $mime . '").']);
 }
 
 // ---- build a safe, unique destination --------------------------------------
@@ -167,6 +167,13 @@ function sniff_model($path, $size) {
     if ($size > 84) {
         $count = unpack('V', substr($head, 80, 4))[1];
         if ($count > 0 && $size === 84 + $count * 50) return 'stl';
+    }
+
+    // GLB: the magic word "glTF", a version, and a total length that has to
+    // match the file exactly.
+    if ($size > 12 && strncmp($head, 'glTF', 4) === 0) {
+        $header = unpack('Vversion/Vlength', substr($head, 4, 8));
+        if ($header['version'] === 2 && $header['length'] === $size) return 'glb';
     }
 
     // 3MF is an OPC (zip) package that must contain a 3dmodel.model part.
@@ -309,7 +316,7 @@ function send_upload_catalogue($root, $public_base) {
         'mp3' => 'audio', 'wav' => 'audio', 'ogg' => 'audio',
         'weba' => 'audio',
         'stl' => 'model', 'step' => 'model', 'stp' => 'model',
-        'obj' => 'model', '3mf' => 'model',
+        'obj' => 'model', '3mf' => 'model', 'glb' => 'model',
     ];
     $files = [];
     if (is_dir($root)) {

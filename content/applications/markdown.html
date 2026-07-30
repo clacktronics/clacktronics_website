@@ -293,7 +293,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
     <header><span>Upload media</span><button id="uploadClose" aria-label="Close"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span></button></header>
     <div class="commit-form">
       <label>Image, video, audio, or 3D model
-        <input type="file" id="uploadFileInput" accept="image/*,video/*,audio/*,.stl,.step,.stp,.obj,.3mf">
+        <input type="file" id="uploadFileInput" accept="image/*,video/*,audio/*,.stl,.step,.stp,.obj,.3mf,.glb">
       </label>
       <label id="uploadTokenRow">Upload token <span class="hint">(the secret set in upload-config.php on the web host — kept in memory, forgotten when the tab closes)</span>
         <input type="password" id="uploadTokenInput" autocomplete="off" spellcheck="false">
@@ -1686,7 +1686,7 @@ document.addEventListener('drop', async e => {
   /* an image/video/audio/3D-model file is uploaded to the web host; anything
      else is treated as text and loaded into the editor. Models are matched by
      extension because the browser reports no type for most of them. */
-  if (/^(image|video|audio)\//.test(f.type) || /\.(?:stl|step|stp|obj|3mf)$/i.test(f.name)) {
+  if (/^(image|video|audio)\//.test(f.type) || /\.(?:stl|step|stp|obj|3mf|glb)$/i.test(f.name)) {
     const url = await getAssetUploadUrl();
     if (!url) { status.textContent = 'Dropped media, but uploads are not configured in content/site.json.'; return; }
     beginUpload(f);
