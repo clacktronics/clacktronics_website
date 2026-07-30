@@ -452,8 +452,9 @@ same date and title: a CSV entry wins over the mirrored one.
   | `brightness=100` | `100` | Light intensity percentage (20–400) |
   | `key=` `fill=` `sky=` `ground=` | theme | Individual light colours |
   | `wireframe` | off | Render as wireframe |
-  | `spin` / `nospin` | `spin` | Auto-rotation (paused while off-screen) |
-  | `speed=0.9` | `0.9` | Rotation speed (−8–8; negative reverses) |
+  | `animation=hover` | `turntable` | Idle animation: `none`, `turntable`, `swing`, `jump`, `hover`, `tumble`, `rock` |
+  | `spin` / `nospin` | `spin` | The short way to ask for the turntable, or for nothing |
+  | `speed=0.9` | `0.9` | Animation speed (−8–8; negative reverses). A GLB's own animation plays at its authored speed at `0.9` |
   | `zoom=1` | `1` | Framing multiplier; above 1 fills more of the frame |
   | `static` / `interactive` | drag to orbit | `static` disables input entirely; `interactive` (`controls=full`) adds wheel zoom and panning |
   | `axes=xzy` | per format | Which source axis becomes world X, Y, Z. STL, STEP and 3MF default to `xzy` (Z up, as CAD draws it); OBJ and GLB default to `xyz` |
@@ -760,7 +761,12 @@ windows, and desktop actions.
   `assets/js/model-scene.js`, shared with the inline `@[model]` embeds, so both
   render identically. View fits, resets, wireframes and auto-rotates; Colours
   and Lighting follow the ClackOS palette until overridden, with five lighting
-  presets, a brightness slider and shadows. **Axes** maps the file's axes onto
+  presets, a brightness slider and shadows. **Animation** idles the model the
+  way the old Windows 3D Viewer did — Turntable (the long-standing behaviour,
+  which walks the camera round so the ground grid stays still), Swing, Jump &
+  turn, Hover, Tumble and Rock, all of which move the model itself — with a
+  speed slider and a Reverse toggle. The same set is available to inline embeds
+  as `{animation=…}`. **Axes** maps the file's axes onto
   the world's: three.js is Y-up while CAD and slicers write Z-up, so STL, STEP
   and 3MF are turned a quarter turn as they load (OBJ is left alone) and any of
   the six orders can be picked by hand (GLB is Y-up by specification, so it is
@@ -772,8 +778,9 @@ windows, and desktop actions.
   GLB extras are handled where they can be and dropped where they cannot: Draco
   and meshopt compression and KTX2 textures are decoded (their decoders are
   fetched from the same three build on first use), the file's own lights are
-  dropped in favour of the viewer's rig, and animations are ignored — a rigged
-  model shows its bind pose. `.gltf` is deliberately not accepted: the JSON form
+  dropped in favour of the viewer's rig, and a file that brought its own
+  animation plays it (Animation → Model's own animation turns it off; the entry
+  stays disabled for a file that has none). `.gltf` is deliberately not accepted: the JSON form
   points at its buffers and textures as separate files, which does not survive
   being passed round as a single upload. File → Upload to website… sends the open
   model to the web host through the same endpoint ClackPaint and the Markdown

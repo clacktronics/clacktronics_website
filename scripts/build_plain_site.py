@@ -620,6 +620,7 @@ def kicanvas_embed(block, page_out, state):
 MODEL_LIGHTING = ('studio', 'soft', 'dramatic', 'flat', 'unlit')
 MODEL_CONTROLS = ('none', 'orbit', 'full')
 MODEL_AXIS_ORDERS = ('xyz', 'xzy', 'yxz', 'yzx', 'zxy', 'zyx')
+MODEL_ANIMATIONS = ('none', 'turntable', 'swing', 'jump', 'hover', 'tumble', 'rock')
 MODEL_COLOUR_OPTIONS = {'colour': 'colour', 'color': 'colour', 'grid': 'gridcolour',
                         'key': 'key', 'fill': 'fill', 'sky': 'sky', 'ground': 'ground'}
 
@@ -694,6 +695,10 @@ def model_embed_settings(text):
             if value not in MODEL_AXIS_ORDERS:
                 return None
             settings['data']['axes'] = value
+        elif name == 'animation':
+            if value not in MODEL_ANIMATIONS:
+                return None
+            settings['data']['animation'] = value
         elif name == 'static':
             settings['data']['controls'] = 'none'
         elif name == 'interactive':

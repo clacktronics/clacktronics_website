@@ -209,6 +209,12 @@ A bordered, fully interactive one — wheel to zoom, right-drag to pan:
 
 @[model](content/applications/models/pj3410-round-nut.stl "Interactive, bordered"){border caption interactive background=#f3ecd1 nospin}
 
+An idle animation other than the default turntable — `{animation=hover}` floats
+the model instead of spinning it, and `swing`, `jump`, `tumble` and `rock` are
+the rest of the set:
+
+@[model](content/applications/models/pj3410-round-nut.stl "Hovering"){animation=hover grid caption}
+
 The build stamp, filled in from `version.json` after the window mounts (reads
 "dev" on a raw checkout):
 

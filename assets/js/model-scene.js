@@ -352,7 +352,9 @@ async function parseGlb(buffer, material, onProgress, { renderer } = {}) {
   const lights = [];
   root.traverse(object => { if (object.isLight) lights.push(object); });
   lights.forEach(light => light.removeFromParent());
-  return { root, ...adoptGltfMaterials(root, material) };
+  /* Animation the model's author made, which the viewer plays in preference to
+     inventing movement of its own. */
+  return { root, animations: gltf.animations || [], ...adoptGltfMaterials(root, material) };
 }
 
 async function parseStep(buffer, material, onProgress) {
@@ -401,6 +403,63 @@ export const MODEL_FORMATS = {
 
 export const formatFor = name => MODEL_FORMATS[extensionOf(name)] || null;
 
+/* --------------------------------------------------------------- animations */
+
+/* Idle animations in the manner of the old Windows 3D Viewer: a model sitting
+ * on a page is more legible moving than still. Turntable is the odd one out —
+ * it walks the camera round the model through OrbitControls, which is what this
+ * viewer has always done and what keeps the ground grid still underneath — and
+ * the rest move the model itself.
+ *
+ * Each pose is a pure function of the animation's phase in seconds, so nothing
+ * accumulates and the speed can change mid-movement without a jump. Distances
+ * are in scene units, where every model is normalised to 80 across, and the
+ * frequencies assume the default speed of 0.9, which is what the phase advances
+ * at per second. */
+export const ANIMATIONS = {
+  none: { label: 'None' },
+  turntable: { label: 'Turntable', orbits: true },
+  swing: {
+    label: 'Swing',
+    pose: (holder, phase) => { holder.rotation.y = 0.62 * Math.sin(phase * 1.5); }
+  },
+  jump: {
+    label: 'Jump & turn',
+    pose: (holder, phase) => {
+      holder.rotation.y = phase * 1.1;
+      /* |sin| is the arc of a bouncing ball — quick through the bottom, hanging
+         at the top — rather than the smooth wave a plain sine would give. */
+      holder.position.y = Math.abs(Math.sin(phase * 1.7)) * 9;
+    }
+  },
+  hover: {
+    label: 'Hover',
+    pose: (holder, phase) => {
+      holder.position.y = 4 * Math.sin(phase * 1.05);
+      /* Two slow tilts at frequencies that do not divide into one another, so
+         the drift never settles into an obvious loop. */
+      holder.rotation.z = 0.035 * Math.sin(phase * 0.8);
+      holder.rotation.x = 0.03 * Math.sin(phase * 0.63);
+    }
+  },
+  tumble: {
+    label: 'Tumble',
+    pose: (holder, phase) => {
+      holder.rotation.y = phase * 0.75;
+      holder.rotation.x = phase * 0.45;
+    }
+  },
+  rock: {
+    label: 'Rock',
+    pose: (holder, phase) => { holder.rotation.z = 0.4 * Math.sin(phase * 1.6); }
+  }
+};
+
+export const ANIMATION_NAMES = Object.keys(ANIMATIONS);
+
+/* The speed the frequencies above are tuned around, and the viewer's default. */
+export const DEFAULT_ANIMATION_SPEED = 0.9;
+
 /* ------------------------------------------------------------------- viewer */
 
 /* Builds a viewport inside `container` and returns the handles both callers
@@ -430,14 +489,20 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     '3D model; drag to orbit, right-drag to pan, and use the wheel to zoom');
   container.appendChild(renderer.domElement);
 
+  /* Declared before the controls exist so their 'change' handler can never read
+     it before it is initialised. */
+  let looping = false;
+
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = false;
   controls.screenSpacePanning = true;
   controls.minDistance = 8;
   controls.maxDistance = 500;
   controls.autoRotate = false;
-  controls.autoRotateSpeed = 0.9;
-  controls.addEventListener('change', render);
+  controls.autoRotateSpeed = DEFAULT_ANIMATION_SPEED;
+  /* While the animation loop is running it renders once at the end of each
+     frame, so the camera changes it makes itself must not render again. */
+  controls.addEventListener('change', () => { if (!looping) render(); });
 
   const hemisphereLight = new THREE.HemisphereLight(colour('sky'), colour('ground'), 2.2);
   scene.add(hemisphereLight);
@@ -471,12 +536,25 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
   grid.position.y = -42;
   scene.add(grid);
 
-  let modelRoot = null;     // the holder that is normalised and added to the scene
+  /* The model hangs in a chain of holders so that each transform has one owner
+     and they never fight: animationRoot carries the idle animation, modelRoot
+     the centring and scaling, and sourceRoot the axis order. */
+  const animationRoot = new THREE.Group();
+  scene.add(animationRoot);
+
+  let modelRoot = null;     // the holder that is normalised, inside the animation holder
   let sourceRoot = null;    // the model as it was loaded, inside the holder
   let axisOrder = 'xyz';
   let lightingPreset = 'studio';
   let brightness = 1;
-  let rotationFrame = null;
+  let animation = 'none';
+  let animationSpeed = DEFAULT_ANIMATION_SPEED;
+  let phase = 0;            // the animation's own clock, in seconds
+  let playing = true;       // embeds stop the loop while they are off-screen
+  let mixer = null;         // plays a GLB's own animation clips, when it has any
+  let clips = [];
+  let frame = null;
+  const clock = new THREE.Clock(false);
 
   function render() {
     renderer.render(scene, camera);
@@ -595,21 +673,132 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     render();
   }
 
-  /* Auto-rotation runs its own frame loop. OrbitControls keeps handling pointer
-     input while it spins, so the user can still orbit, pan and zoom. */
-  function spin() {
-    if (!controls.autoRotate) {
-      rotationFrame = null;
-      return;
-    }
-    rotationFrame = requestAnimationFrame(spin);
-    controls.update();
+  /* ---- idle animation ---- */
+
+  /* Puts the animation holder back to rest. Anything that measures the model —
+     normalising it, fitting the view — has to see it where it will sit when the
+     animation is stopped, or the framing would follow the movement. */
+  function restAnimation() {
+    animationRoot.position.set(0, 0, 0);
+    animationRoot.rotation.set(0, 0, 0);
+    animationRoot.scale.setScalar(1);
+    animationRoot.updateMatrixWorld(true);
   }
 
+  function poseAnimation() {
+    const pose = ANIMATIONS[animation]?.pose;
+    if (!pose) return;
+    restAnimation();
+    pose(animationRoot, phase);
+    animationRoot.updateMatrixWorld(true);
+  }
+
+  /* Measures the model at rest and then puts it back where the animation had
+     it, so a fit or an axis change mid-movement neither reads the moving
+     transform nor visibly interrupts it. */
+  function atRest(measure) {
+    restAnimation();
+    const result = measure();
+    poseAnimation();
+    return result;
+  }
+
+  const animating = () => playing && (animation !== 'none' || Boolean(mixer));
+
+  /* One frame loop drives everything that moves. OrbitControls keeps handling
+     pointer input throughout, so the user can orbit, pan and zoom while it
+     runs. It stops itself as soon as there is nothing left to animate. */
+  function tick() {
+    if (!animating()) {
+      frame = null;
+      clock.stop();
+      return;
+    }
+    frame = requestAnimationFrame(tick);
+    /* Frames stop while the tab is in the background, so the first one back
+       carries the whole gap; capped, the model resumes instead of teleporting. */
+    const delta = Math.min(clock.getDelta(), 0.1);
+    phase += delta * animationSpeed;
+    looping = true;
+    if (mixer) mixer.update(delta);
+    if (ANIMATIONS[animation]?.orbits) controls.update();
+    else poseAnimation();
+    looping = false;
+    render();
+  }
+
+  function startAnimation() {
+    if (!animating()) {
+      /* Stopping leaves the model wherever the animation had got to, which is
+         what pausing an off-screen embed should do; turning it off entirely is
+         setAnimation('none'), which rests it. */
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = null;
+      clock.stop();
+      return;
+    }
+    if (frame === null) {
+      clock.start();
+      frame = requestAnimationFrame(tick);
+    }
+  }
+
+  function setAnimation(name, speed) {
+    if (!ANIMATIONS[name]) return;
+    if (speed !== undefined) setAnimationSpeed(speed);
+    animation = name;
+    /* Every pose is at rest at phase zero, so starting the clock afresh means a
+       new animation always begins from the model standing still rather than
+       part-way through a jump. */
+    phase = 0;
+    controls.autoRotate = Boolean(ANIMATIONS[name].orbits);
+    if (name === 'none') {
+      restAnimation();
+      render();
+    }
+    startAnimation();
+  }
+
+  function setAnimationSpeed(speed) {
+    animationSpeed = Number.isFinite(Number(speed)) ? Number(speed) : DEFAULT_ANIMATION_SPEED;
+    controls.autoRotateSpeed = animationSpeed;
+    /* A model's own clips run at their authored speed at the viewer's default,
+       and follow the slider from there. */
+    if (mixer) mixer.timeScale = animationSpeed / DEFAULT_ANIMATION_SPEED;
+  }
+
+  /* The on/off switch for the loop that leaves the animation where it is —
+     inline embeds use it to stop burning frames once they scroll away. */
+  function setPlaying(value) {
+    playing = Boolean(value);
+    startAnimation();
+  }
+
+  /* A GLB can carry animation the model's author made, which is worth more than
+     any idle movement this viewer invents; the two run together, the clip
+     inside the holder and the idle animation outside it. */
+  function setClipsPlaying(value) {
+    if (!clips.length || !modelRoot) return;
+    if (value && !mixer) {
+      mixer = new THREE.AnimationMixer(modelRoot);
+      mixer.timeScale = animationSpeed / DEFAULT_ANIMATION_SPEED;
+      clips.forEach(clip => mixer.clipAction(clip).play());
+    } else if (!value && mixer) {
+      /* Winding back to the first frame before stopping leaves the model in the
+         pose it loads in, rather than frozen wherever the clip had reached. */
+      clips.forEach(clip => mixer.clipAction(clip).reset());
+      mixer.setTime(0);
+      mixer.stopAllAction();
+      mixer = null;
+      render();
+    }
+    startAnimation();
+  }
+
+  /* Kept because it reads better than setAnimation('turntable') at the call
+     sites that only ever wanted a spin. */
   function setAutoRotate(enabled, speed) {
-    if (speed !== undefined) controls.autoRotateSpeed = speed;
-    controls.autoRotate = enabled;
-    if (enabled && rotationFrame === null) spin();
+    setAnimation(enabled ? 'turntable' : 'none', speed);
   }
 
   function normaliseModel(root) {
@@ -632,7 +821,7 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
 
   function fitView(resetDirection = false) {
     if (!modelRoot) return;
-    const box = new THREE.Box3().setFromObject(modelRoot);
+    const box = atRest(() => new THREE.Box3().setFromObject(modelRoot));
     const sphere = box.getBoundingSphere(new THREE.Sphere());
     const direction = resetDirection
       ? new THREE.Vector3(1, 0.72, 1).normalize()
@@ -668,24 +857,32 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
   }
 
   /* The model sits inside a holder: the axis order turns the model, and the
-     holder carries the centring and scaling, so the two never fight. */
-  function setModel(root) {
+     holder carries the centring and scaling, so the two never fight. Animation
+     clips the file brought with it start playing as the model appears. */
+  function setModel(root, { animations = [] } = {}) {
+    if (mixer) {
+      mixer.stopAllAction();
+      mixer = null;
+    }
     if (modelRoot) {
-      scene.remove(modelRoot);
+      animationRoot.remove(modelRoot);
       disposeObject(modelRoot);
     }
     sourceRoot = root;
     modelRoot = new THREE.Group();
     modelRoot.add(root);
     applyAxisOrder();
-    normaliseModel(modelRoot);
-    scene.add(modelRoot);
+    atRest(() => normaliseModel(modelRoot));
+    animationRoot.add(modelRoot);
     modelRoot.traverse(object => {
       if (!object.isMesh) return;
       object.castShadow = true;
       object.receiveShadow = true;
     });
+    clips = Array.isArray(animations) ? animations : [];
+    if (clips.length) setClipsPlaying(true);
     fitView(true);
+    startAnimation();
   }
 
   function applyAxisOrder() {
@@ -699,7 +896,7 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     axisOrder = order;
     if (!sourceRoot) return;
     applyAxisOrder();
-    normaliseModel(modelRoot);
+    atRest(() => normaliseModel(modelRoot));
     if (refit) fitView(true);
     render();
   }
@@ -714,8 +911,10 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
   }
 
   function dispose() {
-    if (rotationFrame !== null) cancelAnimationFrame(rotationFrame);
-    rotationFrame = null;
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null;
+    mixer?.stopAllAction();
+    mixer = null;
     controls.dispose();
     if (modelRoot) disposeObject(modelRoot);
     grid.geometry.dispose();
@@ -742,7 +941,12 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     colour, material, parse, render, resize, dispose,
     setModel, fitView, setColour, setWireframe, setAutoRotate, setGridVisible,
     setShadows, setLightingPreset, setBrightness, setAxisOrder, refreshTheme,
+    setAnimation, setAnimationSpeed, setPlaying, setClipsPlaying,
     get modelRoot() { return modelRoot; },
+    get animation() { return animation; },
+    get animationSpeed() { return animationSpeed; },
+    get hasClips() { return clips.length > 0; },
+    get clipsPlaying() { return Boolean(mixer); },
     get autoRotate() { return controls.autoRotate; },
     get lightingPreset() { return lightingPreset; },
     get axisOrder() { return axisOrder; },
