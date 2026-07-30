@@ -10,7 +10,7 @@
     audio: /\.(?:mp3|wav|ogg|m4a|flac|aac)$/i,
     markdown: /\.(?:md|markdown)$/i,
     pdf: /\.pdf$/i,
-    model: /\.(?:stl|step|stp|obj|3mf)$/i
+    model: /\.(?:stl|step|stp|obj|3mf|glb)$/i
   };
 
   const icon = item => item.type === 'folder' ? '▰' : item.kind === 'image' ? '▧' :

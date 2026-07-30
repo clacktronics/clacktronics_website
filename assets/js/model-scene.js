@@ -35,8 +35,9 @@ export const LIGHTING_PRESETS = {
 export const AXIS_ORDERS = ['xyz', 'xzy', 'yxz', 'yzx', 'zxy', 'zyx'];
 
 /* STL, STEP and 3MF come from CAD and 3D-printing tools, which put Z up. OBJ
-   comes from graphics tools, which put Y up like three.js. */
-const FORMAT_AXIS_ORDER = { stl: 'xzy', step: 'xzy', stp: 'xzy', obj: 'xyz', '3mf': 'xzy' };
+   and glTF/GLB come from graphics tools, which put Y up like three.js — GLB by
+   specification rather than convention. */
+const FORMAT_AXIS_ORDER = { stl: 'xzy', step: 'xzy', stp: 'xzy', obj: 'xyz', '3mf': 'xzy', glb: 'xyz' };
 
 export const extensionOf = name =>
   String(name || '').split(/[?#]/)[0].split('.').pop().toLowerCase();
@@ -103,6 +104,75 @@ function loadOcct() {
     throw error;
   });
   return occtPromise;
+}
+
+/* OCCT reports colours as r, g, b — either 0-1 or 0-255 depending on how the
+   file wrote them, so a value above 1 means the triple is in bytes. */
+function stepColour(values) {
+  if (!Array.isArray(values) || values.length < 3) return null;
+  const [r, g, b] = values.map(value => (value > 1 ? value / 255 : value));
+  return new THREE.Color(r, g, b);
+}
+
+/* A STEP file can colour each b-rep face separately — an anodised panel with
+ * bare screw holes, a board with tinned pads — and OCCT reports that as
+ * `brep_faces`: a colour, or null, against a run of triangle indices.
+ *
+ * This turns those runs into geometry groups, one material per distinct colour,
+ * merging neighbours that share a colour so a 900-face part does not become 900
+ * materials. Faces the file leaves uncoloured fall back to the mesh's own
+ * colour and then to no colour at all, which keeps them on the viewer's themed
+ * material and following the colour picker. Runs OCCT does not account for are
+ * filled in the same way: a geometry with groups draws nothing outside them, so
+ * any gap would otherwise punch a hole in the part.
+ *
+ * Returns null when the mesh needs no splitting, so the common case stays on a
+ * single material. */
+function stepFaceGroups(stepMesh, triangleCount, meshColour) {
+  const faces = Array.isArray(stepMesh.brep_faces) ? stepMesh.brep_faces : [];
+  if (!faces.some(face => face && stepColour(face.color))) return null;
+
+  const groups = [];
+  const push = (first, last, colour) => {
+    if (last < first) return;
+    const key = colour ? colour.getHex() : 'themed';
+    const previous = groups[groups.length - 1];
+    if (previous && previous.key === key && previous.last + 1 === first) previous.last = last;
+    else groups.push({ first, last, colour, key });
+  };
+
+  let cursor = 0;
+  [...faces]
+    .filter(face => face && Number.isInteger(face.first) && Number.isInteger(face.last))
+    .sort((a, b) => a.first - b.first)
+    .forEach(face => {
+      const first = Math.max(face.first, cursor);
+      const last = Math.min(face.last, triangleCount - 1);
+      if (last < first) return;
+      if (first > cursor) push(cursor, first - 1, meshColour);
+      push(first, last, stepColour(face.color) || meshColour);
+      cursor = last + 1;
+    });
+  push(cursor, triangleCount - 1, meshColour);
+  /* One face colour over the whole mesh is just the mesh's colour: only keep
+     the groups when they actually say something the single material cannot. */
+  if (groups.length === 1 && groups[0].colour === meshColour) return null;
+  return groups.length ? groups : null;
+}
+
+/* One material per colour, shared across the groups that use it, so the mesh
+   carries as many materials as the part has distinct colours and no more. */
+function stepMaterials(geometry, groups, material) {
+  const materials = [];
+  const indices = new Map();
+  groups.forEach(({ first, last, colour, key }) => {
+    if (!indices.has(key)) {
+      indices.set(key, materials.length);
+      materials.push(material(colour));
+    }
+    geometry.addGroup(first * 3, (last - first + 1) * 3, indices.get(key));
+  });
+  return materials;
 }
 
 function geometryFromStepMesh(stepMesh) {
@@ -180,6 +250,111 @@ async function parse3mf(buffer, material) {
   return { root, ...adoptMaterials(root, material) };
 }
 
+/* Draco geometry compression, meshopt compression and KTX2 textures are all
+   optional glTF extensions, and each needs a decoder GLTFLoader does not carry
+   itself. They are fetched from the same three build the import map names, so a
+   version bump there moves the decoders with it, and only on the first GLB. */
+const THREE_ADDONS = (() => {
+  try {
+    const resolved = import.meta.resolve?.('three/addons/');
+    if (resolved) return resolved;
+  } catch { /* no import.meta.resolve, or no import map entry for it */ }
+  return 'https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/';
+})();
+
+let gltfPromise = null;
+
+function loadGltf() {
+  if (gltfPromise) return gltfPromise;
+  gltfPromise = (async () => {
+    const [{ GLTFLoader }, { DRACOLoader }, { KTX2Loader }, { MeshoptDecoder }] = await Promise.all([
+      import('three/addons/loaders/GLTFLoader.js'),
+      import('three/addons/loaders/DRACOLoader.js'),
+      import('three/addons/loaders/KTX2Loader.js'),
+      import('three/addons/libs/meshopt_decoder.module.js')
+    ]);
+    const ktx2 = new KTX2Loader().setTranscoderPath(`${THREE_ADDONS}libs/basis/`);
+    const loader = new GLTFLoader()
+      .setDRACOLoader(new DRACOLoader().setDecoderPath(`${THREE_ADDONS}libs/draco/gltf/`))
+      .setKTX2Loader(ktx2)
+      .setMeshoptDecoder(MeshoptDecoder);
+    return { loader, ktx2 };
+  })().catch(error => {
+    gltfPromise = null;
+    throw error;
+  });
+  return gltfPromise;
+}
+
+/* Every texture slot a glTF material can fill. A material using any of them is
+   carrying artwork from the file, which is the whole point of the format. */
+const TEXTURE_SLOTS = [
+  'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap',
+  'alphaMap', 'bumpMap', 'displacementMap', 'clearcoatMap', 'sheenColorMap',
+  'specularMap', 'iridescenceMap', 'transmissionMap'
+];
+
+/* Unlike the CAD formats, a GLB arrives with materials somebody authored, so
+   they are kept exactly as they are — textures, metalness, roughness and all —
+   and the model colour picker leaves them alone. Only materials that say
+   nothing at all (untextured, plain white, no glow) are swapped for the themed
+   one, which is what an untextured export looks like and what the picker is
+   for. Materials shared between meshes are decided once. */
+function adoptGltfMaterials(root, material) {
+  let ownColours = false;
+  let triangles = 0;
+  const decided = new Map();
+  root.traverse(object => {
+    if (!object.isMesh) return;
+    const { geometry } = object;
+    if (!geometry.getAttribute('normal')) geometry.computeVertexNormals();
+    const vertexColours = Boolean(geometry.getAttribute('color'));
+    const sources = Array.isArray(object.material) ? object.material : [object.material];
+    const replacements = sources.map(source => {
+      if (!source) return material(null);
+      if (decided.has(source)) return decided.get(source);
+      const textured = TEXTURE_SLOTS.some(slot => source[slot]);
+      const tinted = source.color && source.color.getHex() !== 0xffffff;
+      const glowing = source.emissive && source.emissive.getHex() !== 0x000000;
+      const keep = textured || tinted || glowing || vertexColours;
+      const replacement = keep ? source : material(null, {
+        metalness: source.metalness ?? 0,
+        transparent: Boolean(source.transparent),
+        opacity: source.opacity ?? 1
+      });
+      if (keep) ownColours = true;
+      else source.dispose();
+      decided.set(source, replacement);
+      return replacement;
+    });
+    object.material = Array.isArray(object.material) ? replacements : replacements[0];
+    const positions = geometry.getAttribute('position');
+    triangles += (geometry.index ? geometry.index.count : positions.count) / 3;
+  });
+  return { ownColours, triangles: Math.floor(triangles) };
+}
+
+async function parseGlb(buffer, material, onProgress, { renderer } = {}) {
+  onProgress?.('Loading glTF decoders…');
+  const { loader, ktx2 } = await loadGltf();
+  /* Which compressed texture formats can be transcoded to depends on the GPU,
+     so the KTX2 decoder is pointed at the renderer that will draw the result. */
+  if (renderer) ktx2.detectSupport(renderer);
+  onProgress?.('Reading GLB model…');
+  const gltf = await new Promise((resolve, reject) => loader.parse(buffer, '', resolve,
+    error => reject(new Error(`The GLB file could not be read: ${error?.message || error}`))));
+
+  const root = gltf.scene || gltf.scenes?.[0];
+  if (!root) throw new Error('The GLB file contains no scene.');
+  /* A GLB may carry its own punctual lights. The viewer has a lighting rig and
+     five presets of its own, so the file's lights are dropped rather than added
+     on top of them. */
+  const lights = [];
+  root.traverse(object => { if (object.isLight) lights.push(object); });
+  lights.forEach(light => light.removeFromParent());
+  return { root, ...adoptGltfMaterials(root, material) };
+}
+
 async function parseStep(buffer, material, onProgress) {
   onProgress?.('Loading STEP engine…');
   const occt = await loadOcct();
@@ -198,13 +373,17 @@ async function parseStep(buffer, material, onProgress) {
   let ownColours = false;
   result.meshes.forEach(stepMesh => {
     const geometry = geometryFromStepMesh(stepMesh);
-    /* STEP files may carry their own part colours, which take priority;
-       anything without one follows the viewer's model colour. */
-    const rgb = stepMesh.color?.map(value => value > 1 ? value / 255 : value);
-    const colour = rgb ? new THREE.Color(rgb[0], rgb[1], rgb[2]) : null;
-    ownColours = ownColours || Boolean(rgb);
-    root.add(new THREE.Mesh(geometry, material(colour)));
-    triangles += geometry.index ? geometry.index.count / 3 : geometry.getAttribute('position').count / 3;
+    const count = Math.floor((geometry.index ? geometry.index.count : geometry.getAttribute('position').count) / 3);
+    /* STEP files may carry their own colours — per part, and per b-rep face
+       within a part — which take priority; anything without one follows the
+       viewer's model colour. */
+    const meshColour = stepColour(stepMesh.color);
+    const groups = stepFaceGroups(stepMesh, count, meshColour);
+    ownColours = ownColours || Boolean(meshColour) || Boolean(groups);
+    root.add(new THREE.Mesh(geometry, groups
+      ? stepMaterials(geometry, groups, material)
+      : material(meshColour)));
+    triangles += count;
   });
   return { root, triangles: Math.floor(triangles), parts: result.meshes.length, ownColours };
 }
@@ -214,7 +393,10 @@ export const MODEL_FORMATS = {
   step: { label: 'STEP', parse: parseStep },
   stp: { label: 'STEP', parse: parseStep },
   obj: { label: 'OBJ', parse: parseObj },
-  '3mf': { label: '3MF', parse: parse3mf }
+  '3mf': { label: '3MF', parse: parse3mf },
+  /* GLB only, not .gltf: the JSON form points at its buffers and textures as
+     separate files, which does not survive being handed round as one upload. */
+  glb: { label: 'GLB', parse: parseGlb }
 };
 
 export const formatFor = name => MODEL_FORMATS[extensionOf(name)] || null;
@@ -302,8 +484,9 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
 
   /* Models render in the accent colour. Passing no colour marks the material as
      themed, so it follows the palette. Colours that come from the file itself —
-     STEP part colours, STL vertex colours — win instead and are left alone;
-     vertex colours need a white base so the file's colours are not tinted. */
+     STEP part and face colours, STL vertex colours, GLB materials and textures —
+     win instead and are left alone; vertex colours need a white base so the
+     file's colours are not tinted. */
   function material(color = null, options = {}) {
     const themed = color === null && !options.vertexColors;
     const entry = new THREE.MeshStandardMaterial({
@@ -465,11 +648,22 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     render();
   }
 
+  /* Materials a GLB brought with it own textures, which hold GPU memory of their
+     own and are not freed by disposing the material that references them. */
+  function disposeMaterial(entry) {
+    TEXTURE_SLOTS.forEach(slot => entry[slot]?.dispose?.());
+    entry.dispose();
+  }
+
   function disposeObject(root) {
+    const disposed = new Set();
     root.traverse(object => {
       if (object.geometry) object.geometry.dispose();
-      if (Array.isArray(object.material)) object.material.forEach(entry => entry.dispose());
-      else if (object.material) object.material.dispose();
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.filter(entry => entry && !disposed.has(entry)).forEach(entry => {
+        disposed.add(entry);
+        disposeMaterial(entry);
+      });
     });
   }
 
@@ -533,8 +727,8 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
   /* Parses a model buffer with this scene's materials. */
   async function parse(buffer, name, onProgress) {
     const format = formatFor(name);
-    if (!format) throw new Error('Choose an STL, STEP, OBJ or 3MF file.');
-    const parsed = await format.parse(buffer, material, onProgress);
+    if (!format) throw new Error('Choose an STL, STEP, OBJ, 3MF or GLB file.');
+    const parsed = await format.parse(buffer, material, onProgress, { renderer });
     return { label: format.label, ...parsed };
   }
 
