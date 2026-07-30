@@ -28,6 +28,8 @@
 * Waveacity
 * SSTV encoder and decoder
 * AFSK encoder and decoder
+* Falstad2KiCAD vise versa
+* Falstad2Spice vise versa
 
 # Final launch tasks
 
