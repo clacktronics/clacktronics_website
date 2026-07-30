@@ -974,9 +974,9 @@ application as a full page in a new tab. The
 blocks go through the same sanitiser policy as ClackOS, and headings get the
 same generated anchor ids so `[jump](#heading)` links work. The
 pages reuse `assets/css/clackos.css` plus the active theme from `site.json`,
-so the mirror keeps the ClackOS typography and palette. Mobile devices enter
-this version by default. Each page footer links back to the desktop version,
-and the taskbar links to the mirror.
+so the mirror keeps the ClackOS typography and palette. Phones get the desktop
+like everyone else — the mirror is a choice, not a redirect — so each page
+footer links back to the desktop version, and the taskbar links to the mirror.
 
 The mirror is generated — don't edit `plain/` by hand (the same run also writes
 the root `sitemap.xml` and `robots.txt`; see [Search engines](#search-engines)).
@@ -1005,8 +1005,8 @@ generator produces the metadata that makes it indexable:
 
 `index.html` carries a relative `<link rel="canonical" href="plain/index.html">`
 so the empty desktop shell doesn't compete with the mirror's copy of the same
-page. Mobile crawlers (Googlebot included) already follow the shell's redirect
-into `plain/`.
+page — the shell serves the desktop to every device, so the canonical link is
+the only thing pointing crawlers at the mirror.
 
 The description is taken from `description:` in the frontmatter, else
 `tagline:`, else the first real paragraph, trimmed to ~155 characters. Blog
