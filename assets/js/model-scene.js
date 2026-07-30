@@ -501,6 +501,11 @@ export const FINISH_NAMES = Object.keys(FINISHES);
 /* The speed the frequencies above are tuned around, and the viewer's default. */
 export const DEFAULT_ANIMATION_SPEED = 0.9;
 
+/* How much of the model a squish grab takes hold of, as a fraction of its size.
+   Kept here rather than in the squish module because the menu needs it before
+   that module has been fetched; the module clamps whatever it is given. */
+export const DEFAULT_SQUISH_REACH = 0.2;
+
 /* ------------------------------------------------------------------- viewer */
 
 /* Builds a viewport inside `container` and returns the handles both callers
@@ -592,6 +597,7 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
   let wireframe = false;
   let squish = null;            // the springy lattice, loaded only if it is asked for
   let squishWanted = false;
+  let squishReach = DEFAULT_SQUISH_REACH;
   const finishMaterials = {};   // built on demand, one per finish, disposed with the scene
   let environment = null;       // the reflection chrome needs, built once
   let environmentPromise = null;
@@ -793,11 +799,20 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
         squish = createSquish({ camera, renderer, controls, render, wake: startAnimation });
       }
       squish.enable();
+      squish.setReach(squishReach);
       squish.reset(modelRoot);
       /* re-runs the material pass, which is where squish hooks itself in */
       applyFinish();
       render();
     });
+  }
+
+  /* How much of the model a grab takes hold of. Remembered whether or not the
+     squish module has been fetched yet, so the slider works before it is turned
+     on and the setting survives it being turned off and on again. */
+  function setSquishReach(fraction) {
+    squishReach = fraction;
+    squish?.setReach(fraction);
   }
 
   /* Returns a promise because chrome cannot be drawn until its reflection has
@@ -1103,10 +1118,12 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     colour, material, parse, render, resize, dispose,
     setModel, fitView, setColour, setWireframe, setAutoRotate, setGridVisible,
     setShadows, setLightingPreset, setBrightness, setAxisOrder, refreshTheme,
-    setAnimation, setAnimationSpeed, setPlaying, setClipsPlaying, setFinish, setSquish,
+    setAnimation, setAnimationSpeed, setPlaying, setClipsPlaying, setFinish,
+    setSquish, setSquishReach,
     get modelRoot() { return modelRoot; },
     get finish() { return finish; },
     get squish() { return squishWanted; },
+    get squishReach() { return squishReach; },
     get animation() { return animation; },
     get animationSpeed() { return animationSpeed; },
     get hasClips() { return clips.length > 0; },

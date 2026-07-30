@@ -141,6 +141,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" data-cmd="grid" id="grid-toggle" aria-pressed="true"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Show grid<span class="mi-check"></span></button>
         <div class="sep"></div>
         <button type="button" data-cmd="squish" id="squish" aria-pressed="false"><span class="pixel-icon" data-icon="lasso" aria-hidden="true"></span>Squish &mdash; drag to pull<span class="mi-check"></span></button>
+        <!-- How much of the model a grab takes hold of, as a percentage of its
+             size: low pulls a feature out on its own, high sways the lot. -->
+        <div class="mi-row">
+          <label for="squish-reach">Squish area</label>
+          <input type="range" id="squish-reach" min="3" max="60" step="1" value="20">
+        </div>
       </div>
     </div>
     <div class="rm">
@@ -292,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 import {
   createModelScene, LIGHTING_PRESETS, SCENE_COLOUR_KEYS, LIGHT_COLOUR_KEYS,
   AXIS_ORDERS, ANIMATION_NAMES, FINISH_NAMES, DEFAULT_ANIMATION_SPEED,
+  DEFAULT_SQUISH_REACH,
   axisOrderFor, asHex, formatFor, THREE
 } from '../../assets/js/model-scene.js';
 
@@ -305,6 +312,7 @@ const messageEl = document.getElementById('viewer-message');
 const wireButton = document.getElementById('wireframe');
 const clipsButton = document.getElementById('anim-clips');
 const squishButton = document.getElementById('squish');
+const squishReachInput = document.getElementById('squish-reach');
 const reverseButton = document.getElementById('anim-reverse');
 const speedInput = document.getElementById('anim-speed');
 const gridButtons = [...document.querySelectorAll('[data-cmd="grid"]')];
@@ -578,6 +586,9 @@ Object.entries(colourInputs).forEach(([key, input]) =>
 brightnessInput.addEventListener('input', event =>
   viewer.setBrightness(Number(event.target.value) / 100));
 speedInput.addEventListener('input', applyAnimationSpeed);
+squishReachInput.value = String(Math.round(DEFAULT_SQUISH_REACH * 100));
+squishReachInput.addEventListener('input', event =>
+  viewer.setSquishReach(Number(event.target.value) / 100));
 
 /* ---- upload the open model to the web host ----
  * Models are large binaries, so they go to the endpoint named by "assetUpload"
