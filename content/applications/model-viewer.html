@@ -139,6 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="sep"></div>
         <button type="button" data-cmd="wireframe" id="wireframe" aria-pressed="false"><span class="pixel-icon" data-icon="eye" aria-hidden="true"></span>Wireframe<span class="mi-check"></span></button>
         <button type="button" data-cmd="grid" id="grid-toggle" aria-pressed="true"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Show grid<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="squish" id="squish" aria-pressed="false"><span class="pixel-icon" data-icon="lasso" aria-hidden="true"></span>Squish &mdash; drag to pull<span class="mi-check"></span></button>
       </div>
     </div>
     <div class="rm">
@@ -302,6 +304,7 @@ const statsEl = document.getElementById('model-stats');
 const messageEl = document.getElementById('viewer-message');
 const wireButton = document.getElementById('wireframe');
 const clipsButton = document.getElementById('anim-clips');
+const squishButton = document.getElementById('squish');
 const reverseButton = document.getElementById('anim-reverse');
 const speedInput = document.getElementById('anim-speed');
 const gridButtons = [...document.querySelectorAll('[data-cmd="grid"]')];
@@ -360,6 +363,22 @@ function setAnimation(name) {
   viewer.setAnimation(name);
   ANIMATION_NAMES.forEach(entry =>
     setToggleState(document.getElementById(`anim-${entry}`), entry === name));
+}
+
+/* Squish is a module of its own, fetched the first time it is asked for. While
+   it is on, left-drag takes hold of the model and orbiting moves to the right
+   button — the viewer says so, because nothing else would. */
+function setSquish(enabled) {
+  setToggleState(squishButton, enabled);
+  viewer.setSquish(enabled).then(() => {
+    showMessage(enabled
+      ? 'Squish on — drag the model to pull it about, right-drag to orbit.'
+      : 'Squish off.');
+  }).catch(error => {
+    console.error(error);
+    showMessage('The squish module could not be downloaded.', true);
+    setToggleState(squishButton, false);
+  });
 }
 
 /* Chrome has a reflection to build before it can be drawn, which means a
@@ -532,6 +551,7 @@ const viewerCommands = {
   reset: () => viewer.fitView(true),
   wireframe: () => setWireframe(wireButton.getAttribute('aria-pressed') !== 'true'),
   grid: () => setGridVisible(!viewer.gridVisible),
+  squish: () => setSquish(squishButton.getAttribute('aria-pressed') !== 'true'),
   'anim-reverse': () => { reversed = !reversed; applyAnimationSpeed(); },
   'anim-clips': () => {
     viewer.setClipsPlaying(!viewer.clipsPlaying);

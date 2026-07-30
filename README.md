@@ -772,7 +772,17 @@ windows, and desktop actions.
   decoration: As authored, Model colour (the palette accent, still driven by
   Colours → Model), Clay (matte and near-white, like a plaster cast), Chrome and
   Normals (each face coloured by the direction it points, which makes flipped
-  faces and bad smoothing obvious). Chrome is the one that needs something to
+  faces and bad smoothing obvious). **View → Squish** makes the model springy:
+  left-drag takes hold of it and pulls it out of shape, letting go springs it
+  back, and the overshoot ripples across it before it settles (orbiting moves
+  to the right button while it is on). The model itself is never simulated —
+  imported meshes are hollow shells, and STL and OBJ have no shared vertices to
+  hang springs from at all — so the springs live in a 5x5x5 cage around it
+  (`assets/js/model-squish.js`, fetched the first time squish is switched on),
+  and the mesh follows by trilinear interpolation of that cage in the vertex
+  shader. The simulation therefore costs the same for three thousand triangles
+  as for three hundred thousand, and the deformation itself is free. Only the
+  application offers it; inline embeds have no gesture to spare. Chrome is the one that needs something to
   reflect, so the first time it is picked the viewer builds a reflection map
   from three's own studio-room scene, fetched alongside the rest of the addons;
   the other finishes are immediate. Embeds take the same set as

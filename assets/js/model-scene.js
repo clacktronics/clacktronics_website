@@ -590,6 +590,8 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
   let brightness = 1;
   let finish = 'authored';
   let wireframe = false;
+  let squish = null;            // the springy lattice, loaded only if it is asked for
+  let squishWanted = false;
   const finishMaterials = {};   // built on demand, one per finish, disposed with the scene
   let environment = null;       // the reflection chrome needs, built once
   let environmentPromise = null;
@@ -766,9 +768,36 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
         object.userData.authoredMaterial = object.material;
       }
       object.material = override || object.userData.authoredMaterial;
+      /* Squish deforms whatever material the mesh is wearing, so it has to be
+         told each time one lands on it. */
+      squish?.prepare(object);
     });
     applyWireframe();
     applyModelColour();
+  }
+
+  /* ---- squish ---- */
+
+  /* The springy lattice is a whole module of its own and only the viewer
+     application offers it, so it is fetched the first time it is switched on
+     and never by a page that just shows a model. */
+  function setSquish(enabled) {
+    squishWanted = Boolean(enabled);
+    if (!squishWanted) {
+      squish?.disable();
+      return Promise.resolve();
+    }
+    return import('./model-squish.js').then(({ createSquish }) => {
+      if (!squishWanted) return;
+      if (!squish) {
+        squish = createSquish({ camera, renderer, controls, render, wake: startAnimation });
+      }
+      squish.enable();
+      squish.reset(modelRoot);
+      /* re-runs the material pass, which is where squish hooks itself in */
+      applyFinish();
+      render();
+    });
   }
 
   /* Returns a promise because chrome cannot be drawn until its reflection has
@@ -821,7 +850,7 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     return result;
   }
 
-  const animating = () => playing && (animation !== 'none' || Boolean(mixer));
+  const animating = () => playing && (animation !== 'none' || Boolean(mixer) || Boolean(squish?.busy));
 
   /* One frame loop drives everything that moves. OrbitControls keeps handling
      pointer input throughout, so the user can orbit, pan and zoom while it
@@ -841,6 +870,7 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     if (mixer) mixer.update(delta);
     if (ANIMATIONS[animation]?.orbits) controls.update();
     else poseAnimation();
+    squish?.update(delta);
     looping = false;
     render();
   }
@@ -1002,8 +1032,10 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     });
     clips = Array.isArray(animations) ? animations : [];
     if (clips.length) setClipsPlaying(true);
-    /* A chosen finish outlives the model it was chosen against. */
+    /* A chosen finish outlives the model it was chosen against, and the
+       lattice is rebuilt around whatever has just been loaded. */
     applyFinish();
+    squish?.reset(modelRoot);
     fitView(true);
     startAnimation();
   }
@@ -1040,6 +1072,8 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     mixer = null;
     controls.dispose();
     if (modelRoot) disposeObject(modelRoot);
+    squish?.dispose();
+    squish = null;
     Object.values(finishMaterials).forEach(entry => entry.dispose());
     environment?.dispose();
     grid.geometry.dispose();
@@ -1066,9 +1100,10 @@ export function createModelScene(container, { transparent = false, fitMargin = 1
     colour, material, parse, render, resize, dispose,
     setModel, fitView, setColour, setWireframe, setAutoRotate, setGridVisible,
     setShadows, setLightingPreset, setBrightness, setAxisOrder, refreshTheme,
-    setAnimation, setAnimationSpeed, setPlaying, setClipsPlaying, setFinish,
+    setAnimation, setAnimationSpeed, setPlaying, setClipsPlaying, setFinish, setSquish,
     get modelRoot() { return modelRoot; },
     get finish() { return finish; },
+    get squish() { return squishWanted; },
     get animation() { return animation; },
     get animationSpeed() { return animationSpeed; },
     get hasClips() { return clips.length > 0; },
