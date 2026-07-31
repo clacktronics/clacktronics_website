@@ -34,6 +34,7 @@
 .rm-sub-dd .pixel-icon { margin-top: 1px; flex: none; }
 .rm-dd .mi-check { margin-left: auto; padding-left: 18px; color: var(--leaf-deep); }
 .rm-dd button[aria-pressed="true"] .mi-check::before { content: '✓'; }
+.rm > .rm-dd { max-height: calc(100vh - 42px); overflow-y: auto; overscroll-behavior: contain; }
 /* on a narrow window there is no room to the right, so drop underneath */
 @media (max-width: 640px) {
   .rm-sub-dd { left: 8px; top: 100%; min-width: 0; width: calc(100vw - 40px); max-width: 320px; }
@@ -42,7 +43,7 @@
 /* The dithering panel styles itself (see paint-dither.js) because it may be
    built in the desktop document, which does not load app.css. All this side
    needs is a hint that painting is on hold while a live preview is running. */
-.paint-stack.dither-busy { cursor: not-allowed; }
+.paint-stack.dither-busy, .paint-stack.adjust-busy { cursor: not-allowed; }
 
 /* Layers and selection context menu live here because ClackPaint can also be
    mounted inside the desktop's shadow root, where page-global styles do not. */
@@ -65,6 +66,23 @@
 .paint-adjust-fields label { display: grid; grid-template-columns: minmax(105px,1fr) minmax(100px,1.4fr) 54px; align-items: center; gap: 8px; font-size: 11px; }
 .paint-adjust-fields input[type="range"] { width: 100%; }
 .paint-adjust-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--sage); }
+.paint-adjust-histogram { width: 100%; height: 118px; box-sizing: border-box; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); }
+.paint-adjust-stats { min-height: 1.4em; margin: -5px 0 0; padding: 0; font-size: 10px; color: var(--sage); font-variant-numeric: tabular-nums; }
+.paint-modal { pointer-events: none; align-items: flex-start; justify-content: flex-end; padding: 56px 18px 18px; background: transparent; }
+.paint-modal .paint-modal-box { pointer-events: auto; position: fixed; right: 18px; top: 56px; width: min(390px, calc(100vw - 24px)); max-height: calc(100vh - 72px); }
+.paint-modal .paint-modal-box > header { cursor: grab; touch-action: none; user-select: none; }
+.paint-modal .paint-modal-box > header:active { cursor: grabbing; }
+.paint-modal .paint-dialog-body { overflow-y: auto; min-height: 0; }
+.paint-zoom-control { flex: none; display: flex; flex-direction: column; gap: 5px; padding-top: 2px; }
+.paint-zoom-control > span { display: flex; justify-content: space-between; gap: 8px; color: var(--sage); font-size: 10px; }
+.paint-zoom-control input { width: 100%; margin: 0; }
+.paint-blur-readout { min-width: 54px; display: inline-block; text-align: right; font-variant-numeric: tabular-nums; color: var(--sage); }
+#gaussianBlurModal label > span { display: flex; align-items: center; gap: 8px; flex: 1; }
+#gaussianBlurModal input[type="range"] { flex: 1; min-width: 120px; }
+@media (max-width: 700px) {
+  .paint-modal { padding: 0; }
+  .paint-modal .paint-modal-box { left: 10px; right: 10px; top: auto; bottom: 10px; width: auto; max-height: 56vh; }
+}
 .paint-context-menu { position: fixed; z-index: 90; display: none; min-width: 180px; padding: 5px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); box-shadow: 4px 4px 0 color-mix(in srgb,var(--shadow) var(--shadow-alpha),transparent); }
 .paint-context-menu.open { display: block; }
 .paint-context-menu button { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 7px 9px; border-radius: 4px; color: var(--control-text); font-size: 11px; cursor: pointer; }
@@ -158,9 +176,10 @@
           <button data-cmd="adjust-posterize">Posterize…</button>
           <button data-cmd="adjust-auto-levels">Auto Levels</button>
           <button data-cmd="adjust-equalize">Equalize</button>
-          <button data-cmd="invert"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Invert</button>
+          <button data-cmd="adjust-invert"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Invert</button>
         </div>
       </div>
+      <button data-cmd="histogram"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Histogram…</button>
       <div class="sep"></div>
       <button data-cmd="clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear Image</button>
       <button data-cmd="flip-h"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Flip Horizontal</button>
@@ -217,7 +236,7 @@
       <button class="paint-tool" data-tool="rect" title="Rectangle" aria-label="Rectangle"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="ellipse" title="Ellipse" aria-label="Ellipse"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="rect-fill" title="Filled rectangle" aria-label="Filled rectangle"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="zoom" title="Zoom — click in, right-click or Shift-click out" aria-label="Zoom"><span class="paint-zoom-icon" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="zoom" title="Zoom — click to zoom in, Shift-click or Alt-click to zoom out" aria-label="Zoom"><span class="paint-zoom-icon" aria-hidden="true"></span></button>
       <div class="paint-size">
         <span class="app-lbl">Tool size</span>
         <input type="range" min="1" max="32" value="3" aria-label="Tool size">
@@ -261,6 +280,7 @@
         <button type="button" data-layer-action="delete" title="Delete layer" aria-label="Delete layer">×</button>
       </span></header>
       <div class="paint-layer-list" role="listbox" aria-label="Image layers"></div>
+      <label class="paint-zoom-control"><span><b>Zoom</b><output id="paintZoomValue">100%</output></span><input id="paintZoomSlider" type="range" min="0" max="6" step="1" value="3" aria-label="Canvas zoom"></label>
     </aside>
   </div>
 
@@ -338,8 +358,8 @@
   <form class="paint-modal-box paint-dialog" id="gaussianBlurForm">
     <header><span id="gaussianBlurTitle">Gaussian Blur</span><button type="button" data-close="gaussianBlurModal" aria-label="Close">×</button></header>
     <div class="paint-dialog-body">
-      <label>Radius <span><input id="gaussianRadius" type="number" min="0.1" max="50" step="0.1" value="2" required> px</span></label>
-      <p class="app-status">Softens the whole image. Tile edges are wrapped so the effect remains seamless.</p>
+      <label>Radius <span><input id="gaussianRadius" type="range" min="0.1" max="50" step="0.1" value="2" required><output class="paint-blur-readout" id="gaussianRadiusValue">2.0 px</output></span></label>
+      <p class="app-status">Live preview · softens the active layer. Tile edges wrap so the effect remains seamless.</p>
       <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="gaussianBlurModal">Cancel</button><button class="btn primary">Apply</button></div>
     </div>
   </form>
@@ -357,12 +377,14 @@
   </form>
 </div>
 
-<div class="paint-modal" id="adjustModal" role="dialog" aria-modal="true" aria-labelledby="adjustTitle">
+<div class="paint-modal" id="adjustModal" role="dialog" aria-modal="false" aria-labelledby="adjustTitle">
   <form class="paint-modal-box paint-dialog" id="adjustForm">
     <header><span id="adjustTitle">Adjust</span><button type="button" data-close="adjustModal" aria-label="Close">×</button></header>
     <div class="paint-dialog-body">
+      <canvas class="paint-adjust-histogram" id="adjustHistogram" width="336" height="118" aria-label="RGB histogram"></canvas>
+      <p class="paint-adjust-stats" id="adjustStats"></p>
       <div class="paint-adjust-fields" id="adjustFields"></div>
-      <p class="app-status" id="adjustHelp">Adjusts the active layer while preserving transparency.</p>
+      <p class="app-status" id="adjustHelp">Live preview · adjusts the active layer while preserving transparency.</p>
       <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="adjustModal">Cancel</button><button class="btn primary">Apply</button></div>
     </div>
   </form>
@@ -436,6 +458,8 @@ const seamYButton = appRoot.querySelector('[data-cmd="seams-y"]');
 const mirrorButtons = [...appRoot.querySelectorAll('[data-cmd^="mirror-"]')];
 const cropButton = appRoot.querySelector('[data-cmd="crop"]');
 const layerList = appRoot.querySelector('.paint-layer-list');
+const zoomSlider = appRoot.querySelector('#paintZoomSlider');
+const zoomValue = appRoot.querySelector('#paintZoomValue');
 const contextMenu = appRoot.querySelector('.paint-context-menu');
 const MAX_DIMENSION = 8192;
 const CUSTOM_BG_KEY = 'clackos-custom-background';
@@ -452,6 +476,9 @@ const COLORS = [
 let fg = '#000000', bg = '#FFFFFF', tool = 'pencil';
 let ditherApi = null;
 let ditherPreviewing = false;
+let adjustPreviewing = false;
+let effectPreviewing = false;
+let gaussianPreviewOriginal = null;
 let fileName = 'untitled.png';
 let selection = null;
 let cloneSource = null, cloneOffset = null, strokeBuffer = null, mirrorStrokeBefore = null;
@@ -497,6 +524,7 @@ function syncLayerCanvases() {
 
 function activateLayer(layer) {
   if (!layer || !layers.includes(layer)) return;
+  if ((adjustPreviewing || effectPreviewing) && layer !== activeLayer) { setStatus('Apply or cancel the live preview before changing layers'); return; }
   if (ditherPreviewing && layer !== activeLayer) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
   if (contentTransform && layer !== activeLayer) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
   activeLayer = layer;
@@ -520,6 +548,7 @@ function renderLayerPanel() {
     eye.title = layer.visible ? 'Hide layer' : 'Show layer'; eye.setAttribute('aria-label', eye.title);
     eye.addEventListener('click', event => {
       event.stopPropagation();
+      if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before changing layers'); return; }
       if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
       if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
       pushUndo(); layer.visible = !layer.visible; syncLayerCanvases(); renderLayerPanel(); setStatus(layer.visible ? `Shown ${layer.name}` : `Hidden ${layer.name}`);
@@ -537,13 +566,14 @@ function renderLayerPanel() {
     blend.addEventListener('click', event => event.stopPropagation());
     blend.addEventListener('change', event => {
       event.stopPropagation();
-      if (ditherPreviewing || contentTransform) { blend.value = layer.blendMode; setStatus('Finish the current image operation before changing a blend mode'); return; }
+      if (ditherPreviewing || contentTransform || adjustPreviewing || effectPreviewing) { blend.value = layer.blendMode; setStatus('Finish the current image operation before changing a blend mode'); return; }
       pushUndo(); layer.blendMode = blend.value; syncLayerCanvases(); activateLayer(layer); setStatus(`${layer.name} blend mode: ${blend.selectedOptions[0].text}`);
     });
     details.append(name, blend);
     row.append(eye, thumb, details);
     row.addEventListener('click', () => { activateLayer(layer); setStatus(`${layer.name} selected`); });
     row.addEventListener('dblclick', () => {
+      if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before changing layers'); return; }
       if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
       if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
       const next = prompt('Layer name', layer.name);
@@ -553,6 +583,7 @@ function renderLayerPanel() {
     row.addEventListener('dragover', event => event.preventDefault());
     row.addEventListener('drop', event => {
       event.preventDefault();
+      if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before changing layers'); return; }
       if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
       if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
       const dragged = layers.find(item => String(item.id) === event.dataTransfer?.getData('text/plain'));
@@ -650,6 +681,7 @@ function moveLayer(direction) {
 }
 
 appRoot.querySelectorAll('[data-layer-action]').forEach(button => button.addEventListener('click', () => {
+  if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before changing layers'); return; }
   const action = button.dataset.layerAction;
   if (action === 'add') newLayer();
   else if (action === 'duplicate') duplicateLayer();
@@ -689,6 +721,8 @@ function updateStackSize() {
 
 function setZoom(nextZoom, focusPoint, clientX, clientY) {
   const next = Math.max(ZOOM_LEVELS[0], Math.min(ZOOM_LEVELS[ZOOM_LEVELS.length - 1], nextZoom));
+  const zoomIndex = ZOOM_LEVELS.reduce((best, level, index) => Math.abs(level - next) < Math.abs(ZOOM_LEVELS[best] - next) ? index : best, 0);
+  zoomSlider.value = zoomIndex; zoomValue.textContent = `${Math.round(next * 100)}%`;
   if (next === zoom) {
     setStatus(`Zoom is already at ${Math.round(zoom * 100)}%`);
     return;
@@ -996,7 +1030,7 @@ appRoot.querySelectorAll('.paint-tool').forEach(button => {
     else if (tool === 'magnetic-lasso') setStatus('Trace near an object edge; the lasso will snap to nearby contrast');
     else if (tool === 'clone') setStatus(cloneSource ? 'Clone source ready; drag to paint from it' : 'Alt-click the image to choose a clone source');
     else if (tool === 'blur') setStatus('Blur brush selected; Tool Size controls the soft brush radius');
-    else if (tool === 'zoom') setStatus(`Zoom tool selected at ${Math.round(zoom * 100)}%; click to zoom in, right-click or Shift-click to zoom out`);
+    else if (tool === 'zoom') setStatus(`Zoom tool selected at ${Math.round(zoom * 100)}%; click to zoom in, Shift-click or Alt-click to zoom out`);
     else setStatus(`${button.title} selected`);
   });
 });
@@ -1257,6 +1291,7 @@ function pickColor(point, right) {
 }
 
 function selectionToLayer(cut) {
+  if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before changing layers'); return; }
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
   if (!selection) { setStatus('Make a selection first'); return; }
   const mask = selectionMask();
@@ -1279,6 +1314,7 @@ function selectionToLayer(cut) {
 function closeContextMenu() { contextMenu.classList.remove('open'); }
 function openContextMenu(event) {
   event.preventDefault();
+  if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before using canvas actions'); return; }
   if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before using canvas actions'; return; }
   contextMenu.querySelector('[data-context-action="cut-layer"]').disabled = !selection;
   contextMenu.querySelector('[data-context-action="copy-layer"]').disabled = !selection;
@@ -1307,6 +1343,7 @@ stack.addEventListener('pointerdown', event => {
   event.preventDefault();
   if (event.button === 2) return;
   if (contentTransform) { status.textContent = 'Drag a transform handle, or Apply/Cancel the content-aware scale'; return; }
+  if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before painting'); return; }
   if (seamAnimating) { status.textContent = `Seam view is sliding into place — ${width()} × ${height()} px`; return; }
   /* the dithering preview redraws the whole canvas, so a stroke made now
      would be wiped out by the next change to a setting */
@@ -1315,7 +1352,7 @@ stack.addEventListener('pointerdown', event => {
   const point = evPos(event);
   drawColor = right ? bg : fg;
   if (tool === 'zoom') {
-    stepZoom(right || event.shiftKey ? -1 : 1, point, event.clientX, event.clientY);
+    stepZoom(event.shiftKey || event.altKey ? -1 : 1, point, event.clientX, event.clientY);
     return;
   }
   if (tool === 'picker') { pickColor(point, right); return; }
@@ -1463,14 +1500,34 @@ function cropSelection() {
   setStatus('Cropped to selection');
 }
 
-function applyGaussianBlur(radius) {
-  const copy = copyCanvas();
-  pushUndo(); clearSelection(); bx.clearRect(0, 0, width(), height());
+function renderGaussianBlur(radius, sourcePixels) {
+  const copy = document.createElement('canvas'); copy.width = width(); copy.height = height();
+  copy.getContext('2d').putImageData(sourcePixels, 0, 0);
+  bx.clearRect(0, 0, width(), height());
   bx.save(); bx.filter = `blur(${radius}px)`;
   for (const x of [-width(), 0, width()])
     for (const y of [-height(), 0, height()]) bx.drawImage(copy, x, y);
   bx.restore();
-  setStatus(`Gaussian Blur applied at ${radius}px radius`);
+}
+
+function previewGaussianBlur() {
+  if (!gaussianPreviewOriginal) return;
+  const radius = Number(appRoot.querySelector('#gaussianRadius').value);
+  appRoot.querySelector('#gaussianRadiusValue').textContent = `${radius.toFixed(1)} px`;
+  renderGaussianBlur(radius, gaussianPreviewOriginal);
+}
+
+function openGaussianBlur() {
+  gaussianPreviewOriginal = bx.getImageData(0, 0, width(), height()); effectPreviewing = true;
+  stack.classList.add('adjust-busy'); showModal('gaussianBlurModal'); previewGaussianBlur();
+  appRoot.querySelector('#gaussianRadius').focus();
+}
+
+function cancelGaussianPreview() {
+  const cancelled = !!gaussianPreviewOriginal;
+  if (cancelled) bx.putImageData(gaussianPreviewOriginal, 0, 0);
+  gaussianPreviewOriginal = null; effectPreviewing = false; stack.classList.remove('adjust-busy'); renderLayerPanel();
+  if (cancelled) setStatus('Gaussian Blur cancelled');
 }
 
 function addNoise(amount, monochrome) {
@@ -1499,10 +1556,19 @@ const ADJUSTMENTS = {
   vibrance: { title: 'Vibrance', fields: [['Vibrance', -100, 100, 0, 1], ['Saturation', -100, 100, 0, 1]] },
   'hue-saturation': { title: 'Hue / Saturation', fields: [['Hue', -180, 180, 0, 1], ['Saturation', -100, 100, 0, 1], ['Lightness', -100, 100, 0, 1]] },
   'color-balance': { title: 'Colour Balance', fields: [['Cyan / Red', -100, 100, 0, 1], ['Magenta / Green', -100, 100, 0, 1], ['Yellow / Blue', -100, 100, 0, 1]] },
+  'black-white': { title: 'Black & White', fields: [] },
+  desaturate: { title: 'Desaturate', fields: [] },
   threshold: { title: 'Threshold', fields: [['Threshold', 0, 255, 128, 1]] },
-  posterize: { title: 'Posterize', fields: [['Levels', 2, 32, 4, 1]] }
+  posterize: { title: 'Posterize', fields: [['Levels', 2, 32, 4, 1]] },
+  'auto-levels': { title: 'Auto Levels', fields: [] },
+  equalize: { title: 'Equalize', fields: [] },
+  invert: { title: 'Invert', fields: [] }
 };
 let activeAdjustment = null;
+let adjustmentOriginal = null;
+let adjustmentFrame = 0;
+let histogramTimer = 0;
+let histogramOnly = false;
 const clampByte = value => Math.max(0, Math.min(255, Math.round(value)));
 
 function rgbToHsl(r, g, b) {
@@ -1522,18 +1588,17 @@ function hslToRgb(h, s, l) {
   return [channel(h + 1 / 3) * 255, channel(h) * 255, channel(h - 1 / 3) * 255];
 }
 
-function applyPixelAdjustment(label, transform) {
-  pushUndo();
-  const image = bx.getImageData(0, 0, width(), height()), data = image.data, mask = selectionMask();
+function transformPixels(image, transform, mask = null) {
+  const data = image.data;
   for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
     if (!data[i + 3] || (mask && !mask[pixel])) continue;
     const next = transform(data[i], data[i + 1], data[i + 2], data[i + 3], pixel);
     data[i] = clampByte(next[0]); data[i + 1] = clampByte(next[1]); data[i + 2] = clampByte(next[2]);
   }
-  bx.putImageData(image, 0, 0); setStatus(`${label} applied`);
+  return image;
 }
 
-function adjustmentTransform(kind, values) {
+function adjustmentTransform(kind, values, sourceData) {
   if (kind === 'brightness-contrast') {
     const brightness = values[0] * 2.55, contrast = values[1] * 2.55;
     const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
@@ -1564,13 +1629,89 @@ function adjustmentTransform(kind, values) {
     return hslToRgb(h, s, l);
   };
   if (kind === 'color-balance') return (r, g, b) => [r + values[0] * 1.28, g + values[1] * 1.28, b + values[2] * 1.28];
+  if (kind === 'black-white') return (r, g, b) => { const value = r * .299 + g * .587 + b * .114; return [value, value, value]; };
+  if (kind === 'desaturate') return (r, g, b) => { const value = (Math.max(r, g, b) + Math.min(r, g, b)) / 2; return [value, value, value]; };
   if (kind === 'threshold') return (r, g, b) => { const value = r * .299 + g * .587 + b * .114 >= values[0] ? 255 : 0; return [value, value, value]; };
   if (kind === 'posterize') return (r, g, b) => { const step = 255 / (values[0] - 1), map = value => Math.round(value / step) * step; return [map(r), map(g), map(b)]; };
+  if (kind === 'invert') return (r, g, b) => [255 - r, 255 - g, 255 - b];
+  if (kind === 'auto-levels') {
+    const min = [255, 255, 255], max = [0, 0, 0];
+    for (let i = 0; i < sourceData.length; i += 4) if (sourceData[i + 3]) for (let channel = 0; channel < 3; channel++) {
+      min[channel] = Math.min(min[channel], sourceData[i + channel]); max[channel] = Math.max(max[channel], sourceData[i + channel]);
+    }
+    return (r, g, b) => [r, g, b].map((value, channel) => (value - min[channel]) * 255 / Math.max(1, max[channel] - min[channel]));
+  }
+  if (kind === 'equalize') {
+    const histograms = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)]; let count = 0;
+    for (let i = 0; i < sourceData.length; i += 4) if (sourceData[i + 3]) { histograms[0][sourceData[i]]++; histograms[1][sourceData[i + 1]]++; histograms[2][sourceData[i + 2]]++; count++; }
+    const maps = histograms.map(histogram => { const map = new Uint8Array(256); let sum = 0; for (let i = 0; i < 256; i++) { sum += histogram[i]; map[i] = count ? Math.round(sum / count * 255) : i; } return map; });
+    return (r, g, b) => [maps[0][r], maps[1][g], maps[2][b]];
+  }
   return (r, g, b) => [r, g, b];
+}
+
+function adjustedImage(kind, values) {
+  const source = adjustmentOriginal.pixels;
+  const image = new ImageData(new Uint8ClampedArray(source.data), source.width, source.height);
+  return transformPixels(image, adjustmentTransform(kind, values, source.data), adjustmentOriginal.mask);
+}
+
+function adjustmentValues() {
+  return [...appRoot.querySelectorAll('#adjustFields input')].map(input => Number(input.value));
+}
+
+function drawHistogram() {
+  const canvas = appRoot.querySelector('#adjustHistogram');
+  if (!canvas || !appRoot.querySelector('#adjustModal').classList.contains('open')) return;
+  const source = compositeCanvas(), pixels = source.getContext('2d').getImageData(0, 0, width(), height()).data;
+  const bins = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+  let count = 0, sum = 0;
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (!pixels[i + 3]) continue;
+    const luminance = clampByte(pixels[i] * .299 + pixels[i + 1] * .587 + pixels[i + 2] * .114);
+    bins[0][pixels[i]]++; bins[1][pixels[i + 1]]++; bins[2][pixels[i + 2]]++; bins[3][luminance]++; count++; sum += luminance;
+  }
+  const context = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
+  context.clearRect(0, 0, w, h); context.fillStyle = getComputedStyle(canvas).backgroundColor || '#f3ecd1'; context.fillRect(0, 0, w, h);
+  const peak = Math.max(1, ...bins.flatMap(channel => [...channel]));
+  [['#e44f55', 0], ['#43a766', 1], ['#4b76d1', 2], ['#253128', 3]].forEach(([colour, channel]) => {
+    context.beginPath(); context.strokeStyle = colour; context.globalAlpha = channel === 3 ? .72 : .58; context.lineWidth = channel === 3 ? 1.4 : 1;
+    for (let i = 0; i < 256; i++) { const x = i / 255 * (w - 1), y = h - 2 - Math.sqrt(bins[channel][i] / peak) * (h - 5); if (i) context.lineTo(x, y); else context.moveTo(x, y); }
+    context.stroke();
+  });
+  context.globalAlpha = 1;
+  appRoot.querySelector('#adjustStats').textContent = count ? `${count.toLocaleString()} pixels · mean luminance ${(sum / count).toFixed(1)} · RGB + luminance` : 'No visible pixels';
+}
+
+function scheduleAdjustmentPreview() {
+  if (!adjustPreviewing || !activeAdjustment) return;
+  cancelAnimationFrame(adjustmentFrame);
+  adjustmentFrame = requestAnimationFrame(() => {
+    if (!adjustmentOriginal || activeLayer.id !== adjustmentOriginal.layerId) return;
+    bx.putImageData(adjustedImage(activeAdjustment, adjustmentValues()), 0, 0);
+    drawHistogram();
+  });
+}
+
+function startHistogramUpdates() {
+  clearInterval(histogramTimer); drawHistogram(); histogramTimer = setInterval(drawHistogram, 450);
+}
+
+function closeAdjustment(cancel = true) {
+  cancelAnimationFrame(adjustmentFrame); clearInterval(histogramTimer); histogramTimer = 0;
+  if (cancel && adjustPreviewing && adjustmentOriginal && activeLayer.id === adjustmentOriginal.layerId) bx.putImageData(adjustmentOriginal.pixels, 0, 0);
+  const wasPreview = adjustPreviewing;
+  adjustPreviewing = false; histogramOnly = false; activeAdjustment = null; adjustmentOriginal = null;
+  stack.classList.remove('adjust-busy'); appRoot.querySelector('#adjustModal').classList.remove('open');
+  renderLayerPanel();
+  if (cancel && wasPreview) setStatus('Adjustment cancelled');
 }
 
 function openAdjustment(kind) {
   const config = ADJUSTMENTS[kind]; if (!config) return;
+  if (appRoot.querySelector('#adjustModal').classList.contains('open')) closeAdjustment(true);
+  adjustmentOriginal = { layerId: activeLayer.id, pixels: bx.getImageData(0, 0, width(), height()), mask: selectionMask() };
+  adjustPreviewing = true; histogramOnly = false; stack.classList.add('adjust-busy');
   activeAdjustment = kind; appRoot.querySelector('#adjustTitle').textContent = config.title;
   const fields = appRoot.querySelector('#adjustFields'); fields.replaceChildren();
   config.fields.forEach(([label, min, max, value, step], index) => {
@@ -1578,29 +1719,28 @@ function openAdjustment(kind) {
     const text = document.createElement('span'); text.textContent = label;
     const input = document.createElement('input'); input.type = 'range'; input.min = min; input.max = max; input.value = value; input.step = step; input.dataset.adjustIndex = index;
     const output = document.createElement('output'); output.className = 'paint-adjust-value'; output.value = value; output.textContent = value;
-    input.addEventListener('input', () => { output.value = input.value; output.textContent = input.value; });
+    input.addEventListener('input', () => { output.value = input.value; output.textContent = input.value; scheduleAdjustmentPreview(); });
     row.append(text, input, output); fields.append(row);
   });
+  appRoot.querySelector('#adjustHelp').textContent = 'Live preview · adjusts the active layer while preserving transparency.';
+  const buttons = appRoot.querySelector('#adjustForm .paint-dialog-actions'); buttons.querySelector('.primary').hidden = false; buttons.querySelector('.ghost').textContent = 'Cancel';
   showModal('adjustModal'); fields.querySelector('input')?.focus();
+  scheduleAdjustmentPreview(); startHistogramUpdates();
 }
 
-function autoLevels(equalize = false) {
-  const image = bx.getImageData(0, 0, width(), height()), data = image.data;
-  if (equalize) {
-    const histograms = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)]; let count = 0;
-    for (let i = 0; i < data.length; i += 4) if (data[i + 3]) { histograms[0][data[i]]++; histograms[1][data[i + 1]]++; histograms[2][data[i + 2]]++; count++; }
-    const maps = histograms.map(histogram => { const map = new Uint8Array(256); let sum = 0; for (let i = 0; i < 256; i++) { sum += histogram[i]; map[i] = count ? Math.round(sum / count * 255) : i; } return map; });
-    applyPixelAdjustment('Equalize', (r, g, b) => [maps[0][r], maps[1][g], maps[2][b]]); return;
-  }
-  const min = [255, 255, 255], max = [0, 0, 0];
-  for (let i = 0; i < data.length; i += 4) if (data[i + 3]) for (let channel = 0; channel < 3; channel++) { min[channel] = Math.min(min[channel], data[i + channel]); max[channel] = Math.max(max[channel], data[i + channel]); }
-  applyPixelAdjustment('Auto Levels', (r, g, b) => [r, g, b].map((value, channel) => (value - min[channel]) * 255 / Math.max(1, max[channel] - min[channel])));
+function openHistogram() {
+  if (appRoot.querySelector('#adjustModal').classList.contains('open')) closeAdjustment(true);
+  histogramOnly = true; appRoot.querySelector('#adjustTitle').textContent = 'Histogram'; appRoot.querySelector('#adjustFields').replaceChildren();
+  appRoot.querySelector('#adjustHelp').textContent = 'Live RGB and luminance distribution for the visible image.';
+  const buttons = appRoot.querySelector('#adjustForm .paint-dialog-actions'); buttons.querySelector('.primary').hidden = true; buttons.querySelector('.ghost').textContent = 'Close';
+  showModal('adjustModal'); startHistogramUpdates();
 }
 
 appRoot.querySelector('#adjustForm').addEventListener('submit', event => {
-  event.preventDefault(); if (!activeAdjustment) return;
-  const values = [...appRoot.querySelectorAll('#adjustFields input')].map(input => Number(input.value));
-  const title = ADJUSTMENTS[activeAdjustment].title; hideModal('adjustModal'); applyPixelAdjustment(title, adjustmentTransform(activeAdjustment, values));
+  event.preventDefault(); if (!activeAdjustment || !adjustmentOriginal) return;
+  const kind = activeAdjustment, title = ADJUSTMENTS[kind].title, values = adjustmentValues(), original = adjustmentOriginal;
+  bx.putImageData(original.pixels, 0, 0); pushUndo(); bx.putImageData(adjustedImage(kind, values), 0, 0);
+  closeAdjustment(false); setStatus(`${title} applied`);
 });
 
 const filePick = appRoot.querySelector('#paintFilePicker');
@@ -1671,15 +1811,40 @@ function setAsBackground() {
 
 const modals = new Map([...appRoot.querySelectorAll('.paint-modal')].map(modal => [modal.id, modal]));
 const showModal = id => modals.get(id).classList.add('open');
-const hideModal = id => modals.get(id).classList.remove('open');
+const hideModal = id => {
+  if (id === 'gaussianBlurModal') cancelGaussianPreview();
+  modals.get(id).classList.remove('open');
+};
+modals.forEach(modal => {
+  const dialogWindow = modal.querySelector('.paint-modal-box'), handle = dialogWindow?.querySelector(':scope > header');
+  if (!dialogWindow || !handle) return;
+  handle.addEventListener('pointerdown', event => {
+    if (event.target.closest('button')) return;
+    event.preventDefault();
+    const rect = dialogWindow.getBoundingClientRect(), grabX = event.clientX - rect.left, grabY = event.clientY - rect.top;
+    dialogWindow.style.width = rect.width + 'px'; dialogWindow.style.right = 'auto'; dialogWindow.style.bottom = 'auto';
+    dialogWindow.style.left = rect.left + 'px'; dialogWindow.style.top = rect.top + 'px';
+    document.body.classList.add('win-drag');
+    const move = moved => {
+      dialogWindow.style.left = Math.max(-rect.width + 70, Math.min(window.innerWidth - 70, moved.clientX - grabX)) + 'px';
+      dialogWindow.style.top = Math.max(0, Math.min(window.innerHeight - 34, moved.clientY - grabY)) + 'px';
+    };
+    const up = () => {
+      document.body.classList.remove('win-drag'); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  });
+});
 appRoot.addEventListener('click', event => {
   const closer = event.target.closest('[data-close]');
-  if (closer) hideModal(closer.dataset.close);
+  if (closer?.dataset.close === 'adjustModal') closeAdjustment(true);
+  else if (closer) hideModal(closer.dataset.close);
 });
 /* Dialogs marked data-keep-open hold typed-in work (tokens, names), so they
  * close only through their × or Cancel button — never a stray backdrop click. */
 modals.forEach(modal => modal.addEventListener('pointerdown', event => {
-  if (event.target === modal && !modal.hasAttribute('data-keep-open')) hideModal(modal.id);
+  if (event.target !== modal || modal.hasAttribute('data-keep-open')) return;
+  if (modal.id === 'adjustModal') closeAdjustment(true); else hideModal(modal.id);
 }));
 
 /* ---- upload the picture to the web host ----
@@ -1816,9 +1981,13 @@ appRoot.querySelector('#canvasSizeForm').addEventListener('submit', event => {
 appRoot.querySelector('#gaussianBlurForm').addEventListener('submit', event => {
   event.preventDefault();
   const radius = Number(appRoot.querySelector('#gaussianRadius').value);
-  if (!Number.isFinite(radius) || radius < 0.1 || radius > 50) return;
-  hideModal('gaussianBlurModal'); applyGaussianBlur(radius);
+  if (!gaussianPreviewOriginal || !Number.isFinite(radius) || radius < 0.1 || radius > 50) return;
+  const original = gaussianPreviewOriginal; bx.putImageData(original, 0, 0);
+  gaussianPreviewOriginal = null; effectPreviewing = false; stack.classList.remove('adjust-busy');
+  pushUndo(); clearSelection(); renderGaussianBlur(radius, original); hideModal('gaussianBlurModal');
+  setStatus(`Gaussian Blur applied at ${radius.toFixed(1)}px radius`);
 });
+appRoot.querySelector('#gaussianRadius').addEventListener('input', previewGaussianBlur);
 appRoot.querySelector('#noiseForm').addEventListener('submit', event => {
   event.preventDefault();
   const amount = Number(appRoot.querySelector('#noiseAmount').value);
@@ -2065,17 +2234,28 @@ appRoot.querySelector('#contentAwareForm').addEventListener('submit', event => {
 
 contentModal.addEventListener('click', event => { if (event.target.closest('[data-close]') && contentJob) stopContentAware(true); });
 
-function toggleSeamAxis(axis) {
-  const button = axis === 'x' ? seamXButton : seamYButton;
-  button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'));
-  updateOffsetPreview();
-  const axes = [seamXButton, seamYButton].filter(item => item.getAttribute('aria-pressed') === 'true').map(item => item === seamXButton ? 'X' : 'Y').join(' + ');
-  setStatus(axes ? `Checking seams with a 50% ${axes} shift` : 'Seam preview off; image returned to its original position');
+async function animateRequestedSeamView(message) {
+  const requestedX = seamXButton.getAttribute('aria-pressed') === 'true';
+  const requestedY = seamYButton.getAttribute('aria-pressed') === 'true';
+  const dx = requestedX === seamAppliedX ? 0 : (requestedX ? Math.floor(width() / 2) : -Math.floor(width() / 2));
+  const dy = requestedY === seamAppliedY ? 0 : (requestedY ? Math.floor(height() / 2) : -Math.floor(height() / 2));
+  if (!dx && !dy) { setStatus(message); return; }
+  status.textContent = `Sliding to the requested seam view — ${width()} × ${height()} px`;
+  if (await animateSeamTransition(dx, dy)) setStatus(message);
 }
 
-function resetSeamView() {
+async function toggleSeamAxis(axis) {
+  if (seamAnimating) { setStatus('Wait for the seam animation to finish'); return; }
+  const button = axis === 'x' ? seamXButton : seamYButton;
+  button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'));
+  const axes = [seamXButton, seamYButton].filter(item => item.getAttribute('aria-pressed') === 'true').map(item => item === seamXButton ? 'X' : 'Y').join(' + ');
+  await animateRequestedSeamView(axes ? `Checking seams with a 50% ${axes} shift` : 'Seam preview off; image returned to its original position');
+}
+
+async function resetSeamView() {
+  if (seamAnimating) { setStatus('Wait for the seam animation to finish'); return; }
   seamXButton.setAttribute('aria-pressed', 'false'); seamYButton.setAttribute('aria-pressed', 'false');
-  updateOffsetPreview(); setStatus('Seam preview off; image returned to its original position');
+  await animateRequestedSeamView('Seam preview off; image returned to its original position');
 }
 
 function setMirrorMode(mode) {
@@ -2087,6 +2267,7 @@ function setMirrorMode(mode) {
 }
 
 sizeInput.addEventListener('input', () => { if (cursorPoint) updateBrushCursor(cursorPoint); });
+zoomSlider.addEventListener('input', () => setZoom(ZOOM_LEVELS[Number(zoomSlider.value)]));
 
 /* ---- Background removal — MODNet via Transformers.js, run in a worker so the
  *      model download and inference never freeze the paint UI ---- */
@@ -2186,6 +2367,7 @@ const disconnect = () => {
   if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
   if (contentWorker) { contentWorker.terminate(); contentWorker = null; }
   cancelLiveContentPreview(true);
+  if (appRoot.querySelector('#adjustModal').classList.contains('open')) closeAdjustment(true);
   if (ditherApi?.destroy) ditherApi.destroy();
 };
 if (appRoot === document) window.addEventListener('pagehide', disconnect, { once: true });
@@ -2215,6 +2397,12 @@ function runCmd(cmd) {
     if (cmd === 'content-aware-scale') finishContentAwareTransform(false);
     else status.textContent = 'Apply or cancel Content-Aware Scale before using another command';
     return;
+  }
+  if (effectPreviewing) { setStatus('Apply or cancel the effect preview before using another command'); return; }
+  if (adjustPreviewing) {
+    if (cmd.startsWith('adjust-') && ADJUSTMENTS[cmd.slice(7)]) { openAdjustment(cmd.slice(7)); return; }
+    if (cmd === 'histogram') { closeAdjustment(true); openHistogram(); return; }
+    setStatus('Apply or cancel the adjustment preview before using another command'); return;
   }
   if (cmd.startsWith('dither-')) {
     if (!ditherApi) { setStatus('Dithering is unavailable — paint-dither.js did not load'); return; }
@@ -2248,6 +2436,7 @@ function runCmd(cmd) {
     case 'content-aware-size': openContentAware(); break;
     case 'canvas-size': openCanvasSize(); break;
     case 'crop': cropSelection(); break;
+    case 'histogram': openHistogram(); break;
     case 'seams-x': toggleSeamAxis('x'); break;
     case 'seams-y': toggleSeamAxis('y'); break;
     case 'seams-off': resetSeamView(); break;
@@ -2255,12 +2444,8 @@ function runCmd(cmd) {
     case 'mirror-x': setMirrorMode('x'); break;
     case 'mirror-y': setMirrorMode('y'); break;
     case 'mirror-both': setMirrorMode('both'); break;
-    case 'adjust-black-white': applyPixelAdjustment('Black & White', (r, g, b) => { const value = r * .299 + g * .587 + b * .114; return [value, value, value]; }); break;
-    case 'adjust-desaturate': applyPixelAdjustment('Desaturate', (r, g, b) => { const value = (Math.max(r, g, b) + Math.min(r, g, b)) / 2; return [value, value, value]; }); break;
-    case 'adjust-auto-levels': autoLevels(false); break;
-    case 'adjust-equalize': autoLevels(true); break;
     case 'remove-bg': openBgRemoval(); break;
-    case 'gaussian-blur': showModal('gaussianBlurModal'); appRoot.querySelector('#gaussianRadius').focus(); break;
+    case 'gaussian-blur': openGaussianBlur(); break;
     case 'noise': showModal('noiseModal'); appRoot.querySelector('#noiseAmount').focus(); break;
     case 'clear': pushUndo(); clearSelection(); bx.fillStyle = bg; bx.fillRect(0, 0, width(), height()); setStatus('Image cleared to the background colour'); break;
     case 'invert': {
@@ -2322,10 +2507,11 @@ appRoot.addEventListener('click', event => { if (!event.target.closest('.rm')) c
 appRoot.addEventListener('keydown', event => {
   if (contentTransform && event.key === 'Escape') { event.preventDefault(); finishContentAwareTransform(false); return; }
   if (contentTransform && event.key === 'Enter' && !/^(INPUT|BUTTON)$/.test(event.target.tagName || '')) { event.preventDefault(); finishContentAwareTransform(true); return; }
+  if (event.key === 'Escape' && appRoot.querySelector('#adjustModal').classList.contains('open')) { event.preventDefault(); closeAdjustment(true); return; }
   if (event.key === 'Escape') {
     closeContextMenu();
     if (contentModal.classList.contains('open')) { hideModal('contentAwareModal'); if (contentJob) stopContentAware(true); }
-    modals.forEach(modal => { if (!modal.hasAttribute('data-keep-open')) modal.classList.remove('open'); });
+    modals.forEach(modal => { if (!modal.hasAttribute('data-keep-open')) hideModal(modal.id); });
   }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); }
