@@ -266,7 +266,14 @@ body {
 }
 @media (prefers-reduced-motion: reduce) { .window { transition: none; } }
 .window.fixed { min-width: 0; min-height: 0; }
-.window.closing { opacity: 0; transform: scale(0.97); }
+/* A window on its way out stops taking clicks the moment the dot is pressed,
+   however it leaves the screen — see "Window animations" in clackos.js. */
+.window.closing, .window.dissolving { pointer-events: none; }
+/* the exit used when the pixel dissolve cannot run: the plain fade */
+.window.closing.fade-out { opacity: 0; transform: scale(0.97); }
+/* an animated window is driven frame by frame, so the shorthand transition
+   above must keep out of the way */
+.window.animating, .window.dissolving { transition: none; }
 .window.inactive .titlebar { background: var(--window-inactive); }
 .window.inactive .titlebar .title { color: var(--title-text-inactive); }
 .window.inactive .frame { border-color: var(--window-border-inactive); }

@@ -505,9 +505,7 @@ async function mountIntegratedApp(body, launchPage, title, onClose) {
 async function openWindow(id, restore = null) {
   const existing = windows.get(id);
   if (existing) {
-    existing.el.style.display = 'flex';
-    existing.minimised = false;
-    focusWindow(existing.el);
+    unminimiseWindow(existing);
     updateTaskbar();
     return;
   }
@@ -739,6 +737,8 @@ async function openWindow(id, restore = null) {
   fitWindowToDesktop(rec);
   if (restore) applyWindowEntry(rec, restore);
   updateTaskbar();
+  /* last, so the window expands from the box it has actually settled at */
+  animateOpen(rec);
 }
 
 /* Grow or shrink a window so its body is exactly the requested size, keeping
@@ -811,9 +811,7 @@ async function navigateWindow(rec, id) {
   if (rec.id === id) return;
   const open = windows.get(id);
   if (open) {
-    open.el.style.display = 'flex';
-    open.minimised = false;
-    focusWindow(open.el);
+    unminimiseWindow(open);
     updateTaskbar();
     return;
   }
@@ -846,38 +844,270 @@ async function navigateWindow(rec, id) {
   scheduleSessionSave();
 }
 
+/* ---------------- Window animations ----------------
+ * Three moments in a window's life have a movement of their own: closing
+ * dissolves it into the desktop a block of pixels at a time, minimising
+ * shrinks it into its taskbar button, and arriving — a new window, one coming
+ * back out of the taskbar, or one being maximised — expands it into place.
+ *
+ * All of it is decoration. Every routine below hands control straight back to
+ * its caller when it cannot run, so a browser without the Web Animations API
+ * or CSS masking, and a visitor who has asked for less movement, get exactly
+ * the same desktop with the movement left out.
+ */
+
+/* the dissolve: block size in CSS pixels, how many steps clear the window,
+ * and how long the whole thing takes */
+const DISSOLVE_CELL = 9, DISSOLVE_STEPS = 15, DISSOLVE_MS = 400;
+/* the block grid overhangs the window by this much so the drop shadow, which
+ * sits outside the border box, dissolves with it instead of blinking out */
+const DISSOLVE_PAD = 12;
+/* minimise/restore travel, a new window arriving, a maximise toggle */
+const TRAVEL_MS = 220, OPEN_MS = 160, RESIZE_MS = 200;
+/* the desktop's own easings: out of the way quickly, back in gently */
+const EASE_OUT = 'cubic-bezier(0.4, 0, 0.75, 0.6)';
+const EASE_IN = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
+
+const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+
+/* Movement is skipped for a visitor who has asked for less of it, and while a
+ * saved desktop is being rebuilt — a restored session should simply be there
+ * rather than animate a dozen windows into existence at boot. */
+function motionOff() {
+  return sessionRestoring || reducedMotion?.matches === true;
+}
+
+/* …and on anything without the Web Animations API, which is what everything
+ * but the dissolve is built on. */
+function canAnimate() {
+  return !motionOff() && typeof Element.prototype.animate === 'function';
+}
+
+/* One animation at a time per window: starting another cancels whatever the
+ * previous click left running, and the class keeps the CSS transition on
+ * `.window` from fighting the keyframes. */
+function runWindowAnim(rec, frames, options) {
+  const el = rec.el;
+  try { rec.anim?.cancel(); } catch {}
+  el.classList.add('animating');
+  const anim = el.animate(frames, { fill: 'none', ...options });
+  rec.anim = anim;
+  /* a cancel arrives after its replacement has been recorded, so only the
+     animation still holding the slot is allowed to clean up after itself */
+  const settle = () => {
+    if (rec.anim !== anim) return;
+    rec.anim = null;
+    el.classList.remove('animating');
+  };
+  anim.addEventListener('finish', settle);
+  anim.addEventListener('cancel', settle);
+  return anim;
+}
+
+/* The taskbar button a window minimises into and comes back out of. */
+function taskRectFor(id) {
+  const button = [...tasksEl.children].find(node => node.dataset.windowId === id);
+  return button ? button.getBoundingClientRect() : null;
+}
+
+/* Keyframes running between the window's own box and its taskbar button.
+ * `into` picks the direction; null means there is nothing to travel to. */
+function travelFrames(rec, into) {
+  const from = rec.el.getBoundingClientRect();
+  const to = taskRectFor(rec.id);
+  if (!to || !to.width || from.width < 2 || from.height < 2) return null;
+  const docked = {
+    transformOrigin: 'top left',
+    transform: `translate(${to.left - from.left}px, ${to.top - from.top}px) ` +
+      `scale(${to.width / from.width}, ${to.height / from.height})`,
+    opacity: 0.2
+  };
+  const open = { transformOrigin: 'top left', transform: 'none', opacity: 1 };
+  return into ? [open, docked] : [docked, open];
+}
+
+/* Minimise: down into the taskbar, then `hide` takes the window out of the
+ * layout. A restore part-way through cancels this, and `hide` never runs. */
+function animateMinimise(rec, hide) {
+  const frames = canAnimate() ? travelFrames(rec, true) : null;
+  if (!frames) { hide(); return; }
+  runWindowAnim(rec, frames, { duration: TRAVEL_MS, easing: EASE_OUT })
+    .addEventListener('finish', hide);
+}
+
+/* Restore: back out of the taskbar button to the box it left behind. */
+function animateRestore(rec) {
+  const frames = canAnimate() ? travelFrames(rec, false) : null;
+  if (frames) runWindowAnim(rec, frames, { duration: TRAVEL_MS, easing: EASE_IN });
+}
+
+/* A window opening expands onto the desktop from just under its full size. */
+function animateOpen(rec) {
+  if (!canAnimate()) return;
+  runWindowAnim(rec, [
+    { transform: 'scale(0.9)', opacity: 0 },
+    { transform: 'none', opacity: 1 }
+  ], { duration: OPEN_MS, easing: EASE_IN });
+}
+
+/* Maximise and un-maximise move and resize in one go. `apply` sets the new box
+ * immediately and the window is then animated from where it just was, so the
+ * content inside is laid out once instead of on every frame. */
+function animateBoxChange(rec, apply) {
+  const el = rec.el;
+  const from = el.getBoundingClientRect();
+  apply();
+  if (!canAnimate()) return;
+  const to = el.getBoundingClientRect();
+  if (from.width < 2 || from.height < 2 || to.width < 2 || to.height < 2) return;
+  runWindowAnim(rec, [
+    {
+      transformOrigin: 'top left',
+      transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) ` +
+        `scale(${from.width / to.width}, ${from.height / to.height})`
+    },
+    { transformOrigin: 'top left', transform: 'none' }
+  ], { duration: RESIZE_MS, easing: EASE_IN });
+}
+
+function maskSupported() {
+  return typeof CSS === 'object' && typeof CSS.supports === 'function' &&
+    (CSS.supports('mask-image', 'linear-gradient(#000, #000)') ||
+     CSS.supports('-webkit-mask-image', 'linear-gradient(#000, #000)'));
+}
+
+/* mask-image is still prefixed in Safari; both spellings are written and the
+ * one the browser does not know is ignored. */
+function setMask(el, image, size, position) {
+  for (const property of ['mask', 'webkitMask']) {
+    if (image != null) el.style[property + 'Image'] = image;
+    if (size != null) {
+      el.style[property + 'Size'] = size;
+      el.style[property + 'Repeat'] = 'no-repeat';
+    }
+    if (position != null) el.style[property + 'Position'] = position;
+  }
+}
+
+/* Close: the window leaves the way a 1980s desktop did it, in blocks of pixels
+ * that vanish in a random order. The whole window is masked by a canvas that
+ * has more of itself rubbed out on each step, so the desktop shows through the
+ * holes — chrome, shadow and content together, no matter what is inside.
+ *
+ * The canvas is drawn a few pixels per block rather than one, which keeps the
+ * block edges hard once the browser scales the mask back up to window size,
+ * and keeps it small enough to re-encode fifteen times without stuttering. */
+function dissolveWindow(rec, done) {
+  const el = rec.el;
+  const width = el.offsetWidth, height = el.offsetHeight;
+  /* a minimised window has no box to dissolve */
+  const roomToDissolve = width >= 2 && height >= 2 && maskSupported() && !motionOff();
+  const ctx = roomToDissolve ? document.createElement('canvas').getContext('2d') : null;
+  if (!ctx) {
+    /* nothing to dissolve with, or no appetite for movement: the plain fade */
+    el.classList.add('fade-out');
+    setTimeout(done, motionOff() ? 0 : 160);
+    return;
+  }
+
+  const cols = Math.ceil((width + DISSOLVE_PAD * 2) / DISSOLVE_CELL);
+  const rows = Math.ceil((height + DISSOLVE_PAD * 2) / DISSOLVE_CELL);
+  const total = cols * rows;
+  const px = Math.max(1, Math.min(4, Math.floor(480 / Math.max(cols, rows))));
+  const canvas = ctx.canvas;
+  canvas.width = cols * px;
+  canvas.height = rows * px;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  /* the order the blocks go in — a plain shuffle, which is what the
+     pseudo-random dissolves of the era looked like anyway */
+  const order = new Int32Array(total);
+  for (let i = 0; i < total; i++) order[i] = i;
+  for (let i = total - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const swap = order[i]; order[i] = order[j]; order[j] = swap;
+  }
+
+  el.classList.add('dissolving');
+  setMask(el, null, `${cols * DISSOLVE_CELL}px ${rows * DISSOLVE_CELL}px`,
+    `-${DISSOLVE_PAD}px -${DISSOLVE_PAD}px`);
+
+  let cleared = 0, step = 0;
+  const start = performance.now();
+  const tick = now => {
+    if (!el.isConnected) return;
+    const due = Math.ceil((now - start) / (DISSOLVE_MS / DISSOLVE_STEPS));
+    if (due > step) {
+      step = Math.min(DISSOLVE_STEPS, due);
+      const target = Math.round(total * step / DISSOLVE_STEPS);
+      for (; cleared < target; cleared++) {
+        const cell = order[cleared];
+        ctx.clearRect((cell % cols) * px, Math.floor(cell / cols) * px, px, px);
+      }
+      setMask(el, `url("${canvas.toDataURL()}")`);
+    }
+    if (step >= DISSOLVE_STEPS) done();
+    else requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 function closeWindow(id) {
   const rec = windows.get(id);
   if (!rec) return;
   rec.cleanups.forEach(fn => { try { fn(); } catch {} });
+  /* the window stops counting as open the moment it is asked to close: the
+   * taskbar loses its button now rather than when the dissolve has finished */
+  rec.closing = true;
+  try { rec.anim?.cancel(); } catch {}
   rec.el.classList.add('closing');
-  setTimeout(() => { rec.el.remove(); windows.delete(id); updateTaskbar(); }, 160);
+  windows.delete(id);
+  updateTaskbar();
+  dissolveWindow(rec, () => rec.el.remove());
 }
 
 function minimiseWindow(id) {
   const rec = windows.get(id);
-  if (!rec) return;
-  rec.el.style.display = 'none';
+  if (!rec || rec.minimised) return;
   rec.minimised = true;
   updateTaskbar();
+  /* only taken out of the layout once it has finished shrinking into its
+   * button — and not at all if it was restored or closed on the way down */
+  animateMinimise(rec, () => {
+    if (rec.minimised && !rec.closing) rec.el.style.display = 'none';
+  });
+}
+
+/* Put a minimised window back on the desktop, expanding it out of its taskbar
+ * button. Also the way an already-open window is raised, which is why the
+ * animation only runs when there was something to come back from. */
+function unminimiseWindow(rec) {
+  const wasMinimised = rec.minimised;
+  rec.el.style.display = 'flex';
+  rec.minimised = false;
+  focusWindow(rec.el);
+  if (wasMinimised) animateRestore(rec);
 }
 
 function toggleMax(id) {
   const rec = windows.get(id);
   if (!rec) return;
   const el = rec.el;
-  if (rec.maxed) {
-    Object.assign(el.style, rec.maxed);
-    rec.maxed = null;
-    /* the desktop may have shrunk while the window was maximised */
-    fitWindowToDesktop(rec);
-  } else {
-    rec.maxed = { left: el.style.left, top: el.style.top, width: el.style.width, height: el.style.height };
-    el.style.left = '8px';
-    el.style.top = '8px';
-    el.style.width = (desktop.clientWidth - 16) + 'px';
-    el.style.height = (desktop.clientHeight - 16) + 'px';
-  }
+  animateBoxChange(rec, () => {
+    if (rec.maxed) {
+      Object.assign(el.style, rec.maxed);
+      rec.maxed = null;
+      /* the desktop may have shrunk while the window was maximised */
+      fitWindowToDesktop(rec);
+    } else {
+      rec.maxed = { left: el.style.left, top: el.style.top, width: el.style.width, height: el.style.height };
+      el.style.left = '8px';
+      el.style.top = '8px';
+      el.style.width = (desktop.clientWidth - 16) + 'px';
+      el.style.height = (desktop.clientHeight - 16) + 'px';
+    }
+  });
   focusWindow(el);
 }
 
@@ -981,9 +1211,7 @@ function minimiseAll() {
   [...windows.keys()].forEach(id => { if (!windows.get(id).minimised) minimiseWindow(id); });
 }
 function restoreAll() {
-  windows.forEach(rec => {
-    if (rec.minimised) { rec.el.style.display = 'flex'; rec.minimised = false; }
-  });
+  windows.forEach(rec => { if (rec.minimised) unminimiseWindow(rec); });
   updateTaskbar();
 }
 
@@ -1293,6 +1521,8 @@ function updateTaskbar() {
     const title = windowTitles.get(id) || id;
     const b = document.createElement('button');
     b.className = 'task';
+    /* the box a window minimises into and expands back out of */
+    b.dataset.windowId = id;
     if (rec.minimised) b.classList.add('minimised');
     if (front && front.id === id && !rec.minimised) b.classList.add('active');
     b.innerHTML = `${iconHTML(rec.icon || 'file-text', 'task-icon')}<span class="lbl">${esc(title)}</span>`;
