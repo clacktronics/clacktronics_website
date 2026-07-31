@@ -50,6 +50,19 @@
    mounted inside the desktop's shadow root, where page-global styles do not. */
 .paint-layer-panel { width: 174px; min-width: 150px; display: flex; flex-direction: column; gap: 7px; }
 .paint-layer-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 5px; font-size: 11px; color: var(--sage); }
+.paint-layer-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 7px; }
+.paint-layer-collapse { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 5px; padding: 2px 4px; border-radius: 4px; color: inherit; cursor: pointer; }
+.paint-layer-collapse:hover { background: var(--paper-deep); color: var(--control-text); }
+.paint-layer-collapse:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.paint-layer-caret { font-size: 9px; }
+/* Minimised: the panel shrinks to a rail carrying just the label and the caret. */
+.paint-layer-panel.collapsed { width: auto; min-width: 0; }
+.paint-layer-panel.collapsed > header { align-items: flex-start; }
+.paint-layer-panel.collapsed .paint-layer-actions, .paint-layer-panel.collapsed .paint-layer-body { display: none; }
+.paint-layer-panel.collapsed .paint-layer-collapse { flex-direction: column; gap: 8px; padding: 7px 4px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--control-text); }
+.paint-layer-panel.collapsed .paint-layer-collapse:hover { background: var(--paper-deep); }
+.paint-layer-panel.collapsed .paint-layer-caret { font-size: 11px; }
+.paint-layer-panel.collapsed .paint-layer-title { writing-mode: vertical-rl; letter-spacing: 0.06em; }
 .paint-layer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 3px; }
 .paint-layer-actions button { all: unset; width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid var(--ink); border-radius: 5px; background: var(--paper); color: var(--control-text); cursor: pointer; }
 .paint-layer-actions button:hover { background: var(--paper-deep); }
@@ -143,6 +156,8 @@
       <button data-cmd="layer-merge-down"><span class="pixel-icon" data-icon="align-vertical-distribute-center" aria-hidden="true"></span>Merge Down</button>
       <button data-cmd="layer-merge-visible"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Merge Visible</button>
       <button data-cmd="layer-flatten"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>Flatten Image</button>
+      <div class="sep"></div>
+      <button data-cmd="layer-panel" aria-pressed="false"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Minimise Layers Panel<span class="mi-check"></span></button>
     </div></div>
     <div class="rm"><button>Image</button><div class="rm-dd">
       <button data-cmd="image-size"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Image Size…</button>
@@ -272,7 +287,7 @@
       </div>
     </div>
     <aside class="paint-layer-panel" aria-label="Layers">
-      <header><span>Layers</span><span class="paint-layer-actions">
+      <header><button type="button" class="paint-layer-collapse" data-layer-toggle aria-expanded="true" aria-controls="paintLayerBody" title="Minimise the layers panel" aria-label="Minimise the layers panel"><span class="paint-layer-caret" aria-hidden="true">▸</span><span class="paint-layer-title">Layers</span></button><span class="paint-layer-actions">
         <button type="button" data-layer-action="add" title="New layer" aria-label="New layer">+</button>
         <button type="button" data-layer-action="duplicate" title="Duplicate layer" aria-label="Duplicate layer">⧉</button>
         <button type="button" data-layer-action="up" title="Move layer up" aria-label="Move layer up">↑</button>
@@ -280,8 +295,10 @@
         <button type="button" data-layer-action="merge" title="Merge down" aria-label="Merge layer down">⇩</button>
         <button type="button" data-layer-action="delete" title="Delete layer" aria-label="Delete layer">×</button>
       </span></header>
-      <div class="paint-layer-list" role="listbox" aria-label="Image layers"></div>
-      <label class="paint-zoom-control"><span><b>Zoom</b><output id="paintZoomValue">100%</output></span><input id="paintZoomSlider" type="range" min="0" max="6" step="1" value="3" aria-label="Canvas zoom"></label>
+      <div class="paint-layer-body" id="paintLayerBody">
+        <div class="paint-layer-list" role="listbox" aria-label="Image layers"></div>
+        <label class="paint-zoom-control"><span><b>Zoom</b><output id="paintZoomValue">100%</output></span><input id="paintZoomSlider" type="range" min="0" max="6" step="1" value="3" aria-label="Canvas zoom"></label>
+      </div>
     </aside>
   </div>
 
@@ -459,11 +476,16 @@ const seamYButton = appRoot.querySelector('[data-cmd="seams-y"]');
 const mirrorButtons = [...appRoot.querySelectorAll('[data-cmd^="mirror-"]')];
 const cropButton = appRoot.querySelector('[data-cmd="crop"]');
 const layerList = appRoot.querySelector('.paint-layer-list');
+const layerPanel = appRoot.querySelector('.paint-layer-panel');
+const layerToggle = appRoot.querySelector('[data-layer-toggle]');
+const layerPanelCommand = appRoot.querySelector('[data-cmd="layer-panel"]');
+let layersCollapsed = false;
 const zoomSlider = appRoot.querySelector('#paintZoomSlider');
 const zoomValue = appRoot.querySelector('#paintZoomValue');
 const contextMenu = appRoot.querySelector('.paint-context-menu');
 const MAX_DIMENSION = 8192;
 const CUSTOM_BG_KEY = 'clackos-custom-background';
+const LAYER_PANEL_KEY = 'clackpaint-layers-collapsed';
 const CUSTOM_BG_NAME = 'Custom paint tile';
 const width = () => base.width;
 const height = () => base.height;
@@ -535,6 +557,7 @@ function activateLayer(layer) {
 }
 
 function renderLayerPanel() {
+  if (layersCollapsed) return;
   layerList.replaceChildren();
   layers.forEach(layer => {
     const row = document.createElement('div');
@@ -691,6 +714,26 @@ appRoot.querySelectorAll('[data-layer-action]').forEach(button => button.addEven
   else if (action === 'up') moveLayer(1);
   else if (action === 'down') moveLayer(-1);
 }));
+
+/* The panel can be minimised to a rail so the canvas gets the width back. While
+   it is collapsed renderLayerPanel() bails out, so the rows and thumbnails are
+   rebuilt only when it comes back into view. */
+function setLayersCollapsed(collapsed, announce) {
+  layersCollapsed = collapsed;
+  layerPanel.classList.toggle('collapsed', collapsed);
+  const label = collapsed ? 'Show the layers panel' : 'Minimise the layers panel';
+  layerToggle.setAttribute('aria-expanded', String(!collapsed));
+  layerToggle.title = label;
+  layerToggle.setAttribute('aria-label', label);
+  layerToggle.querySelector('.paint-layer-caret').textContent = collapsed ? '◂' : '▸';
+  layerPanelCommand?.setAttribute('aria-pressed', String(collapsed));
+  if (!collapsed) renderLayerPanel();
+  try { localStorage.setItem(LAYER_PANEL_KEY, collapsed ? '1' : '0'); } catch { /* private browsing */ }
+  if (announce) setStatus(collapsed ? 'Layers panel minimised' : 'Layers panel shown');
+}
+
+layerToggle.addEventListener('click', () => setLayersCollapsed(!layersCollapsed, true));
+try { if (localStorage.getItem(LAYER_PANEL_KEY) === '1') setLayersCollapsed(true, false); } catch { /* private browsing */ }
 
 const setStatus = message => {
   if ((seamXButton.getAttribute('aria-pressed') === 'true' || seamYButton.getAttribute('aria-pressed') === 'true') && !seamAnimating) updateOffsetPreview();
@@ -2394,6 +2437,8 @@ if (window.ClackDither) {
 }
 
 function runCmd(cmd) {
+  /* Purely a view change, so it stays available while a preview is running. */
+  if (cmd === 'layer-panel') { setLayersCollapsed(!layersCollapsed, true); return; }
   if (contentTransform) {
     if (cmd === 'content-aware-scale') finishContentAwareTransform(false);
     else status.textContent = 'Apply or cancel Content-Aware Scale before using another command';
