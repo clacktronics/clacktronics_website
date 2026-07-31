@@ -68,6 +68,7 @@
 .paint-dialog-body [data-caview="form"] > label:not(.paint-check) { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .paint-transform-box { position: absolute; inset: -2px; z-index: 5; border: 1px dashed #fff; outline: 1px dashed #000; pointer-events: none; }
 .paint-transform-box[hidden] { display: none; }
+.paint-stack .content-transform-preview { z-index: 4; pointer-events: none; image-rendering: auto; }
 .paint-transform-handle { all: unset; position: absolute; width: 10px; height: 10px; box-sizing: border-box; border: 1px solid #000; background: #fff; box-shadow: 0 0 0 1px #fff; pointer-events: auto; touch-action: none; }
 .paint-transform-handle[data-handle="nw"] { left: -5px; top: -5px; cursor: nwse-resize; }
 .paint-transform-handle[data-handle="n"] { left: 50%; top: -5px; transform: translateX(-50%); cursor: ns-resize; }
@@ -169,6 +170,7 @@
         <canvas class="base" width="640" height="400"></canvas>
         <canvas class="seam-animation" width="640" height="400" hidden></canvas>
         <canvas class="overlay" width="640" height="400"></canvas>
+        <canvas class="content-transform-preview" width="640" height="400" hidden aria-label="Live content-aware scale preview"></canvas>
         <span class="paint-brush-cursor" aria-hidden="true" hidden></span>
         <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
         <div class="paint-transform-box" hidden aria-label="Content-aware scale handles">
@@ -345,6 +347,7 @@ const appUrl = appRoot === document ? location.href : appRoot.host.dataset.sourc
 let base = appRoot.querySelector('canvas.base');
 const seamAnimation = appRoot.querySelector('canvas.seam-animation');
 const overlay = appRoot.querySelector('canvas.overlay');
+const contentTransformPreview = appRoot.querySelector('canvas.content-transform-preview');
 const stack = appRoot.querySelector('.paint-stack');
 const canvasWrap = appRoot.querySelector('.paint-canvas-wrap');
 const brushCursors = [...appRoot.querySelectorAll('.paint-brush-cursor')];
@@ -353,6 +356,7 @@ const transformSize = appRoot.querySelector('.paint-transform-size');
 let bx = base.getContext('2d', { willReadFrequently: true });
 const ax = seamAnimation.getContext('2d');
 const ox = overlay.getContext('2d');
+const tx = contentTransformPreview.getContext('2d');
 const status = appRoot.querySelector('.paint-status');
 const sizeInput = appRoot.querySelector('.paint-size input');
 const offsetToggle = appRoot.querySelector('#offsetPreview');
@@ -382,6 +386,7 @@ let seamModeApplied = false;
 let seamAnimating = false, seamAnimationToken = 0;
 let zoom = 1, cursorPoint = null;
 let contentTransform = null;
+let liveContentWorker = null, liveContentToken = 0, liveContentTimer = 0, liveContentLastRun = 0;
 const ZOOM_LEVELS = [0.125, 0.25, 0.5, 1, 2, 4, 8];
 const undoStack = [], redoStack = [];
 const MAXUNDO = 25;
@@ -726,6 +731,7 @@ function resizeSurfaces(w, h) {
   layers.forEach(layer => { layer.canvas.width = w; layer.canvas.height = h; });
   overlay.width = w; overlay.height = h;
   seamAnimation.width = w; seamAnimation.height = h;
+  contentTransformPreview.width = w; contentTransformPreview.height = h; contentTransformPreview.hidden = true;
   seamModeApplied = false;
   updateStackSize();
   cloneSource = null; cloneOffset = null; strokeBuffer = null;
@@ -737,7 +743,8 @@ function resetLayers(w, h, name = 'Background') {
   const canvas = makeLayerCanvas(w, h);
   layers = [{ id: layerCounter++, name, visible: true, canvas }];
   activeLayer = layers[0]; base = canvas; bx = canvas.getContext('2d', { willReadFrequently: true });
-  overlay.width = seamAnimation.width = w; overlay.height = seamAnimation.height = h;
+  overlay.width = seamAnimation.width = contentTransformPreview.width = w;
+  overlay.height = seamAnimation.height = contentTransformPreview.height = h; contentTransformPreview.hidden = true;
   seamModeApplied = false; syncLayerCanvases(); renderLayerPanel(); updateStackSize(); clearSelection();
 }
 
@@ -807,8 +814,8 @@ function restore(snap) {
   });
   activeLayer = layers[Math.max(0, Math.min(layers.length - 1, snap.active || 0))];
   base = activeLayer.canvas; bx = base.getContext('2d', { willReadFrequently: true });
-  overlay.width = seamAnimation.width = snap.width;
-  overlay.height = seamAnimation.height = snap.height;
+  overlay.width = seamAnimation.width = contentTransformPreview.width = snap.width;
+  overlay.height = seamAnimation.height = contentTransformPreview.height = snap.height; contentTransformPreview.hidden = true;
   syncLayerCanvases(); renderLayerPanel(); updateStackSize(); clearSelection();
   seamModeApplied = !!snap.seam;
   updateOffsetPreview();
@@ -1566,6 +1573,78 @@ appRoot.querySelector('#noiseForm').addEventListener('submit', event => {
   hideModal('noiseModal'); addNoise(amount, appRoot.querySelector('#noiseMonochrome').checked);
 });
 
+function cancelLiveContentPreview(clear = true) {
+  liveContentToken++;
+  clearTimeout(liveContentTimer); liveContentTimer = 0;
+  if (liveContentWorker) { liveContentWorker.terminate(); liveContentWorker = null; }
+  if (clear) contentTransformPreview.hidden = true;
+}
+
+function liveProtectMask(proxyWidth, proxyHeight) {
+  if (!selection) return null;
+  const canvas = document.createElement('canvas'); canvas.width = proxyWidth; canvas.height = proxyHeight;
+  const context = canvas.getContext('2d');
+  context.scale(proxyWidth / width(), proxyHeight / height());
+  context.fillStyle = '#fff'; traceSelectionPath(context, selection); context.fill();
+  const rgba = context.getImageData(0, 0, proxyWidth, proxyHeight).data;
+  const mask = new Uint8Array(proxyWidth * proxyHeight);
+  for (let i = 0; i < mask.length; i++) mask[i] = rgba[i * 4 + 3] ? 1 : 0;
+  return mask;
+}
+
+function runLiveContentPreview() {
+  if (!contentTransform) return;
+  const targetWidth = contentTransform.targetWidth, targetHeight = contentTransform.targetHeight;
+  if (targetWidth === width() && targetHeight === height()) { contentTransformPreview.hidden = true; return; }
+  const scale = Math.min(1, 220 / width(), 220 / height(), 360 / targetWidth, 360 / targetHeight);
+  const proxyWidth = Math.max(1, Math.round(width() * scale));
+  const proxyHeight = Math.max(1, Math.round(height() * scale));
+  const proxyTargetWidth = Math.max(1, Math.round(targetWidth * scale));
+  const proxyTargetHeight = Math.max(1, Math.round(targetHeight * scale));
+  if (proxyWidth === proxyTargetWidth && proxyHeight === proxyTargetHeight) { contentTransformPreview.hidden = true; return; }
+
+  const proxy = document.createElement('canvas'); proxy.width = proxyWidth; proxy.height = proxyHeight;
+  const context = proxy.getContext('2d'); context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+  context.drawImage(contentTransform.sourceCanvas, 0, 0, proxyWidth, proxyHeight);
+  const composite = context.getImageData(0, 0, proxyWidth, proxyHeight).data;
+  const layer = composite.slice();
+  const protect = liveProtectMask(proxyWidth, proxyHeight);
+  const token = liveContentToken;
+  liveContentWorker = new Worker(new URL('paint-content-aware-worker.js', appUrl));
+  liveContentWorker.onerror = () => { if (token === liveContentToken) { liveContentWorker = null; contentTransformPreview.hidden = true; } };
+  liveContentWorker.onmessage = event => {
+    const message = event.data;
+    if (token !== liveContentToken || !contentTransform) return;
+    if (message.type === 'result') {
+      contentTransformPreview.width = message.width; contentTransformPreview.height = message.height;
+      tx.putImageData(new ImageData(new Uint8ClampedArray(message.layers[0]), message.width, message.height), 0, 0);
+      contentTransformPreview.hidden = false;
+      status.textContent = `Live content-aware preview — ${contentTransform.targetWidth} × ${contentTransform.targetHeight} px · Enter applies · Esc cancels`;
+      liveContentWorker?.terminate(); liveContentWorker = null;
+    } else if (message.type === 'error') {
+      liveContentWorker?.terminate(); liveContentWorker = null; contentTransformPreview.hidden = true;
+    }
+  };
+  const transfers = [composite.buffer, layer.buffer];
+  if (protect) transfers.push(protect.buffer);
+  liveContentWorker.postMessage({
+    type: 'run', token, width: proxyWidth, height: proxyHeight,
+    targetWidth: proxyTargetWidth, targetHeight: proxyTargetHeight,
+    composite: composite.buffer, layers: [layer.buffer], protect: protect?.buffer || null,
+  }, transfers);
+}
+
+function scheduleLiveContentPreview() {
+  if (!contentTransform) return;
+  if (liveContentTimer) return;
+  const delay = Math.max(0, 140 - (performance.now() - liveContentLastRun));
+  liveContentTimer = setTimeout(() => {
+    liveContentTimer = 0; liveContentLastRun = performance.now(); liveContentToken++;
+    if (liveContentWorker) { liveContentWorker.terminate(); liveContentWorker = null; }
+    runLiveContentPreview();
+  }, delay);
+}
+
 function updateContentTransformPreview() {
   if (!contentTransform) return;
   updateStackSize();
@@ -1577,7 +1656,10 @@ function updateContentTransformPreview() {
 function beginContentAwareTransform() {
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before resizing'); return; }
   if (seamAnimating || contentJob) { setStatus('Finish the current image operation first'); return; }
-  contentTransform = { targetWidth: width(), targetHeight: height(), offsetX: 0, offsetY: 0 };
+  contentTransform = {
+    targetWidth: width(), targetHeight: height(), offsetX: 0, offsetY: 0,
+    sourceCanvas: compositeCanvas(),
+  };
   offsetToggle.disabled = true; mirrorToggle.disabled = true;
   transformBox.hidden = false; stack.classList.add('content-transforming'); hideBrushCursor();
   updateContentTransformPreview();
@@ -1586,6 +1668,7 @@ function beginContentAwareTransform() {
 function finishContentAwareTransform(apply) {
   if (!contentTransform) return;
   const targetWidth = contentTransform.targetWidth, targetHeight = contentTransform.targetHeight;
+  cancelLiveContentPreview(true);
   contentTransform = null; transformBox.hidden = true; stack.classList.remove('content-transforming');
   offsetToggle.disabled = false; mirrorToggle.disabled = false;
   stack.style.transform = ''; updateStackSize();
@@ -1623,6 +1706,7 @@ transformBox.querySelectorAll('[data-handle]').forEach(handle => handle.addEvent
     contentTransform.offsetX = drag.offsetX + (direction.includes('w') ? (drag.width - nextWidth) * zoom : 0);
     contentTransform.offsetY = drag.offsetY + (direction.includes('n') ? (drag.height - nextHeight) * zoom : 0);
     updateContentTransformPreview();
+    scheduleLiveContentPreview();
   };
   const end = () => {
     handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', end); handle.removeEventListener('pointercancel', end);
@@ -1843,6 +1927,7 @@ bgModal.addEventListener('pointerdown', event => { if (event.target === bgModal)
 const disconnect = () => {
   if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
   if (contentWorker) { contentWorker.terminate(); contentWorker = null; }
+  cancelLiveContentPreview(true);
   if (ditherApi?.destroy) ditherApi.destroy();
 };
 if (appRoot === document) window.addEventListener('pagehide', disconnect, { once: true });

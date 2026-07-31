@@ -928,10 +928,12 @@ windows, and desktop actions.
   selections can be copied or cut directly to a new layer from the canvas
   right-click menu. Image → Content-Aware Scale opens a Photoshop-style
   transform box: drag any edge or corner handle, hold Shift on a corner to
-  preserve the aspect ratio, then Apply (or press Enter). The exact-size dialog
-  remains available alongside it. Worker-based seam carving shrinks or enlarges
-  every layer along shared low-detail paths, optionally protecting the current
-  selection. The zoom tool
+  preserve the aspect ratio, then Apply (or press Enter). While a handle moves,
+  a debounced low-resolution seam-carved proxy updates live; superseded worker
+  jobs are cancelled so dragging stays responsive. The exact-size dialog remains
+  available alongside it. The final full-resolution worker pass shrinks or
+  enlarges every layer along shared low-detail paths, optionally protecting the
+  current selection. The zoom tool
   supports 12.5%–800% views, and brush-based tools show their live footprint
   over the canvas. A non-destructive
   50% X/Y offset checkbox below Tool Size animates into a wrapped, fully
