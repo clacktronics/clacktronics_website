@@ -1162,92 +1162,302 @@ function normalise(groupId, values) {
   return out;
 }
 
-/* ---------------------------------------------------------------- dialog */
+/* ----------------------------------------------------------------- panel */
+
+/* Dithering is judged by eye, so the controls deliberately are not a modal:
+ * they sit beside the picture with the preview running live. Inside ClackOS
+ * the panel becomes a real window on the desktop next to ClackPaint — the
+ * same trick the Processing app uses for its sketch window — so nothing
+ * covers the canvas at all. Standalone there is no desktop to put a window
+ * on, so it floats over the edge of the page instead.
+ *
+ * All of its styling is defined here rather than in app.css, because the
+ * desktop document does not load app.css; only the colour variables are
+ * common to both documents. */
+const PANEL_CSS = `
+.dither-panel {
+  font-family: 'IBM Plex Mono', monospace; font-size: 12.5px;
+  color: var(--ink-soft, #14231a); display: flex; flex-direction: column; min-height: 0;
+}
+.dither-panel form { display: flex; flex-direction: column; gap: 12px; padding: 14px; overflow-y: auto; min-height: 0; }
+.dither-panel p { font-size: 11.5px; color: var(--sage, #66755a); line-height: 1.6; margin: 0; }
+.dither-note:empty { display: none; }
+.dither-fields { display: flex; flex-direction: column; gap: 10px; }
+.dither-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dither-row[hidden], .dither-check[hidden] { display: none; }
+/* option text such as "Void-and-cluster — blue-noise mask" has no chance of
+   fitting beside its label in a panel this narrow, so dropdowns stack */
+.dither-row.stacked { flex-direction: column; align-items: stretch; gap: 4px; }
+.dither-row.stacked .dither-control { justify-content: stretch; }
+.dither-row.stacked select { flex: 1; }
+.dither-check { display: flex; align-items: center; gap: 8px; line-height: 1.4; }
+.dither-label { flex: none; }
+.dither-control { display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex: 1; min-width: 0; }
+.dither-panel select, .dither-panel input[type="number"] {
+  font: inherit; font-size: 11.5px; color: var(--control-text, #14231a);
+  background: var(--paper, #f8f2dd); border: 1px solid var(--ink, #09140d);
+  border-radius: 6px; padding: 5px 8px;
+}
+.dither-panel select { max-width: 100%; min-width: 0; }
+.dither-panel input[type="number"] { width: 90px; }
+.dither-panel input[type="range"] { flex: 1; max-width: 160px; min-width: 80px; accent-color: var(--leaf-deep, #276b47); }
+.dither-panel input[type="checkbox"] { accent-color: var(--leaf-deep, #276b47); flex: none; }
+.dither-panel :focus-visible { outline: 2px solid var(--leaf, #4fae7d); outline-offset: 1px; }
+.dither-readout { flex: none; min-width: 42px; text-align: right; font-size: 11px; color: var(--sage, #66755a); font-variant-numeric: tabular-nums; }
+.dither-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 2px; }
+.dither-btn {
+  all: unset; cursor: pointer; box-sizing: border-box; font: inherit; font-size: 12px;
+  padding: 7px 14px; border-radius: 6px; border: 1px solid var(--ink, #09140d);
+  color: var(--control-text, #14231a); background: var(--paper, #f8f2dd);
+}
+.dither-btn:hover { background: var(--paper-deep, #f3ecd1); }
+.dither-btn.primary { background: var(--ink, #09140d); color: var(--button-text, #f2ecd6); }
+.dither-btn.primary:hover { background: var(--leaf-deep, #276b47); border-color: var(--leaf-deep, #276b47); }
+.dither-btn:focus-visible { outline: 2px solid var(--leaf, #4fae7d); outline-offset: 2px; }
+
+/* window chrome, only used when there is no desktop to host a real window */
+.dither-float {
+  position: fixed; z-index: 60; right: 18px; top: 64px;
+  width: 392px; max-width: calc(100vw - 24px);
+  display: flex; flex-direction: column; max-height: calc(100vh - 90px);
+  background: var(--paper, #f8f2dd); border: 2px solid var(--ink, #09140d); border-radius: 10px;
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--ink, #09140d) 22%, transparent);
+}
+.dither-float > .dither-titlebar {
+  flex: none; display: flex; align-items: center; gap: 8px; cursor: grab; touch-action: none;
+  user-select: none; padding: 8px 12px; border-radius: 7px 7px 0 0;
+  background: var(--ink, #09140d); color: var(--menu-text, #f5efdb);
+}
+.dither-float > .dither-titlebar:active { cursor: grabbing; }
+.dither-titlebar .dither-dot {
+  all: unset; width: 11px; height: 11px; border-radius: 50%; cursor: pointer; flex: none;
+  box-sizing: border-box; background: var(--leaf, #4fae7d); border: 1.5px solid var(--leaf, #4fae7d);
+}
+.dither-titlebar .dither-dot:hover { background: var(--accent-hover, #6fcf9a); border-color: var(--accent-hover, #6fcf9a); }
+.dither-titlebar .dither-name {
+  margin: 0 auto; transform: translateX(-10px); font-size: 12.5px;
+  color: var(--title-text, #c8e3d2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* narrow pages have no room beside the picture, so dock along the bottom
+   and leave the canvas visible above */
+@media (max-width: 760px) {
+  .dither-float { left: 10px; right: 10px; width: auto; top: auto; bottom: 10px; max-height: 54vh; }
+}
+
+/* when it is a desktop window the desktop styles the chrome; only the body
+   padding and sizing need saying */
+.dither-window { width: 392px; }
+.dither-window > .winbody { padding: 0; display: flex; flex-direction: column; }
+`;
 
 const dialog = {};
 
-function buildDialog() {
-  const modal = document.createElement('div');
-  modal.className = 'paint-modal dither-modal';
-  modal.id = 'ditherModal';
-  modal.setAttribute('role', 'dialog');
-  modal.setAttribute('aria-modal', 'true');
-  modal.setAttribute('aria-labelledby', 'ditherTitle');
-  modal.innerHTML = `
-    <form class="paint-modal-box paint-dialog" id="ditherForm">
-      <header><span id="ditherTitle">Dithering</span><button type="button" data-dither-cancel aria-label="Close">×</button></header>
-      <div class="paint-dialog-body">
-        <p class="app-status dither-hint"></p>
-        <div class="dither-fields"></div>
-        <label class="paint-check"><input type="checkbox" class="dither-preview" checked> Live preview</label>
-        <p class="app-status dither-note"></p>
-        <div class="paint-dialog-actions">
-          <button type="button" class="btn ghost" data-dither-cancel>Cancel</button>
-          <button type="submit" class="btn primary">Apply</button>
-        </div>
-      </div>
-    </form>`;
-  document.body.appendChild(modal);
-  dialog.modal = modal;
-  dialog.form = modal.querySelector('#ditherForm');
-  dialog.title = modal.querySelector('#ditherTitle');
-  dialog.hint = modal.querySelector('.dither-hint');
-  dialog.note = modal.querySelector('.dither-note');
-  dialog.fields = modal.querySelector('.dither-fields');
-  dialog.preview = modal.querySelector('.dither-preview');
+function parentDesktop() {
+  try {
+    if (window.parent !== window) {
+      const doc = window.parent.document;
+      if (doc.getElementById('desktop')) return doc;
+    }
+  } catch { /* a cross-origin parent is simply not a desktop we can use */ }
+  return null;
+}
 
-  modal.addEventListener('click', event => { if (event.target.closest('[data-dither-cancel]')) closeDialog(true); });
-  modal.addEventListener('pointerdown', event => { if (event.target === modal) closeDialog(true); });
-  dialog.form.addEventListener('submit', event => { event.preventDefault(); applyAndClose(); });
-  dialog.form.addEventListener('input', event => {
+function ensurePanelStyle(doc) {
+  if (doc.getElementById('clack-dither-style')) return;
+  const style = doc.createElement('style');
+  style.id = 'clack-dither-style';
+  style.textContent = PANEL_CSS;
+  doc.head.appendChild(style);
+}
+
+function panelBody(doc) {
+  const panel = doc.createElement('div');
+  panel.className = 'dither-panel';
+  const form = doc.createElement('form');
+  form.innerHTML = `
+    <p class="dither-hint"></p>
+    <div class="dither-fields"></div>
+    <label class="dither-check"><input type="checkbox" class="dither-preview" checked><span>Live preview</span></label>
+    <p class="dither-note"></p>
+    <div class="dither-actions">
+      <button type="button" class="dither-btn" data-dither-cancel>Cancel</button>
+      <button type="submit" class="dither-btn primary">Apply</button>
+    </div>`;
+  panel.appendChild(form);
+
+  dialog.form = form;
+  dialog.hint = form.querySelector('.dither-hint');
+  dialog.note = form.querySelector('.dither-note');
+  dialog.fields = form.querySelector('.dither-fields');
+  dialog.preview = form.querySelector('.dither-preview');
+
+  form.addEventListener('submit', event => { event.preventDefault(); applyAndClose(); });
+  form.addEventListener('click', event => { if (event.target.closest('[data-dither-cancel]')) closePanel(true); });
+  form.addEventListener('input', event => {
     if (event.target === dialog.preview) { if (dialog.preview.checked) schedulePreview(); else restoreOriginal(); return; }
     refreshVisibility();
     schedulePreview();
   });
-  dialog.form.addEventListener('change', () => { refreshVisibility(); schedulePreview(); });
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && modal.classList.contains('open')) closeDialog(true);
+  form.addEventListener('change', () => { refreshVisibility(); schedulePreview(); });
+  return panel;
+}
+
+/* Drag by the title bar. Inside the desktop the body gets .win-drag, which is
+ * what stops the iframes swallowing the pointer mid-drag. */
+function makeDraggable(doc, win, handle, bounds) {
+  handle.addEventListener('pointerdown', event => {
+    if (event.target.closest('button')) return;
+    event.preventDefault();
+    const rect = win.getBoundingClientRect();
+    /* pin the size before switching off the right/bottom anchors, or a panel
+     * docked with left+right would collapse the moment it starts moving */
+    win.style.width = rect.width + 'px';
+    win.style.right = 'auto';
+    win.style.bottom = 'auto';
+    win.style.left = win.offsetLeft + 'px';
+    win.style.top = win.offsetTop + 'px';
+    const grabX = event.clientX - rect.left, grabY = event.clientY - rect.top;
+    const startLeft = win.offsetLeft - rect.left, startTop = win.offsetTop - rect.top;
+    const view = doc.defaultView;
+    doc.body.classList.add('win-drag');
+    const move = moved => {
+      win.style.left = clamp(moved.clientX - grabX + startLeft, -rect.width + 70, bounds().width - 70) + 'px';
+      win.style.top = clamp(moved.clientY - grabY + startTop, 0, bounds().height - 34) + 'px';
+    };
+    const up = () => {
+      doc.body.classList.remove('win-drag');
+      view.removeEventListener('pointermove', move);
+      view.removeEventListener('pointerup', up);
+    };
+    view.addEventListener('pointermove', move);
+    view.addEventListener('pointerup', up);
   });
 }
 
-function fieldFor(param) {
-  const row = document.createElement('label');
-  row.className = param.type === 'check' ? 'paint-check' : 'dither-row';
+function buildPanel(title) {
+  const desktop = parentDesktop();
+  const doc = desktop || document;
+  ensurePanelStyle(doc);
+  dialog.doc = doc;
+  dialog.onDesktop = !!desktop;
+
+  const body = panelBody(doc);
+  let win;
+  if (desktop) {
+    const surface = desktop.getElementById('desktop');
+    win = doc.createElement('section');
+    win.className = 'window fixed dither-window';
+    win.setAttribute('role', 'dialog');
+    win.setAttribute('aria-label', title);
+    win.innerHTML = `
+      <div class="titlebar"><button class="dot close" aria-label="Close"></button><span class="title"><span class="title-label"></span></span></div>
+      <div class="winbody"></div>
+      <div class="frame" aria-hidden="true"></div>`;
+    win.querySelector('.title-label').textContent = title;
+    win.querySelector('.winbody').appendChild(body);
+    surface.appendChild(win);
+
+    /* sit above every other window, and beside ClackPaint if there is room */
+    const raise = () => {
+      let top = 10;
+      doc.querySelectorAll('.window').forEach(other => {
+        top = Math.max(top, parseInt(other.style.zIndex || 0, 10));
+        if (other !== win) other.classList.add('inactive');
+      });
+      win.style.zIndex = top + 1;
+      win.classList.remove('inactive');
+    };
+    /* whichever side of ClackPaint has room for the panel wins; if neither
+     * does it goes to the right edge and the user can drag it about */
+    const paintWindow = window.frameElement && window.frameElement.closest('.window');
+    const rect = (paintWindow || window.frameElement || surface).getBoundingClientRect();
+    const width = win.offsetWidth || 392;
+    const roomRight = surface.clientWidth - rect.right, roomLeft = rect.left;
+    let left = surface.clientWidth - width - 12;
+    if (roomRight >= width + 24) left = rect.right + 18;
+    else if (roomLeft >= width + 24) left = rect.left - width - 18;
+    win.style.left = Math.max(12, left) + 'px';
+    win.style.top = Math.max(12, Math.min(rect.top, surface.clientHeight - 200)) + 'px';
+    raise();
+    win.addEventListener('pointerdown', raise);
+    win.querySelector('.dot.close').addEventListener('click', event => { event.stopPropagation(); closePanel(true); });
+    makeDraggable(doc, win, win.querySelector('.titlebar'), () => ({ width: surface.clientWidth, height: surface.clientHeight }));
+  } else {
+    win = doc.createElement('div');
+    win.className = 'dither-float';
+    win.setAttribute('role', 'dialog');
+    win.setAttribute('aria-label', title);
+    win.innerHTML = `
+      <div class="dither-titlebar"><button type="button" class="dither-dot" aria-label="Close"></button><span class="dither-name"></span></div>`;
+    win.querySelector('.dither-name').textContent = title;
+    win.appendChild(body);
+    /* the resting position stays in the stylesheet so the narrow-screen rule
+     * that docks the panel along the bottom can still win */
+    doc.body.appendChild(win);
+    win.querySelector('.dither-dot').addEventListener('click', () => closePanel(true));
+    makeDraggable(doc, win, win.querySelector('.dither-titlebar'), () => ({ width: doc.defaultView.innerWidth, height: doc.defaultView.innerHeight }));
+  }
+
+  dialog.win = win;
+  dialog.escape = event => { if (event.key === 'Escape') closePanel(true); };
+  doc.addEventListener('keydown', dialog.escape);
+  if (doc !== document) document.addEventListener('keydown', dialog.escape);
+  return win;
+}
+
+function destroyPanel() {
+  if (!dialog.win) return;
+  dialog.doc.removeEventListener('keydown', dialog.escape);
+  document.removeEventListener('keydown', dialog.escape);
+  dialog.win.remove();
+  dialog.win = null;
+  dialog.form = null;
+}
+
+/* the panel must not outlive the ClackPaint window it belongs to */
+window.addEventListener('pagehide', () => { if (dialog.win) closePanel(true); });
+
+function fieldFor(doc, param) {
+  const row = doc.createElement('label');
+  row.className = param.type === 'check' ? 'dither-check'
+    : param.type === 'select' ? 'dither-row stacked' : 'dither-row';
   row.dataset.key = param.key;
   if (param.type === 'check') {
-    const input = document.createElement('input');
+    const input = doc.createElement('input');
     input.type = 'checkbox';
     input.name = param.key;
-    row.append(input, document.createTextNode(' ' + param.label));
+    const caption = doc.createElement('span');
+    caption.textContent = param.label;
+    row.append(input, caption);
     return row;
   }
-  const caption = document.createElement('span');
+  const caption = doc.createElement('span');
   caption.className = 'dither-label';
   caption.textContent = param.label;
-  const holder = document.createElement('span');
+  const holder = doc.createElement('span');
   holder.className = 'dither-control';
   let input;
   if (param.type === 'select') {
-    input = document.createElement('select');
+    input = doc.createElement('select');
     for (const [value, text] of param.options) {
-      const option = document.createElement('option');
+      const option = doc.createElement('option');
       option.value = value; option.textContent = text;
       input.appendChild(option);
     }
   } else {
-    input = document.createElement('input');
+    input = doc.createElement('input');
     input.type = param.type === 'range' ? 'range' : 'number';
     input.min = param.min; input.max = param.max; input.step = param.step;
   }
   input.name = param.key;
   holder.appendChild(input);
   if (param.type === 'range') {
-    const readout = document.createElement('output');
+    const readout = doc.createElement('output');
     readout.className = 'dither-readout';
     holder.appendChild(readout);
     input.addEventListener('input', () => { readout.textContent = input.value + (param.unit || ''); });
   } else if (param.unit) {
-    holder.appendChild(document.createTextNode(' ' + param.unit));
+    holder.appendChild(doc.createTextNode(' ' + param.unit));
   }
   row.append(caption, holder);
   return row;
@@ -1334,12 +1544,12 @@ function applyAndClose() {
     host.pushUndo();
     const { values } = computeInto(true);
     lastRun = { groupId: dialog.groupId, values: currentValues() };
-    closeDialog(false);
+    closePanel(false);
     const detail = describe(dialog.groupId, values);
     host.setStatus(`${label} dither applied${detail ? ' — ' + detail : ''}${region.w !== host.width() || region.h !== host.height() ? ' (selection only)' : ''}`);
   } catch (error) {
     restoreOriginal();
-    closeDialog(false);
+    closePanel(false);
     host.setStatus(`Dithering failed: ${error.message}`);
   }
 }
@@ -1351,23 +1561,24 @@ function describe(groupId, values) {
   return OPTION_LABEL(key.options, values[key.key]);
 }
 
-function closeDialog(restore) {
+function closePanel(restore) {
   clearTimeout(previewTimer);
   if (restore) restoreOriginal();
-  dialog.modal.classList.remove('open');
+  destroyPanel();
   original = null;
+  if (host.setBusy) host.setBusy(false);
 }
 
-function openDialog(groupId) {
+function openPanel(groupId) {
   const group = GROUPS[groupId];
   if (!group) return;
-  if (!dialog.modal) buildDialog();
+  if (dialog.win) closePanel(true);
+  buildPanel(group.label + ' dither');
   dialog.groupId = groupId;
   dialog.params = paramsFor(groupId);
-  dialog.title.textContent = group.label + ' dither';
   dialog.hint.textContent = group.hint;
   dialog.fields.textContent = '';
-  for (const param of dialog.params) dialog.fields.appendChild(fieldFor(param));
+  for (const param of dialog.params) dialog.fields.appendChild(fieldFor(dialog.doc, param));
 
   const values = lastRun && lastRun.groupId === groupId ? { ...defaultsFor(groupId), ...lastRun.values } : defaultsFor(groupId);
   for (const param of dialog.params) {
@@ -1388,7 +1599,9 @@ function openDialog(groupId) {
     ? 'Preview is off above 4 megapixels — press Apply to see the result.'
     : wholeImage ? '' : `Applying to the ${region.w} × ${region.h} px selection only.`;
 
-  dialog.modal.classList.add('open');
+  /* the preview keeps rewriting the canvas, so a brush stroke made now would
+   * vanish at the next keystroke — painting waits until the panel is shut */
+  if (host.setBusy) host.setBusy(true);
   const first = dialog.fields.querySelector('select, input');
   if (first) first.focus();
   schedulePreview();
@@ -1414,7 +1627,7 @@ function repeatLast() {
 window.ClackDither = {
   GROUPS,
   init(api) { host = api; },
-  open(groupId) { if (host) openDialog(groupId); },
+  open(groupId) { if (host) openPanel(groupId); },
   repeat() { if (host) repeatLast(); }
 };
 })();
