@@ -121,7 +121,8 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 .paint-main { display: flex; gap: 14px; padding: 14px; flex: 1; min-height: 0; }
 .paint-tools {
   display: grid; grid-template-columns: repeat(2, 36px); grid-auto-rows: 36px; gap: 6px;
-  align-content: start; flex: none;
+  align-content: start; flex: none; max-height: 100%; overflow-x: hidden; overflow-y: auto;
+  scrollbar-width: thin;
 }
 .paint-tool {
   all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center;

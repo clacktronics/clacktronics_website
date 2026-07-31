@@ -13,7 +13,7 @@
       { "type": "app", "page": "puredata.html", "label": "Pure Data", "title": "Pure Data", "icon": "keyboard-music", "width": 1080, "height": 740, "multi": true },
       { "type": "app", "page": "video/index.html", "label": "Video Lab", "title": "Video Lab", "icon": "video", "width": 1180, "height": 780, "multi": true },
       { "type": "app", "page": "recorder.html", "label": "Sound Recorder", "title": "Sound Recorder", "icon": "mic", "width": 400, "height": 245, "fixed": true, "multi": true, "integrated": true },
-      { "type": "app", "page": "paint.html", "label": "ClackPaint", "title": "ClackPaint", "icon": "brush", "width": 900, "height": 680, "multi": true, "integrated": true },
+      { "type": "app", "page": "paint.html", "label": "ClackPaint", "title": "ClackPaint", "icon": "brush", "width": 900, "height": 680, "minHeight": 560, "multi": true, "integrated": true },
       { "type": "app", "page": "graphite.html", "label": "Graphite", "title": "Graphite", "icon": "shapes", "width": 1240, "height": 820, "multi": true },
       { "type": "app", "page": "model-viewer.html", "label": "3D Model Viewer", "title": "3D Model Viewer", "icon": "box", "width": 900, "height": 660, "multi": true }
     ] },

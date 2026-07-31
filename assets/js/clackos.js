@@ -573,6 +573,7 @@ async function openWindow(id, restore = null) {
       icon: safeIconName(def.icon) || 'app-windows',
       width: def.width,
       height: def.height,
+      minHeight: def.minHeight,
       fixed: def.fixed,
       integrated: def.integrated === true
     };
@@ -621,6 +622,8 @@ async function openWindow(id, restore = null) {
   const el = document.createElement('section');
   el.className = 'window';
   if (meta.integrated) el.classList.add('integrated-app-window');
+  const windowMinHeight = Math.max(MINH, parseInt(meta.minHeight, 10) || MINH);
+  el.style.setProperty('--window-min-height', windowMinHeight + 'px');
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-label', title);
 
@@ -675,7 +678,7 @@ async function openWindow(id, restore = null) {
     <div class="frame" aria-hidden="true"></div>`;
 
   desktop.appendChild(el);
-  const rec = { id, el, icon: meta.icon, minimised: false, maxed: null, cleanups: [] };
+  const rec = { id, el, icon: meta.icon, minHeight: windowMinHeight, minimised: false, maxed: null, cleanups: [] };
   /* Held before the app mounts: apps ask for their state as they start up. */
   if (restore && restore.state !== undefined) rec.state = restore.state;
   windows.set(id, rec);
@@ -741,7 +744,7 @@ async function openWindow(id, restore = null) {
       const dir = handle.dataset.dir;
       /* the floor gives way on a desktop too small to hold it */
       const minW = Math.min(MINW, desktop.clientWidth - FIT_MARGIN);
-      const minH = Math.min(MINH, desktop.clientHeight - FIT_MARGIN);
+      const minH = Math.min(rec.minHeight, desktop.clientHeight - FIT_MARGIN);
       const startX = e.clientX, startY = e.clientY;
       const orig = { l: el.offsetLeft, t: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
       const move = ev => {
@@ -799,8 +802,9 @@ function fitWindowToContent(rec, contentWidth, contentHeight) {
   const frameH = el.offsetHeight - winbody.offsetHeight;
   const w = contentWidth == null ? el.offsetWidth
     : Math.min(Math.round(contentWidth) + frameW, dw - 16);
+  const minH = Math.min(rec.minHeight || MINH, dh - 16);
   const h = contentHeight == null ? el.offsetHeight
-    : Math.min(Math.round(contentHeight) + frameH, dh - 16);
+    : Math.max(minH, Math.min(Math.round(contentHeight) + frameH, dh - 16));
   el.style.width = w + 'px';
   el.style.height = h + 'px';
   el.style.left = Math.max(8, Math.min(el.offsetLeft, dw - w - 8)) + 'px';
@@ -829,7 +833,8 @@ function fitWindowToDesktop(rec) {
   /* the CSS minimum ('.window' min-width/min-height) is itself capped to the
    * desktop, so this can shrink a window the whole way down on a phone */
   const w = Math.round(Math.min(want.width, dw - FIT_MARGIN));
-  const h = Math.round(Math.min(want.height, dh - FIT_MARGIN));
+  const minH = Math.min(rec.minHeight || MINH, dh - FIT_MARGIN);
+  const h = Math.round(Math.max(minH, Math.min(want.height, dh - FIT_MARGIN)));
   el.style.width = w + 'px';
   el.style.height = h + 'px';
   el.style.left = Math.round(Math.max(0, Math.min(want.left, dw - w - 8))) + 'px';
