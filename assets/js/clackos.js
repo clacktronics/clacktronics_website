@@ -856,12 +856,15 @@ async function navigateWindow(rec, id) {
  * the same desktop with the movement left out.
  */
 
-/* the dissolve: block size in CSS pixels, how many steps clear the window,
- * and how long the whole thing takes */
-const DISSOLVE_CELL = 9, DISSOLVE_STEPS = 15, DISSOLVE_MS = 400;
-/* the block grid overhangs the window by this much so the drop shadow, which
- * sits outside the border box, dissolves with it instead of blinking out */
-const DISSOLVE_PAD = 12;
+/* The dissolve works at the finest grain the screen has — one noise pixel per
+ * device pixel — so a mask the size of the window is far too expensive to
+ * re-encode on every step: a full-window PNG costs 20-60ms each time. The
+ * noise is a tile of this many CSS pixels repeated across the window instead,
+ * which encodes in a couple of milliseconds. At single-pixel grain the repeat
+ * is not something the eye picks up in four hundred milliseconds. */
+const DISSOLVE_TILE = 256;
+/* how many steps clear the window, and how long the whole thing takes */
+const DISSOLVE_STEPS = 20, DISSOLVE_MS = 420;
 /* minimise/restore travel, a new window arriving, a maximise toggle */
 const TRAVEL_MS = 220, OPEN_MS = 160, RESIZE_MS = 200;
 /* the desktop's own easings: out of the way quickly, back in gently */
@@ -977,31 +980,30 @@ function maskSupported() {
 }
 
 /* mask-image is still prefixed in Safari; both spellings are written and the
- * one the browser does not know is ignored. */
-function setMask(el, image, size, position) {
+ * one the browser does not know is ignored. `layout` is set once, up front;
+ * after that only the image changes. */
+function setMask(el, image, layout) {
   for (const property of ['mask', 'webkitMask']) {
     if (image != null) el.style[property + 'Image'] = image;
-    if (size != null) {
-      el.style[property + 'Size'] = size;
-      el.style[property + 'Repeat'] = 'no-repeat';
-    }
-    if (position != null) el.style[property + 'Position'] = position;
+    if (!layout) continue;
+    el.style[property + 'Size'] = layout.size;
+    el.style[property + 'Repeat'] = layout.repeat;
+    /* the drop shadow is drawn outside the border box, which is where a mask
+       would otherwise stop: no-clip keeps it in the dissolve instead of
+       cutting it away the moment the mask is applied */
+    el.style[property + 'Clip'] = 'no-clip';
   }
 }
 
-/* Close: the window leaves the way a 1980s desktop did it, in blocks of pixels
- * that vanish in a random order. The whole window is masked by a canvas that
- * has more of itself rubbed out on each step, so the desktop shows through the
- * holes — chrome, shadow and content together, no matter what is inside.
- *
- * The canvas is drawn a few pixels per block rather than one, which keeps the
- * block edges hard once the browser scales the mask back up to window size,
- * and keeps it small enough to re-encode fifteen times without stuttering. */
+/* Close: the window leaves the way a 1980s desktop did it, one pixel at a time
+ * in a random order. The whole window is masked by a tile of noise that has
+ * more of itself rubbed out on each step, so the desktop shows through the
+ * holes — chrome, shadow and content together, no matter what is inside. */
 function dissolveWindow(rec, done) {
   const el = rec.el;
-  const width = el.offsetWidth, height = el.offsetHeight;
   /* a minimised window has no box to dissolve */
-  const roomToDissolve = width >= 2 && height >= 2 && maskSupported() && !motionOff();
+  const roomToDissolve = el.offsetWidth >= 2 && el.offsetHeight >= 2 &&
+    maskSupported() && !motionOff();
   const ctx = roomToDissolve ? document.createElement('canvas').getContext('2d') : null;
   if (!ctx) {
     /* nothing to dissolve with, or no appetite for movement: the plain fade */
@@ -1010,19 +1012,23 @@ function dissolveWindow(rec, done) {
     return;
   }
 
-  const cols = Math.ceil((width + DISSOLVE_PAD * 2) / DISSOLVE_CELL);
-  const rows = Math.ceil((height + DISSOLVE_PAD * 2) / DISSOLVE_CELL);
-  const total = cols * rows;
-  const px = Math.max(1, Math.min(4, Math.floor(480 / Math.max(cols, rows))));
+  /* one noise pixel per device pixel, so nothing is resampled on its way to
+   * the screen and the dissolve is as fine as the display can draw. A very
+   * dense display is capped rather than encoding a tile four times the size */
+  const scale = Math.min(Math.max(Math.round(window.devicePixelRatio || 1), 1), 2);
+  const side = DISSOLVE_TILE * scale;
+  const total = side * side;
   const canvas = ctx.canvas;
-  canvas.width = cols * px;
-  canvas.height = rows * px;
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  canvas.width = canvas.height = side;
+  const noise = ctx.createImageData(side, side);
+  /* one 32-bit write per pixel: opaque white to start, so the whole window
+     shows through, and zero — transparent — once a pixel has gone */
+  const mask = new Uint32Array(noise.data.buffer);
+  mask.fill(0xffffffff);
 
-  /* the order the blocks go in — a plain shuffle, which is what the
+  /* the order the pixels go in — a plain shuffle, which is what the
      pseudo-random dissolves of the era looked like anyway */
-  const order = new Int32Array(total);
+  const order = new Uint32Array(total);
   for (let i = 0; i < total; i++) order[i] = i;
   for (let i = total - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -1030,8 +1036,7 @@ function dissolveWindow(rec, done) {
   }
 
   el.classList.add('dissolving');
-  setMask(el, null, `${cols * DISSOLVE_CELL}px ${rows * DISSOLVE_CELL}px`,
-    `-${DISSOLVE_PAD}px -${DISSOLVE_PAD}px`);
+  setMask(el, null, { size: `${DISSOLVE_TILE}px ${DISSOLVE_TILE}px`, repeat: 'repeat' });
 
   let cleared = 0, step = 0;
   const start = performance.now();
@@ -1041,10 +1046,8 @@ function dissolveWindow(rec, done) {
     if (due > step) {
       step = Math.min(DISSOLVE_STEPS, due);
       const target = Math.round(total * step / DISSOLVE_STEPS);
-      for (; cleared < target; cleared++) {
-        const cell = order[cleared];
-        ctx.clearRect((cell % cols) * px, Math.floor(cell / cols) * px, px, px);
-      }
+      for (; cleared < target; cleared++) mask[order[cleared]] = 0;
+      ctx.putImageData(noise, 0, 0);
       setMask(el, `url("${canvas.toDataURL()}")`);
     }
     if (step >= DISSOLVE_STEPS) done();
