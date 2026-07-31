@@ -27,11 +27,13 @@
 .rm-item { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .rm-item small { font-size: 10px; opacity: 0.65; white-space: normal; line-height: 1.4; }
 .rm-sub-arrow { margin-left: auto; font-size: 10px; }
-.rm-sub-dd { top: -6px; left: 100%; min-width: 300px; max-width: 340px; border-radius: 0 8px 8px 8px; }
+.rm-sub-dd { top: -6px; left: 100%; min-width: 300px; max-width: 340px; max-height: calc(100vh - 48px); overflow-y: auto; border-radius: 0 8px 8px 8px; }
 .rm-sub.open > .rm-sub-dd { display: block; }
 .rm-sub.open > .rm-sub-open { background: var(--ink); color: var(--menu-text); }
 .rm-sub-dd button { align-items: flex-start; white-space: normal; }
 .rm-sub-dd .pixel-icon { margin-top: 1px; flex: none; }
+.rm-dd .mi-check { margin-left: auto; padding-left: 18px; color: var(--leaf-deep); }
+.rm-dd button[aria-pressed="true"] .mi-check::before { content: '✓'; }
 /* on a narrow window there is no room to the right, so drop underneath */
 @media (max-width: 640px) {
   .rm-sub-dd { left: 8px; top: 100%; min-width: 0; width: calc(100vw - 40px); max-width: 320px; }
@@ -53,9 +55,16 @@
 .paint-layer-row { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 22px 38px minmax(0,1fr); align-items: center; gap: 5px; min-height: 42px; padding: 4px; border: 1px solid transparent; border-radius: 5px; color: var(--control-text); cursor: pointer; }
 .paint-layer-row:hover { background: var(--paper); }
 .paint-layer-row.active { border-color: var(--ink); background: var(--paper); }
-.paint-layer-eye { all: unset; display: grid; place-items: center; width: 20px; height: 28px; cursor: pointer; font-size: 13px; }
+.paint-layer-eye { all: unset; display: grid; place-items: center; width: 20px; height: 28px; cursor: pointer; }
+.paint-layer-eye .pixel-icon { width: 16px; height: 16px; }
 .paint-layer-thumb { width: 36px; height: 30px; border: 1px solid var(--paper-line); background-color: #fff; background-image: linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%); background-size: 8px 8px; image-rendering: pixelated; }
 .paint-layer-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; }
+.paint-layer-details { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.paint-layer-blend { width: 100%; min-width: 0; height: 19px; padding: 0 2px; border: 1px solid var(--paper-line); border-radius: 3px; background: var(--paper-deep); color: var(--control-text); font: 9px/1 'IBM Plex Mono', monospace; }
+.paint-adjust-fields { display: flex; flex-direction: column; gap: 10px; }
+.paint-adjust-fields label { display: grid; grid-template-columns: minmax(105px,1fr) minmax(100px,1.4fr) 54px; align-items: center; gap: 8px; font-size: 11px; }
+.paint-adjust-fields input[type="range"] { width: 100%; }
+.paint-adjust-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--sage); }
 .paint-context-menu { position: fixed; z-index: 90; display: none; min-width: 180px; padding: 5px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); box-shadow: 4px 4px 0 color-mix(in srgb,var(--shadow) var(--shadow-alpha),transparent); }
 .paint-context-menu.open { display: block; }
 .paint-context-menu button { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 7px 9px; border-radius: 4px; color: var(--control-text); font-size: 11px; cursor: pointer; }
@@ -103,6 +112,19 @@
       <button data-cmd="undo"><span class="pixel-icon" data-icon="undo" aria-hidden="true"></span>Undo</button>
       <button data-cmd="redo"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Redo</button>
     </div></div>
+    <div class="rm"><button>Layer</button><div class="rm-dd">
+      <button data-cmd="layer-new"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>New Layer</button>
+      <button data-cmd="layer-duplicate"><span class="pixel-icon" data-icon="copy" aria-hidden="true"></span>Duplicate Layer</button>
+      <button data-cmd="layer-rename"><span class="pixel-icon" data-icon="pencil" aria-hidden="true"></span>Rename Layer…</button>
+      <button data-cmd="layer-delete"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Delete Layer</button>
+      <div class="sep"></div>
+      <button data-cmd="layer-up"><span class="pixel-icon" data-icon="align-vertical-space-between" aria-hidden="true"></span>Move Layer Up</button>
+      <button data-cmd="layer-down"><span class="pixel-icon" data-icon="align-vertical-space-between" aria-hidden="true"></span>Move Layer Down</button>
+      <div class="sep"></div>
+      <button data-cmd="layer-merge-down"><span class="pixel-icon" data-icon="align-vertical-distribute-center" aria-hidden="true"></span>Merge Down</button>
+      <button data-cmd="layer-merge-visible"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Merge Visible</button>
+      <button data-cmd="layer-flatten"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>Flatten Image</button>
+    </div></div>
     <div class="rm"><button>Image</button><div class="rm-dd">
       <button data-cmd="image-size"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Image Size…</button>
       <button data-cmd="content-aware-scale"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Content-Aware Scale</button>
@@ -110,14 +132,53 @@
       <button data-cmd="canvas-size"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Canvas Size…</button>
       <button data-cmd="crop" disabled><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Crop to Selection</button>
       <div class="sep"></div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span><span class="rm-item">Check Seams</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd">
+          <button data-cmd="seams-x" aria-pressed="false"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Shift X by 50%<span class="mi-check"></span></button>
+          <button data-cmd="seams-y" aria-pressed="false"><span class="pixel-icon" data-icon="align-vertical-space-between" aria-hidden="true"></span>Shift Y by 50%<span class="mi-check"></span></button>
+          <div class="sep"></div>
+          <button data-cmd="seams-off"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>Reset Seam View</button>
+        </div>
+      </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span><span class="rm-item">Adjust</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd">
+          <button data-cmd="adjust-brightness-contrast">Brightness / Contrast…</button>
+          <button data-cmd="adjust-levels">Levels…</button>
+          <button data-cmd="adjust-curves">Curves…</button>
+          <button data-cmd="adjust-exposure">Exposure…</button>
+          <button data-cmd="adjust-vibrance">Vibrance…</button>
+          <button data-cmd="adjust-hue-saturation">Hue / Saturation…</button>
+          <button data-cmd="adjust-color-balance">Colour Balance…</button>
+          <div class="sep"></div>
+          <button data-cmd="adjust-black-white">Black &amp; White</button>
+          <button data-cmd="adjust-desaturate">Desaturate</button>
+          <button data-cmd="adjust-threshold">Threshold…</button>
+          <button data-cmd="adjust-posterize">Posterize…</button>
+          <button data-cmd="adjust-auto-levels">Auto Levels</button>
+          <button data-cmd="adjust-equalize">Equalize</button>
+          <button data-cmd="invert"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Invert</button>
+        </div>
+      </div>
+      <div class="sep"></div>
       <button data-cmd="clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear Image</button>
-      <button data-cmd="invert"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Invert Colours</button>
       <button data-cmd="flip-h"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Flip Horizontal</button>
       <button data-cmd="flip-v"><span class="pixel-icon" data-icon="align-vertical-space-between" aria-hidden="true"></span>Flip Vertical</button>
       <div class="sep"></div>
       <button data-cmd="remove-bg"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Remove Background…</button>
     </div></div>
     <div class="rm"><button>Effects</button><div class="rm-dd">
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="copy" aria-hidden="true"></span><span class="rm-item">Mirror Paint</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd">
+          <button data-cmd="mirror-none" aria-pressed="true">Off<span class="mi-check"></span></button>
+          <button data-cmd="mirror-x" aria-pressed="false">Across X axis<span class="mi-check"></span></button>
+          <button data-cmd="mirror-y" aria-pressed="false">Across Y axis<span class="mi-check"></span></button>
+          <button data-cmd="mirror-both" aria-pressed="false">Across both axes<span class="mi-check"></span></button>
+        </div>
+      </div>
+      <div class="sep"></div>
       <button data-cmd="gaussian-blur"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Gaussian Blur…</button>
       <button data-cmd="noise"><span class="pixel-icon" data-icon="spray-can" aria-hidden="true"></span>Add Noise…</button>
       <div class="sep"></div>
@@ -160,8 +221,6 @@
       <div class="paint-size">
         <span class="app-lbl">Tool size</span>
         <input type="range" min="1" max="32" value="3" aria-label="Tool size">
-        <label class="paint-offset-check" title="Preview the tile wrapped by half its width and height without changing the image"><input id="offsetPreview" type="checkbox"><span>Check seams<small>50% X/Y offset</small></span></label>
-        <label class="paint-offset-check" title="Reflect new paint strokes across the vertical centre line"><input id="mirrorPaint" type="checkbox"><span>Mirror paint<small>Y axis</small></span></label>
       </div>
     </div>
 
@@ -172,6 +231,8 @@
         <canvas class="overlay" width="640" height="400"></canvas>
         <canvas class="content-transform-preview" width="640" height="400" hidden aria-label="Live content-aware scale preview"></canvas>
         <span class="paint-brush-cursor" aria-hidden="true" hidden></span>
+        <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
+        <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
         <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
         <div class="paint-transform-box" hidden aria-label="Content-aware scale handles">
           <button type="button" class="paint-transform-handle" data-handle="nw" aria-label="Resize from top left"></button>
@@ -296,6 +357,17 @@
   </form>
 </div>
 
+<div class="paint-modal" id="adjustModal" role="dialog" aria-modal="true" aria-labelledby="adjustTitle">
+  <form class="paint-modal-box paint-dialog" id="adjustForm">
+    <header><span id="adjustTitle">Adjust</span><button type="button" data-close="adjustModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <div class="paint-adjust-fields" id="adjustFields"></div>
+      <p class="app-status" id="adjustHelp">Adjusts the active layer while preserving transparency.</p>
+      <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="adjustModal">Cancel</button><button class="btn primary">Apply</button></div>
+    </div>
+  </form>
+</div>
+
 <div class="paint-modal" id="bgRemoveModal" role="dialog" aria-modal="true" aria-labelledby="bgRemoveTitle">
   <div class="paint-modal-box paint-dialog">
     <header><span id="bgRemoveTitle">Remove Background</span><button type="button" data-close="bgRemoveModal" aria-label="Close">×</button></header>
@@ -359,8 +431,9 @@ const ox = overlay.getContext('2d');
 const tx = contentTransformPreview.getContext('2d');
 const status = appRoot.querySelector('.paint-status');
 const sizeInput = appRoot.querySelector('.paint-size input');
-const offsetToggle = appRoot.querySelector('#offsetPreview');
-const mirrorToggle = appRoot.querySelector('#mirrorPaint');
+const seamXButton = appRoot.querySelector('[data-cmd="seams-x"]');
+const seamYButton = appRoot.querySelector('[data-cmd="seams-y"]');
+const mirrorButtons = [...appRoot.querySelectorAll('[data-cmd^="mirror-"]')];
 const cropButton = appRoot.querySelector('[data-cmd="crop"]');
 const layerList = appRoot.querySelector('.paint-layer-list');
 const contextMenu = appRoot.querySelector('.paint-context-menu');
@@ -382,7 +455,8 @@ let ditherPreviewing = false;
 let fileName = 'untitled.png';
 let selection = null;
 let cloneSource = null, cloneOffset = null, strokeBuffer = null, mirrorStrokeBefore = null;
-let seamModeApplied = false;
+let seamAppliedX = false, seamAppliedY = false;
+let mirrorMode = 'none';
 let seamAnimating = false, seamAnimationToken = 0;
 let zoom = 1, cursorPoint = null;
 let contentTransform = null;
@@ -393,7 +467,13 @@ const MAXUNDO = 25;
 const MAX_UNDO_BYTES = 96 * 1024 * 1024;
 let documentRevision = 0;
 let layerCounter = 1;
-let layers = [{ id: layerCounter++, name: 'Background', visible: true, canvas: base }];
+const BLEND_MODES = [
+  ['source-over', 'Normal'], ['multiply', 'Multiply'], ['screen', 'Screen'], ['overlay', 'Overlay'],
+  ['darken', 'Darken'], ['lighten', 'Lighten'], ['color-dodge', 'Colour Dodge'], ['color-burn', 'Colour Burn'],
+  ['hard-light', 'Hard Light'], ['soft-light', 'Soft Light'], ['difference', 'Difference'], ['exclusion', 'Exclusion'],
+  ['hue', 'Hue'], ['saturation', 'Saturation'], ['color', 'Colour'], ['luminosity', 'Luminosity']
+];
+let layers = [{ id: layerCounter++, name: 'Background', visible: true, blendMode: 'source-over', canvas: base }];
 let activeLayer = layers[0];
 base.classList.add('paint-layer');
 
@@ -407,6 +487,7 @@ function makeLayerCanvas(w = width(), h = height()) {
 function syncLayerCanvases() {
   layers.forEach(layer => {
     layer.canvas.style.zIndex = '1';
+    layer.canvas.style.mixBlendMode = layer.blendMode === 'source-over' ? 'normal' : layer.blendMode;
     layer.canvas.hidden = !layer.visible || seamAnimating;
     stack.insertBefore(layer.canvas, seamAnimation);
   });
@@ -434,7 +515,8 @@ function renderLayerPanel() {
     row.draggable = true;
     row.dataset.layerId = layer.id;
     const eye = document.createElement('button');
-    eye.type = 'button'; eye.className = 'paint-layer-eye'; eye.textContent = layer.visible ? '●' : '○';
+    eye.type = 'button'; eye.className = 'paint-layer-eye';
+    eye.innerHTML = `<span class="pixel-icon" data-icon="${layer.visible ? 'eye' : 'eye-off'}" aria-hidden="true"></span>`;
     eye.title = layer.visible ? 'Hide layer' : 'Show layer'; eye.setAttribute('aria-label', eye.title);
     eye.addEventListener('click', event => {
       event.stopPropagation();
@@ -447,8 +529,19 @@ function renderLayerPanel() {
     const scale = Math.min(thumb.width / width(), thumb.height / height());
     const tw = width() * scale, th = height() * scale;
     thumb.getContext('2d').drawImage(layer.canvas, (thumb.width - tw) / 2, (thumb.height - th) / 2, tw, th);
+    const details = document.createElement('span'); details.className = 'paint-layer-details';
     const name = document.createElement('span'); name.className = 'paint-layer-name'; name.textContent = layer.name;
-    row.append(eye, thumb, name);
+    const blend = document.createElement('select'); blend.className = 'paint-layer-blend'; blend.setAttribute('aria-label', `${layer.name} blending mode`);
+    BLEND_MODES.forEach(([value, label]) => blend.add(new Option(label, value, false, layer.blendMode === value)));
+    blend.addEventListener('pointerdown', event => event.stopPropagation());
+    blend.addEventListener('click', event => event.stopPropagation());
+    blend.addEventListener('change', event => {
+      event.stopPropagation();
+      if (ditherPreviewing || contentTransform) { blend.value = layer.blendMode; setStatus('Finish the current image operation before changing a blend mode'); return; }
+      pushUndo(); layer.blendMode = blend.value; syncLayerCanvases(); activateLayer(layer); setStatus(`${layer.name} blend mode: ${blend.selectedOptions[0].text}`);
+    });
+    details.append(name, blend);
+    row.append(eye, thumb, details);
     row.addEventListener('click', () => { activateLayer(layer); setStatus(`${layer.name} selected`); });
     row.addEventListener('dblclick', () => {
       if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
@@ -476,7 +569,7 @@ function renderLayerPanel() {
 function addLayer(name = `Layer ${layers.length + 1}`, pixels = null, index = layers.indexOf(activeLayer) + 1) {
   const canvas = makeLayerCanvas();
   if (pixels) canvas.getContext('2d').putImageData(pixels, 0, 0);
-  const layer = { id: layerCounter++, name, visible: true, canvas };
+  const layer = { id: layerCounter++, name, visible: true, blendMode: 'source-over', canvas };
   layers.splice(Math.max(0, Math.min(layers.length, index)), 0, layer);
   syncLayerCanvases(); activateLayer(layer);
   return layer;
@@ -492,8 +585,10 @@ function duplicateLayer() {
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
   if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
   pushUndo();
+  const source = activeLayer;
   const pixels = bx.getImageData(0, 0, width(), height());
-  addLayer(`${activeLayer.name} copy`, pixels); clearSelection(); setStatus('Layer duplicated');
+  const duplicate = addLayer(`${source.name} copy`, pixels); duplicate.blendMode = source.blendMode;
+  syncLayerCanvases(); renderLayerPanel(); clearSelection(); setStatus('Layer duplicated');
 }
 
 function deleteLayer() {
@@ -513,10 +608,36 @@ function mergeLayerDown() {
   if (index < 1) { setStatus('There is no layer below to merge into'); return; }
   pushUndo(); canonicaliseSeam();
   const lower = layers[index - 1];
-  lower.canvas.getContext('2d').drawImage(activeLayer.canvas, 0, 0);
+  const context = lower.canvas.getContext('2d');
+  context.save(); context.globalCompositeOperation = activeLayer.blendMode; context.drawImage(activeLayer.canvas, 0, 0); context.restore();
   lower.name = activeLayer.name;
   activeLayer.canvas.remove(); layers.splice(index, 1);
   activateLayer(lower); syncLayerCanvases(); clearSelection(); reapplySeam(); setStatus('Layer merged down');
+}
+
+function renameLayer() {
+  const next = prompt('Layer name', activeLayer.name);
+  if (next?.trim() && next.trim() !== activeLayer.name) { pushUndo(); activeLayer.name = next.trim(); renderLayerPanel(); setStatus('Layer renamed'); }
+}
+
+function mergeVisibleLayers(flatten = false) {
+  if (ditherPreviewing || contentTransform) { setStatus('Finish the current image operation before merging layers'); return; }
+  const visible = layers.filter(layer => layer.visible);
+  if (!visible.length) { setStatus('There are no visible layers to merge'); return; }
+  if (!flatten && visible.length < 2) { setStatus('There is only one visible layer'); return; }
+  pushUndo(); canonicaliseSeam();
+  const visibleComposite = compositeCanvas();
+  const mergedCanvas = flatten ? makeLayerCanvas() : visibleComposite;
+  if (flatten) { const context = mergedCanvas.getContext('2d'); context.fillStyle = bg; context.fillRect(0, 0, width(), height()); context.drawImage(visibleComposite, 0, 0); }
+  mergedCanvas.className = 'base paint-layer';
+  const insertAt = flatten ? 0 : Math.min(...visible.map(layer => layers.indexOf(layer)));
+  const kept = flatten ? [] : layers.filter(layer => !layer.visible);
+  layers.forEach(layer => layer.canvas.remove());
+  const merged = { id: layerCounter++, name: flatten ? 'Background' : 'Merged', visible: true, blendMode: 'source-over', canvas: mergedCanvas };
+  if (flatten) layers = [merged];
+  else { layers = kept; layers.splice(Math.min(insertAt, layers.length), 0, merged); }
+  activeLayer = merged; base = merged.canvas; bx = base.getContext('2d', { willReadFrequently: true });
+  syncLayerCanvases(); renderLayerPanel(); clearSelection(); reapplySeam(); setStatus(flatten ? 'Image flattened' : 'Visible layers merged');
 }
 
 function moveLayer(direction) {
@@ -539,7 +660,7 @@ appRoot.querySelectorAll('[data-layer-action]').forEach(button => button.addEven
 }));
 
 const setStatus = message => {
-  if (offsetToggle.checked && !seamAnimating) updateOffsetPreview();
+  if ((seamXButton.getAttribute('aria-pressed') === 'true' || seamYButton.getAttribute('aria-pressed') === 'true') && !seamAnimating) updateOffsetPreview();
   status.textContent = `${message} — ${width()} × ${height()} px`;
   cancelAnimationFrame(setStatus.layerFrame || 0);
   setStatus.layerFrame = requestAnimationFrame(renderLayerPanel);
@@ -592,12 +713,16 @@ function stepZoom(direction, point, clientX, clientY) {
 }
 
 function updateOffsetPreview() {
-  const enabled = offsetToggle.checked;
+  const enabledX = seamXButton.getAttribute('aria-pressed') === 'true';
+  const enabledY = seamYButton.getAttribute('aria-pressed') === 'true';
+  const enabled = enabledX || enabledY;
   overlay.hidden = false;
   stack.classList.toggle('checking-seams', enabled);
-  if (enabled === seamModeApplied) return;
-  shiftBase(enabled ? Math.floor(width() / 2) : -Math.floor(width() / 2), enabled ? Math.floor(height() / 2) : -Math.floor(height() / 2));
-  seamModeApplied = enabled;
+  const dx = enabledX === seamAppliedX ? 0 : (enabledX ? Math.floor(width() / 2) : -Math.floor(width() / 2));
+  const dy = enabledY === seamAppliedY ? 0 : (enabledY ? Math.floor(height() / 2) : -Math.floor(height() / 2));
+  if (!dx && !dy) return;
+  shiftBase(dx, dy);
+  seamAppliedX = enabledX; seamAppliedY = enabledY;
   cloneSource = null; cloneOffset = null; strokeBuffer = null;
   clearSelection();
 }
@@ -610,11 +735,9 @@ function drawWrapped(context, source, dx, dy) {
     for (const y of [y0, y0 - height()]) context.drawImage(source, x, y);
 }
 
-function animateSeamTransition(enabled) {
+function animateSeamTransition(targetX, targetY) {
   const token = ++seamAnimationToken;
   const source = compositeCanvas();
-  const targetX = enabled ? Math.floor(width() / 2) : -Math.floor(width() / 2);
-  const targetY = enabled ? Math.floor(height() / 2) : -Math.floor(height() / 2);
   const duration = 460;
   const started = performance.now();
   seamAnimating = true;
@@ -663,13 +786,13 @@ function shiftBase(dx, dy) {
 }
 
 function canonicaliseSeam() {
-  if (!seamModeApplied) return;
-  shiftBase(-Math.floor(width() / 2), -Math.floor(height() / 2));
-  seamModeApplied = false;
+  if (!seamAppliedX && !seamAppliedY) return;
+  shiftBase(seamAppliedX ? -Math.floor(width() / 2) : 0, seamAppliedY ? -Math.floor(height() / 2) : 0);
+  seamAppliedX = false; seamAppliedY = false;
 }
 
 function reapplySeam() {
-  if (offsetToggle.checked) updateOffsetPreview();
+  if (seamXButton.getAttribute('aria-pressed') === 'true' || seamYButton.getAttribute('aria-pressed') === 'true') updateOffsetPreview();
 }
 
 function clearSelection() {
@@ -732,7 +855,7 @@ function resizeSurfaces(w, h) {
   overlay.width = w; overlay.height = h;
   seamAnimation.width = w; seamAnimation.height = h;
   contentTransformPreview.width = w; contentTransformPreview.height = h; contentTransformPreview.hidden = true;
-  seamModeApplied = false;
+  seamAppliedX = false; seamAppliedY = false;
   updateStackSize();
   cloneSource = null; cloneOffset = null; strokeBuffer = null;
   clearSelection();
@@ -741,11 +864,11 @@ function resizeSurfaces(w, h) {
 function resetLayers(w, h, name = 'Background') {
   layers.forEach(layer => layer.canvas.remove());
   const canvas = makeLayerCanvas(w, h);
-  layers = [{ id: layerCounter++, name, visible: true, canvas }];
+  layers = [{ id: layerCounter++, name, visible: true, blendMode: 'source-over', canvas }];
   activeLayer = layers[0]; base = canvas; bx = canvas.getContext('2d', { willReadFrequently: true });
   overlay.width = seamAnimation.width = contentTransformPreview.width = w;
   overlay.height = seamAnimation.height = contentTransformPreview.height = h; contentTransformPreview.hidden = true;
-  seamModeApplied = false; syncLayerCanvases(); renderLayerPanel(); updateStackSize(); clearSelection();
+  seamAppliedX = false; seamAppliedY = false; syncLayerCanvases(); renderLayerPanel(); updateStackSize(); clearSelection();
 }
 
 function layerCopies() {
@@ -766,18 +889,21 @@ function compositeCanvas() {
   const copy = document.createElement('canvas');
   copy.width = width(); copy.height = height();
   const context = copy.getContext('2d');
-  layers.forEach(layer => { if (layer.visible) context.drawImage(layer.canvas, 0, 0); });
+  layers.forEach(layer => {
+    if (!layer.visible) return;
+    context.save(); context.globalCompositeOperation = layer.blendMode || 'source-over'; context.drawImage(layer.canvas, 0, 0); context.restore();
+  });
   return copy;
 }
 
 function canonicalCanvas() {
   const copy = compositeCanvas();
-  if (!seamModeApplied) return copy;
+  if (!seamAppliedX && !seamAppliedY) return copy;
   const canonical = document.createElement('canvas');
   canonical.width = width(); canonical.height = height();
   const context = canonical.getContext('2d');
-  const dx = ((-Math.floor(width() / 2) % width()) + width()) % width();
-  const dy = ((-Math.floor(height() / 2) % height()) + height()) % height();
+  const dx = seamAppliedX ? ((-Math.floor(width() / 2) % width()) + width()) % width() : 0;
+  const dy = seamAppliedY ? ((-Math.floor(height() / 2) % height()) + height()) % height() : 0;
   for (const x of [dx, dx - width()])
     for (const y of [dy, dy - height()]) context.drawImage(copy, x, y);
   return canonical;
@@ -785,20 +911,20 @@ function canonicalCanvas() {
 
 function canonicalActiveCanvas() {
   const copy = copyCanvas();
-  if (!seamModeApplied) return copy;
+  if (!seamAppliedX && !seamAppliedY) return copy;
   const canonical = document.createElement('canvas'); canonical.width = width(); canonical.height = height();
   const context = canonical.getContext('2d');
-  const dx = ((-Math.floor(width() / 2) % width()) + width()) % width();
-  const dy = ((-Math.floor(height() / 2) % height()) + height()) % height();
+  const dx = seamAppliedX ? ((-Math.floor(width() / 2) % width()) + width()) % width() : 0;
+  const dy = seamAppliedY ? ((-Math.floor(height() / 2) % height()) + height()) % height() : 0;
   for (const x of [dx, dx - width()]) for (const y of [dy, dy - height()]) context.drawImage(copy, x, y);
   return canonical;
 }
 
 function snapshot() {
   return {
-    width: width(), height: height(), seam: seamModeApplied,
+    width: width(), height: height(), seamX: seamAppliedX, seamY: seamAppliedY,
     active: layers.indexOf(activeLayer),
-    layers: layers.map(layer => ({ name: layer.name, visible: layer.visible, pixels: layer.canvas.getContext('2d').getImageData(0, 0, width(), height()) }))
+    layers: layers.map(layer => ({ name: layer.name, visible: layer.visible, blendMode: layer.blendMode, pixels: layer.canvas.getContext('2d').getImageData(0, 0, width(), height()) }))
   };
 }
 
@@ -810,14 +936,16 @@ function restore(snap) {
   layers = snap.layers.map(saved => {
     const canvas = makeLayerCanvas(snap.width, snap.height);
     canvas.getContext('2d').putImageData(saved.pixels, 0, 0);
-    return { id: layerCounter++, name: saved.name, visible: saved.visible, canvas };
+    return { id: layerCounter++, name: saved.name, visible: saved.visible, blendMode: saved.blendMode || 'source-over', canvas };
   });
   activeLayer = layers[Math.max(0, Math.min(layers.length - 1, snap.active || 0))];
   base = activeLayer.canvas; bx = base.getContext('2d', { willReadFrequently: true });
   overlay.width = seamAnimation.width = contentTransformPreview.width = snap.width;
   overlay.height = seamAnimation.height = contentTransformPreview.height = snap.height; contentTransformPreview.hidden = true;
   syncLayerCanvases(); renderLayerPanel(); updateStackSize(); clearSelection();
-  seamModeApplied = !!snap.seam;
+  seamAppliedX = !!snap.seamX; seamAppliedY = !!snap.seamY;
+  seamXButton.setAttribute('aria-pressed', String(seamAppliedX));
+  seamYButton.setAttribute('aria-pressed', String(seamAppliedY));
   updateOffsetPreview();
   setStatus('Restored image');
 }
@@ -942,46 +1070,59 @@ function updateBrushCursor(point) {
   cursorPoint = point;
   if (!BRUSH_TOOLS.has(tool) || seamAnimating || ditherPreviewing) { hideBrushCursor(); return; }
   const diameter = brushDiameter();
-  placeBrushCursor(brushCursors[0], point, diameter);
-  if (mirrorToggle.checked) placeBrushCursor(brushCursors[1], mirroredPoint(point), diameter);
-  else brushCursors[1].hidden = true;
+  const points = mirroredPoints(point);
+  brushCursors.forEach((cursor, index) => {
+    if (points[index]) placeBrushCursor(cursor, points[index], diameter);
+    else cursor.hidden = true;
+  });
 }
 
 function paintMirrored(context, draw) {
   draw();
-  if (!mirrorToggle.checked) return;
-  context.save();
-  context.translate(width(), 0);
-  context.scale(-1, 1);
-  draw();
-  context.restore();
+  const transforms = [];
+  if (mirrorMode === 'x' || mirrorMode === 'both') transforms.push([1, -1, 0, height()]);
+  if (mirrorMode === 'y' || mirrorMode === 'both') transforms.push([-1, 1, width(), 0]);
+  if (mirrorMode === 'both') transforms.push([-1, -1, width(), height()]);
+  transforms.forEach(([scaleX, scaleY, translateX, translateY]) => {
+    context.save(); context.translate(translateX, translateY); context.scale(scaleX, scaleY); draw(); context.restore();
+  });
 }
 
-const mirroredPoint = point => ({ ...point, x: Math.max(0, width() - 1 - point.x) });
+function mirroredPoints(point) {
+  const points = [point];
+  if (mirrorMode === 'x' || mirrorMode === 'both') points.push({ ...point, y: Math.max(0, height() - 1 - point.y) });
+  if (mirrorMode === 'y' || mirrorMode === 'both') points.push({ ...point, x: Math.max(0, width() - 1 - point.x) });
+  if (mirrorMode === 'both') points.push({ ...point, x: Math.max(0, width() - 1 - point.x), y: Math.max(0, height() - 1 - point.y) });
+  return points.filter((candidate, index, all) => all.findIndex(other => other.x === candidate.x && other.y === candidate.y) === index);
+}
 
 function finishMirroredStroke(sourcePoint) {
-  if (!mirrorStrokeBefore || !mirrorToggle.checked || !sourcePoint ||
+  if (!mirrorStrokeBefore || mirrorMode === 'none' || !sourcePoint ||
       mirrorStrokeBefore.width !== width() || mirrorStrokeBefore.height !== height()) {
     mirrorStrokeBefore = null;
     return;
   }
   const current = bx.getImageData(0, 0, width(), height());
   const before = mirrorStrokeBefore.data, pixels = current.data;
-  const sourceOnLeft = sourcePoint.x < width() / 2;
-  const firstX = sourceOnLeft ? 0 : Math.ceil(width() / 2);
-  const lastX = sourceOnLeft ? Math.floor(width() / 2) : width();
-  for (let y = 0; y < height(); y++) {
+  const mirrorX = mirrorMode === 'y' || mirrorMode === 'both';
+  const mirrorY = mirrorMode === 'x' || mirrorMode === 'both';
+  const firstX = mirrorX && sourcePoint.x >= width() / 2 ? Math.ceil(width() / 2) : 0;
+  const lastX = mirrorX && sourcePoint.x < width() / 2 ? Math.floor(width() / 2) : width();
+  const firstY = mirrorY && sourcePoint.y >= height() / 2 ? Math.ceil(height() / 2) : 0;
+  const lastY = mirrorY && sourcePoint.y < height() / 2 ? Math.floor(height() / 2) : height();
+  for (let y = firstY; y < lastY; y++) {
     for (let x = firstX; x < lastX; x++) {
-      const mirrorX = width() - 1 - x;
       const sourceIndex = (y * width() + x) * 4;
-      const mirrorIndex = (y * width() + mirrorX) * 4;
-      let touched = false;
-      for (let channel = 0; channel < 4; channel++) {
-        if (pixels[sourceIndex + channel] !== before[sourceIndex + channel] ||
-            pixels[mirrorIndex + channel] !== before[mirrorIndex + channel]) touched = true;
-      }
+      const orbit = mirroredPoints({ x, y });
+      const touched = orbit.some(point => {
+        const index = (point.y * width() + point.x) * 4;
+        return [0, 1, 2, 3].some(channel => pixels[index + channel] !== before[index + channel]);
+      });
       if (touched) {
-        for (let channel = 0; channel < 4; channel++) pixels[mirrorIndex + channel] = pixels[sourceIndex + channel];
+        orbit.forEach(point => {
+          const index = (point.y * width() + point.x) * 4;
+          for (let channel = 0; channel < 4; channel++) pixels[index + channel] = pixels[sourceIndex + channel];
+        });
       }
     }
   }
@@ -1187,11 +1328,11 @@ stack.addEventListener('pointerdown', event => {
   if (!SELECTION_TOOLS.has(tool)) {
     const undoSaved = pushUndo();
     const saved = undoSaved ? undoStack[undoStack.length - 1] : null;
-    mirrorStrokeBefore = mirrorToggle.checked && saved ? saved.layers[saved.active].pixels : null;
+    mirrorStrokeBefore = mirrorMode !== 'none' && saved ? saved.layers[saved.active].pixels : null;
   }
   if (tool === 'fill') {
     clearSelection(); floodFill(point, drawColor);
-    if (mirrorToggle.checked) floodFill(mirroredPoint(point), drawColor);
+    mirroredPoints(point).slice(1).forEach(mirrorPoint => floodFill(mirrorPoint, drawColor));
     finishMirroredStroke(point);
     setStatus('Area filled'); return;
   }
@@ -1315,7 +1456,7 @@ function cropSelection() {
     const context = crop.getContext('2d'); context.save(); traceSelectionPath(context, selected, rect.x, rect.y); context.clip();
     context.drawImage(layer.canvas, -rect.x, -rect.y); context.restore(); return crop;
   });
-  pushUndo(); seamModeApplied = false;
+  pushUndo(); seamAppliedX = false; seamAppliedY = false;
   resizeSurfaces(rect.w, rect.h);
   layers.forEach((layer, index) => layer.canvas.getContext('2d').drawImage(crops[index], 0, 0));
   reapplySeam(); renderLayerPanel();
@@ -1349,6 +1490,118 @@ function addNoise(amount, monochrome) {
   bx.putImageData(image, 0, 0);
   setStatus(`${monochrome ? 'Monochromatic' : 'Colour'} noise applied at ${amount}%`);
 }
+
+const ADJUSTMENTS = {
+  'brightness-contrast': { title: 'Brightness / Contrast', fields: [['Brightness', -100, 100, 0, 1], ['Contrast', -100, 100, 0, 1]] },
+  levels: { title: 'Levels', fields: [['Black point', 0, 254, 0, 1], ['Gamma', .1, 3, 1, .05], ['White point', 1, 255, 255, 1]] },
+  curves: { title: 'Curves', fields: [['Shadows', -100, 100, 0, 1], ['Midtones', -100, 100, 0, 1], ['Highlights', -100, 100, 0, 1]] },
+  exposure: { title: 'Exposure', fields: [['Exposure', -5, 5, 0, .1], ['Offset', -100, 100, 0, 1], ['Gamma', .1, 3, 1, .05]] },
+  vibrance: { title: 'Vibrance', fields: [['Vibrance', -100, 100, 0, 1], ['Saturation', -100, 100, 0, 1]] },
+  'hue-saturation': { title: 'Hue / Saturation', fields: [['Hue', -180, 180, 0, 1], ['Saturation', -100, 100, 0, 1], ['Lightness', -100, 100, 0, 1]] },
+  'color-balance': { title: 'Colour Balance', fields: [['Cyan / Red', -100, 100, 0, 1], ['Magenta / Green', -100, 100, 0, 1], ['Yellow / Blue', -100, 100, 0, 1]] },
+  threshold: { title: 'Threshold', fields: [['Threshold', 0, 255, 128, 1]] },
+  posterize: { title: 'Posterize', fields: [['Levels', 2, 32, 4, 1]] }
+};
+let activeAdjustment = null;
+const clampByte = value => Math.max(0, Math.min(255, Math.round(value)));
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), light = (max + min) / 2;
+  if (max === min) return [0, 0, light];
+  const delta = max - min, saturation = light > .5 ? delta / (2 - max - min) : delta / (max + min);
+  let hue = max === r ? (g - b) / delta + (g < b ? 6 : 0) : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+  return [hue / 6, saturation, light];
+}
+
+function hslToRgb(h, s, l) {
+  h = ((h % 1) + 1) % 1;
+  if (!s) return [l * 255, l * 255, l * 255];
+  const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const channel = t => { t = ((t % 1) + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  return [channel(h + 1 / 3) * 255, channel(h) * 255, channel(h - 1 / 3) * 255];
+}
+
+function applyPixelAdjustment(label, transform) {
+  pushUndo();
+  const image = bx.getImageData(0, 0, width(), height()), data = image.data, mask = selectionMask();
+  for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+    if (!data[i + 3] || (mask && !mask[pixel])) continue;
+    const next = transform(data[i], data[i + 1], data[i + 2], data[i + 3], pixel);
+    data[i] = clampByte(next[0]); data[i + 1] = clampByte(next[1]); data[i + 2] = clampByte(next[2]);
+  }
+  bx.putImageData(image, 0, 0); setStatus(`${label} applied`);
+}
+
+function adjustmentTransform(kind, values) {
+  if (kind === 'brightness-contrast') {
+    const brightness = values[0] * 2.55, contrast = values[1] * 2.55;
+    const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+    return (r, g, b) => [factor * (r - 128) + 128 + brightness, factor * (g - 128) + 128 + brightness, factor * (b - 128) + 128 + brightness];
+  }
+  if (kind === 'levels') {
+    const [black, gamma, white] = values, map = value => Math.pow(Math.max(0, Math.min(1, (value - black) / Math.max(1, white - black))), 1 / gamma) * 255;
+    return (r, g, b) => [map(r), map(g), map(b)];
+  }
+  if (kind === 'curves') {
+    const [shadows, midtones, highlights] = values;
+    const map = value => { const t = value / 255; return value + 2.55 * (shadows * (1 - t) * (1 - t) + midtones * 4 * t * (1 - t) + highlights * t * t); };
+    return (r, g, b) => [map(r), map(g), map(b)];
+  }
+  if (kind === 'exposure') {
+    const [exposure, offset, gamma] = values, map = value => Math.pow(Math.max(0, value / 255 * Math.pow(2, exposure) + offset / 255), 1 / gamma) * 255;
+    return (r, g, b) => [map(r), map(g), map(b)];
+  }
+  if (kind === 'vibrance') return (r, g, b) => {
+    let [h, s, l] = rgbToHsl(r, g, b); const vibrance = values[0] / 100, saturation = values[1] / 100;
+    s = Math.max(0, Math.min(1, s + vibrance * (vibrance > 0 ? (1 - s) * (1 - s) : s) + saturation * (saturation > 0 ? 1 - s : s)));
+    return hslToRgb(h, s, l);
+  };
+  if (kind === 'hue-saturation') return (r, g, b) => {
+    let [h, s, l] = rgbToHsl(r, g, b); h += values[0] / 360;
+    s = Math.max(0, Math.min(1, s + values[1] / 100 * (values[1] > 0 ? 1 - s : s)));
+    l = Math.max(0, Math.min(1, l + values[2] / 100 * (values[2] > 0 ? 1 - l : l)));
+    return hslToRgb(h, s, l);
+  };
+  if (kind === 'color-balance') return (r, g, b) => [r + values[0] * 1.28, g + values[1] * 1.28, b + values[2] * 1.28];
+  if (kind === 'threshold') return (r, g, b) => { const value = r * .299 + g * .587 + b * .114 >= values[0] ? 255 : 0; return [value, value, value]; };
+  if (kind === 'posterize') return (r, g, b) => { const step = 255 / (values[0] - 1), map = value => Math.round(value / step) * step; return [map(r), map(g), map(b)]; };
+  return (r, g, b) => [r, g, b];
+}
+
+function openAdjustment(kind) {
+  const config = ADJUSTMENTS[kind]; if (!config) return;
+  activeAdjustment = kind; appRoot.querySelector('#adjustTitle').textContent = config.title;
+  const fields = appRoot.querySelector('#adjustFields'); fields.replaceChildren();
+  config.fields.forEach(([label, min, max, value, step], index) => {
+    const row = document.createElement('label');
+    const text = document.createElement('span'); text.textContent = label;
+    const input = document.createElement('input'); input.type = 'range'; input.min = min; input.max = max; input.value = value; input.step = step; input.dataset.adjustIndex = index;
+    const output = document.createElement('output'); output.className = 'paint-adjust-value'; output.value = value; output.textContent = value;
+    input.addEventListener('input', () => { output.value = input.value; output.textContent = input.value; });
+    row.append(text, input, output); fields.append(row);
+  });
+  showModal('adjustModal'); fields.querySelector('input')?.focus();
+}
+
+function autoLevels(equalize = false) {
+  const image = bx.getImageData(0, 0, width(), height()), data = image.data;
+  if (equalize) {
+    const histograms = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)]; let count = 0;
+    for (let i = 0; i < data.length; i += 4) if (data[i + 3]) { histograms[0][data[i]]++; histograms[1][data[i + 1]]++; histograms[2][data[i + 2]]++; count++; }
+    const maps = histograms.map(histogram => { const map = new Uint8Array(256); let sum = 0; for (let i = 0; i < 256; i++) { sum += histogram[i]; map[i] = count ? Math.round(sum / count * 255) : i; } return map; });
+    applyPixelAdjustment('Equalize', (r, g, b) => [maps[0][r], maps[1][g], maps[2][b]]); return;
+  }
+  const min = [255, 255, 255], max = [0, 0, 0];
+  for (let i = 0; i < data.length; i += 4) if (data[i + 3]) for (let channel = 0; channel < 3; channel++) { min[channel] = Math.min(min[channel], data[i + channel]); max[channel] = Math.max(max[channel], data[i + channel]); }
+  applyPixelAdjustment('Auto Levels', (r, g, b) => [r, g, b].map((value, channel) => (value - min[channel]) * 255 / Math.max(1, max[channel] - min[channel])));
+}
+
+appRoot.querySelector('#adjustForm').addEventListener('submit', event => {
+  event.preventDefault(); if (!activeAdjustment) return;
+  const values = [...appRoot.querySelectorAll('#adjustFields input')].map(input => Number(input.value));
+  const title = ADJUSTMENTS[activeAdjustment].title; hideModal('adjustModal'); applyPixelAdjustment(title, adjustmentTransform(activeAdjustment, values));
+});
 
 const filePick = appRoot.querySelector('#paintFilePicker');
 filePick.addEventListener('change', () => {
@@ -1660,7 +1913,7 @@ function beginContentAwareTransform() {
     targetWidth: width(), targetHeight: height(), offsetX: 0, offsetY: 0,
     sourceCanvas: compositeCanvas(),
   };
-  offsetToggle.disabled = true; mirrorToggle.disabled = true;
+  seamXButton.disabled = true; seamYButton.disabled = true; mirrorButtons.forEach(button => { button.disabled = true; });
   transformBox.hidden = false; stack.classList.add('content-transforming'); hideBrushCursor();
   updateContentTransformPreview();
 }
@@ -1670,7 +1923,7 @@ function finishContentAwareTransform(apply) {
   const targetWidth = contentTransform.targetWidth, targetHeight = contentTransform.targetHeight;
   cancelLiveContentPreview(true);
   contentTransform = null; transformBox.hidden = true; stack.classList.remove('content-transforming');
-  offsetToggle.disabled = false; mirrorToggle.disabled = false;
+  seamXButton.disabled = false; seamYButton.disabled = false; mirrorButtons.forEach(button => { button.disabled = false; });
   stack.style.transform = ''; updateStackSize();
   if (!apply) { setStatus('Content-aware scale cancelled'); return; }
   openContentAware(targetWidth, targetHeight);
@@ -1777,12 +2030,12 @@ appRoot.querySelector('#contentAwareForm').addEventListener('submit', event => {
   if ((targetWidth * targetHeight > 24000000 || estimate > 350000000) &&
       !confirm('This is a large seam-carving job and may take several minutes. Continue?')) return;
 
-  const originalSeam = seamModeApplied;
+  const originalSeam = { x: seamAppliedX, y: seamAppliedY };
   canonicaliseSeam();
   const compositePixels = compositeCanvas().getContext('2d').getImageData(0, 0, width(), height()).data;
   const layerPixels = layers.map(layer => layer.canvas.getContext('2d').getImageData(0, 0, width(), height()).data);
   const protectMask = appRoot.querySelector('#contentAwareProtect').checked ? selectionMask() : null;
-  if (originalSeam) reapplySeam();
+  if (originalSeam.x || originalSeam.y) reapplySeam();
 
   const token = ++contentToken;
   contentJob = { token, width: width(), height: height(), revision: documentRevision, layerIds: layers.map(layer => layer.id) };
@@ -1812,21 +2065,26 @@ appRoot.querySelector('#contentAwareForm').addEventListener('submit', event => {
 
 contentModal.addEventListener('click', event => { if (event.target.closest('[data-close]') && contentJob) stopContentAware(true); });
 
-offsetToggle.addEventListener('change', async () => {
-  const enabled = offsetToggle.checked;
-  status.textContent = `${enabled ? 'Sliding to the 50% seam view' : 'Sliding back to the original view'} — ${width()} × ${height()} px`;
-  if (!await animateSeamTransition(enabled)) return;
-  setStatus(enabled
-    ? 'Showing a non-destructive 50% offset for checking tile seams'
-    : 'Seam preview off; image returned to its original position');
-});
+function toggleSeamAxis(axis) {
+  const button = axis === 'x' ? seamXButton : seamYButton;
+  button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'));
+  updateOffsetPreview();
+  const axes = [seamXButton, seamYButton].filter(item => item.getAttribute('aria-pressed') === 'true').map(item => item === seamXButton ? 'X' : 'Y').join(' + ');
+  setStatus(axes ? `Checking seams with a 50% ${axes} shift` : 'Seam preview off; image returned to its original position');
+}
 
-mirrorToggle.addEventListener('change', () => {
-  setStatus(mirrorToggle.checked
-    ? 'Y-axis mirror painting on; new marks are reflected left to right'
-    : 'Y-axis mirror painting off');
+function resetSeamView() {
+  seamXButton.setAttribute('aria-pressed', 'false'); seamYButton.setAttribute('aria-pressed', 'false');
+  updateOffsetPreview(); setStatus('Seam preview off; image returned to its original position');
+}
+
+function setMirrorMode(mode) {
+  mirrorMode = mode;
+  mirrorButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.cmd === `mirror-${mode}`)));
+  const label = mode === 'none' ? 'off' : mode === 'both' ? 'on across both axes' : `on across the ${mode.toUpperCase()} axis`;
+  setStatus(`Mirror painting ${label}`);
   if (cursorPoint) updateBrushCursor(cursorPoint);
-});
+}
 
 sizeInput.addEventListener('input', () => { if (cursorPoint) updateBrushCursor(cursorPoint); });
 
@@ -1965,6 +2223,7 @@ function runCmd(cmd) {
     return;
   }
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before using another command'); return; }
+  if (cmd.startsWith('adjust-') && ADJUSTMENTS[cmd.slice(7)]) { openAdjustment(cmd.slice(7)); return; }
   switch (cmd) {
     case 'new': pushUndo(); resetLayers(640, 400, 'Background'); bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); reapplySeam(); fileName = 'untitled.png'; setStatus('New image'); break;
     case 'open': filePick.click(); break;
@@ -1975,11 +2234,31 @@ function runCmd(cmd) {
     case 'set-background': setAsBackground(); break;
     case 'undo': undo(); break;
     case 'redo': redo(); break;
+    case 'layer-new': newLayer(); break;
+    case 'layer-duplicate': duplicateLayer(); break;
+    case 'layer-rename': renameLayer(); break;
+    case 'layer-delete': deleteLayer(); break;
+    case 'layer-up': moveLayer(1); break;
+    case 'layer-down': moveLayer(-1); break;
+    case 'layer-merge-down': mergeLayerDown(); break;
+    case 'layer-merge-visible': mergeVisibleLayers(false); break;
+    case 'layer-flatten': mergeVisibleLayers(true); break;
     case 'image-size': openImageSize(); break;
     case 'content-aware-scale': beginContentAwareTransform(); break;
     case 'content-aware-size': openContentAware(); break;
     case 'canvas-size': openCanvasSize(); break;
     case 'crop': cropSelection(); break;
+    case 'seams-x': toggleSeamAxis('x'); break;
+    case 'seams-y': toggleSeamAxis('y'); break;
+    case 'seams-off': resetSeamView(); break;
+    case 'mirror-none': setMirrorMode('none'); break;
+    case 'mirror-x': setMirrorMode('x'); break;
+    case 'mirror-y': setMirrorMode('y'); break;
+    case 'mirror-both': setMirrorMode('both'); break;
+    case 'adjust-black-white': applyPixelAdjustment('Black & White', (r, g, b) => { const value = r * .299 + g * .587 + b * .114; return [value, value, value]; }); break;
+    case 'adjust-desaturate': applyPixelAdjustment('Desaturate', (r, g, b) => { const value = (Math.max(r, g, b) + Math.min(r, g, b)) / 2; return [value, value, value]; }); break;
+    case 'adjust-auto-levels': autoLevels(false); break;
+    case 'adjust-equalize': autoLevels(true); break;
     case 'remove-bg': openBgRemoval(); break;
     case 'gaussian-blur': showModal('gaussianBlurModal'); appRoot.querySelector('#gaussianRadius').focus(); break;
     case 'noise': showModal('noiseModal'); appRoot.querySelector('#noiseAmount').focus(); break;
