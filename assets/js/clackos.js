@@ -525,6 +525,19 @@ async function mountIntegratedApp(body, launchPage, title, onClose) {
       script.remove();
       delete window.ClackOSMountRoot;
     }
+
+    /* Integrated menus are real descendants of the window body, unlike menus
+     * inside an iframe. Let them paint beyond the body while they are open,
+     * then restore the body's normal scrolling as soon as they close. Watching
+     * class changes also covers nested menus that open on hover. */
+    const syncMenuOverflow = () => {
+      body.classList.toggle('integrated-menu-open', Boolean(root.querySelector('.rm.open')));
+    };
+    const menuObserver = new MutationObserver(syncMenuOverflow);
+    menuObserver.observe(root, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    onClose(() => menuObserver.disconnect());
+    syncMenuOverflow();
+
     bindWebLinkRouting(root);
   } catch (error) {
     console.error(error);
