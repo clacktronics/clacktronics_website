@@ -37,20 +37,10 @@
   .rm-sub-dd { left: 8px; top: 100%; min-width: 0; width: calc(100vw - 40px); max-width: 320px; }
 }
 
-/* ---- generated dithering dialog ---- */
-.dither-modal .paint-dialog { width: min(470px, 94vw); }
-.dither-modal .paint-dialog-body { max-height: min(74vh, 640px); overflow-y: auto; }
-.dither-fields { display: flex; flex-direction: column; gap: 10px; }
-.dither-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-.dither-row[hidden], .dither-modal .paint-check[hidden] { display: none; }
-.dither-label { flex: none; }
-.dither-control { display: flex; align-items: center; gap: 8px; justify-content: flex-end; min-width: 0; flex: 1; }
-.dither-control select { max-width: 260px; font-size: 11.5px; padding: 5px 8px; }
-.dither-control input[type="number"] { width: 92px; }
-.dither-control input[type="range"] { flex: 1; max-width: 170px; min-width: 90px; }
-.dither-readout { flex: none; min-width: 44px; text-align: right; font-size: 11px; color: var(--sage); font-variant-numeric: tabular-nums; }
-.dither-hint { margin: 0; }
-.dither-note:empty { display: none; }
+/* The dithering panel styles itself (see paint-dither.js) because it may be
+   built in the desktop document, which does not load app.css. All this side
+   needs is a hint that painting is on hold while a live preview is running. */
+.paint-stack.dither-busy { cursor: not-allowed; }
 </style>
 <script src="../../assets/js/file-manager.js"></script>
 <script src="paint-dither.js"></script>
@@ -565,7 +555,7 @@ function placeBrushCursor(cursor, point, diameter) {
 
 function updateBrushCursor(point) {
   cursorPoint = point;
-  if (!BRUSH_TOOLS.has(tool) || seamAnimating) { hideBrushCursor(); return; }
+  if (!BRUSH_TOOLS.has(tool) || seamAnimating || ditherPreviewing) { hideBrushCursor(); return; }
   const diameter = brushDiameter();
   placeBrushCursor(brushCursors[0], point, diameter);
   if (mirrorToggle.checked) placeBrushCursor(brushCursors[1], mirroredPoint(point), diameter);
@@ -745,6 +735,9 @@ stack.addEventListener('pointerdown', event => {
   if (event.button !== 0 && event.button !== 2) return;
   event.preventDefault();
   if (seamAnimating) { status.textContent = `Seam view is sliding into place — ${width()} × ${height()} px`; return; }
+  /* the dithering preview redraws the whole canvas, so a stroke made now
+     would be wiped out by the next change to a setting */
+  if (ditherPreviewing) { setStatus('Close the dithering panel before painting again'); return; }
   const right = event.button === 2;
   const point = evPos(event);
   drawColor = right ? bg : fg;
@@ -1223,13 +1216,19 @@ window.addEventListener('pagehide', () => { if (bgWorker) bgWorker.terminate(); 
 
 /* ---- dithering — the algorithms and their dialog live in paint-dither.js,
  *      which only needs a way in and out of this canvas ---- */
+let ditherPreviewing = false;
 if (window.ClackDither) {
   window.ClackDither.init({
     width, height,
     getContext: () => bx,
     getSelection: () => selection,
     getColours: () => ({ fg, bg, palette: COLORS }),
-    pushUndo, setStatus
+    pushUndo, setStatus,
+    setBusy: busy => {
+      ditherPreviewing = busy;
+      stack.classList.toggle('dither-busy', busy);
+      hideBrushCursor();
+    }
   });
 }
 
