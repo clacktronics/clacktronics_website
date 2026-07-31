@@ -34,7 +34,8 @@
 .rm-sub-dd .pixel-icon { margin-top: 1px; flex: none; }
 .rm-dd .mi-check { margin-left: auto; padding-left: 18px; color: var(--leaf-deep); }
 .rm-dd button[aria-pressed="true"] .mi-check::before { content: '✓'; }
-.rm > .rm-dd { max-height: calc(100vh - 42px); overflow-y: auto; overscroll-behavior: contain; }
+.rm > .rm-dd { overflow: visible; }
+.rm > .rm-dd.rm-scroll { overflow-y: auto; overscroll-behavior: contain; }
 /* on a narrow window there is no room to the right, so drop underneath */
 @media (max-width: 640px) {
   .rm-sub-dd { left: 8px; top: 100%; min-width: 0; width: calc(100vw - 40px); max-width: 320px; }
@@ -2477,15 +2478,38 @@ const closeSubMenus = () => subMenus.forEach(sub => {
   sub.classList.remove('open');
   sub.querySelector(':scope > .rm-sub-open').setAttribute('aria-expanded', 'false');
 });
-const closeMenus = () => { closeSubMenus(); rms.forEach(menu => menu.classList.remove('open')); };
+const closeMenus = () => { closeSubMenus(); rms.forEach(menu => {
+  menu.classList.remove('open');
+  const panel = menu.querySelector(':scope > .rm-dd');
+  panel.classList.remove('rm-scroll'); panel.style.maxHeight = '';
+}); };
 rms.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
-  event.stopPropagation(); const wasOpen = menu.classList.contains('open'); closeMenus(); if (!wasOpen) menu.classList.add('open');
+  event.stopPropagation(); const wasOpen = menu.classList.contains('open'); closeMenus();
+  if (!wasOpen) {
+    menu.classList.add('open');
+    const panel = menu.querySelector(':scope > .rm-dd'), rect = panel.getBoundingClientRect();
+    /* Scrolling a parent clips its fly-out submenus. Only leaf menus become
+       scroll containers; Image and Effects keep visible overflow for theirs. */
+    if (!menu.querySelector('.rm-sub') && rect.bottom > window.innerHeight - 8) {
+      panel.style.maxHeight = Math.max(120, window.innerHeight - rect.top - 8) + 'px';
+      panel.classList.add('rm-scroll');
+    }
+  }
 }));
 /* a submenu opens on hover like a desktop menu, and on click for touch */
 subMenus.forEach(sub => {
   const opener = sub.querySelector(':scope > .rm-sub-open');
   const openSub = () => {
     closeSubMenus(); sub.classList.add('open'); opener.setAttribute('aria-expanded', 'true');
+    const panel = sub.querySelector(':scope > .rm-sub-dd');
+    panel.style.top = '';
+    if (window.innerWidth > 640) {
+      panel.style.top = '-6px';
+      const rect = panel.getBoundingClientRect(), lowerEdge = window.innerHeight - 8;
+      if (rect.bottom > lowerEdge) panel.style.top = `${-6 - (rect.bottom - lowerEdge)}px`;
+      const shifted = panel.getBoundingClientRect();
+      if (shifted.top < 8) panel.style.top = `${parseFloat(panel.style.top) + 8 - shifted.top}px`;
+    }
   };
   opener.addEventListener('click', event => {
     event.stopPropagation();
