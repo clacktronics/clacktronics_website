@@ -922,7 +922,16 @@ windows, and desktop actions.
   colours; arbitrary bitmap dimensions up to 8192 × 8192; undo/redo; local or
   website background opening; PNG saving and uploading straight to the web host
   (File → Upload to website…); image-size resampling, anchored
-  canvas resizing, crop selection, flip, invert and clear. The zoom tool
+  canvas resizing, crop selection, flip, invert and clear. Documents retain a
+  reorderable layer stack with visibility, rename, duplicate, delete and merge
+  controls; rectangular, freehand-lasso and edge-snapping magnetic-lasso
+  selections can be copied or cut directly to a new layer from the canvas
+  right-click menu. Image → Content-Aware Scale opens a Photoshop-style
+  transform box: drag any edge or corner handle, hold Shift on a corner to
+  preserve the aspect ratio, then Apply (or press Enter). The exact-size dialog
+  remains available alongside it. Worker-based seam carving shrinks or enlarges
+  every layer along shared low-detail paths, optionally protecting the current
+  selection. The zoom tool
   supports 12.5%–800% views, and brush-based tools show their live footprint
   over the canvas. A non-destructive
   50% X/Y offset checkbox below Tool Size animates into a wrapped, fully

@@ -41,6 +41,46 @@
    built in the desktop document, which does not load app.css. All this side
    needs is a hint that painting is on hold while a live preview is running. */
 .paint-stack.dither-busy { cursor: not-allowed; }
+
+/* Layers and selection context menu live here because ClackPaint can also be
+   mounted inside the desktop's shadow root, where page-global styles do not. */
+.paint-layer-panel { width: 174px; min-width: 150px; display: flex; flex-direction: column; gap: 7px; }
+.paint-layer-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 5px; font-size: 11px; color: var(--sage); }
+.paint-layer-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 3px; }
+.paint-layer-actions button { all: unset; width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid var(--ink); border-radius: 5px; background: var(--paper); color: var(--control-text); cursor: pointer; }
+.paint-layer-actions button:hover { background: var(--paper-deep); }
+.paint-layer-list { flex: 1; min-height: 70px; overflow: auto; display: flex; flex-direction: column-reverse; gap: 4px; padding: 4px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); }
+.paint-layer-row { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 22px 38px minmax(0,1fr); align-items: center; gap: 5px; min-height: 42px; padding: 4px; border: 1px solid transparent; border-radius: 5px; color: var(--control-text); cursor: pointer; }
+.paint-layer-row:hover { background: var(--paper); }
+.paint-layer-row.active { border-color: var(--ink); background: var(--paper); }
+.paint-layer-eye { all: unset; display: grid; place-items: center; width: 20px; height: 28px; cursor: pointer; font-size: 13px; }
+.paint-layer-thumb { width: 36px; height: 30px; border: 1px solid var(--paper-line); background-color: #fff; background-image: linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%); background-size: 8px 8px; image-rendering: pixelated; }
+.paint-layer-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; }
+.paint-context-menu { position: fixed; z-index: 90; display: none; min-width: 180px; padding: 5px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); box-shadow: 4px 4px 0 color-mix(in srgb,var(--shadow) var(--shadow-alpha),transparent); }
+.paint-context-menu.open { display: block; }
+.paint-context-menu button { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 7px 9px; border-radius: 4px; color: var(--control-text); font-size: 11px; cursor: pointer; }
+.paint-context-menu button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
+.paint-context-menu button:disabled { opacity: .45; cursor: default; }
+.paint-context-menu .sep { margin: 4px 2px; }
+.paint-progress { height: 17px; overflow: hidden; border: 1px solid var(--ink); border-radius: 5px; background: var(--paper-deep); }
+.paint-progress > div { width: 0; height: 100%; background: var(--leaf-deep); }
+.paint-dialog-body [data-caview="form"] { display: flex; flex-direction: column; gap: 12px; }
+.paint-dialog-body [data-caview="form"] > label:not(.paint-check) { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.paint-transform-box { position: absolute; inset: -2px; z-index: 5; border: 1px dashed #fff; outline: 1px dashed #000; pointer-events: none; }
+.paint-transform-box[hidden] { display: none; }
+.paint-transform-handle { all: unset; position: absolute; width: 10px; height: 10px; box-sizing: border-box; border: 1px solid #000; background: #fff; box-shadow: 0 0 0 1px #fff; pointer-events: auto; touch-action: none; }
+.paint-transform-handle[data-handle="nw"] { left: -5px; top: -5px; cursor: nwse-resize; }
+.paint-transform-handle[data-handle="n"] { left: 50%; top: -5px; transform: translateX(-50%); cursor: ns-resize; }
+.paint-transform-handle[data-handle="ne"] { right: -5px; top: -5px; cursor: nesw-resize; }
+.paint-transform-handle[data-handle="e"] { right: -5px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+.paint-transform-handle[data-handle="se"] { right: -5px; bottom: -5px; cursor: nwse-resize; }
+.paint-transform-handle[data-handle="s"] { left: 50%; bottom: -5px; transform: translateX(-50%); cursor: ns-resize; }
+.paint-transform-handle[data-handle="sw"] { left: -5px; bottom: -5px; cursor: nesw-resize; }
+.paint-transform-handle[data-handle="w"] { left: -5px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+.paint-transform-toolbar { position: absolute; left: 50%; bottom: -44px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 5px 6px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--control-text); box-shadow: 3px 3px 0 color-mix(in srgb,var(--shadow) var(--shadow-alpha),transparent); pointer-events: auto; white-space: nowrap; }
+.paint-transform-size { min-width: 92px; font-size: 10px; text-align: center; font-variant-numeric: tabular-nums; }
+.paint-transform-toolbar .btn { min-height: 24px; padding: 3px 8px; font-size: 10px; }
+@media (max-width: 700px) { .paint-layer-panel { width: 132px; min-width: 112px; } .paint-layer-row { grid-template-columns: 20px 30px minmax(0,1fr); } .paint-layer-thumb { width: 28px; } }
 </style>
 <script src="../../assets/js/file-manager.js"></script>
 <script src="paint-dither.js" data-integrated-instance></script>
@@ -64,6 +104,8 @@
     </div></div>
     <div class="rm"><button>Image</button><div class="rm-dd">
       <button data-cmd="image-size"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Image Size…</button>
+      <button data-cmd="content-aware-scale"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Content-Aware Scale</button>
+      <button data-cmd="content-aware-size"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Content-Aware Size…</button>
       <button data-cmd="canvas-size"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Canvas Size…</button>
       <button data-cmd="crop" disabled><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Crop to Selection</button>
       <div class="sep"></div>
@@ -100,6 +142,8 @@
     <div class="paint-tools" role="toolbar" aria-label="Tools">
       <button class="paint-tool active" data-tool="pencil" title="Pencil" aria-label="Pencil"><span class="pixel-icon icon-only" data-icon="pencil" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="select" title="Rectangular selection" aria-label="Rectangular selection"><span class="pixel-icon icon-only" data-icon="lasso" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="lasso" title="Freehand lasso" aria-label="Freehand lasso"><span class="pixel-icon icon-only" data-icon="git-commit" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="magnetic-lasso" title="Magnetic lasso — trace near an edge" aria-label="Magnetic lasso"><span class="pixel-icon icon-only" data-icon="target" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="brush" title="Brush" aria-label="Brush"><span class="pixel-icon icon-only" data-icon="brush" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="eraser" title="Eraser" aria-label="Eraser"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="spray" title="Airbrush" aria-label="Airbrush"><span class="pixel-icon icon-only" data-icon="spray-can" aria-hidden="true"></span></button>
@@ -127,8 +171,34 @@
         <canvas class="overlay" width="640" height="400"></canvas>
         <span class="paint-brush-cursor" aria-hidden="true" hidden></span>
         <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
+        <div class="paint-transform-box" hidden aria-label="Content-aware scale handles">
+          <button type="button" class="paint-transform-handle" data-handle="nw" aria-label="Resize from top left"></button>
+          <button type="button" class="paint-transform-handle" data-handle="n" aria-label="Resize from top"></button>
+          <button type="button" class="paint-transform-handle" data-handle="ne" aria-label="Resize from top right"></button>
+          <button type="button" class="paint-transform-handle" data-handle="e" aria-label="Resize from right"></button>
+          <button type="button" class="paint-transform-handle" data-handle="se" aria-label="Resize from bottom right"></button>
+          <button type="button" class="paint-transform-handle" data-handle="s" aria-label="Resize from bottom"></button>
+          <button type="button" class="paint-transform-handle" data-handle="sw" aria-label="Resize from bottom left"></button>
+          <button type="button" class="paint-transform-handle" data-handle="w" aria-label="Resize from left"></button>
+          <div class="paint-transform-toolbar">
+            <span class="paint-transform-size">640 × 400 px</span>
+            <button type="button" class="btn ghost" data-transform-action="cancel">Cancel</button>
+            <button type="button" class="btn primary" data-transform-action="apply">Apply</button>
+          </div>
+        </div>
       </div>
     </div>
+    <aside class="paint-layer-panel" aria-label="Layers">
+      <header><span>Layers</span><span class="paint-layer-actions">
+        <button type="button" data-layer-action="add" title="New layer" aria-label="New layer">+</button>
+        <button type="button" data-layer-action="duplicate" title="Duplicate layer" aria-label="Duplicate layer">⧉</button>
+        <button type="button" data-layer-action="up" title="Move layer up" aria-label="Move layer up">↑</button>
+        <button type="button" data-layer-action="down" title="Move layer down" aria-label="Move layer down">↓</button>
+        <button type="button" data-layer-action="merge" title="Merge down" aria-label="Merge layer down">⇩</button>
+        <button type="button" data-layer-action="delete" title="Delete layer" aria-label="Delete layer">×</button>
+      </span></header>
+      <div class="paint-layer-list" role="listbox" aria-label="Image layers"></div>
+    </aside>
   </div>
 
   <div class="paint-bottom">
@@ -136,6 +206,15 @@
     <div class="paint-palette" role="listbox" aria-label="Colours"></div>
   </div>
   <p class="paint-status app-status">Ready — 640 × 400 px</p>
+</div>
+
+<div class="paint-context-menu" role="menu" aria-label="Canvas actions">
+  <button type="button" data-context-action="cut-layer">Cut Selection to New Layer</button>
+  <button type="button" data-context-action="copy-layer">Copy Selection to New Layer</button>
+  <div class="sep"></div>
+  <button type="button" data-context-action="new-layer">New Layer</button>
+  <button type="button" data-context-action="duplicate-layer">Duplicate Layer</button>
+  <button type="button" data-context-action="merge-layer">Merge Down</button>
 </div>
 
 <input id="paintFilePicker" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,image/png,image/jpeg,image/gif,image/webp,image/bmp" hidden>
@@ -149,6 +228,28 @@
       <label class="paint-check"><input id="keepAspect" type="checkbox" checked> Preserve aspect ratio</label>
       <p class="app-status">Resamples the image to the new pixel dimensions.</p>
       <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="imageSizeModal">Cancel</button><button class="btn primary">Resize</button></div>
+    </div>
+  </form>
+</div>
+
+<div class="paint-modal" id="contentAwareModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="contentAwareTitle">
+  <form class="paint-modal-box paint-dialog" id="contentAwareForm">
+    <header><span id="contentAwareTitle">Content-Aware Scale</span><button type="button" data-close="contentAwareModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <div data-caview="form">
+        <label>Width <span><input id="contentAwareWidth" type="number" min="1" max="8192" required> px</span></label>
+        <label>Height <span><input id="contentAwareHeight" type="number" min="1" max="8192" required> px</span></label>
+        <label class="paint-check"><input id="contentAwareProtect" type="checkbox" checked> Protect current selection</label>
+        <p class="app-status">Enter an exact size, or use Image → Content-Aware Scale to drag the handles directly. Seam carving removes or adds low-detail paths.</p>
+      </div>
+      <div data-caview="progress" hidden>
+        <div class="paint-progress" role="progressbar" aria-label="Content-aware resize progress"><div></div></div>
+        <p class="paint-bg-detail">Preparing image…</p>
+      </div>
+      <div class="paint-dialog-actions">
+        <button type="button" class="btn ghost" id="contentAwareCancel" data-close="contentAwareModal">Cancel</button>
+        <button class="btn primary" id="contentAwareStart">Apply</button>
+      </div>
     </div>
   </form>
 </div>
@@ -241,13 +342,15 @@
 (() => {
 const appRoot = window.ClackOSMountRoot || document.currentScript?.getRootNode() || document;
 const appUrl = appRoot === document ? location.href : appRoot.host.dataset.sourceUrl;
-const base = appRoot.querySelector('canvas.base');
+let base = appRoot.querySelector('canvas.base');
 const seamAnimation = appRoot.querySelector('canvas.seam-animation');
 const overlay = appRoot.querySelector('canvas.overlay');
 const stack = appRoot.querySelector('.paint-stack');
 const canvasWrap = appRoot.querySelector('.paint-canvas-wrap');
 const brushCursors = [...appRoot.querySelectorAll('.paint-brush-cursor')];
-const bx = base.getContext('2d', { willReadFrequently: true });
+const transformBox = appRoot.querySelector('.paint-transform-box');
+const transformSize = appRoot.querySelector('.paint-transform-size');
+let bx = base.getContext('2d', { willReadFrequently: true });
 const ax = seamAnimation.getContext('2d');
 const ox = overlay.getContext('2d');
 const status = appRoot.querySelector('.paint-status');
@@ -255,6 +358,8 @@ const sizeInput = appRoot.querySelector('.paint-size input');
 const offsetToggle = appRoot.querySelector('#offsetPreview');
 const mirrorToggle = appRoot.querySelector('#mirrorPaint');
 const cropButton = appRoot.querySelector('[data-cmd="crop"]');
+const layerList = appRoot.querySelector('.paint-layer-list');
+const contextMenu = appRoot.querySelector('.paint-context-menu');
 const MAX_DIMENSION = 8192;
 const CUSTOM_BG_KEY = 'clackos-custom-background';
 const CUSTOM_BG_NAME = 'Custom paint tile';
@@ -269,20 +374,170 @@ const COLORS = [
 ];
 let fg = '#000000', bg = '#FFFFFF', tool = 'pencil';
 let ditherApi = null;
+let ditherPreviewing = false;
 let fileName = 'untitled.png';
 let selection = null;
 let cloneSource = null, cloneOffset = null, strokeBuffer = null, mirrorStrokeBefore = null;
 let seamModeApplied = false;
 let seamAnimating = false, seamAnimationToken = 0;
 let zoom = 1, cursorPoint = null;
+let contentTransform = null;
 const ZOOM_LEVELS = [0.125, 0.25, 0.5, 1, 2, 4, 8];
 const undoStack = [], redoStack = [];
 const MAXUNDO = 25;
 const MAX_UNDO_BYTES = 96 * 1024 * 1024;
+let documentRevision = 0;
+let layerCounter = 1;
+let layers = [{ id: layerCounter++, name: 'Background', visible: true, canvas: base }];
+let activeLayer = layers[0];
+base.classList.add('paint-layer');
+
+function makeLayerCanvas(w = width(), h = height()) {
+  const canvas = document.createElement('canvas');
+  canvas.className = 'base paint-layer';
+  canvas.width = w; canvas.height = h;
+  return canvas;
+}
+
+function syncLayerCanvases() {
+  layers.forEach(layer => {
+    layer.canvas.style.zIndex = '1';
+    layer.canvas.hidden = !layer.visible || seamAnimating;
+    stack.insertBefore(layer.canvas, seamAnimation);
+  });
+  seamAnimation.style.zIndex = '2';
+  overlay.style.zIndex = '3';
+}
+
+function activateLayer(layer) {
+  if (!layer || !layers.includes(layer)) return;
+  if (ditherPreviewing && layer !== activeLayer) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+  if (contentTransform && layer !== activeLayer) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  activeLayer = layer;
+  base = layer.canvas;
+  bx = base.getContext('2d', { willReadFrequently: true });
+  renderLayerPanel();
+}
+
+function renderLayerPanel() {
+  layerList.replaceChildren();
+  layers.forEach(layer => {
+    const row = document.createElement('div');
+    row.className = 'paint-layer-row' + (layer === activeLayer ? ' active' : '');
+    row.setAttribute('role', 'option');
+    row.setAttribute('aria-selected', String(layer === activeLayer));
+    row.draggable = true;
+    row.dataset.layerId = layer.id;
+    const eye = document.createElement('button');
+    eye.type = 'button'; eye.className = 'paint-layer-eye'; eye.textContent = layer.visible ? '●' : '○';
+    eye.title = layer.visible ? 'Hide layer' : 'Show layer'; eye.setAttribute('aria-label', eye.title);
+    eye.addEventListener('click', event => {
+      event.stopPropagation();
+      if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+      if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+      pushUndo(); layer.visible = !layer.visible; syncLayerCanvases(); renderLayerPanel(); setStatus(layer.visible ? `Shown ${layer.name}` : `Hidden ${layer.name}`);
+    });
+    const thumb = document.createElement('canvas');
+    thumb.className = 'paint-layer-thumb'; thumb.width = 72; thumb.height = 60;
+    const scale = Math.min(thumb.width / width(), thumb.height / height());
+    const tw = width() * scale, th = height() * scale;
+    thumb.getContext('2d').drawImage(layer.canvas, (thumb.width - tw) / 2, (thumb.height - th) / 2, tw, th);
+    const name = document.createElement('span'); name.className = 'paint-layer-name'; name.textContent = layer.name;
+    row.append(eye, thumb, name);
+    row.addEventListener('click', () => { activateLayer(layer); setStatus(`${layer.name} selected`); });
+    row.addEventListener('dblclick', () => {
+      if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+      if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+      const next = prompt('Layer name', layer.name);
+      if (next?.trim() && next.trim() !== layer.name) { pushUndo(); layer.name = next.trim(); renderLayerPanel(); setStatus('Layer renamed'); }
+    });
+    row.addEventListener('dragstart', event => event.dataTransfer?.setData('text/plain', String(layer.id)));
+    row.addEventListener('dragover', event => event.preventDefault());
+    row.addEventListener('drop', event => {
+      event.preventDefault();
+      if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+      if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+      const dragged = layers.find(item => String(item.id) === event.dataTransfer?.getData('text/plain'));
+      if (!dragged || dragged === layer) return;
+      pushUndo();
+      const from = layers.indexOf(dragged), to = layers.indexOf(layer);
+      layers.splice(from, 1); layers.splice(to, 0, dragged);
+      syncLayerCanvases(); renderLayerPanel(); setStatus('Layer order changed');
+    });
+    layerList.appendChild(row);
+  });
+}
+
+function addLayer(name = `Layer ${layers.length + 1}`, pixels = null, index = layers.indexOf(activeLayer) + 1) {
+  const canvas = makeLayerCanvas();
+  if (pixels) canvas.getContext('2d').putImageData(pixels, 0, 0);
+  const layer = { id: layerCounter++, name, visible: true, canvas };
+  layers.splice(Math.max(0, Math.min(layers.length, index)), 0, layer);
+  syncLayerCanvases(); activateLayer(layer);
+  return layer;
+}
+
+function newLayer() {
+  if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  pushUndo(); addLayer(); clearSelection(); setStatus('New layer added');
+}
+
+function duplicateLayer() {
+  if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  pushUndo();
+  const pixels = bx.getImageData(0, 0, width(), height());
+  addLayer(`${activeLayer.name} copy`, pixels); clearSelection(); setStatus('Layer duplicated');
+}
+
+function deleteLayer() {
+  if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  if (layers.length === 1) { setStatus('The document must keep at least one layer'); return; }
+  pushUndo();
+  const index = layers.indexOf(activeLayer);
+  activeLayer.canvas.remove(); layers.splice(index, 1);
+  activateLayer(layers[Math.max(0, index - 1)]); syncLayerCanvases(); clearSelection(); setStatus('Layer deleted');
+}
+
+function mergeLayerDown() {
+  if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  const index = layers.indexOf(activeLayer);
+  if (index < 1) { setStatus('There is no layer below to merge into'); return; }
+  pushUndo(); canonicaliseSeam();
+  const lower = layers[index - 1];
+  lower.canvas.getContext('2d').drawImage(activeLayer.canvas, 0, 0);
+  lower.name = activeLayer.name;
+  activeLayer.canvas.remove(); layers.splice(index, 1);
+  activateLayer(lower); syncLayerCanvases(); clearSelection(); reapplySeam(); setStatus('Layer merged down');
+}
+
+function moveLayer(direction) {
+  if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  const index = layers.indexOf(activeLayer), next = index + direction;
+  if (next < 0 || next >= layers.length) return;
+  pushUndo(); [layers[index], layers[next]] = [layers[next], layers[index]];
+  syncLayerCanvases(); renderLayerPanel(); setStatus(direction > 0 ? 'Layer moved up' : 'Layer moved down');
+}
+
+appRoot.querySelectorAll('[data-layer-action]').forEach(button => button.addEventListener('click', () => {
+  const action = button.dataset.layerAction;
+  if (action === 'add') newLayer();
+  else if (action === 'duplicate') duplicateLayer();
+  else if (action === 'delete') deleteLayer();
+  else if (action === 'merge') mergeLayerDown();
+  else if (action === 'up') moveLayer(1);
+  else if (action === 'down') moveLayer(-1);
+}));
 
 const setStatus = message => {
   if (offsetToggle.checked && !seamAnimating) updateOffsetPreview();
   status.textContent = `${message} — ${width()} × ${height()} px`;
+  cancelAnimationFrame(setStatus.layerFrame || 0);
+  setStatus.layerFrame = requestAnimationFrame(renderLayerPanel);
 };
 const fgEl = appRoot.querySelector('.paint-current .fg');
 const bgEl = appRoot.querySelector('.paint-current .bg');
@@ -300,8 +555,10 @@ COLORS.forEach(c => {
 showColors();
 
 function updateStackSize() {
-  stack.style.width = width() * zoom + 'px';
-  stack.style.height = height() * zoom + 'px';
+  const displayWidth = contentTransform?.targetWidth || width();
+  const displayHeight = contentTransform?.targetHeight || height();
+  stack.style.width = displayWidth * zoom + 'px';
+  stack.style.height = displayHeight * zoom + 'px';
 }
 
 function setZoom(nextZoom, focusPoint, clientX, clientY) {
@@ -331,7 +588,6 @@ function stepZoom(direction, point, clientX, clientY) {
 
 function updateOffsetPreview() {
   const enabled = offsetToggle.checked;
-  base.hidden = false;
   overlay.hidden = false;
   stack.classList.toggle('checking-seams', enabled);
   if (enabled === seamModeApplied) return;
@@ -351,7 +607,7 @@ function drawWrapped(context, source, dx, dy) {
 
 function animateSeamTransition(enabled) {
   const token = ++seamAnimationToken;
-  const source = copyCanvas();
+  const source = compositeCanvas();
   const targetX = enabled ? Math.floor(width() / 2) : -Math.floor(width() / 2);
   const targetY = enabled ? Math.floor(height() / 2) : -Math.floor(height() / 2);
   const duration = 460;
@@ -359,7 +615,7 @@ function animateSeamTransition(enabled) {
   seamAnimating = true;
   hideBrushCursor();
   seamAnimation.hidden = false;
-  base.style.visibility = 'hidden';
+  layers.forEach(layer => { layer.canvas.style.visibility = 'hidden'; });
   overlay.style.visibility = 'hidden';
 
   return new Promise(resolve => {
@@ -372,7 +628,7 @@ function animateSeamTransition(enabled) {
       if (token !== seamAnimationToken) { resolve(false); return; }
       drawWrapped(ax, source, targetX, targetY);
       seamAnimation.hidden = true;
-      base.style.visibility = '';
+      layers.forEach(layer => { layer.canvas.style.visibility = ''; });
       overlay.style.visibility = '';
       seamAnimating = false;
       updateOffsetPreview();
@@ -393,8 +649,12 @@ function animateSeamTransition(enabled) {
 }
 
 function shiftBase(dx, dy) {
-  const copy = copyCanvas();
-  drawWrapped(bx, copy, dx, dy);
+  layers.forEach(layer => {
+    const context = layer.canvas.getContext('2d');
+    const copy = document.createElement('canvas');
+    copy.width = width(); copy.height = height(); copy.getContext('2d').drawImage(layer.canvas, 0, 0);
+    drawWrapped(context, copy, dx, dy);
+  });
 }
 
 function canonicaliseSeam() {
@@ -413,6 +673,39 @@ function clearSelection() {
   ox.clearRect(0, 0, overlay.width, overlay.height);
 }
 
+function selectionBounds(points) {
+  const xs = points.map(point => point.x), ys = points.map(point => point.y);
+  const x = Math.max(0, Math.floor(Math.min(...xs))), y = Math.max(0, Math.floor(Math.min(...ys)));
+  const right = Math.min(width(), Math.ceil(Math.max(...xs)) + 1), bottom = Math.min(height(), Math.ceil(Math.max(...ys)) + 1);
+  return { x, y, w: Math.max(0, right - x), h: Math.max(0, bottom - y) };
+}
+
+function polygonSelection(points, type = 'lasso') {
+  if (!points || points.length < 3) return null;
+  return { type, points: points.map(point => ({ x: point.x, y: point.y })), ...selectionBounds(points) };
+}
+
+function traceSelectionPath(context, selected = selection, offsetX = 0, offsetY = 0) {
+  context.beginPath();
+  if (selected?.points?.length) {
+    context.moveTo(selected.points[0].x - offsetX, selected.points[0].y - offsetY);
+    for (let i = 1; i < selected.points.length; i++) context.lineTo(selected.points[i].x - offsetX, selected.points[i].y - offsetY);
+    context.closePath();
+  } else if (selected) {
+    context.rect(selected.x - offsetX, selected.y - offsetY, selected.w, selected.h);
+  }
+}
+
+function selectionMask(selected = selection) {
+  if (!selected) return null;
+  const maskCanvas = document.createElement('canvas'); maskCanvas.width = width(); maskCanvas.height = height();
+  const context = maskCanvas.getContext('2d'); context.fillStyle = '#fff'; traceSelectionPath(context, selected); context.fill();
+  const alpha = context.getImageData(0, 0, width(), height()).data;
+  const mask = new Uint8Array(width() * height());
+  for (let i = 0; i < mask.length; i++) mask[i] = alpha[i * 4 + 3] > 0 ? 1 : 0;
+  return mask;
+}
+
 function renderSelection(rect = selection) {
   ox.clearRect(0, 0, overlay.width, overlay.height);
   if (!rect || rect.w < 1 || rect.h < 1) return;
@@ -420,23 +713,39 @@ function renderSelection(rect = selection) {
   ox.setLineDash([4, 3]);
   ox.lineWidth = 1;
   ox.strokeStyle = '#ffffff';
-  ox.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w, rect.h);
+  traceSelectionPath(ox, rect); ox.stroke();
   ox.lineDashOffset = 3;
   ox.strokeStyle = '#000000';
-  ox.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w, rect.h);
+  traceSelectionPath(ox, rect); ox.stroke();
   ox.restore();
 }
 
 function resizeSurfaces(w, h) {
   w = Math.max(1, Math.min(MAX_DIMENSION, Math.round(w)));
   h = Math.max(1, Math.min(MAX_DIMENSION, Math.round(h)));
-  base.width = overlay.width = w;
-  base.height = overlay.height = h;
+  layers.forEach(layer => { layer.canvas.width = w; layer.canvas.height = h; });
+  overlay.width = w; overlay.height = h;
   seamAnimation.width = w; seamAnimation.height = h;
   seamModeApplied = false;
   updateStackSize();
   cloneSource = null; cloneOffset = null; strokeBuffer = null;
   clearSelection();
+}
+
+function resetLayers(w, h, name = 'Background') {
+  layers.forEach(layer => layer.canvas.remove());
+  const canvas = makeLayerCanvas(w, h);
+  layers = [{ id: layerCounter++, name, visible: true, canvas }];
+  activeLayer = layers[0]; base = canvas; bx = canvas.getContext('2d', { willReadFrequently: true });
+  overlay.width = seamAnimation.width = w; overlay.height = seamAnimation.height = h;
+  seamModeApplied = false; syncLayerCanvases(); renderLayerPanel(); updateStackSize(); clearSelection();
+}
+
+function layerCopies() {
+  return layers.map(layer => {
+    const copy = document.createElement('canvas'); copy.width = width(); copy.height = height();
+    copy.getContext('2d').drawImage(layer.canvas, 0, 0); return copy;
+  });
 }
 
 function copyCanvas() {
@@ -446,8 +755,16 @@ function copyCanvas() {
   return copy;
 }
 
+function compositeCanvas() {
+  const copy = document.createElement('canvas');
+  copy.width = width(); copy.height = height();
+  const context = copy.getContext('2d');
+  layers.forEach(layer => { if (layer.visible) context.drawImage(layer.canvas, 0, 0); });
+  return copy;
+}
+
 function canonicalCanvas() {
-  const copy = copyCanvas();
+  const copy = compositeCanvas();
   if (!seamModeApplied) return copy;
   const canonical = document.createElement('canvas');
   canonical.width = width(); canonical.height = height();
@@ -459,22 +776,47 @@ function canonicalCanvas() {
   return canonical;
 }
 
-function snapshot() {
-  return { width: width(), height: height(), seam: seamModeApplied, pixels: bx.getImageData(0, 0, width(), height()) };
+function canonicalActiveCanvas() {
+  const copy = copyCanvas();
+  if (!seamModeApplied) return copy;
+  const canonical = document.createElement('canvas'); canonical.width = width(); canonical.height = height();
+  const context = canonical.getContext('2d');
+  const dx = ((-Math.floor(width() / 2) % width()) + width()) % width();
+  const dy = ((-Math.floor(height() / 2) % height()) + height()) % height();
+  for (const x of [dx, dx - width()]) for (const y of [dy, dy - height()]) context.drawImage(copy, x, y);
+  return canonical;
 }
 
-const snapshotBytes = () => width() * height() * 4;
-const stackBytes = items => items.reduce((total, item) => total + item.pixels.data.byteLength, 0);
+function snapshot() {
+  return {
+    width: width(), height: height(), seam: seamModeApplied,
+    active: layers.indexOf(activeLayer),
+    layers: layers.map(layer => ({ name: layer.name, visible: layer.visible, pixels: layer.canvas.getContext('2d').getImageData(0, 0, width(), height()) }))
+  };
+}
+
+const snapshotBytes = () => width() * height() * 4 * layers.length;
+const stackBytes = items => items.reduce((total, item) => total + item.layers.reduce((sum, layer) => sum + layer.pixels.data.byteLength, 0), 0);
 
 function restore(snap) {
-  resizeSurfaces(snap.width, snap.height);
-  bx.putImageData(snap.pixels, 0, 0);
+  layers.forEach(layer => layer.canvas.remove());
+  layers = snap.layers.map(saved => {
+    const canvas = makeLayerCanvas(snap.width, snap.height);
+    canvas.getContext('2d').putImageData(saved.pixels, 0, 0);
+    return { id: layerCounter++, name: saved.name, visible: saved.visible, canvas };
+  });
+  activeLayer = layers[Math.max(0, Math.min(layers.length - 1, snap.active || 0))];
+  base = activeLayer.canvas; bx = base.getContext('2d', { willReadFrequently: true });
+  overlay.width = seamAnimation.width = snap.width;
+  overlay.height = seamAnimation.height = snap.height;
+  syncLayerCanvases(); renderLayerPanel(); updateStackSize(); clearSelection();
   seamModeApplied = !!snap.seam;
   updateOffsetPreview();
   setStatus('Restored image');
 }
 
 function pushUndo() {
+  documentRevision++;
   if (snapshotBytes() > MAX_UNDO_BYTES) {
     undoStack.length = 0; redoStack.length = 0;
     return false;
@@ -487,6 +829,7 @@ function pushUndo() {
 
 function undo() {
   if (!undoStack.length) return;
+  documentRevision++;
   if (snapshotBytes() <= MAX_UNDO_BYTES) redoStack.push(snapshot());
   else redoStack.length = 0;
   restore(undoStack.pop());
@@ -494,6 +837,7 @@ function undo() {
 
 function redo() {
   if (!redoStack.length) return;
+  documentRevision++;
   undoStack.push(snapshot());
   restore(redoStack.pop());
 }
@@ -501,6 +845,8 @@ function redo() {
 bx.fillStyle = '#FFFFFF';
 bx.fillRect(0, 0, width(), height());
 updateStackSize();
+syncLayerCanvases();
+renderLayerPanel();
 
 appRoot.querySelectorAll('.paint-tool').forEach(button => {
   button.addEventListener('click', () => {
@@ -509,8 +855,10 @@ appRoot.querySelectorAll('.paint-tool').forEach(button => {
     stack.classList.toggle('zoom-tool', tool === 'zoom');
     if (cursorPoint) updateBrushCursor(cursorPoint); else hideBrushCursor();
     if (tool === 'clone' && cloneSource) drawCloneSource();
-    else if (tool !== 'select' && selection) renderSelection();
-    if (tool === 'select') setStatus('Drag to select an area, then use Image → Crop to Selection');
+    else if (!['select', 'lasso', 'magnetic-lasso'].includes(tool) && selection) renderSelection();
+    if (tool === 'select') setStatus('Drag to select an area; right-click it for layer actions');
+    else if (tool === 'lasso') setStatus('Drag around an area to make a freehand selection');
+    else if (tool === 'magnetic-lasso') setStatus('Trace near an object edge; the lasso will snap to nearby contrast');
     else if (tool === 'clone') setStatus(cloneSource ? 'Clone source ready; drag to paint from it' : 'Alt-click the image to choose a clone source');
     else if (tool === 'blur') setStatus('Blur brush selected; Tool Size controls the soft brush radius');
     else if (tool === 'zoom') setStatus(`Zoom tool selected at ${Math.round(zoom * 100)}%; click to zoom in, right-click or Shift-click to zoom out`);
@@ -528,8 +876,35 @@ const evPos = event => {
 const rectFrom = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) });
 
 let drawing = false, start = null, last = null, drawColor = '#000000', sprayTimer = 0;
+let lassoPoints = [], magnetPixels = null;
 const toolSize = () => +sizeInput.value;
 const BRUSH_TOOLS = new Set(['pencil', 'brush', 'eraser', 'spray', 'clone', 'blur']);
+const SELECTION_TOOLS = new Set(['select', 'lasso', 'magnetic-lasso']);
+
+function buildMagnetPixels() {
+  return compositeCanvas().getContext('2d').getImageData(0, 0, width(), height()).data;
+}
+
+function snapMagnetPoint(point) {
+  if (!magnetPixels) return point;
+  const radius = Math.max(3, Math.min(12, Math.round(toolSize() / 2 + 4)));
+  let best = point, bestScore = -Infinity;
+  const clampPoint = (value, size) => Math.max(0, Math.min(size - 1, value));
+  const lumaAt = (x, y) => {
+    const index = (clampPoint(y, height()) * width() + clampPoint(x, width())) * 4;
+    return magnetPixels[index] * .299 + magnetPixels[index + 1] * .587 + magnetPixels[index + 2] * .114;
+  };
+  const edgeAt = (x, y) => Math.abs(lumaAt(x + 1, y) - lumaAt(x - 1, y)) + Math.abs(lumaAt(x, y + 1) - lumaAt(x, y - 1));
+  for (let y = Math.max(0, point.y - radius); y <= Math.min(height() - 1, point.y + radius); y++) {
+    for (let x = Math.max(0, point.x - radius); x <= Math.min(width() - 1, point.x + radius); x++) {
+      const distance = Math.hypot(x - point.x, y - point.y);
+      if (distance > radius) continue;
+      const score = edgeAt(x, y) - distance * 7;
+      if (score > bestScore) { bestScore = score; best = { x, y }; }
+    }
+  }
+  return best;
+}
 
 function brushDiameter() {
   if (tool === 'pencil') return 1;
@@ -733,10 +1108,57 @@ function pickColor(point, right) {
   showColors(); setStatus(`Picked ${hex}`);
 }
 
-stack.addEventListener('contextmenu', event => event.preventDefault());
+function selectionToLayer(cut) {
+  if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+  if (!selection) { setStatus('Make a selection first'); return; }
+  const mask = selectionMask();
+  pushUndo();
+  const source = bx.getImageData(0, 0, width(), height());
+  const lifted = new ImageData(width(), height());
+  for (let i = 0; i < mask.length; i++) {
+    if (!mask[i]) continue;
+    const pixel = i * 4;
+    lifted.data[pixel] = source.data[pixel]; lifted.data[pixel + 1] = source.data[pixel + 1];
+    lifted.data[pixel + 2] = source.data[pixel + 2]; lifted.data[pixel + 3] = source.data[pixel + 3];
+    if (cut) source.data[pixel] = source.data[pixel + 1] = source.data[pixel + 2] = source.data[pixel + 3] = 0;
+  }
+  const sourceName = activeLayer.name;
+  if (cut) bx.putImageData(source, 0, 0);
+  addLayer(`${sourceName} ${cut ? 'cut' : 'copy'}`, lifted);
+  clearSelection(); renderLayerPanel(); setStatus(cut ? 'Selection cut to a new layer' : 'Selection copied to a new layer');
+}
+
+function closeContextMenu() { contextMenu.classList.remove('open'); }
+function openContextMenu(event) {
+  event.preventDefault();
+  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before using canvas actions'; return; }
+  contextMenu.querySelector('[data-context-action="cut-layer"]').disabled = !selection;
+  contextMenu.querySelector('[data-context-action="copy-layer"]').disabled = !selection;
+  contextMenu.querySelector('[data-context-action="merge-layer"]').disabled = layers.indexOf(activeLayer) < 1;
+  contextMenu.classList.add('open');
+  const box = contextMenu.getBoundingClientRect();
+  contextMenu.style.left = Math.max(4, Math.min(innerWidth - box.width - 4, event.clientX)) + 'px';
+  contextMenu.style.top = Math.max(4, Math.min(innerHeight - box.height - 4, event.clientY)) + 'px';
+}
+
+stack.addEventListener('contextmenu', openContextMenu);
+contextMenu.addEventListener('click', event => {
+  const action = event.target.closest('[data-context-action]')?.dataset.contextAction;
+  if (!action) return;
+  closeContextMenu();
+  if (action === 'cut-layer') selectionToLayer(true);
+  else if (action === 'copy-layer') selectionToLayer(false);
+  else if (action === 'new-layer') newLayer();
+  else if (action === 'duplicate-layer') duplicateLayer();
+  else if (action === 'merge-layer') mergeLayerDown();
+});
+appRoot.addEventListener('pointerdown', event => { if (!event.target.closest?.('.paint-context-menu')) closeContextMenu(); });
+
 stack.addEventListener('pointerdown', event => {
   if (event.button !== 0 && event.button !== 2) return;
   event.preventDefault();
+  if (event.button === 2) return;
+  if (contentTransform) { status.textContent = 'Drag a transform handle, or Apply/Cancel the content-aware scale'; return; }
   if (seamAnimating) { status.textContent = `Seam view is sliding into place — ${width()} × ${height()} px`; return; }
   /* the dithering preview redraws the whole canvas, so a stroke made now
      would be wiped out by the next change to a setting */
@@ -755,9 +1177,10 @@ stack.addEventListener('pointerdown', event => {
     return;
   }
   if (tool === 'clone' && !cloneSource) { setStatus('Alt-click the image first to choose a clone source'); return; }
-  if (tool !== 'select') {
+  if (!SELECTION_TOOLS.has(tool)) {
     const undoSaved = pushUndo();
-    mirrorStrokeBefore = mirrorToggle.checked && undoSaved ? undoStack[undoStack.length - 1].pixels : null;
+    const saved = undoSaved ? undoStack[undoStack.length - 1] : null;
+    mirrorStrokeBefore = mirrorToggle.checked && saved ? saved.layers[saved.active].pixels : null;
   }
   if (tool === 'fill') {
     clearSelection(); floodFill(point, drawColor);
@@ -767,7 +1190,12 @@ stack.addEventListener('pointerdown', event => {
   }
   drawing = true; start = last = point;
   try { stack.setPointerCapture(event.pointerId); } catch {}
-  if (tool === 'select') { selection = null; cropButton.disabled = true; renderSelection(rectFrom(point, point)); }
+  if (SELECTION_TOOLS.has(tool)) {
+    selection = null; cropButton.disabled = true;
+    lassoPoints = [point]; magnetPixels = tool === 'magnetic-lasso' ? buildMagnetPixels() : null;
+    if (tool === 'magnetic-lasso') lassoPoints[0] = snapMagnetPoint(point);
+    renderSelection(tool === 'select' ? rectFrom(point, point) : null);
+  }
   else {
     clearSelection();
     if (tool === 'pencil') strokeSeg(point, point, drawColor, 1);
@@ -788,6 +1216,13 @@ stack.addEventListener('pointermove', event => {
   updateBrushCursor(point);
   if (!drawing) return;
   if (tool === 'select') renderSelection(rectFrom(start, point));
+  else if (tool === 'lasso' || tool === 'magnetic-lasso') {
+    const next = tool === 'magnetic-lasso' ? snapMagnetPoint(point) : point;
+    const previous = lassoPoints[lassoPoints.length - 1];
+    if (!previous || Math.hypot(next.x - previous.x, next.y - previous.y) >= 2) lassoPoints.push(next);
+    const preview = lassoPoints.length > 1 ? { type: tool, points: lassoPoints, ...selectionBounds(lassoPoints) } : null;
+    renderSelection(preview);
+  }
   else if (tool === 'pencil') strokeSeg(last, point, drawColor, 1);
   else if (tool === 'brush') strokeSeg(last, point, drawColor, toolSize());
   else if (tool === 'eraser') strokeSeg(last, point, bg, toolSize() * 3);
@@ -803,12 +1238,19 @@ function endDraw(event) {
   if (!drawing) return;
   drawing = false; clearInterval(sprayTimer);
   const point = evPos(event);
-  if (tool === 'select') {
-    const rect = rectFrom(start, point);
-    selection = rect.w && rect.h ? rect : null;
+  if (SELECTION_TOOLS.has(tool)) {
+    if (tool === 'select') {
+      const rect = rectFrom(start, point);
+      selection = rect.w && rect.h ? { type: 'rect', ...rect } : null;
+    } else {
+      const lastPoint = tool === 'magnetic-lasso' ? snapMagnetPoint(point) : point;
+      if (!lassoPoints.length || Math.hypot(lastPoint.x - lassoPoints[lassoPoints.length - 1].x, lastPoint.y - lassoPoints[lassoPoints.length - 1].y) > 1) lassoPoints.push(lastPoint);
+      selection = polygonSelection(lassoPoints, tool);
+    }
+    lassoPoints = []; magnetPixels = null;
     cropButton.disabled = !selection;
     renderSelection();
-    setStatus(selection ? `Selected ${selection.w} × ${selection.h} px` : 'Selection cleared');
+    setStatus(selection ? `Selected ${selection.w} × ${selection.h} px; right-click for layer actions` : 'Selection cleared');
   } else if (['line', 'rect', 'rect-fill', 'ellipse'].includes(tool)) {
     commitShape(point); setStatus('Shape drawn');
   } else if (tool === 'clone') {
@@ -816,7 +1258,7 @@ function endDraw(event) {
   } else if (tool === 'blur') {
     strokeBuffer = null; setStatus('Blur stroke applied');
   }
-  if (tool !== 'select') finishMirroredStroke(start);
+  if (!SELECTION_TOOLS.has(tool)) finishMirroredStroke(start);
 }
 stack.addEventListener('pointerup', endDraw);
 stack.addEventListener('pointercancel', endDraw);
@@ -828,11 +1270,14 @@ function validDimension(value) {
 
 function resizeImage(w, h) {
   pushUndo(); canonicaliseSeam();
-  const copy = copyCanvas();
+  const copies = layerCopies();
   resizeSurfaces(w, h);
-  bx.imageSmoothingEnabled = true; bx.imageSmoothingQuality = 'high';
-  bx.drawImage(copy, 0, 0, w, h);
+  layers.forEach((layer, index) => {
+    const context = layer.canvas.getContext('2d'); context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+    context.drawImage(copies[index], 0, 0, w, h);
+  });
   reapplySeam();
+  renderLayerPanel();
   setStatus('Image resized');
 }
 
@@ -842,19 +1287,31 @@ function resizeCanvas(w, h, anchor) {
   const vertical = anchor[0] === 't' ? 0 : anchor[0] === 'b' ? 1 : 0.5;
   const x = Math.round((w - oldW) * horizontal), y = Math.round((h - oldH) * vertical);
   pushUndo(); canonicaliseSeam();
-  const copy = copyCanvas();
+  const copies = layerCopies();
   resizeSurfaces(w, h);
-  bx.fillStyle = bg; bx.fillRect(0, 0, w, h); bx.drawImage(copy, x, y);
+  layers.forEach((layer, index) => {
+    const context = layer.canvas.getContext('2d');
+    if (index === 0) { context.fillStyle = bg; context.fillRect(0, 0, w, h); }
+    context.drawImage(copies[index], x, y);
+  });
   reapplySeam();
+  renderLayerPanel();
   setStatus('Canvas resized');
 }
 
 function cropSelection() {
   if (!selection) return;
   const rect = selection;
-  const pixels = bx.getImageData(rect.x, rect.y, rect.w, rect.h);
+  const selected = selection;
+  const crops = layers.map(layer => {
+    const crop = document.createElement('canvas'); crop.width = rect.w; crop.height = rect.h;
+    const context = crop.getContext('2d'); context.save(); traceSelectionPath(context, selected, rect.x, rect.y); context.clip();
+    context.drawImage(layer.canvas, -rect.x, -rect.y); context.restore(); return crop;
+  });
   pushUndo(); seamModeApplied = false;
-  resizeSurfaces(rect.w, rect.h); bx.putImageData(pixels, 0, 0); reapplySeam();
+  resizeSurfaces(rect.w, rect.h);
+  layers.forEach((layer, index) => layer.canvas.getContext('2d').drawImage(crops[index], 0, 0));
+  reapplySeam(); renderLayerPanel();
   setStatus('Cropped to selection');
 }
 
@@ -903,7 +1360,7 @@ function loadImage(src, name, done) {
       if (image.naturalWidth > MAX_DIMENSION || image.naturalHeight > MAX_DIMENSION) {
         const error = new Error(`Image is larger than ${MAX_DIMENSION} px`); setStatus(error.message); reject(error); return;
       }
-      pushUndo(); seamModeApplied = false; resizeSurfaces(image.naturalWidth, image.naturalHeight);
+      pushUndo(); resetLayers(image.naturalWidth, image.naturalHeight, 'Background');
       bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); bx.drawImage(image, 0, 0);
       reapplySeam();
       fileName = String(name || 'image.png').replace(/\.[^.]+$/, '') + '.png';
@@ -1109,6 +1566,168 @@ appRoot.querySelector('#noiseForm').addEventListener('submit', event => {
   hideModal('noiseModal'); addNoise(amount, appRoot.querySelector('#noiseMonochrome').checked);
 });
 
+function updateContentTransformPreview() {
+  if (!contentTransform) return;
+  updateStackSize();
+  stack.style.transform = `translate(${contentTransform.offsetX}px, ${contentTransform.offsetY}px)`;
+  transformSize.textContent = `${contentTransform.targetWidth} × ${contentTransform.targetHeight} px`;
+  status.textContent = `Content-Aware Scale preview — ${contentTransform.targetWidth} × ${contentTransform.targetHeight} px · drag a handle · Enter applies · Esc cancels`;
+}
+
+function beginContentAwareTransform() {
+  if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before resizing'); return; }
+  if (seamAnimating || contentJob) { setStatus('Finish the current image operation first'); return; }
+  contentTransform = { targetWidth: width(), targetHeight: height(), offsetX: 0, offsetY: 0 };
+  offsetToggle.disabled = true; mirrorToggle.disabled = true;
+  transformBox.hidden = false; stack.classList.add('content-transforming'); hideBrushCursor();
+  updateContentTransformPreview();
+}
+
+function finishContentAwareTransform(apply) {
+  if (!contentTransform) return;
+  const targetWidth = contentTransform.targetWidth, targetHeight = contentTransform.targetHeight;
+  contentTransform = null; transformBox.hidden = true; stack.classList.remove('content-transforming');
+  offsetToggle.disabled = false; mirrorToggle.disabled = false;
+  stack.style.transform = ''; updateStackSize();
+  if (!apply) { setStatus('Content-aware scale cancelled'); return; }
+  openContentAware(targetWidth, targetHeight);
+  appRoot.querySelector('#contentAwareForm').requestSubmit();
+}
+
+transformBox.querySelectorAll('[data-handle]').forEach(handle => handle.addEventListener('pointerdown', event => {
+  if (!contentTransform) return;
+  event.preventDefault(); event.stopPropagation();
+  const direction = handle.dataset.handle;
+  const drag = {
+    x: event.clientX, y: event.clientY,
+    width: contentTransform.targetWidth, height: contentTransform.targetHeight,
+    offsetX: contentTransform.offsetX, offsetY: contentTransform.offsetY,
+  };
+  try { handle.setPointerCapture(event.pointerId); } catch {}
+  const move = moved => {
+    if (!contentTransform) return;
+    const dx = (moved.clientX - drag.x) / zoom, dy = (moved.clientY - drag.y) / zoom;
+    let nextWidth = drag.width, nextHeight = drag.height;
+    if (direction.includes('e')) nextWidth = drag.width + dx;
+    if (direction.includes('w')) nextWidth = drag.width - dx;
+    if (direction.includes('s')) nextHeight = drag.height + dy;
+    if (direction.includes('n')) nextHeight = drag.height - dy;
+    if (moved.shiftKey && direction.length === 2) {
+      const widthChange = Math.abs(nextWidth / drag.width - 1), heightChange = Math.abs(nextHeight / drag.height - 1);
+      if (widthChange >= heightChange) nextHeight = nextWidth * drag.height / drag.width;
+      else nextWidth = nextHeight * drag.width / drag.height;
+    }
+    nextWidth = Math.max(1, Math.min(MAX_DIMENSION, Math.round(nextWidth)));
+    nextHeight = Math.max(1, Math.min(MAX_DIMENSION, Math.round(nextHeight)));
+    contentTransform.targetWidth = nextWidth; contentTransform.targetHeight = nextHeight;
+    contentTransform.offsetX = drag.offsetX + (direction.includes('w') ? (drag.width - nextWidth) * zoom : 0);
+    contentTransform.offsetY = drag.offsetY + (direction.includes('n') ? (drag.height - nextHeight) * zoom : 0);
+    updateContentTransformPreview();
+  };
+  const end = () => {
+    handle.removeEventListener('pointermove', move); handle.removeEventListener('pointerup', end); handle.removeEventListener('pointercancel', end);
+  };
+  handle.addEventListener('pointermove', move); handle.addEventListener('pointerup', end); handle.addEventListener('pointercancel', end);
+}));
+
+transformBox.querySelector('.paint-transform-toolbar').addEventListener('pointerdown', event => event.stopPropagation());
+transformBox.querySelector('[data-transform-action="cancel"]').addEventListener('click', event => { event.stopPropagation(); finishContentAwareTransform(false); });
+transformBox.querySelector('[data-transform-action="apply"]').addEventListener('click', event => { event.stopPropagation(); finishContentAwareTransform(true); });
+
+/* ---- Content-aware resize — seam carving runs off the UI thread and applies
+ *      one shared seam path to the visible composite and every stored layer. */
+const contentModal = appRoot.querySelector('#contentAwareModal');
+const contentFormView = contentModal.querySelector('[data-caview="form"]');
+const contentProgressView = contentModal.querySelector('[data-caview="progress"]');
+const contentProgressBar = contentProgressView.querySelector('.paint-progress > div');
+const contentDetail = contentProgressView.querySelector('.paint-bg-detail');
+const contentStart = appRoot.querySelector('#contentAwareStart');
+let contentWorker = null, contentToken = 0, contentJob = null;
+
+function openContentAware(targetWidth = width(), targetHeight = height()) {
+  if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before resizing'); return; }
+  appRoot.querySelector('#contentAwareWidth').value = targetWidth;
+  appRoot.querySelector('#contentAwareHeight').value = targetHeight;
+  const protect = appRoot.querySelector('#contentAwareProtect');
+  protect.disabled = !selection; protect.checked = !!selection;
+  contentFormView.hidden = false; contentProgressView.hidden = true; contentStart.hidden = false;
+  contentProgressBar.style.width = '0%'; contentDetail.textContent = 'Preparing image…';
+  showModal('contentAwareModal'); appRoot.querySelector('#contentAwareWidth').focus();
+}
+
+function stopContentAware(cancelled = true) {
+  contentToken++; contentJob = null;
+  if (contentWorker) { contentWorker.terminate(); contentWorker = null; }
+  if (cancelled) setStatus('Content-aware resize cancelled');
+}
+
+function finishContentAwareError(message) {
+  stopContentAware(false);
+  contentFormView.hidden = false; contentProgressView.hidden = true; contentStart.hidden = false;
+  setStatus(`Content-aware resize failed: ${message}`);
+}
+
+function applyContentAwareResult(message) {
+  if (!contentJob || message.token !== contentJob.token) return;
+  const unchanged = width() === contentJob.width && height() === contentJob.height &&
+    documentRevision === contentJob.revision && layers.length === contentJob.layerIds.length && layers.every((layer, index) => layer.id === contentJob.layerIds[index]);
+  if (!unchanged) { hideModal('contentAwareModal'); finishContentAwareError('the document changed while it was running'); return; }
+  pushUndo(); canonicaliseSeam();
+  resizeSurfaces(message.width, message.height);
+  layers.forEach((layer, index) => layer.canvas.getContext('2d').putImageData(
+    new ImageData(new Uint8ClampedArray(message.layers[index]), message.width, message.height), 0, 0
+  ));
+  reapplySeam(); clearSelection(); renderLayerPanel();
+  hideModal('contentAwareModal'); stopContentAware(false);
+  setStatus('Content-aware resize complete');
+}
+
+appRoot.querySelector('#contentAwareForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const targetWidth = validDimension(appRoot.querySelector('#contentAwareWidth').value);
+  const targetHeight = validDimension(appRoot.querySelector('#contentAwareHeight').value);
+  if (!targetWidth || !targetHeight) return;
+  if (targetWidth === width() && targetHeight === height()) { hideModal('contentAwareModal'); setStatus('The content-aware size is unchanged'); return; }
+  const seamCount = Math.abs(targetWidth - width()) + Math.abs(targetHeight - height());
+  const estimate = width() * height() * seamCount;
+  if ((targetWidth * targetHeight > 24000000 || estimate > 350000000) &&
+      !confirm('This is a large seam-carving job and may take several minutes. Continue?')) return;
+
+  const originalSeam = seamModeApplied;
+  canonicaliseSeam();
+  const compositePixels = compositeCanvas().getContext('2d').getImageData(0, 0, width(), height()).data;
+  const layerPixels = layers.map(layer => layer.canvas.getContext('2d').getImageData(0, 0, width(), height()).data);
+  const protectMask = appRoot.querySelector('#contentAwareProtect').checked ? selectionMask() : null;
+  if (originalSeam) reapplySeam();
+
+  const token = ++contentToken;
+  contentJob = { token, width: width(), height: height(), revision: documentRevision, layerIds: layers.map(layer => layer.id) };
+  contentFormView.hidden = true; contentProgressView.hidden = false; contentStart.hidden = true;
+  contentDetail.textContent = `Finding ${seamCount} low-energy seam${seamCount === 1 ? '' : 's'}…`;
+  setStatus('Content-aware resize running…');
+  contentWorker = new Worker(new URL('paint-content-aware-worker.js', appUrl));
+  contentWorker.onerror = event => finishContentAwareError(event.message || 'worker failed to start');
+  contentWorker.onmessage = event => {
+    const message = event.data;
+    if (message.token !== contentToken) return;
+    if (message.type === 'progress') {
+      const percent = message.total ? message.complete / message.total * 100 : 100;
+      contentProgressBar.style.width = Math.min(100, percent).toFixed(1) + '%';
+      contentDetail.textContent = `${message.complete} of ${message.total} seams — ${message.width} × ${message.height} px`;
+    } else if (message.type === 'result') applyContentAwareResult(message);
+    else if (message.type === 'error') finishContentAwareError(message.message);
+  };
+  const transfers = [compositePixels.buffer, ...layerPixels.map(pixels => pixels.buffer)];
+  if (protectMask) transfers.push(protectMask.buffer);
+  contentWorker.postMessage({
+    type: 'run', token, width: width(), height: height(), targetWidth, targetHeight,
+    composite: compositePixels.buffer, layers: layerPixels.map(pixels => pixels.buffer),
+    protect: protectMask?.buffer || null,
+  }, transfers);
+});
+
+contentModal.addEventListener('click', event => { if (event.target.closest('[data-close]') && contentJob) stopContentAware(true); });
+
 offsetToggle.addEventListener('change', async () => {
   const enabled = offsetToggle.checked;
   status.textContent = `${enabled ? 'Sliding to the 50% seam view' : 'Sliding back to the original view'} — ${width()} × ${height()} px`;
@@ -1167,10 +1786,10 @@ function ensureBgWorker() {
 }
 
 function startBgRemoval() {
-  const source = canonicalCanvas();
+  const source = canonicalActiveCanvas();
   const pixels = source.getContext('2d').getImageData(0, 0, source.width, source.height);
   const buffer = pixels.data.buffer; /* a fresh ImageData buffer — safe to transfer */
-  bgSize = { width: source.width, height: source.height };
+  bgSize = { width: source.width, height: source.height, layerId: activeLayer.id };
   const token = ++bgRunToken;
   showBgView('loading');
   bgStartBtn.hidden = true;
@@ -1185,7 +1804,7 @@ function startBgRemoval() {
 
 function applyBgResult(msg) {
   if (!bgModal.classList.contains('open')) { bgSize = null; return; } /* cancelled */
-  if (!bgSize || msg.width !== width() || msg.height !== height()) {
+  if (!bgSize || bgSize.layerId !== activeLayer.id || msg.width !== width() || msg.height !== height()) {
     hideModal('bgRemoveModal'); bgSize = null;
     setStatus('Canvas changed before the result arrived; background removal cancelled');
     return;
@@ -1223,6 +1842,7 @@ bgModal.addEventListener('click', event => { if (event.target.closest('[data-clo
 bgModal.addEventListener('pointerdown', event => { if (event.target === bgModal) { bgRunToken++; bgSize = null; } });
 const disconnect = () => {
   if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
+  if (contentWorker) { contentWorker.terminate(); contentWorker = null; }
   if (ditherApi?.destroy) ditherApi.destroy();
 };
 if (appRoot === document) window.addEventListener('pagehide', disconnect, { once: true });
@@ -1230,7 +1850,6 @@ else appRoot.host.addEventListener('clackos-disconnect', disconnect, { once: tru
 
 /* ---- dithering — the algorithms and their dialog live in paint-dither.js,
  *      which only needs a way in and out of this canvas ---- */
-let ditherPreviewing = false;
 if (window.ClackDither) {
   ditherApi = window.ClackDither;
   ditherApi.init({
@@ -1249,14 +1868,20 @@ if (window.ClackDither) {
 }
 
 function runCmd(cmd) {
+  if (contentTransform) {
+    if (cmd === 'content-aware-scale') finishContentAwareTransform(false);
+    else status.textContent = 'Apply or cancel Content-Aware Scale before using another command';
+    return;
+  }
   if (cmd.startsWith('dither-')) {
     if (!ditherApi) { setStatus('Dithering is unavailable — paint-dither.js did not load'); return; }
     if (cmd === 'dither-repeat') ditherApi.repeat();
     else ditherApi.open(cmd.slice('dither-'.length));
     return;
   }
+  if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before using another command'); return; }
   switch (cmd) {
-    case 'new': pushUndo(); seamModeApplied = false; resizeSurfaces(640, 400); bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); reapplySeam(); fileName = 'untitled.png'; setStatus('New image'); break;
+    case 'new': pushUndo(); resetLayers(640, 400, 'Background'); bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); reapplySeam(); fileName = 'untitled.png'; setStatus('New image'); break;
     case 'open': filePick.click(); break;
     case 'open-site': openWebsiteBrowser(); break;
     case 'save': savePng(false); break;
@@ -1266,6 +1891,8 @@ function runCmd(cmd) {
     case 'undo': undo(); break;
     case 'redo': redo(); break;
     case 'image-size': openImageSize(); break;
+    case 'content-aware-scale': beginContentAwareTransform(); break;
+    case 'content-aware-size': openContentAware(); break;
     case 'canvas-size': openCanvasSize(); break;
     case 'crop': cropSelection(); break;
     case 'remove-bg': openBgRemoval(); break;
@@ -1329,7 +1956,13 @@ appRoot.querySelector('.rm-bar').addEventListener('click', event => {
 });
 appRoot.addEventListener('click', event => { if (!event.target.closest('.rm')) closeMenus(); });
 appRoot.addEventListener('keydown', event => {
-  if (event.key === 'Escape') modals.forEach(modal => { if (!modal.hasAttribute('data-keep-open')) modal.classList.remove('open'); });
+  if (contentTransform && event.key === 'Escape') { event.preventDefault(); finishContentAwareTransform(false); return; }
+  if (contentTransform && event.key === 'Enter' && !/^(INPUT|BUTTON)$/.test(event.target.tagName || '')) { event.preventDefault(); finishContentAwareTransform(true); return; }
+  if (event.key === 'Escape') {
+    closeContextMenu();
+    if (contentModal.classList.contains('open')) { hideModal('contentAwareModal'); if (contentJob) stopContentAware(true); }
+    modals.forEach(modal => { if (!modal.hasAttribute('data-keep-open')) modal.classList.remove('open'); });
+  }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); }
 });
