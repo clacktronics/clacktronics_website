@@ -208,6 +208,21 @@ the desktop, and the size saved into a session is the remembered box rather
 than the squeezed one, so a desktop last seen on a narrow screen comes back
 full-size on a wide one.
 
+Windows move the way an eight-bit desktop's did. Closing one dissolves it into
+the desktop a pixel at a time, in a random order — the window is masked with a
+tile of noise that has more of itself rubbed out on each of twenty steps, so
+the chrome, the drop shadow and whatever the window contains all go together.
+The grain is one noise pixel per device pixel; a mask that fine cannot be
+re-encoded twenty times over at window size, which is why it is a 256-pixel
+tile repeated across the window rather than one image the size of the window.
+Minimising shrinks the window into its own taskbar button and
+restoring expands it back out of it; a new window arrives by expanding onto the
+desktop, and maximise moves and resizes in one transition. None of it changes
+what the desktop does: every animation is skipped, and the window simply
+appears or goes, under `prefers-reduced-motion`, while a saved desktop is being
+rebuilt at boot, and on any browser without the Web Animations API or CSS
+masking.
+
 ### Blog posts
 
 Posts live in `content/file/blog/` as `YYYY-MM-DD-slug.md` files with the
