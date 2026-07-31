@@ -354,7 +354,7 @@
   window.ClackOSFileManager = {
     open(options = {}) {
       const host = document.createElement('div'); host.className = 'clack-fm-modal';
-      document.body.appendChild(host); const explorer = new Explorer(host, options, true);
+      (options.root || document.body).appendChild(host); const explorer = new Explorer(host, options, true);
       setTimeout(() => explorer.els.search.focus(), 0); return explorer;
     },
     mount(host, options = {}) { return new Explorer(host, options, false); },

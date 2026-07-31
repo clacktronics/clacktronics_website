@@ -43,7 +43,7 @@
 .paint-stack.dither-busy { cursor: not-allowed; }
 </style>
 <script src="../../assets/js/file-manager.js"></script>
-<script src="paint-dither.js"></script>
+<script src="paint-dither.js" data-integrated-instance></script>
 </head>
 <body>
 <div class="app paint-app">
@@ -239,20 +239,22 @@
 
 <script>
 (() => {
-const base = document.querySelector('canvas.base');
-const seamAnimation = document.querySelector('canvas.seam-animation');
-const overlay = document.querySelector('canvas.overlay');
-const stack = document.querySelector('.paint-stack');
-const canvasWrap = document.querySelector('.paint-canvas-wrap');
-const brushCursors = [...document.querySelectorAll('.paint-brush-cursor')];
+const appRoot = window.ClackOSMountRoot || document.currentScript?.getRootNode() || document;
+const appUrl = appRoot === document ? location.href : appRoot.host.dataset.sourceUrl;
+const base = appRoot.querySelector('canvas.base');
+const seamAnimation = appRoot.querySelector('canvas.seam-animation');
+const overlay = appRoot.querySelector('canvas.overlay');
+const stack = appRoot.querySelector('.paint-stack');
+const canvasWrap = appRoot.querySelector('.paint-canvas-wrap');
+const brushCursors = [...appRoot.querySelectorAll('.paint-brush-cursor')];
 const bx = base.getContext('2d', { willReadFrequently: true });
 const ax = seamAnimation.getContext('2d');
 const ox = overlay.getContext('2d');
-const status = document.querySelector('.paint-status');
-const sizeInput = document.querySelector('.paint-size input');
-const offsetToggle = document.getElementById('offsetPreview');
-const mirrorToggle = document.getElementById('mirrorPaint');
-const cropButton = document.querySelector('[data-cmd="crop"]');
+const status = appRoot.querySelector('.paint-status');
+const sizeInput = appRoot.querySelector('.paint-size input');
+const offsetToggle = appRoot.querySelector('#offsetPreview');
+const mirrorToggle = appRoot.querySelector('#mirrorPaint');
+const cropButton = appRoot.querySelector('[data-cmd="crop"]');
 const MAX_DIMENSION = 8192;
 const CUSTOM_BG_KEY = 'clackos-custom-background';
 const CUSTOM_BG_NAME = 'Custom paint tile';
@@ -266,6 +268,7 @@ const COLORS = [
   '#FF00FF', '#FFFF80', '#00FF80', '#80FFFF', '#8080FF', '#FF0080', '#FF8040'
 ];
 let fg = '#000000', bg = '#FFFFFF', tool = 'pencil';
+let ditherApi = null;
 let fileName = 'untitled.png';
 let selection = null;
 let cloneSource = null, cloneOffset = null, strokeBuffer = null, mirrorStrokeBefore = null;
@@ -281,10 +284,10 @@ const setStatus = message => {
   if (offsetToggle.checked && !seamAnimating) updateOffsetPreview();
   status.textContent = `${message} — ${width()} × ${height()} px`;
 };
-const fgEl = document.querySelector('.paint-current .fg');
-const bgEl = document.querySelector('.paint-current .bg');
+const fgEl = appRoot.querySelector('.paint-current .fg');
+const bgEl = appRoot.querySelector('.paint-current .bg');
 const showColors = () => { fgEl.style.background = fg; bgEl.style.background = bg; };
-const palette = document.querySelector('.paint-palette');
+const palette = appRoot.querySelector('.paint-palette');
 COLORS.forEach(c => {
   const button = document.createElement('button');
   button.className = 'paint-swatch';
@@ -499,10 +502,10 @@ bx.fillStyle = '#FFFFFF';
 bx.fillRect(0, 0, width(), height());
 updateStackSize();
 
-document.querySelectorAll('.paint-tool').forEach(button => {
+appRoot.querySelectorAll('.paint-tool').forEach(button => {
   button.addEventListener('click', () => {
     tool = button.dataset.tool;
-    document.querySelectorAll('.paint-tool').forEach(item => item.classList.toggle('active', item === button));
+    appRoot.querySelectorAll('.paint-tool').forEach(item => item.classList.toggle('active', item === button));
     stack.classList.toggle('zoom-tool', tool === 'zoom');
     if (cursorPoint) updateBrushCursor(cursorPoint); else hideBrushCursor();
     if (tool === 'clone' && cloneSource) drawCloneSource();
@@ -883,7 +886,7 @@ function addNoise(amount, monochrome) {
   setStatus(`${monochrome ? 'Monochromatic' : 'Colour'} noise applied at ${amount}%`);
 }
 
-const filePick = document.getElementById('paintFilePicker');
+const filePick = appRoot.querySelector('#paintFilePicker');
 filePick.addEventListener('change', () => {
   const file = filePick.files[0]; filePick.value = '';
   if (!file || !/^image\/(?:png|jpeg|gif|webp|bmp)$/i.test(file.type)) { if (file) setStatus('Please choose a bitmap image'); return; }
@@ -893,7 +896,7 @@ filePick.addEventListener('change', () => {
 
 function loadImage(src, name, done) {
   return new Promise((resolve, reject) => {
-    const image = new Image(); const imageURL = new URL(src, window.location.href);
+    const image = new Image(); const imageURL = new URL(src, appUrl);
     let anonymous = imageURL.origin !== window.location.origin; let displayOnly = false;
     if (anonymous) image.crossOrigin = 'anonymous';
     image.onload = () => {
@@ -937,17 +940,22 @@ function setAsBackground() {
     const payload = { name: fileName, dataUrl };
     localStorage.setItem(CUSTOM_BG_KEY, JSON.stringify(payload));
     localStorage.setItem('clackos-wallpaper', CUSTOM_BG_NAME);
-    if (window.parent !== window) window.parent.postMessage({ type: 'clackos-set-background-tile', ...payload }, location.origin);
+    const message = { type: 'clackos-set-background-tile', ...payload };
+    if (appRoot !== document) {
+      appRoot.host.dispatchEvent(new CustomEvent('clackos-message', {
+        detail: message, bubbles: true, composed: true
+      }));
+    } else if (window.parent !== window) window.parent.postMessage(message, location.origin);
     setStatus('Set as the repeating desktop background tile');
   } catch (error) {
     setStatus('Tile is too large for browser storage; reduce Image Size and try again');
   }
 }
 
-const modals = new Map([...document.querySelectorAll('.paint-modal')].map(modal => [modal.id, modal]));
+const modals = new Map([...appRoot.querySelectorAll('.paint-modal')].map(modal => [modal.id, modal]));
 const showModal = id => modals.get(id).classList.add('open');
 const hideModal = id => modals.get(id).classList.remove('open');
-document.addEventListener('click', event => {
+appRoot.addEventListener('click', event => {
   const closer = event.target.closest('[data-close]');
   if (closer) hideModal(closer.dataset.close);
 });
@@ -962,21 +970,21 @@ modals.forEach(modal => modal.addEventListener('pointerdown', event => {
  * "assetUpload" in content/site.json (resolved against the site root, so it is
  * same-origin) rather than into the GitHub repository. The token is held in
  * memory for the session only; the host returns the public URL to link to. */
-const uploadForm = document.getElementById('uploadForm');
-const uploadName = document.getElementById('uploadName');
-const uploadTokenRow = document.getElementById('uploadTokenRow');
-const uploadTokenInput = document.getElementById('uploadToken');
-const uploadStatus = document.getElementById('uploadStatus');
-const uploadResult = document.getElementById('uploadResult');
-const uploadLink = document.getElementById('uploadLink');
-const uploadGo = document.getElementById('uploadGo');
+const uploadForm = appRoot.querySelector('#uploadForm');
+const uploadName = appRoot.querySelector('#uploadName');
+const uploadTokenRow = appRoot.querySelector('#uploadTokenRow');
+const uploadTokenInput = appRoot.querySelector('#uploadToken');
+const uploadStatus = appRoot.querySelector('#uploadStatus');
+const uploadResult = appRoot.querySelector('#uploadResult');
+const uploadLink = appRoot.querySelector('#uploadLink');
+const uploadGo = appRoot.querySelector('#uploadGo');
 let uploadToken = null;      /* secret, memory only, per session */
 let assetUploadUrl = null;   /* resolved endpoint URL, or '' if unset */
 
 async function getAssetUploadUrl() {
   if (assetUploadUrl !== null) return assetUploadUrl;
   try {
-    const siteRoot = new URL('../../', location.href);
+    const siteRoot = new URL('../../', appUrl);
     const site = await (await fetch(new URL('content/site.json', siteRoot))).json();
     assetUploadUrl = site.assetUpload ? new URL(site.assetUpload, siteRoot).href : '';
   } catch { assetUploadUrl = ''; }
@@ -1034,7 +1042,7 @@ uploadForm.addEventListener('submit', async event => {
   }
 });
 
-document.getElementById('uploadCopy').addEventListener('click', async () => {
+appRoot.querySelector('#uploadCopy').addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(uploadLink.href);
     uploadStatus.textContent = 'Link copied to the clipboard.';
@@ -1045,6 +1053,7 @@ document.getElementById('uploadCopy').addEventListener('click', async () => {
 
 function openWebsiteBrowser() {
   window.ClackOSFileManager.open({
+    root: appRoot === document ? undefined : appRoot,
     title: 'Open image from website',
     accept: item => item.kind === 'image',
     onSelect: item => loadImage(item.drive === 'github' ? item.url : item.downloadUrl, item.name)
@@ -1054,50 +1063,50 @@ function openWebsiteBrowser() {
 const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function openImageSize() {
-  document.getElementById('imageWidth').value = width();
-  document.getElementById('imageHeight').value = height();
-  document.getElementById('imageSizeForm').dataset.aspect = width() / height();
-  showModal('imageSizeModal'); document.getElementById('imageWidth').focus();
+  appRoot.querySelector('#imageWidth').value = width();
+  appRoot.querySelector('#imageHeight').value = height();
+  appRoot.querySelector('#imageSizeForm').dataset.aspect = width() / height();
+  showModal('imageSizeModal'); appRoot.querySelector('#imageWidth').focus();
 }
 
 function openCanvasSize() {
-  document.getElementById('canvasWidth').value = width();
-  document.getElementById('canvasHeight').value = height();
-  showModal('canvasSizeModal'); document.getElementById('canvasWidth').focus();
+  appRoot.querySelector('#canvasWidth').value = width();
+  appRoot.querySelector('#canvasHeight').value = height();
+  showModal('canvasSizeModal'); appRoot.querySelector('#canvasWidth').focus();
 }
 
-const imageWidth = document.getElementById('imageWidth'), imageHeight = document.getElementById('imageHeight');
+const imageWidth = appRoot.querySelector('#imageWidth'), imageHeight = appRoot.querySelector('#imageHeight');
 imageWidth.addEventListener('input', () => {
-  if (!document.getElementById('keepAspect').checked) return;
-  const value = validDimension(imageWidth.value), aspect = +document.getElementById('imageSizeForm').dataset.aspect;
+  if (!appRoot.querySelector('#keepAspect').checked) return;
+  const value = validDimension(imageWidth.value), aspect = +appRoot.querySelector('#imageSizeForm').dataset.aspect;
   if (value) imageHeight.value = Math.max(1, Math.round(value / aspect));
 });
 imageHeight.addEventListener('input', () => {
-  if (!document.getElementById('keepAspect').checked) return;
-  const value = validDimension(imageHeight.value), aspect = +document.getElementById('imageSizeForm').dataset.aspect;
+  if (!appRoot.querySelector('#keepAspect').checked) return;
+  const value = validDimension(imageHeight.value), aspect = +appRoot.querySelector('#imageSizeForm').dataset.aspect;
   if (value) imageWidth.value = Math.max(1, Math.round(value * aspect));
 });
-document.getElementById('imageSizeForm').addEventListener('submit', event => {
+appRoot.querySelector('#imageSizeForm').addEventListener('submit', event => {
   event.preventDefault(); const w = validDimension(imageWidth.value), h = validDimension(imageHeight.value);
   if (!w || !h) return; hideModal('imageSizeModal'); resizeImage(w, h);
 });
-document.getElementById('canvasSizeForm').addEventListener('submit', event => {
+appRoot.querySelector('#canvasSizeForm').addEventListener('submit', event => {
   event.preventDefault();
-  const w = validDimension(document.getElementById('canvasWidth').value), h = validDimension(document.getElementById('canvasHeight').value);
+  const w = validDimension(appRoot.querySelector('#canvasWidth').value), h = validDimension(appRoot.querySelector('#canvasHeight').value);
   if (!w || !h) return;
   hideModal('canvasSizeModal'); resizeCanvas(w, h, new FormData(event.currentTarget).get('anchor'));
 });
-document.getElementById('gaussianBlurForm').addEventListener('submit', event => {
+appRoot.querySelector('#gaussianBlurForm').addEventListener('submit', event => {
   event.preventDefault();
-  const radius = Number(document.getElementById('gaussianRadius').value);
+  const radius = Number(appRoot.querySelector('#gaussianRadius').value);
   if (!Number.isFinite(radius) || radius < 0.1 || radius > 50) return;
   hideModal('gaussianBlurModal'); applyGaussianBlur(radius);
 });
-document.getElementById('noiseForm').addEventListener('submit', event => {
+appRoot.querySelector('#noiseForm').addEventListener('submit', event => {
   event.preventDefault();
-  const amount = Number(document.getElementById('noiseAmount').value);
+  const amount = Number(appRoot.querySelector('#noiseAmount').value);
   if (!Number.isFinite(amount) || amount < 0.1 || amount > 100) return;
-  hideModal('noiseModal'); addNoise(amount, document.getElementById('noiseMonochrome').checked);
+  hideModal('noiseModal'); addNoise(amount, appRoot.querySelector('#noiseMonochrome').checked);
 });
 
 offsetToggle.addEventListener('change', async () => {
@@ -1121,18 +1130,18 @@ sizeInput.addEventListener('input', () => { if (cursorPoint) updateBrushCursor(c
 /* ---- Background removal — MODNet via Transformers.js, run in a worker so the
  *      model download and inference never freeze the paint UI ---- */
 const BG_MODEL_KEY = 'clackos-paint-bg-model-downloaded';
-const bgModal = document.getElementById('bgRemoveModal');
+const bgModal = appRoot.querySelector('#bgRemoveModal');
 const bgViews = bgModal.querySelectorAll('[data-bgview]');
 const bgProgressBar = bgModal.querySelector('.paint-bg-progress > div');
 const bgDetail = bgModal.querySelector('.paint-bg-detail');
-const bgStartBtn = document.getElementById('bgRemoveStart');
+const bgStartBtn = appRoot.querySelector('#bgRemoveStart');
 let bgWorker = null, bgRunToken = 0, bgSize = null;
 
 const showBgView = name => bgViews.forEach(view => { view.hidden = view.dataset.bgview !== name; });
 
 function ensureBgWorker() {
   if (bgWorker) return bgWorker;
-  bgWorker = new Worker(new URL('paint-worker.js', location.href), { type: 'module' });
+  bgWorker = new Worker(new URL('paint-worker.js', appUrl), { type: 'module' });
   bgWorker.onerror = event => finishBgError(event.message || 'worker failed to start');
   bgWorker.onmessage = event => {
     const msg = event.data;
@@ -1212,17 +1221,24 @@ bgStartBtn.addEventListener('click', startBgRemoval);
 /* closing the dialog (button, backdrop or Escape) abandons an in-flight run */
 bgModal.addEventListener('click', event => { if (event.target.closest('[data-close]')) { bgRunToken++; bgSize = null; } });
 bgModal.addEventListener('pointerdown', event => { if (event.target === bgModal) { bgRunToken++; bgSize = null; } });
-window.addEventListener('pagehide', () => { if (bgWorker) bgWorker.terminate(); });
+const disconnect = () => {
+  if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
+  if (ditherApi?.destroy) ditherApi.destroy();
+};
+if (appRoot === document) window.addEventListener('pagehide', disconnect, { once: true });
+else appRoot.host.addEventListener('clackos-disconnect', disconnect, { once: true });
 
 /* ---- dithering — the algorithms and their dialog live in paint-dither.js,
  *      which only needs a way in and out of this canvas ---- */
 let ditherPreviewing = false;
 if (window.ClackDither) {
-  window.ClackDither.init({
+  ditherApi = window.ClackDither;
+  ditherApi.init({
     width, height,
     getContext: () => bx,
     getSelection: () => selection,
     getColours: () => ({ fg, bg, palette: COLORS }),
+    getMountHost: () => appRoot === document ? null : appRoot.host,
     pushUndo, setStatus,
     setBusy: busy => {
       ditherPreviewing = busy;
@@ -1234,9 +1250,9 @@ if (window.ClackDither) {
 
 function runCmd(cmd) {
   if (cmd.startsWith('dither-')) {
-    if (!window.ClackDither) { setStatus('Dithering is unavailable — paint-dither.js did not load'); return; }
-    if (cmd === 'dither-repeat') window.ClackDither.repeat();
-    else window.ClackDither.open(cmd.slice('dither-'.length));
+    if (!ditherApi) { setStatus('Dithering is unavailable — paint-dither.js did not load'); return; }
+    if (cmd === 'dither-repeat') ditherApi.repeat();
+    else ditherApi.open(cmd.slice('dither-'.length));
     return;
   }
   switch (cmd) {
@@ -1253,8 +1269,8 @@ function runCmd(cmd) {
     case 'canvas-size': openCanvasSize(); break;
     case 'crop': cropSelection(); break;
     case 'remove-bg': openBgRemoval(); break;
-    case 'gaussian-blur': showModal('gaussianBlurModal'); document.getElementById('gaussianRadius').focus(); break;
-    case 'noise': showModal('noiseModal'); document.getElementById('noiseAmount').focus(); break;
+    case 'gaussian-blur': showModal('gaussianBlurModal'); appRoot.querySelector('#gaussianRadius').focus(); break;
+    case 'noise': showModal('noiseModal'); appRoot.querySelector('#noiseAmount').focus(); break;
     case 'clear': pushUndo(); clearSelection(); bx.fillStyle = bg; bx.fillRect(0, 0, width(), height()); setStatus('Image cleared to the background colour'); break;
     case 'invert': {
       pushUndo(); clearSelection(); const image = bx.getImageData(0, 0, width(), height()), data = image.data;
@@ -1270,17 +1286,17 @@ function runCmd(cmd) {
   }
 }
 
-const linkedImage = new URLSearchParams(location.search).get('src');
+const linkedImage = new URL(appUrl).searchParams.get('src');
 if (linkedImage) {
   try {
-    const linkedUrl = new URL(linkedImage, new URL('../../', location.href));
+    const linkedUrl = new URL(linkedImage, new URL('../../', appUrl));
     if (!/^https?:$/.test(linkedUrl.protocol) || !/\.(?:png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(linkedUrl.pathname)) throw new Error();
     loadImage(linkedUrl.href, decodeURIComponent(linkedUrl.pathname.split('/').pop()) || 'image').catch(() => {});
   } catch (_) { setStatus('Refused to open an unexpected image path'); }
 }
 
-const rms = document.querySelectorAll('.rm');
-const subMenus = document.querySelectorAll('.rm-sub');
+const rms = appRoot.querySelectorAll('.rm');
+const subMenus = appRoot.querySelectorAll('.rm-sub');
 const closeSubMenus = () => subMenus.forEach(sub => {
   sub.classList.remove('open');
   sub.querySelector(':scope > .rm-sub-open').setAttribute('aria-expanded', 'false');
@@ -1307,12 +1323,12 @@ subMenus.forEach(sub => {
     if (item && item.parentElement === sub.parentElement) closeSubMenus();
   });
 });
-document.querySelector('.rm-bar').addEventListener('click', event => {
+appRoot.querySelector('.rm-bar').addEventListener('click', event => {
   const command = event.target.closest('[data-cmd]');
   if (!command || command.disabled) return; closeMenus(); runCmd(command.dataset.cmd);
 });
-document.addEventListener('click', event => { if (!event.target.closest('.rm')) closeMenus(); });
-document.addEventListener('keydown', event => {
+appRoot.addEventListener('click', event => { if (!event.target.closest('.rm')) closeMenus(); });
+appRoot.addEventListener('keydown', event => {
   if (event.key === 'Escape') modals.forEach(modal => { if (!modal.hasAttribute('data-keep-open')) modal.classList.remove('open'); });
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); }

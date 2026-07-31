@@ -451,6 +451,7 @@ async function mountIntegratedApp(body, launchPage, title, onClose) {
     const res = await fetchFresh(sourceUrl.href);
     if (!res.ok) throw new Error(`Failed to load ${sourceUrl.pathname}: ${res.status}`);
     const source = new DOMParser().parseFromString(await res.text(), 'text/html');
+    host.dataset.sourceUrl = sourceUrl.href;
 
     const styleLoads = [];
     source.head.querySelectorAll('link[rel="stylesheet"], style').forEach(node => {
@@ -471,10 +472,42 @@ async function mountIntegratedApp(body, launchPage, title, onClose) {
     nativeStyle.textContent = `
       :host { position: relative; display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; }
       .app { height: 100%; min-height: 0; }
-      .modal, .paint-modal { position: absolute; }
+      .modal, .paint-modal, .clack-fm-modal { position: absolute; }
+      .paint-modal-box { width: min(520px, 92%); max-height: 82%; }
+      .paint-dialog { width: min(410px, 92%); }
+      .clack-fm-window { width: min(980px, 96%); height: min(680px, 92%); min-height: min(420px, 100%); }
     `;
     root.appendChild(nativeStyle);
     await Promise.all(styleLoads);
+
+    /* Standalone apps often keep shared dependencies in <head>.  An iframe
+     * loads those naturally; an integrated app has to load them explicitly
+     * before its body script starts.  Reuse dependencies already present in
+     * ClackOS so opening another instance does not evaluate them twice. */
+    for (const oldScript of source.head.querySelectorAll('script')) {
+      const rawSrc = oldScript.getAttribute('src');
+      if (rawSrc) {
+        const src = new URL(rawSrc, sourceUrl).href;
+        const perInstance = oldScript.hasAttribute('data-integrated-instance');
+        if (!perInstance && [...document.scripts].some(existing => existing.src === src)) continue;
+        await new Promise(resolve => {
+          const script = document.createElement('script');
+          for (const attr of oldScript.attributes) script.setAttribute(attr.name, attr.value);
+          script.src = src;
+          script.addEventListener('load', resolve, { once: true });
+          script.addEventListener('error', resolve, { once: true });
+          document.head.appendChild(script);
+        });
+      } else {
+        const script = document.createElement('script');
+        for (const attr of oldScript.attributes) script.setAttribute(attr.name, attr.value);
+        script.textContent = oldScript.textContent;
+        window.ClackOSMountRoot = root;
+        document.head.appendChild(script);
+        script.remove();
+        delete window.ClackOSMountRoot;
+      }
+    }
 
     [...source.body.childNodes].filter(node => node.nodeName !== 'SCRIPT').forEach(node => {
       root.appendChild(document.importNode(node, true));

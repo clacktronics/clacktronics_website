@@ -1254,6 +1254,8 @@ const dialog = {};
 
 function parentDesktop() {
   try {
+    const mountHost = host?.getMountHost?.();
+    if (mountHost?.ownerDocument.getElementById('desktop')) return mountHost.ownerDocument;
     if (window.parent !== window) {
       const doc = window.parent.document;
       if (doc.getElementById('desktop')) return doc;
@@ -1369,7 +1371,8 @@ function buildPanel(title) {
     };
     /* whichever side of ClackPaint has room for the panel wins; if neither
      * does it goes to the right edge and the user can drag it about */
-    const paintWindow = window.frameElement && window.frameElement.closest('.window');
+    const paintWindow = host?.getMountHost?.()?.closest('.window') ||
+      (window.frameElement && window.frameElement.closest('.window'));
     const rect = (paintWindow || window.frameElement || surface).getBoundingClientRect();
     const width = win.offsetWidth || 392;
     const roomRight = surface.clientWidth - rect.right, roomLeft = rect.left;
@@ -1628,6 +1631,10 @@ window.ClackDither = {
   GROUPS,
   init(api) { host = api; },
   open(groupId) { if (host) openPanel(groupId); },
-  repeat() { if (host) repeatLast(); }
+  repeat() { if (host) repeatLast(); },
+  destroy() {
+    if (dialog.win) closePanel(true);
+    host = null;
+  }
 };
 })();

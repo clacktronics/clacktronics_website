@@ -3,6 +3,6 @@
   "items": [
     { "type": "wallpapers" },
     { "type": "sep" },
-    { "type": "app", "page": "../applications/paint.html", "label": "Edit background tile…", "title": "ClackPaint — Background Tile", "icon": "brush", "width": 900, "height": 680, "multi": true }
+    { "type": "app", "page": "../applications/paint.html", "label": "Edit background tile…", "title": "ClackPaint — Background Tile", "icon": "brush", "width": 900, "height": 680, "multi": true, "integrated": true }
   ]
 }
