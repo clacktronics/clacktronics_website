@@ -87,8 +87,9 @@
 .paint-modal .paint-modal-box > header { cursor: grab; touch-action: none; user-select: none; }
 .paint-modal .paint-modal-box > header:active { cursor: grabbing; }
 .paint-modal .paint-dialog-body { overflow-y: auto; min-height: 0; }
-.paint-zoom-control { flex: none; display: flex; flex-direction: column; gap: 5px; padding-top: 2px; }
-.paint-zoom-control > span { display: flex; justify-content: space-between; gap: 8px; color: var(--sage); font-size: 10px; }
+.paint-zoom-control { grid-column: span 2; flex: none; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.paint-zoom-control > span { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; color: var(--sage); font-size: 10px; }
+.paint-zoom-control > span > b { font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--leaf-deep); }
 .paint-zoom-control input { width: 100%; margin: 0; }
 .paint-blur-readout { min-width: 54px; display: inline-block; text-align: right; font-variant-numeric: tabular-nums; color: var(--sage); }
 #gaussianBlurModal label > span { display: flex; align-items: center; gap: 8px; flex: 1; }
@@ -257,6 +258,7 @@
         <span class="app-lbl">Tool size</span>
         <input type="range" min="1" max="32" value="3" aria-label="Tool size">
       </div>
+      <label class="paint-zoom-control"><span><b>Zoom</b><output id="paintZoomValue">100%</output></span><input id="paintZoomSlider" type="range" min="0" max="6" step="1" value="3" aria-label="Canvas zoom"></label>
     </div>
 
     <div class="paint-canvas-wrap">
@@ -297,7 +299,6 @@
       </span></header>
       <div class="paint-layer-body" id="paintLayerBody">
         <div class="paint-layer-list" role="listbox" aria-label="Image layers"></div>
-        <label class="paint-zoom-control"><span><b>Zoom</b><output id="paintZoomValue">100%</output></span><input id="paintZoomSlider" type="range" min="0" max="6" step="1" value="3" aria-label="Canvas zoom"></label>
       </div>
     </aside>
   </div>
