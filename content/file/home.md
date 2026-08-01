@@ -11,7 +11,7 @@ Welcome to CLACKTRONICS a project and company site for all things made by Ben Ba
 
 ## What is clackOS?
 
-A corny mock operating system that has a number of useful apps and content for music, art and just about anything else I can think of. Most apps are either derived by me or open source projects, you will find credits at the bottom of each app. The whole site runs client side and managed using an open [Github repository](https://github.com/clacktronics/clacktronics_website). If you see any issues please let me know in the bug report found in the File menu.
+A corny mock operating system that has a number of useful apps and content for music, art and just about anything else I can think of. Most apps are either derived by me or open source projects, you will find credits at the bottom of each app. The whole site runs client side and managed using an open [Github repository](https://github.com/clacktronics/clacktronics_website). If you see any issues please let me know in the bug report found in the File menu. It will work ok on mobile, but its best viewed on desktop.
 
 ## Euroclack
 
