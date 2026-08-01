@@ -161,8 +161,8 @@
     </div></div>
     <div class="rm"><button>Image</button><div class="rm-dd">
       <button data-cmd="image-size"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Image Size…</button>
-      <button data-cmd="content-aware-scale"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Content-Aware Scale</button>
-      <button data-cmd="content-aware-size"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Content-Aware Size…</button>
+      <button data-cmd="form-detecting-scale"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Form-Detecting Scale</button>
+      <button data-cmd="form-detecting-size"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Form-Detecting Size…</button>
       <button data-cmd="canvas-size"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Canvas Size…</button>
       <button data-cmd="crop" disabled><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Crop to Selection</button>
       <div class="sep"></div>
@@ -264,12 +264,12 @@
         <canvas class="base" width="640" height="400"></canvas>
         <canvas class="seam-animation" width="640" height="400" hidden></canvas>
         <canvas class="overlay" width="640" height="400"></canvas>
-        <canvas class="content-transform-preview" width="640" height="400" hidden aria-label="Live content-aware scale preview"></canvas>
+        <canvas class="content-transform-preview" width="640" height="400" hidden aria-label="Live form-detecting scale preview"></canvas>
         <span class="paint-brush-cursor" aria-hidden="true" hidden></span>
         <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
         <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
         <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
-        <div class="paint-transform-box" hidden aria-label="Content-aware scale handles">
+        <div class="paint-transform-box" hidden aria-label="Form-detecting scale handles">
           <button type="button" class="paint-transform-handle" data-handle="nw" aria-label="Resize from top left"></button>
           <button type="button" class="paint-transform-handle" data-handle="n" aria-label="Resize from top"></button>
           <button type="button" class="paint-transform-handle" data-handle="ne" aria-label="Resize from top right"></button>
@@ -333,23 +333,23 @@
   </form>
 </div>
 
-<div class="paint-modal" id="contentAwareModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="contentAwareTitle">
-  <form class="paint-modal-box paint-dialog" id="contentAwareForm">
-    <header><span id="contentAwareTitle">Content-Aware Scale</span><button type="button" data-close="contentAwareModal" aria-label="Close">×</button></header>
+<div class="paint-modal" id="formDetectingModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="formDetectingTitle">
+  <form class="paint-modal-box paint-dialog" id="formDetectingForm">
+    <header><span id="formDetectingTitle">Form-Detecting Scale</span><button type="button" data-close="formDetectingModal" aria-label="Close">×</button></header>
     <div class="paint-dialog-body">
       <div data-caview="form">
-        <label>Width <span><input id="contentAwareWidth" type="number" min="1" max="8192" required> px</span></label>
-        <label>Height <span><input id="contentAwareHeight" type="number" min="1" max="8192" required> px</span></label>
-        <label class="paint-check"><input id="contentAwareProtect" type="checkbox" checked> Protect current selection</label>
-        <p class="app-status">Enter an exact size, or use Image → Content-Aware Scale to drag the handles directly. Seam carving removes or adds low-detail paths.</p>
+        <label>Width <span><input id="formDetectingWidth" type="number" min="1" max="8192" required> px</span></label>
+        <label>Height <span><input id="formDetectingHeight" type="number" min="1" max="8192" required> px</span></label>
+        <label class="paint-check"><input id="formDetectingProtect" type="checkbox" checked> Protect current selection</label>
+        <p class="app-status">Enter an exact size, or use Image → Form-Detecting Scale to drag the handles directly. Seam carving removes or adds low-detail paths.</p>
       </div>
       <div data-caview="progress" hidden>
-        <div class="paint-progress" role="progressbar" aria-label="Content-aware resize progress"><div></div></div>
+        <div class="paint-progress" role="progressbar" aria-label="Form-detecting resize progress"><div></div></div>
         <p class="paint-bg-detail">Preparing image…</p>
       </div>
       <div class="paint-dialog-actions">
-        <button type="button" class="btn ghost" id="contentAwareCancel" data-close="contentAwareModal">Cancel</button>
-        <button class="btn primary" id="contentAwareStart">Apply</button>
+        <button type="button" class="btn ghost" id="formDetectingCancel" data-close="formDetectingModal">Cancel</button>
+        <button class="btn primary" id="formDetectingStart">Apply</button>
       </div>
     </div>
   </form>
@@ -549,7 +549,7 @@ function activateLayer(layer) {
   if (!layer || !layers.includes(layer)) return;
   if ((adjustPreviewing || effectPreviewing) && layer !== activeLayer) { setStatus('Apply or cancel the live preview before changing layers'); return; }
   if (ditherPreviewing && layer !== activeLayer) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
-  if (contentTransform && layer !== activeLayer) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  if (contentTransform && layer !== activeLayer) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
   activeLayer = layer;
   base = layer.canvas;
   bx = base.getContext('2d', { willReadFrequently: true });
@@ -574,7 +574,7 @@ function renderLayerPanel() {
       event.stopPropagation();
       if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before changing layers'); return; }
       if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
-      if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+      if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
       pushUndo(); layer.visible = !layer.visible; syncLayerCanvases(); renderLayerPanel(); setStatus(layer.visible ? `Shown ${layer.name}` : `Hidden ${layer.name}`);
     });
     const thumb = document.createElement('canvas');
@@ -599,7 +599,7 @@ function renderLayerPanel() {
     row.addEventListener('dblclick', () => {
       if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before changing layers'); return; }
       if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
-      if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+      if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
       const next = prompt('Layer name', layer.name);
       if (next?.trim() && next.trim() !== layer.name) { pushUndo(); layer.name = next.trim(); renderLayerPanel(); setStatus('Layer renamed'); }
     });
@@ -609,7 +609,7 @@ function renderLayerPanel() {
       event.preventDefault();
       if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before changing layers'); return; }
       if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
-      if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+      if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
       const dragged = layers.find(item => String(item.id) === event.dataTransfer?.getData('text/plain'));
       if (!dragged || dragged === layer) return;
       pushUndo();
@@ -632,13 +632,13 @@ function addLayer(name = `Layer ${layers.length + 1}`, pixels = null, index = la
 
 function newLayer() {
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
-  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
   pushUndo(); addLayer(); clearSelection(); setStatus('New layer added');
 }
 
 function duplicateLayer() {
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
-  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
   pushUndo();
   const source = activeLayer;
   const pixels = bx.getImageData(0, 0, width(), height());
@@ -648,7 +648,7 @@ function duplicateLayer() {
 
 function deleteLayer() {
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
-  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
   if (layers.length === 1) { setStatus('The document must keep at least one layer'); return; }
   pushUndo();
   const index = layers.indexOf(activeLayer);
@@ -658,7 +658,7 @@ function deleteLayer() {
 
 function mergeLayerDown() {
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
-  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
   const index = layers.indexOf(activeLayer);
   if (index < 1) { setStatus('There is no layer below to merge into'); return; }
   pushUndo(); canonicaliseSeam();
@@ -697,7 +697,7 @@ function mergeVisibleLayers(flatten = false) {
 
 function moveLayer(direction) {
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
-  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before changing layers'; return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
   const index = layers.indexOf(activeLayer), next = index + direction;
   if (next < 0 || next >= layers.length) return;
   pushUndo(); [layers[index], layers[next]] = [layers[next], layers[index]];
@@ -1359,7 +1359,7 @@ function closeContextMenu() { contextMenu.classList.remove('open'); }
 function openContextMenu(event) {
   event.preventDefault();
   if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before using canvas actions'); return; }
-  if (contentTransform) { status.textContent = 'Apply or cancel Content-Aware Scale before using canvas actions'; return; }
+  if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before using canvas actions'; return; }
   contextMenu.querySelector('[data-context-action="cut-layer"]').disabled = !selection;
   contextMenu.querySelector('[data-context-action="copy-layer"]').disabled = !selection;
   contextMenu.querySelector('[data-context-action="merge-layer"]').disabled = layers.indexOf(activeLayer) < 1;
@@ -1386,7 +1386,7 @@ stack.addEventListener('pointerdown', event => {
   if (event.button !== 0 && event.button !== 2) return;
   event.preventDefault();
   if (event.button === 2) return;
-  if (contentTransform) { status.textContent = 'Drag a transform handle, or Apply/Cancel the content-aware scale'; return; }
+  if (contentTransform) { status.textContent = 'Drag a transform handle, or Apply/Cancel the form-detecting scale'; return; }
   if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before painting'); return; }
   if (seamAnimating) { status.textContent = `Seam view is sliding into place — ${width()} × ${height()} px`; return; }
   /* the dithering preview redraws the whole canvas, so a stroke made now
@@ -2076,7 +2076,7 @@ function runLiveContentPreview() {
   const layer = composite.slice();
   const protect = liveProtectMask(proxyWidth, proxyHeight);
   const token = liveContentToken;
-  liveContentWorker = new Worker(new URL('paint-content-aware-worker.js', appUrl));
+  liveContentWorker = new Worker(new URL('paint-form-detecting-worker.js', appUrl));
   liveContentWorker.onerror = () => { if (token === liveContentToken) { liveContentWorker = null; contentTransformPreview.hidden = true; } };
   liveContentWorker.onmessage = event => {
     const message = event.data;
@@ -2085,7 +2085,7 @@ function runLiveContentPreview() {
       contentTransformPreview.width = message.width; contentTransformPreview.height = message.height;
       tx.putImageData(new ImageData(new Uint8ClampedArray(message.layers[0]), message.width, message.height), 0, 0);
       contentTransformPreview.hidden = false;
-      status.textContent = `Live content-aware preview — ${contentTransform.targetWidth} × ${contentTransform.targetHeight} px · Enter applies · Esc cancels`;
+      status.textContent = `Live form-detecting preview — ${contentTransform.targetWidth} × ${contentTransform.targetHeight} px · Enter applies · Esc cancels`;
       liveContentWorker?.terminate(); liveContentWorker = null;
     } else if (message.type === 'error') {
       liveContentWorker?.terminate(); liveContentWorker = null; contentTransformPreview.hidden = true;
@@ -2116,10 +2116,10 @@ function updateContentTransformPreview() {
   updateStackSize();
   stack.style.transform = `translate(${contentTransform.offsetX}px, ${contentTransform.offsetY}px)`;
   transformSize.textContent = `${contentTransform.targetWidth} × ${contentTransform.targetHeight} px`;
-  status.textContent = `Content-Aware Scale preview — ${contentTransform.targetWidth} × ${contentTransform.targetHeight} px · drag a handle · Enter applies · Esc cancels`;
+  status.textContent = `Form-Detecting Scale preview — ${contentTransform.targetWidth} × ${contentTransform.targetHeight} px · drag a handle · Enter applies · Esc cancels`;
 }
 
-function beginContentAwareTransform() {
+function beginFormDetectingTransform() {
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before resizing'); return; }
   if (seamAnimating || contentJob) { setStatus('Finish the current image operation first'); return; }
   contentTransform = {
@@ -2131,16 +2131,16 @@ function beginContentAwareTransform() {
   updateContentTransformPreview();
 }
 
-function finishContentAwareTransform(apply) {
+function finishFormDetectingTransform(apply) {
   if (!contentTransform) return;
   const targetWidth = contentTransform.targetWidth, targetHeight = contentTransform.targetHeight;
   cancelLiveContentPreview(true);
   contentTransform = null; transformBox.hidden = true; stack.classList.remove('content-transforming');
   seamXButton.disabled = false; seamYButton.disabled = false; mirrorButtons.forEach(button => { button.disabled = false; });
   stack.style.transform = ''; updateStackSize();
-  if (!apply) { setStatus('Content-aware scale cancelled'); return; }
-  openContentAware(targetWidth, targetHeight);
-  appRoot.querySelector('#contentAwareForm').requestSubmit();
+  if (!apply) { setStatus('Form-detecting scale cancelled'); return; }
+  openFormDetecting(targetWidth, targetHeight);
+  appRoot.querySelector('#formDetectingForm').requestSubmit();
 }
 
 transformBox.querySelectorAll('[data-handle]').forEach(handle => handle.addEventListener('pointerdown', event => {
@@ -2181,63 +2181,63 @@ transformBox.querySelectorAll('[data-handle]').forEach(handle => handle.addEvent
 }));
 
 transformBox.querySelector('.paint-transform-toolbar').addEventListener('pointerdown', event => event.stopPropagation());
-transformBox.querySelector('[data-transform-action="cancel"]').addEventListener('click', event => { event.stopPropagation(); finishContentAwareTransform(false); });
-transformBox.querySelector('[data-transform-action="apply"]').addEventListener('click', event => { event.stopPropagation(); finishContentAwareTransform(true); });
+transformBox.querySelector('[data-transform-action="cancel"]').addEventListener('click', event => { event.stopPropagation(); finishFormDetectingTransform(false); });
+transformBox.querySelector('[data-transform-action="apply"]').addEventListener('click', event => { event.stopPropagation(); finishFormDetectingTransform(true); });
 
-/* ---- Content-aware resize — seam carving runs off the UI thread and applies
+/* ---- Form-detecting resize — seam carving runs off the UI thread and applies
  *      one shared seam path to the visible composite and every stored layer. */
-const contentModal = appRoot.querySelector('#contentAwareModal');
+const contentModal = appRoot.querySelector('#formDetectingModal');
 const contentFormView = contentModal.querySelector('[data-caview="form"]');
 const contentProgressView = contentModal.querySelector('[data-caview="progress"]');
 const contentProgressBar = contentProgressView.querySelector('.paint-progress > div');
 const contentDetail = contentProgressView.querySelector('.paint-bg-detail');
-const contentStart = appRoot.querySelector('#contentAwareStart');
+const contentStart = appRoot.querySelector('#formDetectingStart');
 let contentWorker = null, contentToken = 0, contentJob = null;
 
-function openContentAware(targetWidth = width(), targetHeight = height()) {
+function openFormDetecting(targetWidth = width(), targetHeight = height()) {
   if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before resizing'); return; }
-  appRoot.querySelector('#contentAwareWidth').value = targetWidth;
-  appRoot.querySelector('#contentAwareHeight').value = targetHeight;
-  const protect = appRoot.querySelector('#contentAwareProtect');
+  appRoot.querySelector('#formDetectingWidth').value = targetWidth;
+  appRoot.querySelector('#formDetectingHeight').value = targetHeight;
+  const protect = appRoot.querySelector('#formDetectingProtect');
   protect.disabled = !selection; protect.checked = !!selection;
   contentFormView.hidden = false; contentProgressView.hidden = true; contentStart.hidden = false;
   contentProgressBar.style.width = '0%'; contentDetail.textContent = 'Preparing image…';
-  showModal('contentAwareModal'); appRoot.querySelector('#contentAwareWidth').focus();
+  showModal('formDetectingModal'); appRoot.querySelector('#formDetectingWidth').focus();
 }
 
-function stopContentAware(cancelled = true) {
+function stopFormDetecting(cancelled = true) {
   contentToken++; contentJob = null;
   if (contentWorker) { contentWorker.terminate(); contentWorker = null; }
-  if (cancelled) setStatus('Content-aware resize cancelled');
+  if (cancelled) setStatus('Form-detecting resize cancelled');
 }
 
-function finishContentAwareError(message) {
-  stopContentAware(false);
+function finishFormDetectingError(message) {
+  stopFormDetecting(false);
   contentFormView.hidden = false; contentProgressView.hidden = true; contentStart.hidden = false;
-  setStatus(`Content-aware resize failed: ${message}`);
+  setStatus(`Form-detecting resize failed: ${message}`);
 }
 
-function applyContentAwareResult(message) {
+function applyFormDetectingResult(message) {
   if (!contentJob || message.token !== contentJob.token) return;
   const unchanged = width() === contentJob.width && height() === contentJob.height &&
     documentRevision === contentJob.revision && layers.length === contentJob.layerIds.length && layers.every((layer, index) => layer.id === contentJob.layerIds[index]);
-  if (!unchanged) { hideModal('contentAwareModal'); finishContentAwareError('the document changed while it was running'); return; }
+  if (!unchanged) { hideModal('formDetectingModal'); finishFormDetectingError('the document changed while it was running'); return; }
   pushUndo(); canonicaliseSeam();
   resizeSurfaces(message.width, message.height);
   layers.forEach((layer, index) => layer.canvas.getContext('2d').putImageData(
     new ImageData(new Uint8ClampedArray(message.layers[index]), message.width, message.height), 0, 0
   ));
   reapplySeam(); clearSelection(); renderLayerPanel();
-  hideModal('contentAwareModal'); stopContentAware(false);
-  setStatus('Content-aware resize complete');
+  hideModal('formDetectingModal'); stopFormDetecting(false);
+  setStatus('Form-detecting resize complete');
 }
 
-appRoot.querySelector('#contentAwareForm').addEventListener('submit', event => {
+appRoot.querySelector('#formDetectingForm').addEventListener('submit', event => {
   event.preventDefault();
-  const targetWidth = validDimension(appRoot.querySelector('#contentAwareWidth').value);
-  const targetHeight = validDimension(appRoot.querySelector('#contentAwareHeight').value);
+  const targetWidth = validDimension(appRoot.querySelector('#formDetectingWidth').value);
+  const targetHeight = validDimension(appRoot.querySelector('#formDetectingHeight').value);
   if (!targetWidth || !targetHeight) return;
-  if (targetWidth === width() && targetHeight === height()) { hideModal('contentAwareModal'); setStatus('The content-aware size is unchanged'); return; }
+  if (targetWidth === width() && targetHeight === height()) { hideModal('formDetectingModal'); setStatus('The form-detecting size is unchanged'); return; }
   const seamCount = Math.abs(targetWidth - width()) + Math.abs(targetHeight - height());
   const estimate = width() * height() * seamCount;
   if ((targetWidth * targetHeight > 24000000 || estimate > 350000000) &&
@@ -2247,16 +2247,16 @@ appRoot.querySelector('#contentAwareForm').addEventListener('submit', event => {
   canonicaliseSeam();
   const compositePixels = compositeCanvas().getContext('2d').getImageData(0, 0, width(), height()).data;
   const layerPixels = layers.map(layer => layer.canvas.getContext('2d').getImageData(0, 0, width(), height()).data);
-  const protectMask = appRoot.querySelector('#contentAwareProtect').checked ? selectionMask() : null;
+  const protectMask = appRoot.querySelector('#formDetectingProtect').checked ? selectionMask() : null;
   if (originalSeam.x || originalSeam.y) reapplySeam();
 
   const token = ++contentToken;
   contentJob = { token, width: width(), height: height(), revision: documentRevision, layerIds: layers.map(layer => layer.id) };
   contentFormView.hidden = true; contentProgressView.hidden = false; contentStart.hidden = true;
   contentDetail.textContent = `Finding ${seamCount} low-energy seam${seamCount === 1 ? '' : 's'}…`;
-  setStatus('Content-aware resize running…');
-  contentWorker = new Worker(new URL('paint-content-aware-worker.js', appUrl));
-  contentWorker.onerror = event => finishContentAwareError(event.message || 'worker failed to start');
+  setStatus('Form-detecting resize running…');
+  contentWorker = new Worker(new URL('paint-form-detecting-worker.js', appUrl));
+  contentWorker.onerror = event => finishFormDetectingError(event.message || 'worker failed to start');
   contentWorker.onmessage = event => {
     const message = event.data;
     if (message.token !== contentToken) return;
@@ -2264,8 +2264,8 @@ appRoot.querySelector('#contentAwareForm').addEventListener('submit', event => {
       const percent = message.total ? message.complete / message.total * 100 : 100;
       contentProgressBar.style.width = Math.min(100, percent).toFixed(1) + '%';
       contentDetail.textContent = `${message.complete} of ${message.total} seams — ${message.width} × ${message.height} px`;
-    } else if (message.type === 'result') applyContentAwareResult(message);
-    else if (message.type === 'error') finishContentAwareError(message.message);
+    } else if (message.type === 'result') applyFormDetectingResult(message);
+    else if (message.type === 'error') finishFormDetectingError(message.message);
   };
   const transfers = [compositePixels.buffer, ...layerPixels.map(pixels => pixels.buffer)];
   if (protectMask) transfers.push(protectMask.buffer);
@@ -2276,7 +2276,7 @@ appRoot.querySelector('#contentAwareForm').addEventListener('submit', event => {
   }, transfers);
 });
 
-contentModal.addEventListener('click', event => { if (event.target.closest('[data-close]') && contentJob) stopContentAware(true); });
+contentModal.addEventListener('click', event => { if (event.target.closest('[data-close]') && contentJob) stopFormDetecting(true); });
 
 async function animateRequestedSeamView(message) {
   const requestedX = seamXButton.getAttribute('aria-pressed') === 'true';
@@ -2440,8 +2440,8 @@ function runCmd(cmd) {
   /* Purely a view change, so it stays available while a preview is running. */
   if (cmd === 'layer-panel') { setLayersCollapsed(!layersCollapsed, true); return; }
   if (contentTransform) {
-    if (cmd === 'content-aware-scale') finishContentAwareTransform(false);
-    else status.textContent = 'Apply or cancel Content-Aware Scale before using another command';
+    if (cmd === 'form-detecting-scale') finishFormDetectingTransform(false);
+    else status.textContent = 'Apply or cancel Form-Detecting Scale before using another command';
     return;
   }
   if (effectPreviewing) { setStatus('Apply or cancel the effect preview before using another command'); return; }
@@ -2478,8 +2478,8 @@ function runCmd(cmd) {
     case 'layer-merge-visible': mergeVisibleLayers(false); break;
     case 'layer-flatten': mergeVisibleLayers(true); break;
     case 'image-size': openImageSize(); break;
-    case 'content-aware-scale': beginContentAwareTransform(); break;
-    case 'content-aware-size': openContentAware(); break;
+    case 'form-detecting-scale': beginFormDetectingTransform(); break;
+    case 'form-detecting-size': openFormDetecting(); break;
     case 'canvas-size': openCanvasSize(); break;
     case 'crop': cropSelection(); break;
     case 'histogram': openHistogram(); break;
@@ -2574,12 +2574,12 @@ appRoot.querySelector('.rm-bar').addEventListener('click', event => {
 });
 appRoot.addEventListener('click', event => { if (!event.target.closest('.rm')) closeMenus(); });
 appRoot.addEventListener('keydown', event => {
-  if (contentTransform && event.key === 'Escape') { event.preventDefault(); finishContentAwareTransform(false); return; }
-  if (contentTransform && event.key === 'Enter' && !/^(INPUT|BUTTON)$/.test(event.target.tagName || '')) { event.preventDefault(); finishContentAwareTransform(true); return; }
+  if (contentTransform && event.key === 'Escape') { event.preventDefault(); finishFormDetectingTransform(false); return; }
+  if (contentTransform && event.key === 'Enter' && !/^(INPUT|BUTTON)$/.test(event.target.tagName || '')) { event.preventDefault(); finishFormDetectingTransform(true); return; }
   if (event.key === 'Escape' && appRoot.querySelector('#adjustModal').classList.contains('open')) { event.preventDefault(); closeAdjustment(true); return; }
   if (event.key === 'Escape') {
     closeContextMenu();
-    if (contentModal.classList.contains('open')) { hideModal('contentAwareModal'); if (contentJob) stopContentAware(true); }
+    if (contentModal.classList.contains('open')) { hideModal('formDetectingModal'); if (contentJob) stopFormDetecting(true); }
     modals.forEach(modal => { if (!modal.hasAttribute('data-keep-open')) hideModal(modal.id); });
   }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); }

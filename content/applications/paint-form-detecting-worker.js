@@ -1,4 +1,4 @@
-/* ClackPaint content-aware resize worker. It applies each seam found in the
+/* ClackPaint form-detecting resize worker. It applies each seam found in the
  * visible composite to every document layer, keeping the layer stack intact. */
 
 function energyMap(rgba, width, height, protect) {
