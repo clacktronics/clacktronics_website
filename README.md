@@ -926,7 +926,7 @@ windows, and desktop actions.
   reorderable layer stack with visibility, rename, duplicate, delete and merge
   controls; rectangular, freehand-lasso and edge-snapping magnetic-lasso
   selections can be copied or cut directly to a new layer from the canvas
-  right-click menu. Image → Content-Aware Scale opens a Photoshop-style
+  right-click menu. Image → Form-Detecting Scale opens a Photoshop-style
   transform box: drag any edge or corner handle, hold Shift on a corner to
   preserve the aspect ratio, then Apply (or press Enter). While a handle moves,
   a debounced low-resolution seam-carved proxy updates live; superseded worker

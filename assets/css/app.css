@@ -120,7 +120,7 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 .paint-app { height: 100%; min-height: 0; }
 .paint-main { display: flex; gap: 14px; padding: 14px; flex: 1; min-height: 0; }
 .paint-tools {
-  display: grid; grid-template-columns: repeat(2, 36px); grid-auto-rows: 36px; gap: 6px;
+  display: grid; grid-template-columns: repeat(2, 36px); grid-auto-rows: minmax(36px, auto); gap: 6px;
   align-content: start; flex: none; max-height: 100%; overflow-x: hidden; overflow-y: auto;
   scrollbar-width: thin;
 }
@@ -221,6 +221,6 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 
 @media (max-width: 560px) {
   .paint-main { gap: 8px; padding: 8px; }
-  .paint-tools { grid-template-columns: repeat(2, 32px); grid-auto-rows: 32px; gap: 4px; }
+  .paint-tools { grid-template-columns: repeat(2, 32px); grid-auto-rows: minmax(32px, auto); gap: 4px; }
   .paint-palette { grid-template-columns: repeat(14, 16px); }
 }
