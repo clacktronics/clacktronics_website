@@ -303,6 +303,7 @@
           <button data-cmd="effect-mosaic"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Mosaic…</button>
           <button data-cmd="effect-halftone"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Colour Halftone…</button>
           <button data-cmd="effect-crystallize"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span>Crystallize…</button>
+          <button data-cmd="effect-jpeg"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>JPEG Artifacts…</button>
         </div>
       </div>
       <div class="rm-sub">
@@ -2238,6 +2239,230 @@ function halftoneImage(src, maxRadius, angle, mono) {
   return out;
 }
 
+/* The JPEG pipeline itself, minus the entropy coding that has nothing to show
+   for itself: colour is split into brightness and two colour-difference
+   planes, the colour planes are kept at a coarser resolution, and every plane
+   is cut into blocks whose cosine coefficients are rounded off. Blocking,
+   ringing round hard edges, smeared colour and generation loss are not drawn
+   on afterwards — they all fall out of those three steps on their own.
+
+   The quantisation steps are the tables from the JPEG standard, scaled the way
+   libjpeg scales them for a quality setting. They are not held to the 8-bit
+   ceiling a real baseline encoder works within, so the bottom of the Quality
+   slider destroys rather more than any real encoder could. */
+const JPEG_LUMA_QUANT = [
+  16, 11, 10, 16, 24, 40, 51, 61,
+  12, 12, 14, 19, 26, 58, 60, 55,
+  14, 13, 16, 24, 40, 57, 69, 56,
+  14, 17, 22, 29, 51, 87, 80, 62,
+  18, 22, 37, 56, 68, 109, 103, 77,
+  24, 35, 55, 64, 81, 104, 113, 92,
+  49, 64, 78, 87, 103, 121, 120, 101,
+  72, 92, 95, 98, 112, 100, 103, 99
+];
+const JPEG_CHROMA_QUANT = [
+  17, 18, 24, 47, 99, 99, 99, 99,
+  18, 21, 26, 66, 99, 99, 99, 99,
+  24, 26, 56, 99, 99, 99, 99, 99,
+  47, 66, 99, 99, 99, 99, 99, 99,
+  99, 99, 99, 99, 99, 99, 99, 99,
+  99, 99, 99, 99, 99, 99, 99, 99,
+  99, 99, 99, 99, 99, 99, 99, 99,
+  99, 99, 99, 99, 99, 99, 99, 99
+];
+/* How many pixels across and down share one colour sample. */
+const JPEG_SUBSAMPLING = { '444': [1, 1], '422': [2, 1], '420': [2, 2], '411': [4, 1] };
+
+/* The standard tables describe an 8 × 8 block. A larger block wants the same
+   answer stretched over it, so each step is read at its own frequency. */
+function jpegQuantTable(base, quality, size) {
+  const wanted = Math.min(100, Math.max(1, quality));
+  const scale = wanted < 50 ? 5000 / wanted : 200 - wanted * 2;
+  const table = new Float32Array(size * size);
+  for (let v = 0; v < size; v++) for (let u = 0; u < size; u++) {
+    const step = base[Math.min(7, v * 8 / size | 0) * 8 + Math.min(7, u * 8 / size | 0)];
+    table[v * size + u] = Math.max(1, Math.round((step * scale + 50) / 100));
+  }
+  return table;
+}
+
+/* The cosine basis, orthonormal so a block survives untouched when nothing is
+   quantised away, and so the same steps mean the same thing at any size. */
+function jpegCosines(size) {
+  const cosines = new Float32Array(size * size), scale = Math.sqrt(2 / size);
+  for (let u = 0; u < size; u++) for (let n = 0; n < size; n++)
+    cosines[u * size + n] = scale * (u ? 1 : Math.SQRT1_2) * Math.cos((2 * n + 1) * u * Math.PI / (2 * size));
+  return cosines;
+}
+
+/* Ringing rises with frequency, so the boost lands on the coefficients that
+   describe edges. In flat parts of the picture they are already zero and stay
+   that way, which is why the halos appear round the edges and nowhere else. */
+function jpegRingWeights(size) {
+  const weights = new Float32Array(size * size), longest = Math.hypot(size - 1, size - 1) || 1;
+  for (let v = 0; v < size; v++) for (let u = 0; u < size; u++) weights[v * size + u] = Math.hypot(u, v) / longest;
+  return weights;
+}
+
+/* One plane through the encoder and back. The grid can be offset, which is how
+   a second pass lands its blocks somewhere new. */
+function jpegPlane(plane, w, h, size, quant, cosines, weights, ring, offsetX, offsetY, wrap) {
+  const out = new Float32Array(plane.length);
+  const values = new Float32Array(size * size), rows = new Float32Array(size * size), coefficients = new Float32Array(size * size);
+  for (let blockY = -offsetY; blockY < h; blockY += size) for (let blockX = -offsetX; blockX < w; blockX += size) {
+    for (let y = 0; y < size; y++) {
+      const line = edgeIndex(blockY + y, h, wrap) * w;
+      for (let x = 0; x < size; x++) values[y * size + x] = plane[line + edgeIndex(blockX + x, w, wrap)] - 128;
+    }
+    for (let y = 0; y < size; y++) for (let u = 0; u < size; u++) {
+      let sum = 0;
+      for (let x = 0; x < size; x++) sum += cosines[u * size + x] * values[y * size + x];
+      rows[y * size + u] = sum;
+    }
+    /* Rounding to the step is where the picture is actually thrown away. Most
+       of the fine detail lands on zero, and noting how far the survivors reach
+       lets the way back skip the empty remainder. */
+    let lastU = 0, lastV = 0;
+    for (let v = 0; v < size; v++) for (let u = 0; u < size; u++) {
+      let sum = 0;
+      for (let y = 0; y < size; y++) sum += cosines[v * size + y] * rows[y * size + u];
+      const at = v * size + u, step = quant[at];
+      let value = Math.round(sum / step) * step;
+      if (at && ring !== 1) value *= 1 + (ring - 1) * weights[at];
+      coefficients[at] = value;
+      if (value) { if (u > lastU) lastU = u; if (v > lastV) lastV = v; }
+    }
+    const spanU = lastU + 1, spanV = lastV + 1;
+    for (let y = 0; y < size; y++) for (let u = 0; u < spanU; u++) {
+      let sum = 0;
+      for (let v = 0; v < spanV; v++) sum += cosines[v * size + y] * coefficients[v * size + u];
+      rows[y * size + u] = sum;
+    }
+    for (let y = 0; y < size; y++) {
+      const py = blockY + y;
+      if (!wrap && (py < 0 || py >= h)) continue;
+      const line = edgeIndex(py, h, wrap) * w;
+      for (let x = 0; x < size; x++) {
+        const px = blockX + x;
+        if (!wrap && (px < 0 || px >= w)) continue;
+        let sum = 0;
+        for (let u = 0; u < spanU; u++) sum += cosines[u * size + x] * rows[y * size + u];
+        out[line + edgeIndex(px, w, wrap)] = sum + 128;
+      }
+    }
+  }
+  return out;
+}
+
+function jpegDownsample(plane, w, h, stepX, stepY) {
+  const cw = Math.ceil(w / stepX), ch = Math.ceil(h / stepY), out = new Float32Array(cw * ch);
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+    let sum = 0, count = 0;
+    for (let dy = 0; dy < stepY; dy++) {
+      const sy = y * stepY + dy;
+      if (sy >= h) continue;
+      for (let dx = 0; dx < stepX; dx++) {
+        const sx = x * stepX + dx;
+        if (sx >= w) continue;
+        sum += plane[sy * w + sx]; count++;
+      }
+    }
+    out[y * cw + x] = count ? sum / count : 128;
+  }
+  return { plane: out, width: cw, height: ch };
+}
+
+/* Repeating the sample rather than smoothing between them, the way a cheap
+   decoder does — it is the blockier and more recognisable of the two. */
+function jpegUpsample(plane, cw, ch, w, h, stepX, stepY) {
+  const out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const line = Math.min(ch - 1, y / stepY | 0) * cw;
+    for (let x = 0; x < w; x++) out[y * w + x] = plane[line + Math.min(cw - 1, x / stepX | 0)];
+  }
+  return out;
+}
+
+/* JPEG has nowhere to put transparency, so a transparent pixel carries no
+   colour worth compressing — and whatever is sitting in it would be dragged
+   across the picture by the colour planes. Each cell lends its own visible
+   colour to its holes instead, which keeps the edges clean. */
+function jpegFillHoles(planes, data, w, h, size) {
+  const average = [0, 0, 0], cell = [0, 0, 0];
+  let total = 0;
+  for (let pixel = 0; pixel < w * h; pixel++) {
+    if (!data[pixel * 4 + 3]) continue;
+    for (let p = 0; p < 3; p++) average[p] += planes[p][pixel];
+    total++;
+  }
+  if (!total) return;
+  for (let p = 0; p < 3; p++) average[p] /= total;
+  for (let cellY = 0; cellY < h; cellY += size) for (let cellX = 0; cellX < w; cellX += size) {
+    const right = Math.min(w, cellX + size), bottom = Math.min(h, cellY + size);
+    let count = 0;
+    cell[0] = cell[1] = cell[2] = 0;
+    for (let y = cellY; y < bottom; y++) for (let x = cellX; x < right; x++) {
+      const pixel = y * w + x;
+      if (!data[pixel * 4 + 3]) continue;
+      for (let p = 0; p < 3; p++) cell[p] += planes[p][pixel];
+      count++;
+    }
+    for (let p = 0; p < 3; p++) cell[p] = count ? cell[p] / count : average[p];
+    for (let y = cellY; y < bottom; y++) for (let x = cellX; x < right; x++) {
+      const pixel = y * w + x;
+      if (data[pixel * 4 + 3]) continue;
+      for (let p = 0; p < 3; p++) planes[p][pixel] = cell[p];
+    }
+  }
+}
+
+function jpegImage(src, quality, block, chroma, chromaQuality, ringing, passes, drift, wrap) {
+  const w = src.width, h = src.height, data = src.data, count = w * h;
+  const size = Math.max(2, Math.min(32, Math.round(block)));
+  const [stepX, stepY] = JPEG_SUBSAMPLING[chroma] || JPEG_SUBSAMPLING['420'];
+  let luma = new Float32Array(count), blue = new Float32Array(count), red = new Float32Array(count);
+  let holes = false;
+  for (let pixel = 0; pixel < count; pixel++) {
+    const i = pixel * 4, r = data[i], g = data[i + 1], b = data[i + 2];
+    luma[pixel] = .299 * r + .587 * g + .114 * b;
+    blue[pixel] = 128 - .168736 * r - .331264 * g + .5 * b;
+    red[pixel] = 128 + .5 * r - .418688 * g - .081312 * b;
+    if (!data[i + 3]) holes = true;
+  }
+  if (holes) jpegFillHoles([luma, blue, red], data, w, h, size);
+
+  const cosines = jpegCosines(size), weights = jpegRingWeights(size), ring = Math.max(0, ringing) / 100;
+  const lumaQuant = jpegQuantTable(JPEG_LUMA_QUANT, quality, size);
+  const chromaQuant = jpegQuantTable(JPEG_CHROMA_QUANT, chromaQuality, size);
+  /* Saving the same file again lands every block back where it was and rounds
+     it to the step it is already on, so a fixed grid stops doing damage after
+     the first pass. Moving the grid is what keeps generation loss going. */
+  for (let pass = 0, rounds = Math.max(1, Math.round(passes)); pass < rounds; pass++) {
+    const offsetX = drift && pass ? hashNoise(pass, 0, 7) * size | 0 : 0;
+    const offsetY = drift && pass ? hashNoise(0, pass, 11) * size | 0 : 0;
+    luma = jpegPlane(luma, w, h, size, lumaQuant, cosines, weights, ring, offsetX, offsetY, wrap);
+    const encodeChroma = plane => {
+      const small = jpegDownsample(plane, w, h, stepX, stepY);
+      const coded = jpegPlane(small.plane, small.width, small.height, size, chromaQuant, cosines, weights, ring,
+        offsetX / stepX | 0, offsetY / stepY | 0, wrap);
+      return jpegUpsample(coded, small.width, small.height, w, h, stepX, stepY);
+    };
+    blue = encodeChroma(blue); red = encodeChroma(red);
+  }
+
+  const out = blankImage(w, h), result = out.data;
+  for (let pixel = 0; pixel < count; pixel++) {
+    const i = pixel * 4, alpha = data[i + 3];
+    result[i + 3] = alpha;
+    if (!alpha) { result[i] = data[i]; result[i + 1] = data[i + 1]; result[i + 2] = data[i + 2]; continue; }
+    const y = luma[pixel], u = blue[pixel] - 128, v = red[pixel] - 128;
+    result[i] = y + 1.402 * v;
+    result[i + 1] = y - .344136 * u - .714136 * v;
+    result[i + 2] = y + 1.772 * u;
+  }
+  return out;
+}
+
 /* Tileable value noise: the lattice wraps at the image edge, so Clouds over a
    tile still meets itself cleanly. */
 function cloudField(w, h, cells, octaves, roughness, seed) {
@@ -2463,6 +2688,24 @@ const EFFECTS = {
     help: 'Clumps the layer into flat polygons around scattered centres.',
     fields: [{ id: 'cell', label: 'Cell size', type: 'range', min: 3, max: 120, value: 12, step: 1, unit: ' px' }],
     run: (src, v) => crystallizeImage(src, v.cell)
+  },
+  jpeg: {
+    title: 'JPEG Artifacts',
+    help: 'Saves the picture as a bad JPEG and opens it again: blocks, ringing round hard edges and smeared colour.',
+    fields: [
+      { id: 'quality', label: 'Quality', type: 'range', min: 1, max: 100, value: 15, step: 1 },
+      { id: 'block', label: 'Block size', type: 'range', min: 2, max: 32, value: 8, step: 1, unit: ' px' },
+      {
+        id: 'chroma', label: 'Colour detail', type: 'select', value: '420',
+        options: [['444', '4:4:4 — full'], ['422', '4:2:2 — half across'], ['420', '4:2:0 — half both ways'], ['411', '4:1:1 — quarter across']]
+      },
+      { id: 'chromaQuality', label: 'Colour quality', type: 'range', min: 1, max: 100, value: 20, step: 1 },
+      { id: 'ringing', label: 'Ringing', type: 'range', min: 0, max: 300, value: 100, step: 5, unit: '%' },
+      { id: 'passes', label: 'Recompressions', type: 'range', min: 1, max: 20, value: 1, step: 1 },
+      { id: 'drift', label: 'Shift blocks between passes', type: 'check', value: true },
+      { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
+    ],
+    run: (src, v) => jpegImage(src, v.quality, v.block, v.chroma, v.chromaQuality, v.ringing, v.passes, v.drift, v.wrap)
   },
   twirl: {
     title: 'Twirl',
