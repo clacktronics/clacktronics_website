@@ -214,7 +214,13 @@ tile of noise that has more of itself rubbed out on each of twenty steps, so
 the chrome, the drop shadow and whatever the window contains all go together.
 The grain is one noise pixel per device pixel; a mask that fine cannot be
 re-encoded twenty times over at window size, which is why it is a 256-pixel
-tile repeated across the window rather than one image the size of the window.
+tile repeated across the window rather than one image the size of the window —
+laid down smaller on a dense display rather than encoded bigger, so a step
+costs the same on a retina screen as anywhere else. Each tile is decoded before
+it is handed to the mask, because Firefox decodes the images CSS asks for off
+the main thread and paints a window whose mask has not arrived as gone rather
+than as half dissolved; a browser that cannot encode and decode fast enough
+takes the window out in fewer, coarser steps instead of losing the dissolve.
 Minimising shrinks the window into its own taskbar button and
 restoring expands it back out of it; a new window arrives by expanding onto the
 desktop, and maximise moves and resizes in one transition. None of it changes
