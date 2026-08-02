@@ -951,7 +951,12 @@ windows, and desktop actions.
   **Sharpen** (Sharpen, Unsharp Mask, High Pass), **Stylize** (Emboss, Find
   Edges, Maximum, Minimum, and a Custom Matrix taking a 3 × 3 or 5 × 5
   convolution kernel with divisor and offset), **Pixelate** (Mosaic, Colour
-  Halftone with rotated CMYK screens, Crystallize), **Distort** (Twirl, Pinch /
+  Halftone with rotated CMYK screens, Crystallize, and JPEG Artifacts, which
+  runs the picture through the real JPEG pipeline — colour split off at a
+  coarser resolution, blocks rounded down to a quantisation table — so the
+  blocking, the ringing round hard edges and the smeared colour all come out on
+  their own, with the block size, the colour detail, the ringing and the number
+  of times it is saved again all under your hand), **Distort** (Twirl, Pinch /
   Spherize, Polar Coordinates, Wave, Ripple) and **Render** (tileable fractal
   Clouds between the current colours, Lens Flare). One dialog serves them all:
   it builds whatever controls the chosen filter asks for, previews the result
