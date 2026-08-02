@@ -54,6 +54,13 @@ default; trusted system utilities marked `"integrated": true` in `menu.json`
 mount into an isolated shadow root instead. They share `assets/css/app.css`
 for the look and retain their standalone entry points.
 
+An app running in a window offers the way out to that standalone page:
+ClackOS adds **File → Open app in new tab** to the app's own menu bar, and
+gives a bar to the full-window apps that have none. Apps marked
+`"plain": false` in `menu.json` are desktop-only — they drive the shell
+itself — so they get no such link, the same ones the plain mirror leaves out
+of its Applications menu.
+
 There is **no build step**: the browser fetches `site.json`, each folder's
 `menu.json`, and the markdown files at runtime. Edit a `.md` file, refresh,
 done. Hosted on GitHub Pages (or any static host).
