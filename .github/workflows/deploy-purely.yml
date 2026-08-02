@@ -41,6 +41,14 @@ jobs:
       SITE_ORIGIN: https://clacktronics.co.uk
     steps:
       - uses: actions/checkout@v4
+        with:
+          # This job rebuilds the mirror before shipping it, and the sitemap's
+          # <lastmod> dates come from each page's last commit — which a shallow
+          # checkout cannot supply. build_plain_site.py leaves lastmod out
+          # entirely rather than emit the same wrong date for every page, so
+          # without the full history the deployed sitemap loses its dates even
+          # though the committed one has them.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
