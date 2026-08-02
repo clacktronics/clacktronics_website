@@ -39,11 +39,28 @@
 .paint-dream-fields select { flex: 1; min-width: 0; max-width: 250px; }
 .paint-dream-fields output { font-size: 11px; color: var(--sage); min-width: 34px; text-align: right; }
 .paint-dream-note { font-size: 10.5px; color: var(--sage); line-height: 1.6; }
+/* ---- background removal: the matte is shaped after the model has run, so the
+   dialog turns into a small darkroom — a preview over a checkerboard, three
+   ways of looking at it, and the controls that reshape the cut-out ---- */
+.paint-bg-tune { display: flex; flex-direction: column; gap: 10px; }
+.paint-bg-preview {
+  width: 100%; height: auto; box-sizing: border-box; border: 1px solid var(--ink); border-radius: 6px;
+  background-color: #ffffff;
+  background-image: linear-gradient(45deg, #c9c9c9 25%, transparent 25%), linear-gradient(-45deg, #c9c9c9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #c9c9c9 75%), linear-gradient(-45deg, transparent 75%, #c9c9c9 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+}
+.paint-bg-views { display: flex; gap: 6px; }
+.paint-bg-views .btn { flex: 1; min-height: 22px; padding: 2px 6px; font-size: 10px; }
+.paint-bg-views .btn[aria-pressed="true"] { background: var(--ink); color: var(--menu-text); }
+/* The tuning view is tall enough to scroll on a short screen, and Apply is no
+   use out of sight, so the buttons ride along the bottom of it. */
+#bgRemoveModal .paint-dialog-actions { position: sticky; bottom: 0; padding: 10px 0 4px; border-top: 1px solid var(--paper-line); background: var(--paper); }
 /* Both dialogs hide their start button while the model works. .btn resets
    `all`, and a display of its own beats the browser's [hidden] rule, so the
    attribute has to be honoured explicitly — likewise anything laid out with a
    display of its own. */
-.btn[hidden], .paint-dream-fields[hidden] { display: none; }
+.btn[hidden], .paint-dream-fields[hidden], .paint-bg-tune[hidden] { display: none; }
 .paint-upload-result:not([hidden]) { display: flex; align-items: center; gap: 10px; }
 .paint-upload-result a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--leaf-deep); text-decoration: underline; }
 
@@ -451,7 +468,7 @@
         <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span><span class="rm-item">AI</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
         <div class="rm-dd rm-sub-dd">
           <button data-cmd="deep-dream"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span><span class="rm-item">DeepDream…<small>Grows dogs, birds and eyes out of the picture, as Google's 2015 original did</small></span></button>
-          <button data-cmd="remove-bg"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span><span class="rm-item">Remove Background…<small>Cuts the subject out onto transparency</small></span></button>
+          <button data-cmd="remove-bg"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span><span class="rm-item">Remove Background…<small>Cuts the subject out to transparency, a new layer or a selection</small></span></button>
         </div>
       </div>
       <div class="sep"></div>
@@ -726,22 +743,54 @@
   </form>
 </div>
 
-<div class="paint-modal" id="bgRemoveModal" role="dialog" aria-modal="true" aria-labelledby="bgRemoveTitle">
+<!-- data-keep-open: once the model has run, the dialog holds a matte that cost
+     seconds of inference. A stray backdrop click must not throw it away. -->
+<div class="paint-modal" id="bgRemoveModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="bgRemoveTitle">
   <div class="paint-modal-box paint-dialog">
     <header><span id="bgRemoveTitle">Remove Background</span><button type="button" data-close="bgRemoveModal" aria-label="Close">×</button></header>
     <div class="paint-dialog-body">
       <div class="paint-ai-intro" data-bgview="intro">
         <p>Cut the main subject out of the picture and make the rest transparent. A small AI model (<b>MODNet</b>) runs entirely in your browser — the image is never uploaded.</p>
         <p>The first run downloads the model (about <b>13&nbsp;MB</b>) from the Hugging Face Hub, then your browser caches it so later runs start straight away.</p>
+        <p>The model runs once and hands back a <b>matte</b> — a coverage map saying how much of each pixel is subject. Every setting afterwards reshapes that matte on the spot, so nothing has to be worked out twice.</p>
       </div>
       <div data-bgview="loading" hidden>
         <div class="paint-ai-progress" role="progressbar" aria-label="Model download progress"><div></div></div>
         <p class="paint-ai-detail">Starting…</p>
       </div>
+      <div class="paint-bg-tune" data-bgview="tune" hidden>
+        <canvas class="paint-bg-preview" id="bgPreview" width="336" height="210" aria-label="Cut-out preview"></canvas>
+        <div class="paint-bg-views" role="group" aria-label="Preview shows">
+          <button type="button" class="btn" data-bgshow="result" aria-pressed="true">Result</button>
+          <button type="button" class="btn" data-bgshow="matte" aria-pressed="false">Matte</button>
+          <button type="button" class="btn" data-bgshow="before" aria-pressed="false">Before</button>
+        </div>
+        <div class="paint-dream-fields">
+          <label>Output <span><select id="bgOutput">
+            <option value="erase">Erase the background here</option>
+            <option value="cut">Cut the subject to a new layer</option>
+            <option value="copy">Copy the subject to a new layer</option>
+            <option value="fill">Fill the background with the second colour</option>
+            <option value="matte">Put the matte on a new layer</option>
+            <option value="select">Select the subject, change nothing</option>
+          </select></span></label>
+          <p class="paint-dream-note" id="bgOutputNote"></p>
+          <label>Cutoff <span><input id="bgCutoff" type="range" min="1" max="99" step="1" value="50"><output id="bgCutoffValue">50</output></span></label>
+          <label>Edge softness <span><input id="bgSoftness" type="range" min="0" max="100" step="1" value="30"><output id="bgSoftnessValue">30</output></span></label>
+          <label>Grow / shrink <span><input id="bgShift" type="range" min="-8" max="8" step="1" value="0"><output id="bgShiftValue">0 px</output></span></label>
+          <label>Feather <span><input id="bgFeather" type="range" min="0" max="12" step="1" value="0"><output id="bgFeatherValue">0 px</output></span></label>
+          <label class="paint-check"><input id="bgLargest" type="checkbox"> Keep only the biggest piece</label>
+          <label class="paint-check"><input id="bgFillHoles" type="checkbox"> Fill holes inside the subject</label>
+          <label class="paint-check"><input id="bgInvert" type="checkbox"> Swap over — keep the background instead</label>
+          <p class="paint-dream-note" id="bgTuneNote"></p>
+        </div>
+      </div>
       <p class="paint-ai-credit">Model: <a href="https://huggingface.co/Xenova/modnet" target="_blank" rel="noopener">MODNet</a> · Apache-2.0 · Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a></p>
       <div class="paint-dialog-actions">
         <button type="button" class="btn ghost" data-close="bgRemoveModal">Cancel</button>
+        <button type="button" class="btn" id="bgRemoveReset" hidden>Reset</button>
         <button type="button" class="btn primary" id="bgRemoveStart">Remove Background</button>
+        <button type="button" class="btn primary" id="bgRemoveApply" hidden>Apply</button>
       </div>
     </div>
   </div>
@@ -5521,14 +5570,61 @@ optionsBar.addEventListener('click', event => {
 });
 
 /* ---- Background removal — MODNet via Transformers.js, run in a worker so the
- *      model download and inference never freeze the paint UI ---- */
+ *      model download and inference never freeze the paint UI ----
+ * The worker hands back a matte: one coverage byte per pixel, 0 for background
+ * and 255 for subject, everything in between being the fuzz the model is not
+ * sure about — hair, fur, motion blur, a glass of water. That middle ground is
+ * where every judgement lives, so the matte is kept as it came and reshaped
+ * here: where along the fuzz the subject ends, how wide that transition is,
+ * whether the edge is pulled in or pushed out, and what the cut-out is finally
+ * used for. None of that needs the network again, so the settings move with
+ * the picture on screen. */
 const BG_MODEL_KEY = 'clackos-paint-bg-model-downloaded';
 const bgModal = appRoot.querySelector('#bgRemoveModal');
 const bgViews = bgModal.querySelectorAll('[data-bgview]');
 const bgProgressBar = bgModal.querySelector('.paint-ai-progress > div');
 const bgDetail = bgModal.querySelector('.paint-ai-detail');
 const bgStartBtn = appRoot.querySelector('#bgRemoveStart');
-let bgWorker = null, bgRunToken = 0, bgSize = null;
+const bgApplyBtn = appRoot.querySelector('#bgRemoveApply');
+const bgResetBtn = appRoot.querySelector('#bgRemoveReset');
+const bgPreviewCanvas = appRoot.querySelector('#bgPreview');
+const bgOutputSelect = appRoot.querySelector('#bgOutput');
+const bgOutputNote = appRoot.querySelector('#bgOutputNote');
+const bgTuneNote = appRoot.querySelector('#bgTuneNote');
+const bgShowButtons = [...bgModal.querySelectorAll('[data-bgshow]')];
+const bgFields = {
+  cutoff: appRoot.querySelector('#bgCutoff'), softness: appRoot.querySelector('#bgSoftness'),
+  shift: appRoot.querySelector('#bgShift'), feather: appRoot.querySelector('#bgFeather'),
+  largest: appRoot.querySelector('#bgLargest'), fillHoles: appRoot.querySelector('#bgFillHoles'),
+  invert: appRoot.querySelector('#bgInvert')
+};
+const BG_DEFAULTS = { cutoff: 50, softness: 30, shift: 0, feather: 0, largest: false, fillHoles: false, invert: false };
+/* a preview small enough that every slider redraws it within a frame */
+const BG_PREVIEW_MAX = 336, BG_PREVIEW_TALL = 240;
+const BG_OUTPUT_NOTES = {
+  erase: ['The background is rubbed off this layer and the subject is left on transparency.',
+          'The subject is rubbed off this layer and the background is left on transparency.'],
+  cut: ['The subject moves onto a new layer above; this layer keeps the background, with a hole where the subject was.',
+        'The background moves onto a new layer above; this layer keeps the subject alone.'],
+  copy: ['The subject is copied onto a new layer above. This layer is left exactly as it is.',
+         'The background is copied onto a new layer above. This layer is left exactly as it is.'],
+  fill: ['The background is painted over with the second colour; the subject stays.',
+         'The subject is painted over with the second colour; the background stays.'],
+  matte: ['The coverage map itself goes on a new layer, white for subject and black for background — a mask to composite with by hand.',
+          'The coverage map itself goes on a new layer, white for background and black for subject — a mask to composite with by hand.'],
+  select: ['Nothing is painted: the subject becomes the selection, ready for any tool that honours one.',
+           'Nothing is painted: the background becomes the selection, ready for any tool that honours one.']
+};
+const BG_DONE = {
+  erase: ['Background erased — the subject sits on transparency', 'Subject erased — the background sits on transparency'],
+  cut: ['Subject cut to a new layer', 'Background cut to a new layer'],
+  copy: ['Subject copied to a new layer', 'Background copied to a new layer'],
+  fill: ['Background filled with the second colour', 'Subject filled with the second colour'],
+  matte: ['Matte put on a new layer', 'Matte put on a new layer, the other way round'],
+  select: ['The subject is now the selection', 'The background is now the selection']
+};
+let bgWorker = null, bgRunToken = 0, bgRun = null, bgMatte = null, bgPreview = null;
+let bgShow = 'result', bgPreviewFrame = 0;
 
 const showBgView = name => bgViews.forEach(view => { view.hidden = view.dataset.bgview !== name; });
 
@@ -5563,10 +5659,11 @@ function startBgRemoval() {
   const source = canonicalActiveCanvas();
   const pixels = source.getContext('2d').getImageData(0, 0, source.width, source.height);
   const buffer = pixels.data.buffer; /* a fresh ImageData buffer — safe to transfer */
-  bgSize = { width: source.width, height: source.height, layerId: activeLayer.id };
+  bgRun = { width: source.width, height: source.height, layerId: activeLayer.id, canvas: source };
+  bgMatte = null; bgPreview = null;
   const token = ++bgRunToken;
   showBgView('loading');
-  bgStartBtn.hidden = true;
+  bgStartBtn.hidden = true; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
   bgProgressBar.style.width = '0%';
   bgDetail.textContent = 'Starting…';
   setStatus('Loading the background-removal model…');
@@ -5576,50 +5673,419 @@ function startBgRemoval() {
   );
 }
 
+/* ---- shaping the matte ----
+ * Four plain passes over a coverage plane, in the order they make sense in:
+ * decide where the subject ends, move that edge in or out, tidy the pieces,
+ * then soften. Each is separable or single-pass, so the whole chain is quick
+ * enough to run under a dragging slider at preview size. */
+
+/* Cutoff picks the coverage at which the subject begins; softness widens the
+   band either side of it, from a paper-cut edge to one that keeps every wisp
+   of hair the model was unsure about. */
+function bgLevels(raw, cutoff, softness) {
+  const out = new Float32Array(raw.length);
+  const middle = cutoff / 100;
+  const band = Math.max(0.008, softness / 100 * 0.9);
+  const low = middle - band / 2, span = band;
+  for (let i = 0; i < raw.length; i++) {
+    const t = (raw[i] / 255 - low) / span;
+    out[i] = t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  }
+  return out;
+}
+
+/* Grow and shrink are a dilation and an erosion of the coverage plane; taking
+   the maximum (or minimum) along each axis in turn gives a square footprint
+   for two cheap passes rather than one expensive circular one. */
+function bgSpread(cov, w, h, radius, grow) {
+  const r = Math.round(radius);
+  if (r < 1) return cov;
+  const horizontal = new Float32Array(cov.length);
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    for (let x = 0; x < w; x++) {
+      const from = Math.max(0, x - r), to = Math.min(w - 1, x + r);
+      let value = cov[row + from];
+      for (let sx = from + 1; sx <= to; sx++) {
+        const sample = cov[row + sx];
+        if (grow ? sample > value : sample < value) value = sample;
+      }
+      horizontal[row + x] = value;
+    }
+  }
+  const out = new Float32Array(cov.length);
+  for (let x = 0; x < w; x++) {
+    for (let y = 0; y < h; y++) {
+      const from = Math.max(0, y - r), to = Math.min(h - 1, y + r);
+      let value = horizontal[from * w + x];
+      for (let sy = from + 1; sy <= to; sy++) {
+        const sample = horizontal[sy * w + x];
+        if (grow ? sample > value : sample < value) value = sample;
+      }
+      out[y * w + x] = value;
+    }
+  }
+  return out;
+}
+
+/* Feathering is a blur of the coverage plane; two box passes stand in for a
+   Gaussian well enough for an edge nobody measures with a ruler. */
+function bgBlur(cov, w, h, radius) {
+  const r = Math.max(1, Math.round(radius));
+  const clampTo = (value, top) => value < 0 ? 0 : value > top ? top : value;
+  let current = cov;
+  for (let pass = 0; pass < 2; pass++) {
+    const horizontal = new Float32Array(current.length);
+    for (let y = 0; y < h; y++) {
+      const row = y * w;
+      let sum = 0;
+      for (let x = -r; x <= r; x++) sum += current[row + clampTo(x, w - 1)];
+      for (let x = 0; x < w; x++) {
+        horizontal[row + x] = sum / (r * 2 + 1);
+        sum -= current[row + clampTo(x - r, w - 1)];
+        sum += current[row + clampTo(x + r + 1, w - 1)];
+      }
+    }
+    const vertical = new Float32Array(current.length);
+    for (let x = 0; x < w; x++) {
+      let sum = 0;
+      for (let y = -r; y <= r; y++) sum += horizontal[clampTo(y, h - 1) * w + x];
+      for (let y = 0; y < h; y++) {
+        vertical[y * w + x] = sum / (r * 2 + 1);
+        sum -= horizontal[clampTo(y - r, h - 1) * w + x];
+        sum += horizontal[clampTo(y + r + 1, h - 1) * w + x];
+      }
+    }
+    current = vertical;
+  }
+  return current;
+}
+
+/* Flood the plane into connected pieces, four-way, with an explicit stack —
+   a picture is far too big to recurse over. */
+function bgRegions(flags, w, h) {
+  const labels = new Int32Array(flags.length).fill(-1);
+  const stack = new Int32Array(flags.length);
+  const areas = [], onEdge = [];
+  for (let seed = 0; seed < flags.length; seed++) {
+    if (!flags[seed] || labels[seed] >= 0) continue;
+    const id = areas.length;
+    let area = 0, edge = false, top = 0;
+    labels[seed] = id; stack[top++] = seed;
+    while (top) {
+      const at = stack[--top]; area++;
+      const x = at % w, y = (at - x) / w;
+      if (x === 0 || y === 0 || x === w - 1 || y === h - 1) edge = true;
+      if (x > 0 && flags[at - 1] && labels[at - 1] < 0) { labels[at - 1] = id; stack[top++] = at - 1; }
+      if (x < w - 1 && flags[at + 1] && labels[at + 1] < 0) { labels[at + 1] = id; stack[top++] = at + 1; }
+      if (y > 0 && flags[at - w] && labels[at - w] < 0) { labels[at - w] = id; stack[top++] = at - w; }
+      if (y < h - 1 && flags[at + w] && labels[at + w] < 0) { labels[at + w] = id; stack[top++] = at + w; }
+    }
+    areas.push(area); onEdge.push(edge);
+  }
+  return { labels, areas, onEdge };
+}
+
+/* Two tidying jobs the model cannot do for itself: throw away the specks it
+   found somewhere off in the background, and close the gaps it left inside
+   the subject — a hole counts as a hole only if it never reaches the border,
+   which is what tells a gap under an arm from the sky behind it. */
+function bgClean(cov, w, h, largest, fillHoles) {
+  const solid = new Uint8Array(cov.length);
+  for (let i = 0; i < cov.length; i++) solid[i] = cov[i] > .5 ? 1 : 0;
+  if (largest) {
+    const { labels, areas } = bgRegions(solid, w, h);
+    if (areas.length > 1) {
+      let biggest = 0;
+      for (let i = 1; i < areas.length; i++) if (areas[i] > areas[biggest]) biggest = i;
+      const keep = new Float32Array(cov.length);
+      for (let i = 0; i < cov.length; i++) keep[i] = labels[i] === biggest ? 1 : 0;
+      /* grown by a couple of pixels so the soft fringe belonging to the piece
+         we are keeping survives with it */
+      const kept = bgSpread(keep, w, h, 2, true);
+      for (let i = 0; i < cov.length; i++) if (kept[i] <= 0) { cov[i] = 0; solid[i] = 0; }
+    }
+  }
+  if (fillHoles) {
+    const empty = new Uint8Array(cov.length);
+    for (let i = 0; i < cov.length; i++) empty[i] = solid[i] ? 0 : 1;
+    const { labels, onEdge } = bgRegions(empty, w, h);
+    for (let i = 0; i < cov.length; i++) if (empty[i] && labels[i] >= 0 && !onEdge[labels[i]]) cov[i] = 1;
+  }
+  return cov;
+}
+
+const bgSettings = () => ({
+  cutoff: Number(bgFields.cutoff.value),
+  softness: Number(bgFields.softness.value),
+  shift: Number(bgFields.shift.value),
+  feather: Number(bgFields.feather.value),
+  largest: bgFields.largest.checked,
+  fillHoles: bgFields.fillHoles.checked,
+  invert: bgFields.invert.checked
+});
+
+/* `scale` is 1 at full size and the preview's shrink factor at preview size,
+   so a radius given in picture pixels means the same thing in both. */
+function bgShapeMatte(raw, w, h, opts, scale = 1) {
+  let cov = bgLevels(raw, opts.cutoff, opts.softness);
+  const shift = Math.round(opts.shift * scale);
+  if (shift) cov = bgSpread(cov, w, h, Math.abs(shift), shift > 0);
+  if (opts.largest || opts.fillHoles) cov = bgClean(cov, w, h, opts.largest, opts.fillHoles);
+  const feather = Math.round(opts.feather * scale);
+  if (feather) cov = bgBlur(cov, w, h, feather);
+  if (opts.invert) for (let i = 0; i < cov.length; i++) cov[i] = 1 - cov[i];
+  return cov;
+}
+
+/* The preview shrinks both the picture and the matte through the 2D context,
+   so the fuzz averages down properly instead of being point-sampled away. */
+function buildBgPreview() {
+  const w = bgMatte.width, h = bgMatte.height;
+  const scale = Math.min(1, BG_PREVIEW_MAX / w, BG_PREVIEW_TALL / h);
+  const pw = Math.max(1, Math.round(w * scale)), ph = Math.max(1, Math.round(h * scale));
+  const picture = document.createElement('canvas'); picture.width = pw; picture.height = ph;
+  const pictureContext = picture.getContext('2d', { willReadFrequently: true });
+  pictureContext.drawImage(bgRun.canvas, 0, 0, pw, ph);
+  const full = document.createElement('canvas'); full.width = w; full.height = h;
+  const grey = new ImageData(w, h);
+  for (let i = 0, at = 0; i < bgMatte.data.length; i++, at += 4) {
+    grey.data[at] = grey.data[at + 1] = grey.data[at + 2] = bgMatte.data[i];
+    grey.data[at + 3] = 255;
+  }
+  full.getContext('2d').putImageData(grey, 0, 0);
+  const small = document.createElement('canvas'); small.width = pw; small.height = ph;
+  const smallContext = small.getContext('2d', { willReadFrequently: true });
+  smallContext.drawImage(full, 0, 0, pw, ph);
+  const smallPixels = smallContext.getImageData(0, 0, pw, ph).data;
+  const raw = new Uint8ClampedArray(pw * ph);
+  for (let i = 0; i < raw.length; i++) raw[i] = smallPixels[i * 4];
+  bgPreviewCanvas.width = pw; bgPreviewCanvas.height = ph;
+  bgPreview = { width: pw, height: ph, scale, raw, image: pictureContext.getImageData(0, 0, pw, ph) };
+}
+
+function drawBgPreview() {
+  bgPreviewFrame = 0;
+  if (!bgPreview) return;
+  const { width: pw, height: ph, image, raw, scale } = bgPreview;
+  const context = bgPreviewCanvas.getContext('2d');
+  context.clearRect(0, 0, pw, ph);
+  if (bgShow === 'before') { context.putImageData(image, 0, 0); return; }
+  const mode = bgOutputSelect.value;
+  const cov = bgShapeMatte(raw, pw, ph, bgSettings(), scale);
+  const out = new ImageData(pw, ph);
+  const source = image.data, pixels = out.data;
+  if (bgShow === 'matte' || mode === 'matte') {
+    for (let i = 0, at = 0; i < cov.length; i++, at += 4) {
+      pixels[at] = pixels[at + 1] = pixels[at + 2] = Math.round(cov[i] * 255);
+      pixels[at + 3] = 255;
+    }
+  } else if (mode === 'fill') {
+    const [red, green, blue] = hexToRgb(bg);
+    for (let i = 0, at = 0; i < cov.length; i++, at += 4) {
+      const keep = cov[i] * (source[at + 3] / 255);
+      pixels[at] = source[at] * keep + red * (1 - keep);
+      pixels[at + 1] = source[at + 1] * keep + green * (1 - keep);
+      pixels[at + 2] = source[at + 2] * keep + blue * (1 - keep);
+      pixels[at + 3] = 255;
+    }
+  } else {
+    for (let i = 0, at = 0; i < cov.length; i++, at += 4) {
+      pixels[at] = source[at]; pixels[at + 1] = source[at + 1]; pixels[at + 2] = source[at + 2];
+      pixels[at + 3] = source[at + 3] * cov[i];
+    }
+  }
+  context.putImageData(out, 0, 0);
+}
+
+const scheduleBgPreview = () => { if (!bgPreviewFrame) bgPreviewFrame = requestAnimationFrame(drawBgPreview); };
+
+function syncBgFields() {
+  bgFields.cutoff.nextElementSibling.textContent = bgFields.cutoff.value;
+  bgFields.softness.nextElementSibling.textContent = bgFields.softness.value;
+  const shift = Number(bgFields.shift.value);
+  bgFields.shift.nextElementSibling.textContent = `${shift > 0 ? '+' : ''}${shift} px`;
+  bgFields.feather.nextElementSibling.textContent = `${bgFields.feather.value} px`;
+  const notes = BG_OUTPUT_NOTES[bgOutputSelect.value] || BG_OUTPUT_NOTES.erase;
+  bgOutputNote.textContent = notes[bgFields.invert.checked ? 1 : 0];
+}
+
+function showBgTuning() {
+  buildBgPreview();
+  showBgView('tune');
+  bgStartBtn.hidden = true;
+  bgApplyBtn.hidden = false;
+  bgResetBtn.hidden = false;
+  bgTuneNote.textContent = selection
+    ? 'The model has run. Nothing changes until Apply — and a selection is on, so only that part is affected.'
+    : 'The model has run. Nothing changes until Apply; every setting reshapes the result it already gave.';
+  syncBgFields();
+  drawBgPreview();
+}
+
 function applyBgResult(msg) {
-  if (!bgModal.classList.contains('open')) { bgSize = null; return; } /* cancelled */
-  if (!bgSize || bgSize.layerId !== activeLayer.id || msg.width !== width() || msg.height !== height()) {
-    hideModal('bgRemoveModal'); bgSize = null;
+  if (!bgModal.classList.contains('open')) { bgRun = null; return; } /* walked away */
+  if (!bgRun || bgRun.layerId !== activeLayer.id || msg.width !== width() || msg.height !== height()) {
+    showBgView('intro'); bgStartBtn.hidden = false; bgRun = null;
     setStatus('Canvas changed before the result arrived; background removal cancelled');
     return;
   }
-  pushUndo();
-  /* A selection confines the cutout, but only in the canonical view: while a
+  bgMatte = { data: new Uint8ClampedArray(msg.data), width: msg.width, height: msg.height };
+  showBgTuning();
+  setStatus('Subject found — shape the cut-out, then Apply');
+}
+
+/* Turning the shaped matte into whatever the Output box asks for. Everything
+   up to here has been a preview; this is the only part that touches pixels. */
+function applyBgTuning() {
+  if (!bgMatte || !bgRun) return;
+  if (bgRun.layerId !== activeLayer.id || bgMatte.width !== width() || bgMatte.height !== height()) {
+    showBgView('intro'); bgStartBtn.hidden = false; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
+    bgMatte = null; bgPreview = null;
+    setStatus('The layer changed since the model ran — remove the background again');
+    return;
+  }
+  const mode = bgOutputSelect.value;
+  if (mode === 'select' && !retouch) { setStatus('Selection helpers are unavailable; pick another output'); return; }
+  /* A selection is drawn in canonical coordinates and so is the matte, but a
+     seam preview shows the picture shifted — the ants would land in the wrong
+     place, so that one combination is refused rather than fudged. */
+  if (mode === 'select' && (seamAppliedX || seamAppliedY)) {
+    setStatus('Turn the seam preview off before selecting the subject'); return;
+  }
+  const cov = bgShapeMatte(bgMatte.data, bgMatte.width, bgMatte.height, bgSettings());
+  /* A selection confines the result, but only in the canonical view: while a
      seam shift is on screen the selection sits in shifted coordinates. */
-  const before = selection && !seamAppliedX && !seamAppliedY ? bx.getImageData(0, 0, width(), height()) : null;
+  const confined = selection && !seamAppliedX && !seamAppliedY;
+  const kept = bgFields.invert.checked ? 'background' : 'subject';
+  const done = (BG_DONE[mode] || BG_DONE.erase)[bgFields.invert.checked ? 1 : 0];
+
+  if (mode === 'select') {
+    if (confined) {
+      const inside = selectionCoverage();
+      for (let i = 0; i < cov.length; i++) cov[i] *= inside[i];
+    }
+    const made = maskSelection(cov);
+    if (!made) { setStatus(`Nothing to select — try a lower cutoff`); return; }
+    selection = made; cropButton.disabled = false; renderSelection();
+    setStatus(done);
+    closeBgRemoval();
+    return;
+  }
+
+  pushUndo();
+  const before = confined ? bx.getImageData(0, 0, width(), height()) : null;
   canonicaliseSeam();
-  bx.clearRect(0, 0, width(), height());
-  bx.putImageData(new ImageData(new Uint8ClampedArray(msg.data), msg.width, msg.height), 0, 0);
-  if (before) confineToSelection(before);
+  const pixels = bx.getImageData(0, 0, width(), height());
+  const data = pixels.data;
+
+  if (mode === 'erase' || mode === 'fill') {
+    if (mode === 'fill') {
+      const [red, green, blue] = hexToRgb(bg);
+      for (let i = 0, at = 0; i < cov.length; i++, at += 4) {
+        const keep = cov[i] * (data[at + 3] / 255);
+        data[at] = data[at] * keep + red * (1 - keep);
+        data[at + 1] = data[at + 1] * keep + green * (1 - keep);
+        data[at + 2] = data[at + 2] * keep + blue * (1 - keep);
+        data[at + 3] = Math.max(data[at + 3], 255 * (1 - cov[i]));
+      }
+    } else {
+      for (let i = 0, at = 3; i < cov.length; i++, at += 4) data[at] *= cov[i];
+    }
+    bx.putImageData(pixels, 0, 0);
+    if (before) confineToSelection(before);
+  } else {
+    /* everything else puts something on a layer of its own */
+    if (confined) {
+      const inside = selectionCoverage();
+      for (let i = 0; i < cov.length; i++) cov[i] *= inside[i];
+    }
+    const lifted = new ImageData(width(), height());
+    const out = lifted.data;
+    if (mode === 'matte') {
+      for (let i = 0, at = 0; i < cov.length; i++, at += 4) {
+        out[at] = out[at + 1] = out[at + 2] = Math.round(cov[i] * 255);
+        out[at + 3] = 255;
+      }
+    } else {
+      for (let i = 0, at = 0; i < cov.length; i++, at += 4) {
+        out[at] = data[at]; out[at + 1] = data[at + 1]; out[at + 2] = data[at + 2];
+        out[at + 3] = data[at + 3] * cov[i];
+      }
+    }
+    if (mode === 'cut') {
+      for (let i = 0, at = 3; i < cov.length; i++, at += 4) data[at] *= 1 - cov[i];
+      bx.putImageData(pixels, 0, 0);
+    }
+    /* "Background" is already the name of the layer most pictures start on, so
+       the lifted background is a Backdrop and cannot be mistaken for it */
+    addLayer(mode === 'matte' ? 'Matte' : kept === 'subject' ? 'Subject' : 'Backdrop', lifted);
+    renderLayerPanel();
+  }
   reapplySeam();
-  if (before) renderSelection(); else clearSelection();
-  hideModal('bgRemoveModal'); bgSize = null;
-  setStatus(`Background removed — the subject now sits on transparency${before ? ' (selection only)' : ''}`);
+  if (mode === 'erase' || mode === 'fill') { if (before) renderSelection(); else clearSelection(); }
+  else clearSelection();
+  setStatus(`${done}${confined ? ' (selection only)' : ''}`);
+  closeBgRemoval();
 }
 
 function finishBgError(message) {
-  bgRunToken++; bgSize = null;
+  bgRunToken++; bgRun = null; bgMatte = null; bgPreview = null;
   showBgView('intro');
-  bgStartBtn.hidden = false;
+  bgStartBtn.hidden = false; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
   bgDetail.textContent = '';
   bgProgressBar.style.width = '0%';
   setStatus(`Background removal failed: ${message}`);
 }
 
+/* Leaving the dialog abandons an in-flight run and lets the matte go: it is
+   worth several megabytes and is only good for the layer it was made from. */
+function closeBgRemoval() {
+  bgRunToken++;
+  bgRun = null; bgMatte = null; bgPreview = null;
+  cancelAnimationFrame(bgPreviewFrame); bgPreviewFrame = 0;
+  hideModal('bgRemoveModal');
+}
+
 function openBgRemoval() {
+  bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
   bgStartBtn.hidden = false;
   bgDetail.textContent = '';
   bgProgressBar.style.width = '0%';
   showBgView('intro');
   showModal('bgRemoveModal');
+  /* a matte still standing for this very layer is worth reusing — the model
+     has nothing new to say about pixels it has already seen */
+  if (bgMatte && bgRun && bgRun.layerId === activeLayer.id && bgMatte.width === width() && bgMatte.height === height()) {
+    showBgTuning();
+    setStatus('Reusing the matte from the last run');
+    return;
+  }
+  bgMatte = null; bgPreview = null;
   /* model already cached from a previous run — skip the explainer and go */
   if (localStorage.getItem(BG_MODEL_KEY)) startBgRemoval();
 }
 
 bgStartBtn.addEventListener('click', startBgRemoval);
-/* closing the dialog (button, backdrop or Escape) abandons an in-flight run */
-bgModal.addEventListener('click', event => { if (event.target.closest('[data-close]')) { bgRunToken++; bgSize = null; } });
-bgModal.addEventListener('pointerdown', event => { if (event.target === bgModal) { bgRunToken++; bgSize = null; } });
+bgApplyBtn.addEventListener('click', applyBgTuning);
+bgResetBtn.addEventListener('click', () => {
+  Object.entries(BG_DEFAULTS).forEach(([key, value]) => {
+    if (typeof value === 'boolean') bgFields[key].checked = value; else bgFields[key].value = String(value);
+  });
+  syncBgFields(); drawBgPreview();
+  setStatus('Cut-out settings back to their defaults');
+});
+Object.values(bgFields).forEach(field => {
+  field.addEventListener('input', () => { syncBgFields(); scheduleBgPreview(); });
+});
+bgOutputSelect.addEventListener('change', () => { syncBgFields(); scheduleBgPreview(); });
+bgShowButtons.forEach(button => button.addEventListener('click', () => {
+  bgShow = button.dataset.bgshow;
+  bgShowButtons.forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+  drawBgPreview();
+}));
+/* closing the dialog (× or Cancel) abandons the run and the matte with it */
+bgModal.addEventListener('click', event => { if (event.target.closest('[data-close]')) closeBgRemoval(); });
 
 /* ---- DeepDream — inception5h through TensorFlow.js, in a worker ----
  * Gradient ascent on one layer of an image-recognition network: the picture is
@@ -6101,6 +6567,9 @@ appRoot.addEventListener('keydown', event => {
   /* the dream dialog is data-keep-open, so the blanket Escape below skips it:
      abandoning a long run deliberately is worth its own line */
   if (event.key === 'Escape' && dreamModal.classList.contains('open')) { event.preventDefault(); cancelDream(); return; }
+  /* the cut-out dialog is data-keep-open for the same reason — a matte that
+     took seconds to work out should not go to a stray click */
+  if (event.key === 'Escape' && bgModal.classList.contains('open')) { event.preventDefault(); closeBgRemoval(); return; }
   if (event.key === 'Escape') {
     closeContextMenu(); closeToolMenus();
     if (contentModal.classList.contains('open')) { hideModal('formDetectingModal'); if (contentJob) stopFormDetecting(true); }

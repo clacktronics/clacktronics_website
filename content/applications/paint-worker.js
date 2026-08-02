@@ -1,7 +1,14 @@
 /* ClackPaint background-removal worker — cuts the subject out of an image
  * fully in-browser with Transformers.js, using MODNet (Apache-2.0). The model
  * is fetched from the Hugging Face Hub on first use and cached by the browser;
- * the picture itself never leaves the machine. */
+ * the picture itself never leaves the machine.
+ *
+ * What comes back is the matte, not a finished cut-out: one byte of coverage
+ * per pixel, 0 for background and 255 for subject, with the fuzz of hair and
+ * fur in between. Inference is the expensive part and the shaping of that
+ * coverage — cutoff, softness, growing, feathering — is not, so the shaping
+ * belongs to the page, where the settings can be moved with the result on
+ * screen and nothing has to be worked out twice. */
 import { pipeline, RawImage, env }
   from '../../vendor/transformers/transformers.min.js';
 
@@ -46,7 +53,10 @@ async function load() {
   postMessage({ type: 'loading', detail: 'Contacting the Hugging Face Hub…' });
   /* fp16 is small and fast on the GPU; on the CPU path use the 8-bit model so
    * the download stays tiny and inference finishes in a few seconds */
-  segmenter = await pipeline('background-removal', MODEL_ID, {
+  /* image-segmentation rather than background-removal: same model, same
+   * weights, same cache entry — it just stops before pasting the matte into
+   * the picture's alpha, which is the step we want to do ourselves. */
+  segmenter = await pipeline('image-segmentation', MODEL_ID, {
     device,
     dtype: webgpu ? 'fp16' : 'q8',
     progress_callback: reportProgress,
@@ -60,11 +70,11 @@ async function run(msg) {
     postMessage({ type: 'ready', device, token });
     postMessage({ type: 'loading', detail: 'Separating the subject from the background…' });
     const image = new RawImage(new Uint8ClampedArray(msg.data), msg.width, msg.height, 4);
-    const output = await segmenter(image);
-    const rgba = output.rgba();
-    const data = new Uint8ClampedArray(rgba.data);
+    const [{ mask }] = await segmenter(image);
+    /* the mask comes back single-channel at the picture's own size */
+    const data = new Uint8ClampedArray(mask.data);
     postMessage(
-      { type: 'result', token, data, width: rgba.width, height: rgba.height },
+      { type: 'result', token, data, width: mask.width, height: mask.height },
       [data.buffer]
     );
   } catch (err) {
