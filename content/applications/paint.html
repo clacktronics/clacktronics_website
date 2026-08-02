@@ -39,6 +39,8 @@
 .rm-item small { font-size: 10px; opacity: 0.65; white-space: normal; line-height: 1.4; }
 .rm-sub-arrow { margin-left: auto; font-size: 10px; }
 .rm-sub-dd { top: -6px; left: 100%; min-width: 300px; max-width: 340px; max-height: calc(100vh - 48px); overflow-y: auto; border-radius: 0 8px 8px 8px; }
+/* the dithering list needs the width for its descriptions; plain filter lists do not */
+.rm-sub-dd.compact { min-width: 206px; }
 .rm-sub.open > .rm-sub-dd { display: block; }
 .rm-sub.open > .rm-sub-open { background: var(--ink); color: var(--menu-text); }
 .rm-sub-dd button { align-items: flex-start; white-space: normal; }
@@ -91,6 +93,15 @@
 .paint-adjust-fields label { display: grid; grid-template-columns: minmax(105px,1fr) minmax(100px,1.4fr) 54px; align-items: center; gap: 8px; font-size: 11px; }
 .paint-adjust-fields input[type="range"] { width: 100%; }
 .paint-adjust-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--sage); }
+/* Effects reuse the adjustment field grid, but their controls are a mixture:
+   sliders take the middle and the readout, everything else spans both. */
+#effectFields label.paint-effect-block { grid-template-columns: 1fr; }
+.paint-effect-select, .paint-effect-number { grid-column: 2 / span 2; width: 100%; min-width: 0; box-sizing: border-box; height: 22px; padding: 0 4px; border: 1px solid var(--ink); border-radius: 4px; background: var(--paper-deep); color: var(--control-text); font: 11px/1 'IBM Plex Mono', monospace; }
+#effectFields label.paint-effect-switch { grid-template-columns: minmax(105px,1fr) auto; justify-content: start; }
+#effectFields label.paint-effect-switch input { justify-self: start; }
+.paint-effect-matrix { display: grid; gap: 4px; margin-top: 4px; padding: 6px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); }
+.paint-effect-matrix input { width: 100%; min-width: 0; box-sizing: border-box; padding: 3px 2px; border: 1px solid var(--paper-line); border-radius: 3px; background: var(--paper); color: var(--control-text); font: 10px/1.4 'IBM Plex Mono', monospace; text-align: center; }
+.paint-effect-matrix input::-webkit-outer-spin-button, .paint-effect-matrix input::-webkit-inner-spin-button { appearance: none; margin: 0; }
 .paint-adjust-histogram { width: 100%; height: 118px; box-sizing: border-box; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); }
 .paint-adjust-stats { min-height: 1.4em; margin: -5px 0 0; padding: 0; font-size: 10px; color: var(--sage); font-variant-numeric: tabular-nums; }
 .paint-modal { pointer-events: none; align-items: flex-start; justify-content: flex-end; padding: 56px 18px 18px; background: transparent; }
@@ -258,7 +269,59 @@
         </div>
       </div>
       <div class="sep"></div>
-      <button data-cmd="gaussian-blur"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Gaussian Blur…</button>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span><span class="rm-item">Blur</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
+          <button data-cmd="gaussian-blur"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Gaussian Blur…</button>
+          <button data-cmd="effect-box-blur"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Box Blur…</button>
+          <button data-cmd="effect-motion-blur"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Motion Blur…</button>
+          <button data-cmd="effect-radial-blur"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Radial Blur…</button>
+        </div>
+      </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span><span class="rm-item">Sharpen</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
+          <button data-cmd="effect-sharpen"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Sharpen…</button>
+          <button data-cmd="effect-unsharp-mask"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Unsharp Mask…</button>
+          <button data-cmd="effect-high-pass"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>High Pass…</button>
+        </div>
+      </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span><span class="rm-item">Stylize</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
+          <button data-cmd="effect-emboss"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span>Emboss…</button>
+          <button data-cmd="effect-find-edges"><span class="pixel-icon" data-icon="lasso" aria-hidden="true"></span>Find Edges…</button>
+          <div class="sep"></div>
+          <button data-cmd="effect-maximum"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Maximum…</button>
+          <button data-cmd="effect-minimum"><span class="pixel-icon" data-icon="minus-box" aria-hidden="true"></span>Minimum…</button>
+          <button data-cmd="effect-custom"><span class="pixel-icon" data-icon="calculator" aria-hidden="true"></span>Custom Matrix…</button>
+        </div>
+      </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span><span class="rm-item">Pixelate</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
+          <button data-cmd="effect-mosaic"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Mosaic…</button>
+          <button data-cmd="effect-halftone"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Colour Halftone…</button>
+          <button data-cmd="effect-crystallize"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span>Crystallize…</button>
+        </div>
+      </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span><span class="rm-item">Distort</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
+          <button data-cmd="effect-twirl"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Twirl…</button>
+          <button data-cmd="effect-pinch"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Pinch / Spherize…</button>
+          <button data-cmd="effect-polar"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Polar Coordinates…</button>
+          <button data-cmd="effect-wave"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span>Wave…</button>
+          <button data-cmd="effect-ripple"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>Ripple…</button>
+        </div>
+      </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span><span class="rm-item">Render</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
+          <button data-cmd="effect-clouds"><span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span>Clouds…</button>
+          <button data-cmd="effect-lens-flare"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Lens Flare…</button>
+        </div>
+      </div>
       <button data-cmd="noise"><span class="pixel-icon" data-icon="spray-can" aria-hidden="true"></span>Add Noise…</button>
       <div class="sep"></div>
       <div class="rm-sub">
@@ -276,6 +339,8 @@
           <button data-cmd="dither-repeat"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span><span class="rm-item">Repeat Last Dither</span></button>
         </div>
       </div>
+      <div class="sep"></div>
+      <button data-cmd="repeat-effect" disabled><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span><span class="rm-repeat-label">Repeat Last Effect</span></button>
     </div></div>
   </div>
 
@@ -451,6 +516,19 @@
       <label class="paint-check"><input id="noiseMonochrome" type="checkbox" checked> Monochromatic</label>
       <p class="app-status">Adds random grain while preserving transparency.</p>
       <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="noiseModal">Cancel</button><button class="btn primary">Apply</button></div>
+    </div>
+  </form>
+</div>
+
+<!-- One dialog serves every filter in the Effects menu: openEffect builds the
+     controls the chosen filter asks for and previews it live on the layer. -->
+<div class="paint-modal" id="effectModal" role="dialog" aria-modal="false" aria-labelledby="effectTitle">
+  <form class="paint-modal-box paint-dialog" id="effectForm">
+    <header><span id="effectTitle">Effect</span><button type="button" data-close="effectModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <div class="paint-adjust-fields" id="effectFields"></div>
+      <p class="app-status" id="effectHelp"></p>
+      <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="effectModal">Cancel</button><button class="btn primary">Apply</button></div>
     </div>
   </form>
 </div>
@@ -1730,6 +1808,979 @@ function addNoise(amount, monochrome) {
   setStatus(`${monochrome ? 'Monochromatic' : 'Colour'} noise applied at ${amount}%${selectionNote()}`);
 }
 
+/* ---- Effects -------------------------------------------------------------
+   Every filter below is a pure function: the active layer's pixels go in and
+   fresh pixels come out. The shell around them — openEffect, the shared dialog
+   and applyEffect — owns the snapshot, the live preview, the selection mask
+   and the undo entry, so a new filter only has to describe its controls and
+   its run().
+
+   Sampling wraps around the edges wherever wrapping means something, so a
+   filter run over a tile leaves it seamless; the radial filters clamp instead,
+   because a tile has no meaningful centre. */
+
+const blankImage = (w, h) => new ImageData(w, h);
+const copyImage = image => new ImageData(new Uint8ClampedArray(image.data), image.width, image.height);
+const wrapIndex = (value, limit) => ((value % limit) + limit) % limit;
+const edgeIndex = (value, limit, wrap) => wrap ? wrapIndex(value, limit) : value < 0 ? 0 : value >= limit ? limit - 1 : value;
+const smoothStep = t => t * t * (3 - 2 * t);
+
+/* A small integer hash — the seed for the noise lattice and for the jittered
+   cell centres in Crystallize, both of which must be repeatable. */
+function hashNoise(x, y, seed) {
+  let n = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(seed | 0, 1442695041);
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+}
+
+/* Bilinear sampling on premultiplied colour, so a distortion that reaches
+   across a transparent edge does not drag black fringes with it. */
+function sampleImage(src, x, y, wrap, out) {
+  const w = src.width, h = src.height, data = src.data;
+  const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+  let r = 0, g = 0, b = 0, a = 0;
+  for (let dy = 0; dy < 2; dy++) {
+    const weightY = dy ? fy : 1 - fy;
+    if (!weightY) continue;
+    const sy = edgeIndex(y0 + dy, h, wrap);
+    for (let dx = 0; dx < 2; dx++) {
+      const weight = weightY * (dx ? fx : 1 - fx);
+      if (!weight) continue;
+      const i = (sy * w + edgeIndex(x0 + dx, w, wrap)) * 4, alpha = data[i + 3] / 255 * weight;
+      r += data[i] * alpha; g += data[i + 1] * alpha; b += data[i + 2] * alpha; a += alpha;
+    }
+  }
+  out[3] = a * 255;
+  if (a > 1e-4) { out[0] = r / a; out[1] = g / a; out[2] = b / a; } else { out[0] = out[1] = out[2] = 0; }
+  return out;
+}
+
+/* Every distortion is an inverse map: for each destination pixel work out
+   where its colour came from, then sample there. */
+function remapImage(src, wrap, map) {
+  const w = src.width, h = src.height, out = blankImage(w, h), data = out.data;
+  const point = [0, 0], sample = [0, 0, 0, 0];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    point[0] = x + .5; point[1] = y + .5;
+    map(point);
+    sampleImage(src, point[0] - .5, point[1] - .5, wrap, sample);
+    const i = (y * w + x) * 4;
+    data[i] = sample[0]; data[i + 1] = sample[1]; data[i + 2] = sample[2]; data[i + 3] = sample[3];
+  }
+  return out;
+}
+
+/* A tap that lands on a transparent pixel would drag its undefined colour into
+   the result, so those taps borrow the centre pixel's colour instead. Alpha is
+   carried straight through: a convolution never moves the layer's shape. */
+function convolveImage(src, kernel, size, divisor, bias, wrap) {
+  const w = src.width, h = src.height, data = src.data;
+  const out = blankImage(w, h), result = out.data, half = (size - 1) / 2, scale = divisor || 1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const centre = (y * w + x) * 4;
+    let r = 0, g = 0, b = 0;
+    for (let ky = 0; ky < size; ky++) {
+      const sy = edgeIndex(y + ky - half, h, wrap);
+      for (let kx = 0; kx < size; kx++) {
+        const weight = kernel[ky * size + kx];
+        if (!weight) continue;
+        let i = (sy * w + edgeIndex(x + kx - half, w, wrap)) * 4;
+        if (!data[i + 3]) i = centre;
+        r += data[i] * weight; g += data[i + 1] * weight; b += data[i + 2] * weight;
+      }
+    }
+    result[centre] = r / scale + bias; result[centre + 1] = g / scale + bias; result[centre + 2] = b / scale + bias;
+    result[centre + 3] = data[centre + 3];
+  }
+  return out;
+}
+
+/* The browser's own Gaussian, borrowed for the filters that need a blurred
+   copy to work from. Tiling it 3 × 3 keeps the wrap-around seamless, exactly
+   as Effects → Gaussian Blur does. */
+function blurredImage(src, radius, wrap = true) {
+  if (radius <= 0) return copyImage(src);
+  const w = src.width, h = src.height;
+  const source = document.createElement('canvas'); source.width = w; source.height = h;
+  source.getContext('2d').putImageData(src, 0, 0);
+  const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  context.filter = `blur(${radius}px)`;
+  if (wrap) { for (const x of [-w, 0, w]) for (const y of [-h, 0, h]) context.drawImage(source, x, y); }
+  else context.drawImage(source, 0, 0);
+  return context.getImageData(0, 0, w, h);
+}
+
+/* Separable box blur over premultiplied colour, running sums rather than a
+   window per pixel, so the cost does not grow with the radius. */
+function boxBlurImage(src, radius, wrap) {
+  const w = src.width, h = src.height, data = src.data, size = Math.max(0, Math.round(radius));
+  if (!size) return copyImage(src);
+  let plane = new Float32Array(w * h * 4);
+  for (let i = 0; i < data.length; i += 4) {
+    const alpha = data[i + 3] / 255;
+    plane[i] = data[i] * alpha; plane[i + 1] = data[i + 1] * alpha; plane[i + 2] = data[i + 2] * alpha; plane[i + 3] = alpha;
+  }
+  const pass = (input, horizontal) => {
+    const output = new Float32Array(input.length);
+    const lines = horizontal ? h : w, count = horizontal ? w : h;
+    const step = horizontal ? 4 : w * 4, span = size * 2 + 1;
+    for (let line = 0; line < lines; line++) {
+      const start = horizontal ? line * w * 4 : line * 4;
+      const at = position => start + step * edgeIndex(position, count, wrap);
+      let s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+      for (let k = -size; k <= size; k++) { const i = at(k); s0 += input[i]; s1 += input[i + 1]; s2 += input[i + 2]; s3 += input[i + 3]; }
+      for (let position = 0; position < count; position++) {
+        const o = start + step * position;
+        output[o] = s0 / span; output[o + 1] = s1 / span; output[o + 2] = s2 / span; output[o + 3] = s3 / span;
+        const gone = at(position - size), added = at(position + size + 1);
+        s0 += input[added] - input[gone]; s1 += input[added + 1] - input[gone + 1];
+        s2 += input[added + 2] - input[gone + 2]; s3 += input[added + 3] - input[gone + 3];
+      }
+    }
+    return output;
+  };
+  plane = pass(pass(plane, true), false);
+  return unpremultiply(plane, w, h);
+}
+
+function unpremultiply(plane, w, h) {
+  const out = blankImage(w, h), result = out.data;
+  for (let i = 0; i < result.length; i += 4) {
+    const alpha = plane[i + 3];
+    result[i + 3] = alpha * 255;
+    if (alpha > 1e-4) { result[i] = plane[i] / alpha; result[i + 1] = plane[i + 1] / alpha; result[i + 2] = plane[i + 2] / alpha; }
+  }
+  return out;
+}
+
+/* Smearing along a line: the average of the pixels the shutter would have
+   swept across. */
+function motionBlurImage(src, distance, angle, wrap) {
+  const w = src.width, h = src.height, out = blankImage(w, h), result = out.data;
+  const steps = Math.max(1, Math.round(distance)), radians = angle * Math.PI / 180;
+  const stepX = Math.cos(radians), stepY = -Math.sin(radians), sample = [0, 0, 0, 0];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let r = 0, g = 0, b = 0, a = 0;
+    for (let s = 0; s <= steps; s++) {
+      const offset = (s / steps - .5) * distance;
+      sampleImage(src, x + stepX * offset, y + stepY * offset, wrap, sample);
+      const alpha = sample[3] / 255;
+      r += sample[0] * alpha; g += sample[1] * alpha; b += sample[2] * alpha; a += alpha;
+    }
+    const i = (y * w + x) * 4;
+    result[i + 3] = a / (steps + 1) * 255;
+    if (a > 1e-4) { result[i] = r / a; result[i + 1] = g / a; result[i + 2] = b / a; }
+  }
+  return out;
+}
+
+/* Spin smears along the arc around the centre, zoom along the ray out of it. */
+function radialBlurImage(src, amount, method, centreX, centreY) {
+  const w = src.width, h = src.height, out = blankImage(w, h), result = out.data;
+  const originX = centreX / 100 * w, originY = centreY / 100 * h;
+  const steps = Math.max(3, Math.min(48, Math.round(amount / 2) + 3));
+  const sweep = amount / 100 * Math.PI / 7, zoom = amount / 100 * .3, sample = [0, 0, 0, 0];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const dx = x + .5 - originX, dy = y + .5 - originY;
+    let r = 0, g = 0, b = 0, a = 0;
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps - .5;
+      let sx, sy;
+      if (method === 'zoom') { const scale = 1 + t * zoom; sx = originX + dx * scale; sy = originY + dy * scale; }
+      else {
+        const turn = t * sweep, cos = Math.cos(turn), sin = Math.sin(turn);
+        sx = originX + dx * cos - dy * sin; sy = originY + dx * sin + dy * cos;
+      }
+      sampleImage(src, sx - .5, sy - .5, false, sample);
+      const alpha = sample[3] / 255;
+      r += sample[0] * alpha; g += sample[1] * alpha; b += sample[2] * alpha; a += alpha;
+    }
+    const i = (y * w + x) * 4;
+    result[i + 3] = a / (steps + 1) * 255;
+    if (a > 1e-4) { result[i] = r / a; result[i + 1] = g / a; result[i + 2] = b / a; }
+  }
+  return out;
+}
+
+function unsharpMaskImage(src, amount, radius, threshold, wrap) {
+  const low = blurredImage(src, radius, wrap).data, source = src.data;
+  const out = copyImage(src), data = out.data, gain = amount / 100;
+  for (let i = 0; i < data.length; i += 4) {
+    if (!source[i + 3]) continue;
+    for (let c = 0; c < 3; c++) {
+      const difference = source[i + c] - low[i + c];
+      if (Math.abs(difference) >= threshold) data[i + c] = source[i + c] + difference * gain;
+    }
+  }
+  return out;
+}
+
+function highPassImage(src, radius, wrap) {
+  const low = blurredImage(src, radius, wrap).data, source = src.data;
+  const out = copyImage(src), data = out.data;
+  for (let i = 0; i < data.length; i += 4) {
+    if (!source[i + 3]) continue;
+    for (let c = 0; c < 3; c++) data[i + c] = 128 + source[i + c] - low[i + c];
+  }
+  return out;
+}
+
+/* A directional derivative lit from one side: flat areas land on mid grey,
+   slopes facing the light go pale and slopes facing away go dark. */
+function embossImage(src, angle, height, amount, grey, wrap) {
+  const radians = angle * Math.PI / 180, lightX = Math.cos(radians), lightY = -Math.sin(radians);
+  const gain = amount / 100 * height, kernel = new Float32Array(9);
+  for (let ky = -1; ky <= 1; ky++) for (let kx = -1; kx <= 1; kx++) {
+    if (!kx && !ky) continue;
+    kernel[(ky + 1) * 3 + kx + 1] = (kx * lightX + ky * lightY) / Math.hypot(kx, ky) * gain;
+  }
+  const out = convolveImage(src, kernel, 3, 1, 128, wrap);
+  if (grey) {
+    const data = out.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const value = data[i] * .299 + data[i + 1] * .587 + data[i + 2] * .114;
+      data[i] = value; data[i + 1] = value; data[i + 2] = value;
+    }
+  }
+  return out;
+}
+
+/* Sobel gradient magnitude, per channel. */
+function findEdgesImage(src, amount, invert, grey, wrap) {
+  const w = src.width, h = src.height, data = src.data;
+  const out = blankImage(w, h), result = out.data, gain = amount / 100;
+  const horizontal = [-1, 0, 1, -2, 0, 2, -1, 0, 1], vertical = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const centre = (y * w + x) * 4;
+    let edge = 0;
+    for (let c = 0; c < 3; c++) {
+      let gx = 0, gy = 0;
+      for (let ky = 0; ky < 3; ky++) {
+        const sy = edgeIndex(y + ky - 1, h, wrap);
+        for (let kx = 0; kx < 3; kx++) {
+          let i = (sy * w + edgeIndex(x + kx - 1, w, wrap)) * 4;
+          if (!data[i + 3]) i = centre;
+          const value = data[i + c];
+          gx += value * horizontal[ky * 3 + kx]; gy += value * vertical[ky * 3 + kx];
+        }
+      }
+      const magnitude = Math.hypot(gx, gy) * gain;
+      result[centre + c] = invert ? 255 - magnitude : magnitude;
+      edge = Math.max(edge, magnitude);
+    }
+    if (grey) {
+      const value = invert ? 255 - edge : edge;
+      result[centre] = value; result[centre + 1] = value; result[centre + 2] = value;
+    }
+    result[centre + 3] = data[centre + 3];
+  }
+  return out;
+}
+
+/* Sliding-window minimum or maximum through a monotonic deque, so Maximum and
+   Minimum cost the same whatever the radius. */
+function slidingExtreme(source, sourceStart, sourceStride, count, radius, maximum, target, targetStart, targetStride) {
+  const queue = new Int32Array(count);
+  const valueAt = position => source[sourceStart + position * sourceStride];
+  let head = 0, tail = 0;
+  for (let i = 0; i < count + radius; i++) {
+    if (i < count) {
+      const value = valueAt(i);
+      while (tail > head && (maximum ? valueAt(queue[tail - 1]) <= value : valueAt(queue[tail - 1]) >= value)) tail--;
+      queue[tail++] = i;
+    }
+    const position = i - radius;
+    if (position < 0) continue;
+    while (queue[head] < position - radius) head++;
+    target[targetStart + position * targetStride] = valueAt(queue[head]);
+  }
+}
+
+/* Maximum spreads the light pixels, Minimum spreads the dark ones. Transparent
+   pixels are neutralised first so they cannot win the comparison on colour,
+   only on alpha, where growing or shrinking the layer's shape is the point. */
+function morphologyImage(src, radius, round, maximum) {
+  const w = src.width, h = src.height, data = src.data, size = Math.max(1, Math.round(radius));
+  const plane = new Float32Array(w * h * 4), scratch = new Float32Array(plane.length);
+  const identity = maximum ? 0 : 255;
+  for (let i = 0; i < data.length; i += 4) {
+    const opaque = data[i + 3] > 0;
+    plane[i] = opaque ? data[i] : identity; plane[i + 1] = opaque ? data[i + 1] : identity;
+    plane[i + 2] = opaque ? data[i + 2] : identity; plane[i + 3] = data[i + 3];
+  }
+  if (!round) {
+    for (let c = 0; c < 4; c++) {
+      for (let y = 0; y < h; y++) slidingExtreme(plane, y * w * 4 + c, 4, w, size, maximum, scratch, y * w * 4 + c, 4);
+      for (let x = 0; x < w; x++) slidingExtreme(scratch, x * 4 + c, w * 4, h, size, maximum, plane, x * 4 + c, w * 4);
+    }
+  } else {
+    /* A disc is the union of horizontal spans, one per row offset, so each
+       output row merges 2r + 1 sliding passes of the rows around it. */
+    const row = new Float32Array(w), line = new Float32Array(w);
+    for (let c = 0; c < 4; c++) {
+      for (let y = 0; y < h; y++) {
+        row.fill(maximum ? -Infinity : Infinity);
+        for (let dy = -size; dy <= size; dy++) {
+          const sy = Math.max(0, Math.min(h - 1, y + dy)), span = Math.round(Math.sqrt(size * size - dy * dy));
+          slidingExtreme(plane, sy * w * 4 + c, 4, w, span, maximum, line, 0, 1);
+          for (let x = 0; x < w; x++) row[x] = maximum ? Math.max(row[x], line[x]) : Math.min(row[x], line[x]);
+        }
+        for (let x = 0; x < w; x++) scratch[(y * w + x) * 4 + c] = row[x];
+      }
+    }
+    plane.set(scratch);
+  }
+  const out = blankImage(w, h), result = out.data;
+  for (let i = 0; i < result.length; i += 4) {
+    result[i + 3] = plane[i + 3];
+    if (plane[i + 3] > 0) { result[i] = plane[i]; result[i + 1] = plane[i + 1]; result[i + 2] = plane[i + 2]; }
+  }
+  return out;
+}
+
+/* Square blocks of one averaged colour. */
+function mosaicImage(src, cell) {
+  const w = src.width, h = src.height, data = src.data, size = Math.max(2, Math.round(cell));
+  const out = blankImage(w, h), result = out.data;
+  for (let cellY = 0; cellY < h; cellY += size) for (let cellX = 0; cellX < w; cellX += size) {
+    const right = Math.min(w, cellX + size), bottom = Math.min(h, cellY + size);
+    let r = 0, g = 0, b = 0, a = 0, count = 0;
+    for (let y = cellY; y < bottom; y++) for (let x = cellX; x < right; x++) {
+      const i = (y * w + x) * 4, alpha = data[i + 3] / 255;
+      r += data[i] * alpha; g += data[i + 1] * alpha; b += data[i + 2] * alpha; a += alpha; count++;
+    }
+    const red = a > 1e-4 ? r / a : 0, green = a > 1e-4 ? g / a : 0, blue = a > 1e-4 ? b / a : 0, alpha = a / count * 255;
+    for (let y = cellY; y < bottom; y++) for (let x = cellX; x < right; x++) {
+      const i = (y * w + x) * 4;
+      result[i] = red; result[i + 1] = green; result[i + 2] = blue; result[i + 3] = alpha;
+    }
+  }
+  return out;
+}
+
+/* Voronoi cells around jittered centres: each pixel takes the average colour of
+   the cell whose centre is nearest. */
+function crystallizeImage(src, cell) {
+  const w = src.width, h = src.height, data = src.data, size = Math.max(3, Math.round(cell));
+  const columns = Math.max(1, Math.ceil(w / size)), rows = Math.max(1, Math.ceil(h / size));
+  const centres = new Float32Array(columns * rows * 2);
+  for (let cy = 0; cy < rows; cy++) for (let cx = 0; cx < columns; cx++) {
+    const site = (cy * columns + cx) * 2;
+    centres[site] = (cx + hashNoise(cx, cy, 1)) * size;
+    centres[site + 1] = (cy + hashNoise(cx, cy, 2)) * size;
+  }
+  const owner = new Int32Array(w * h), sums = new Float64Array(columns * rows * 5);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const cx = Math.min(columns - 1, Math.floor(x / size)), cy = Math.min(rows - 1, Math.floor(y / size));
+    let best = cy * columns + cx, nearest = Infinity;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const nx = cx + dx, ny = cy + dy;
+      if (nx < 0 || ny < 0 || nx >= columns || ny >= rows) continue;
+      const site = ny * columns + nx, ox = centres[site * 2] - x - .5, oy = centres[site * 2 + 1] - y - .5;
+      const distance = ox * ox + oy * oy;
+      if (distance < nearest) { nearest = distance; best = site; }
+    }
+    const pixel = y * w + x, i = pixel * 4, alpha = data[i + 3] / 255, sum = best * 5;
+    owner[pixel] = best;
+    sums[sum] += data[i] * alpha; sums[sum + 1] += data[i + 1] * alpha; sums[sum + 2] += data[i + 2] * alpha;
+    sums[sum + 3] += alpha; sums[sum + 4]++;
+  }
+  const out = blankImage(w, h), result = out.data;
+  for (let pixel = 0; pixel < owner.length; pixel++) {
+    const sum = owner[pixel] * 5, count = sums[sum + 4] || 1, alpha = sums[sum + 3], i = pixel * 4;
+    result[i + 3] = alpha / count * 255;
+    if (alpha > 1e-4) { result[i] = sums[sum] / alpha; result[i + 1] = sums[sum + 1] / alpha; result[i + 2] = sums[sum + 2] / alpha; }
+  }
+  return out;
+}
+
+/* Printer's screens: each ink gets its own rotated grid of dots whose area
+   carries the ink level, which is what stops the colours moiréing. */
+function halftoneImage(src, maxRadius, angle, mono) {
+  const w = src.width, h = src.height, data = src.data;
+  const out = blankImage(w, h), result = out.data;
+  const cell = Math.max(2, maxRadius) * 2;
+  const screens = mono
+    ? [{ angle: angle + 45, ink: [0, 0, 0], channel: -1 }]
+    : [{ angle: angle + 15, ink: [0, 255, 255], channel: 0 }, { angle: angle + 75, ink: [255, 0, 255], channel: 1 },
+       { angle: angle, ink: [255, 255, 0], channel: 2 }, { angle: angle + 45, ink: [0, 0, 0], channel: 3 }];
+  const prepared = screens.map(screen => {
+    const radians = screen.angle * Math.PI / 180;
+    return { ...screen, cos: Math.cos(radians), sin: Math.sin(radians) };
+  });
+  const inkAt = (x, y, channel) => {
+    const i = (Math.max(0, Math.min(h - 1, Math.round(y))) * w + Math.max(0, Math.min(w - 1, Math.round(x)))) * 4;
+    const r = data[i] / 255, g = data[i + 1] / 255, b = data[i + 2] / 255;
+    if (channel < 0) return 1 - (r * .299 + g * .587 + b * .114);
+    const black = 1 - Math.max(r, g, b);
+    if (channel === 3) return black;
+    if (black >= 1) return 0;
+    const value = channel === 0 ? r : channel === 1 ? g : b;
+    return Math.max(0, Math.min(1, (1 - value - black) / (1 - black)));
+  };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    let red = 255, green = 255, blue = 255;
+    for (const screen of prepared) {
+      const u = (x + .5) * screen.cos + (y + .5) * screen.sin, v = -(x + .5) * screen.sin + (y + .5) * screen.cos;
+      const cellU = Math.round(u / cell) * cell, cellV = Math.round(v / cell) * cell;
+      const ink = inkAt(cellU * screen.cos - cellV * screen.sin, cellU * screen.sin + cellV * screen.cos, screen.channel);
+      const radius = maxRadius * Math.sqrt(Math.max(0, Math.min(1, ink)));
+      const coverage = Math.max(0, Math.min(1, radius - Math.hypot(u - cellU, v - cellV) + .5));
+      if (!coverage) continue;
+      red *= 1 - coverage * (1 - screen.ink[0] / 255);
+      green *= 1 - coverage * (1 - screen.ink[1] / 255);
+      blue *= 1 - coverage * (1 - screen.ink[2] / 255);
+    }
+    result[i] = red; result[i + 1] = green; result[i + 2] = blue; result[i + 3] = data[i + 3];
+  }
+  return out;
+}
+
+/* Tileable value noise: the lattice wraps at the image edge, so Clouds over a
+   tile still meets itself cleanly. */
+function cloudField(w, h, cells, octaves, roughness, seed) {
+  const field = new Float32Array(w * h);
+  let amplitude = 1, total = 0, columns = Math.max(1, Math.round(cells));
+  let rows = Math.max(1, Math.round(cells * h / w));
+  for (let octave = 0; octave < octaves; octave++) {
+    for (let y = 0; y < h; y++) {
+      const v = y / h * rows, v0 = Math.floor(v), fy = smoothStep(v - v0);
+      const row0 = wrapIndex(v0, rows), row1 = wrapIndex(v0 + 1, rows);
+      for (let x = 0; x < w; x++) {
+        const u = x / w * columns, u0 = Math.floor(u), fx = smoothStep(u - u0);
+        const column0 = wrapIndex(u0, columns), column1 = wrapIndex(u0 + 1, columns);
+        const top = hashNoise(column0, row0, seed + octave) * (1 - fx) + hashNoise(column1, row0, seed + octave) * fx;
+        const bottom = hashNoise(column0, row1, seed + octave) * (1 - fx) + hashNoise(column1, row1, seed + octave) * fx;
+        field[y * w + x] += (top * (1 - fy) + bottom * fy) * amplitude;
+      }
+    }
+    total += amplitude; amplitude *= roughness; columns *= 2; rows *= 2;
+  }
+  for (let i = 0; i < field.length; i++) field[i] /= total;
+  return field;
+}
+
+function hexToRgb(hex) {
+  const value = parseInt(String(hex).replace('#', ''), 16);
+  return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+}
+
+function cloudsImage(src, cells, detail, roughness, seed, blend, keepAlpha) {
+  const w = src.width, h = src.height, field = cloudField(w, h, cells, detail, roughness, seed);
+  const out = copyImage(src), data = out.data, source = src.data;
+  const from = hexToRgb(bg), to = hexToRgb(fg);
+  for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+    const t = field[pixel];
+    for (let c = 0; c < 3; c++) {
+      const cloud = from[c] + (to[c] - from[c]) * t;
+      data[i + c] = blend === 'difference' ? Math.abs(source[i + c] - cloud) : cloud;
+    }
+    if (!keepAlpha) data[i + 3] = 255;
+  }
+  return out;
+}
+
+const LENS_GHOSTS = {
+  zoom: [[-.28, .045, .5, [.4, .8, 1]], [.22, .07, .35, [1, .55, .35]], [.42, .035, .55, [.5, 1, .7]],
+         [.68, .09, .3, [1, .8, .4]], [.95, .05, .4, [.6, .5, 1]], [1.3, .13, .22, [1, .45, .55]]],
+  prime: [[-.2, .03, .45, [.5, .85, 1]], [.3, .06, .4, [1, .7, .4]], [.75, .1, .28, [.55, 1, .8]],
+          [1.15, .16, .18, [1, .5, .45]]],
+  movie: [[.35, .12, .3, [.45, .7, 1]], [.8, .07, .45, [1, .75, .45]], [1.25, .2, .16, [.8, .55, 1]]]
+};
+
+/* Light added on top of the picture: the flare's core and streaks, one halo
+   ring, and the ghosts the lens throws along the line to the frame's centre. */
+function lensFlareImage(src, brightness, centreX, centreY, lens) {
+  const w = src.width, h = src.height, out = copyImage(src), data = out.data;
+  const span = Math.hypot(w, h), gain = brightness / 100;
+  const flareX = centreX / 100 * w, flareY = centreY / 100 * h;
+  const ghosts = LENS_GHOSTS[lens] || LENS_GHOSTS.zoom;
+  const blades = lens === 'movie' ? 1 : lens === 'prime' ? 2 : 3;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const dx = x + .5 - flareX, dy = y + .5 - flareY, distance = Math.hypot(dx, dy) / span;
+    let red = 0, green = 0, blue = 0;
+    const core = Math.exp(-distance * distance * 700) * 2.4 + Math.exp(-distance * 24) * .5;
+    red += core; green += core * .96; blue += core * .88;
+    const streak = Math.pow(Math.abs(Math.cos(Math.atan2(dy, dx) * blades)), 24) * Math.exp(-distance * 8) * .8;
+    red += streak; green += streak * .92; blue += streak * .74;
+    const ring = Math.exp(-Math.pow((distance - .33) * 24, 2)) * .16;
+    red += ring * .62; green += ring * .8; blue += ring;
+    for (const [at, size, strength, colour] of ghosts) {
+      const ghostX = flareX + (w / 2 - flareX) * at, ghostY = flareY + (h / 2 - flareY) * at;
+      const reach = Math.hypot(x + .5 - ghostX, y + .5 - ghostY) / (size * span);
+      if (reach >= 1) continue;
+      const light = Math.pow(1 - reach, 1.5) * strength;
+      red += light * colour[0]; green += light * colour[1]; blue += light * colour[2];
+    }
+    red *= gain * 255; green *= gain * 255; blue *= gain * 255;
+    if (red < .5 && green < .5 && blue < .5) continue;
+    const i = (y * w + x) * 4;
+    if (data[i + 3]) { data[i] += red; data[i + 1] += green; data[i + 2] += blue; }
+    else {
+      data[i] = red; data[i + 1] = green; data[i + 2] = blue;
+      data[i + 3] = Math.max(red, green, blue);
+    }
+  }
+  return out;
+}
+
+const EFFECTS = {
+  'box-blur': {
+    title: 'Box Blur',
+    help: 'Averages a square of pixels — flatter and blockier than a Gaussian.',
+    fields: [
+      { id: 'radius', label: 'Radius', type: 'range', min: 1, max: 80, value: 4, step: 1, unit: ' px' },
+      { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
+    ],
+    run: (src, v) => boxBlurImage(src, v.radius, v.wrap)
+  },
+  'motion-blur': {
+    title: 'Motion Blur',
+    help: 'Smears the layer along one direction, as a moving subject would.',
+    fields: [
+      { id: 'distance', label: 'Distance', type: 'range', min: 1, max: 200, value: 20, step: 1, unit: ' px' },
+      { id: 'angle', label: 'Angle', type: 'range', min: -180, max: 180, value: 0, step: 1, unit: '°' },
+      { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
+    ],
+    run: (src, v) => motionBlurImage(src, v.distance, v.angle, v.wrap)
+  },
+  'radial-blur': {
+    title: 'Radial Blur',
+    help: 'Spin turns the picture about the centre; zoom rushes out of it.',
+    fields: [
+      { id: 'amount', label: 'Amount', type: 'range', min: 1, max: 100, value: 20, step: 1 },
+      { id: 'method', label: 'Method', type: 'select', value: 'spin', options: [['spin', 'Spin'], ['zoom', 'Zoom']] },
+      { id: 'centreX', label: 'Centre X', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%' },
+      { id: 'centreY', label: 'Centre Y', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%' }
+    ],
+    run: (src, v) => radialBlurImage(src, v.amount, v.method, v.centreX, v.centreY)
+  },
+  sharpen: {
+    title: 'Sharpen',
+    help: 'The classic three-by-three sharpening kernel, at the strength you ask for.',
+    fields: [
+      { id: 'amount', label: 'Amount', type: 'range', min: 5, max: 300, value: 100, step: 5, unit: '%' },
+      { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
+    ],
+    run: (src, v) => {
+      const gain = v.amount / 100;
+      return convolveImage(src, [0, -gain, 0, -gain, 1 + 4 * gain, -gain, 0, -gain, 0], 3, 1, 0, v.wrap);
+    }
+  },
+  'unsharp-mask': {
+    title: 'Unsharp Mask',
+    help: 'Adds back what a blur takes away. Threshold leaves flat areas — skin, sky, grain — alone.',
+    fields: [
+      { id: 'amount', label: 'Amount', type: 'range', min: 1, max: 500, value: 100, step: 1, unit: '%' },
+      { id: 'radius', label: 'Radius', type: 'range', min: .1, max: 40, value: 1.5, step: .1, decimals: 1, unit: ' px' },
+      { id: 'threshold', label: 'Threshold', type: 'range', min: 0, max: 128, value: 0, step: 1 },
+      { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
+    ],
+    run: (src, v) => unsharpMaskImage(src, v.amount, v.radius, v.threshold, v.wrap)
+  },
+  'high-pass': {
+    title: 'High Pass',
+    help: 'Keeps the detail and throws away the tone — mid grey everywhere the layer is flat.',
+    fields: [
+      { id: 'radius', label: 'Radius', type: 'range', min: .1, max: 50, value: 3, step: .1, decimals: 1, unit: ' px' },
+      { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
+    ],
+    run: (src, v) => highPassImage(src, v.radius, v.wrap)
+  },
+  emboss: {
+    title: 'Emboss',
+    help: 'Stamps the layer into mid grey, lit from the angle you choose.',
+    fields: [
+      { id: 'angle', label: 'Angle', type: 'range', min: -180, max: 180, value: 135, step: 1, unit: '°' },
+      { id: 'height', label: 'Height', type: 'range', min: 1, max: 10, value: 3, step: 1, unit: ' px' },
+      { id: 'amount', label: 'Amount', type: 'range', min: 10, max: 500, value: 100, step: 10, unit: '%' },
+      { id: 'grey', label: 'Desaturate', type: 'check', value: true },
+      { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
+    ],
+    run: (src, v) => embossImage(src, v.angle, v.height, v.amount, v.grey, v.wrap)
+  },
+  'find-edges': {
+    title: 'Find Edges',
+    help: 'Sobel gradients: the outlines stay, the flat areas go.',
+    fields: [
+      { id: 'amount', label: 'Strength', type: 'range', min: 10, max: 400, value: 100, step: 10, unit: '%' },
+      { id: 'invert', label: 'Dark lines on white', type: 'check', value: true },
+      { id: 'grey', label: 'Desaturate', type: 'check', value: false },
+      { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
+    ],
+    run: (src, v) => findEdgesImage(src, v.amount, v.invert, v.grey, v.wrap)
+  },
+  maximum: {
+    title: 'Maximum',
+    help: 'Spreads the light pixels into the dark ones and grows the layer’s shape.',
+    fields: [
+      { id: 'radius', label: 'Radius', type: 'range', min: 1, max: 40, value: 2, step: 1, unit: ' px' },
+      { id: 'round', label: 'Round', type: 'check', value: false }
+    ],
+    run: (src, v) => morphologyImage(src, v.radius, v.round, true)
+  },
+  minimum: {
+    title: 'Minimum',
+    help: 'Spreads the dark pixels into the light ones and shrinks the layer’s shape.',
+    fields: [
+      { id: 'radius', label: 'Radius', type: 'range', min: 1, max: 40, value: 2, step: 1, unit: ' px' },
+      { id: 'round', label: 'Round', type: 'check', value: false }
+    ],
+    run: (src, v) => morphologyImage(src, v.radius, v.round, false)
+  },
+  custom: {
+    title: 'Custom Matrix',
+    help: 'Your own convolution. Each pixel becomes the weighted sum of its neighbours, divided and offset.',
+    fields: [
+      { id: 'size', label: 'Kernel', type: 'select', value: '3', options: [['3', '3 × 3'], ['5', '5 × 5']] },
+      { id: 'matrix', label: 'Weights', type: 'matrix' },
+      { id: 'divisor', label: 'Divisor', type: 'number', min: -999, max: 999, value: 1, step: .1 },
+      { id: 'offset', label: 'Offset', type: 'number', min: -255, max: 255, value: 0, step: 1 },
+      { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
+    ],
+    run: (src, v) => convolveImage(src, v.matrix, Number(v.size), v.divisor, v.offset, v.wrap)
+  },
+  mosaic: {
+    title: 'Mosaic',
+    help: 'Averages the layer into square blocks.',
+    fields: [{ id: 'cell', label: 'Cell size', type: 'range', min: 2, max: 120, value: 10, step: 1, unit: ' px' }],
+    run: (src, v) => mosaicImage(src, v.cell)
+  },
+  halftone: {
+    title: 'Colour Halftone',
+    help: 'Redraws the layer as printer’s dots — four rotated ink screens, or one black screen.',
+    fields: [
+      { id: 'radius', label: 'Max radius', type: 'range', min: 2, max: 30, value: 6, step: 1, unit: ' px' },
+      { id: 'angle', label: 'Screen angle', type: 'range', min: 0, max: 90, value: 0, step: 1, unit: '°' },
+      { id: 'mono', label: 'Single black screen', type: 'check', value: false }
+    ],
+    run: (src, v) => halftoneImage(src, v.radius, v.angle, v.mono)
+  },
+  crystallize: {
+    title: 'Crystallize',
+    help: 'Clumps the layer into flat polygons around scattered centres.',
+    fields: [{ id: 'cell', label: 'Cell size', type: 'range', min: 3, max: 120, value: 12, step: 1, unit: ' px' }],
+    run: (src, v) => crystallizeImage(src, v.cell)
+  },
+  twirl: {
+    title: 'Twirl',
+    help: 'Winds the picture around the centre, hardest in the middle.',
+    fields: [
+      { id: 'angle', label: 'Angle', type: 'range', min: -720, max: 720, value: 120, step: 5, unit: '°' },
+      { id: 'radius', label: 'Radius', type: 'range', min: 5, max: 150, value: 100, step: 1, unit: '%' }
+    ],
+    run: (src, v) => {
+      const w = src.width, h = src.height, centreX = w / 2, centreY = h / 2;
+      const reach = Math.min(w, h) / 2 * (v.radius / 100), turn = v.angle * Math.PI / 180;
+      return remapImage(src, false, point => {
+        const dx = point[0] - centreX, dy = point[1] - centreY, distance = Math.hypot(dx, dy);
+        if (distance >= reach) return;
+        const amount = turn * Math.pow(1 - distance / reach, 2);
+        const cos = Math.cos(amount), sin = Math.sin(amount);
+        point[0] = centreX + dx * cos - dy * sin; point[1] = centreY + dx * sin + dy * cos;
+      });
+    }
+  },
+  pinch: {
+    title: 'Pinch / Spherize',
+    help: 'Negative amounts pinch the picture inwards, positive ones bulge it out like glass.',
+    fields: [
+      { id: 'amount', label: 'Amount', type: 'range', min: -100, max: 100, value: 50, step: 1, unit: '%' },
+      { id: 'radius', label: 'Radius', type: 'range', min: 5, max: 150, value: 100, step: 1, unit: '%' }
+    ],
+    run: (src, v) => {
+      const w = src.width, h = src.height, centreX = w / 2, centreY = h / 2;
+      const reach = Math.min(w, h) / 2 * (v.radius / 100), strength = v.amount / 100;
+      return remapImage(src, false, point => {
+        const dx = point[0] - centreX, dy = point[1] - centreY, distance = Math.hypot(dx, dy);
+        if (distance >= reach || distance < 1e-4) return;
+        /* Pulling the sampled radius in towards the centre magnifies what is
+           there, which reads as a bulge; pushing it out reads as a pinch. The
+           pinch side needs the gentler curve — minifying runs out of picture
+           far quicker than magnifying runs out of room. */
+        const t = distance / reach, scale = Math.pow(t, 1 + strength * (strength > 0 ? .9 : .5)) / t;
+        point[0] = centreX + dx * scale; point[1] = centreY + dy * scale;
+      });
+    }
+  },
+  polar: {
+    title: 'Polar Coordinates',
+    help: 'Bends the picture around a circle, or unrolls a circular one into a strip.',
+    fields: [{
+      id: 'method', label: 'Method', type: 'select', value: 'to-polar',
+      options: [['to-polar', 'Rectangular → polar'], ['to-rect', 'Polar → rectangular']]
+    }],
+    run: (src, v) => {
+      const w = src.width, h = src.height, centreX = w / 2, centreY = h / 2, reach = Math.min(w, h) / 2;
+      if (v.method === 'to-polar') return remapImage(src, false, point => {
+        const dx = point[0] - centreX, dy = point[1] - centreY;
+        const angle = Math.atan2(dx, -dy), distance = Math.hypot(dx, dy);
+        point[0] = (angle / (Math.PI * 2) + .5) * w;
+        point[1] = Math.min(1, distance / reach) * h;
+      });
+      return remapImage(src, false, point => {
+        const angle = (point[0] / w - .5) * Math.PI * 2, distance = point[1] / h * reach;
+        point[0] = centreX + Math.sin(angle) * distance;
+        point[1] = centreY - Math.cos(angle) * distance;
+      });
+    }
+  },
+  wave: {
+    title: 'Wave',
+    help: 'Shifts each row and column along a sine, like heat haze or old glass.',
+    fields: [
+      { id: 'amplitude', label: 'Amplitude', type: 'range', min: 1, max: 100, value: 10, step: 1, unit: ' px' },
+      { id: 'wavelength', label: 'Wavelength', type: 'range', min: 4, max: 400, value: 60, step: 1, unit: ' px' },
+      { id: 'phase', label: 'Phase', type: 'range', min: 0, max: 360, value: 0, step: 5, unit: '°' },
+      {
+        id: 'direction', label: 'Direction', type: 'select', value: 'both',
+        options: [['both', 'Both axes'], ['horizontal', 'Horizontal'], ['vertical', 'Vertical']]
+      },
+      { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
+    ],
+    run: (src, v) => {
+      const step = Math.PI * 2 / v.wavelength, phase = v.phase * Math.PI / 180;
+      const horizontal = v.direction !== 'vertical', vertical = v.direction !== 'horizontal';
+      return remapImage(src, v.wrap, point => {
+        const x = point[0], y = point[1];
+        if (horizontal) point[0] = x + Math.sin(y * step + phase) * v.amplitude;
+        if (vertical) point[1] = y + Math.sin(x * step + phase) * v.amplitude;
+      });
+    }
+  },
+  ripple: {
+    title: 'Ripple',
+    help: 'Concentric ripples spreading from the centre, as if the picture were a pond.',
+    fields: [
+      { id: 'amplitude', label: 'Amount', type: 'range', min: 1, max: 60, value: 8, step: 1, unit: ' px' },
+      { id: 'wavelength', label: 'Ripple size', type: 'range', min: 4, max: 200, value: 30, step: 1, unit: ' px' },
+      { id: 'phase', label: 'Phase', type: 'range', min: 0, max: 360, value: 0, step: 5, unit: '°' }
+    ],
+    run: (src, v) => {
+      const centreX = src.width / 2, centreY = src.height / 2;
+      const step = Math.PI * 2 / v.wavelength, phase = v.phase * Math.PI / 180;
+      return remapImage(src, false, point => {
+        const dx = point[0] - centreX, dy = point[1] - centreY, distance = Math.hypot(dx, dy);
+        if (distance < 1e-4) return;
+        const shift = Math.sin(distance * step + phase) * v.amplitude;
+        point[0] += dx / distance * shift; point[1] += dy / distance * shift;
+      });
+    }
+  },
+  clouds: {
+    title: 'Clouds',
+    help: 'Tileable fractal noise between the background and foreground colours.',
+    fields: [
+      { id: 'cells', label: 'Scale', type: 'range', min: 1, max: 24, value: 4, step: 1 },
+      { id: 'detail', label: 'Detail', type: 'range', min: 1, max: 8, value: 5, step: 1, unit: ' octaves' },
+      { id: 'roughness', label: 'Roughness', type: 'range', min: .2, max: .9, value: .5, step: .05, decimals: 2 },
+      { id: 'seed', label: 'Seed', type: 'range', min: 0, max: 999, value: 1, step: 1 },
+      { id: 'blend', label: 'Blend', type: 'select', value: 'replace', options: [['replace', 'Replace'], ['difference', 'Difference']] },
+      { id: 'keepAlpha', label: 'Keep layer transparency', type: 'check', value: false }
+    ],
+    run: (src, v) => cloudsImage(src, v.cells, v.detail, v.roughness, v.seed, v.blend, v.keepAlpha)
+  },
+  'lens-flare': {
+    title: 'Lens Flare',
+    help: 'Adds the light a bright source throws around inside a lens.',
+    fields: [
+      { id: 'brightness', label: 'Brightness', type: 'range', min: 10, max: 300, value: 120, step: 5, unit: '%' },
+      { id: 'centreX', label: 'Centre X', type: 'range', min: 0, max: 100, value: 30, step: 1, unit: '%' },
+      { id: 'centreY', label: 'Centre Y', type: 'range', min: 0, max: 100, value: 30, step: 1, unit: '%' },
+      {
+        id: 'lens', label: 'Lens', type: 'select', value: 'zoom',
+        options: [['zoom', '50–300 mm zoom'], ['prime', '35 mm prime'], ['movie', 'Movie prime']]
+      }
+    ],
+    run: (src, v) => lensFlareImage(src, v.brightness, v.centreX, v.centreY, v.lens)
+  }
+};
+
+/* Beyond this size a filter takes long enough that chasing the slider would
+   stutter, so the preview waits for the control to be let go instead. */
+const EFFECT_LIVE_PIXELS = 1_500_000;
+const CUSTOM_KERNELS = {
+  3: [0, 0, 0, 0, 1, 0, 0, 0, 0],
+  5: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+};
+let activeEffect = null, effectOriginal = null, effectTimer = 0, effectLive = true, lastEffect = null;
+
+const effectFieldElement = id => appRoot.querySelector(`#effectFields [data-effect-id="${id}"]`);
+
+function effectFieldValue(field) {
+  const element = effectFieldElement(field.id);
+  if (!element) return field.value;
+  if (field.type === 'check') return element.checked;
+  if (field.type === 'select') return element.value;
+  if (field.type === 'matrix') return [...element.querySelectorAll('input')].map(input => Number(input.value) || 0);
+  return Number(element.value);
+}
+
+function effectValues(kind = activeEffect) {
+  const values = {};
+  EFFECTS[kind].fields.forEach(field => { values[field.id] = effectFieldValue(field); });
+  return values;
+}
+
+function formatEffectValue(field, value) {
+  const decimals = field.decimals ?? 0;
+  return `${Number(value).toFixed(decimals)}${field.unit || ''}`;
+}
+
+function renderCustomMatrix(container, size) {
+  const kernel = CUSTOM_KERNELS[size];
+  container.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
+  container.replaceChildren();
+  kernel.forEach((weight, index) => {
+    const input = document.createElement('input');
+    input.type = 'number'; input.step = 'any'; input.value = weight;
+    input.setAttribute('aria-label', `Weight ${Math.floor(index / size) + 1}, ${index % size + 1}`);
+    input.addEventListener('input', () => { kernel[index] = Number(input.value) || 0; scheduleEffectPreview(); });
+    container.append(input);
+  });
+}
+
+function buildEffectFields(config) {
+  const fields = appRoot.querySelector('#effectFields');
+  fields.replaceChildren();
+  config.fields.forEach(field => {
+    const row = document.createElement('label');
+    const name = document.createElement('span'); name.textContent = field.label;
+    row.append(name);
+    if (field.type === 'check') {
+      const input = document.createElement('input');
+      input.type = 'checkbox'; input.checked = field.value; input.dataset.effectId = field.id;
+      input.addEventListener('change', scheduleEffectPreview);
+      row.classList.add('paint-effect-switch'); row.append(input);
+    } else if (field.type === 'select') {
+      const select = document.createElement('select');
+      select.dataset.effectId = field.id; select.className = 'paint-effect-select';
+      field.options.forEach(([value, label]) => {
+        const option = document.createElement('option'); option.value = value; option.textContent = label; select.append(option);
+      });
+      select.value = field.value;
+      select.addEventListener('change', () => {
+        if (field.id === 'size') {
+          const matrix = effectFieldElement('matrix');
+          if (matrix) renderCustomMatrix(matrix, Number(select.value));
+        }
+        scheduleEffectPreview();
+      });
+      row.append(select);
+    } else if (field.type === 'matrix') {
+      const grid = document.createElement('div');
+      grid.className = 'paint-effect-matrix'; grid.dataset.effectId = field.id;
+      renderCustomMatrix(grid, Number(config.fields.find(other => other.id === 'size')?.value || 3));
+      row.classList.add('paint-effect-block'); row.append(grid);
+    } else if (field.type === 'number') {
+      const input = document.createElement('input');
+      input.type = 'number'; input.min = field.min; input.max = field.max; input.step = field.step; input.value = field.value;
+      input.dataset.effectId = field.id; input.className = 'paint-effect-number';
+      input.addEventListener('input', scheduleEffectPreview);
+      row.append(input);
+    } else {
+      const input = document.createElement('input');
+      input.type = 'range'; input.min = field.min; input.max = field.max; input.step = field.step; input.value = field.value;
+      input.dataset.effectId = field.id;
+      const output = document.createElement('output');
+      output.className = 'paint-adjust-value'; output.textContent = formatEffectValue(field, field.value);
+      input.addEventListener('input', () => {
+        output.textContent = formatEffectValue(field, input.value);
+        if (effectLive) scheduleEffectPreview();
+      });
+      input.addEventListener('change', () => { if (!effectLive) scheduleEffectPreview(); });
+      row.append(input, output);
+    }
+    fields.append(row);
+  });
+}
+
+function runEffect(kind, source, values) {
+  return EFFECTS[kind].run(copyImage(source), values);
+}
+
+function maskEffect(result, source, mask) {
+  if (!mask) return result;
+  const data = result.data, previous = source.data;
+  for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+    if (mask[pixel]) continue;
+    data[i] = previous[i]; data[i + 1] = previous[i + 1]; data[i + 2] = previous[i + 2]; data[i + 3] = previous[i + 3];
+  }
+  return result;
+}
+
+function renderEffectPreview() {
+  if (!activeEffect || !effectOriginal || activeLayer.id !== effectOriginal.layerId) return;
+  const result = runEffect(activeEffect, effectOriginal.pixels, effectValues());
+  bx.putImageData(maskEffect(result, effectOriginal.pixels, effectOriginal.mask), 0, 0);
+  renderLayerPanel();
+}
+
+function scheduleEffectPreview() {
+  if (!effectPreviewing || !activeEffect) return;
+  clearTimeout(effectTimer);
+  effectTimer = setTimeout(() => { effectTimer = 0; renderEffectPreview(); }, 60);
+}
+
+function endEffectPreview(restore, announce = true) {
+  clearTimeout(effectTimer); effectTimer = 0;
+  const running = !!effectOriginal, title = running ? EFFECTS[activeEffect].title : '';
+  if (running && restore && activeLayer.id === effectOriginal.layerId) bx.putImageData(effectOriginal.pixels, 0, 0);
+  activeEffect = null; effectOriginal = null; effectPreviewing = false;
+  stack.classList.remove('adjust-busy'); renderLayerPanel();
+  if (running && restore && announce) setStatus(`${title} cancelled`);
+}
+
+function openEffect(kind) {
+  const config = EFFECTS[kind];
+  if (!config) return;
+  if (effectOriginal) endEffectPreview(true, false);
+  effectOriginal = { layerId: activeLayer.id, pixels: bx.getImageData(0, 0, width(), height()), mask: selectionMask() };
+  activeEffect = kind; effectPreviewing = true; effectLive = width() * height() <= EFFECT_LIVE_PIXELS;
+  stack.classList.add('adjust-busy');
+  appRoot.querySelector('#effectTitle').textContent = config.title;
+  buildEffectFields(config);
+  appRoot.querySelector('#effectHelp').textContent = `${config.help}${selection ? ' Only the selected area changes.' : ''}${effectLive ? '' : ' The picture is large, so the preview updates when you let a slider go.'}`;
+  showModal('effectModal');
+  appRoot.querySelector('#effectFields input, #effectFields select')?.focus();
+  renderEffectPreview();
+}
+
+function applyEffect(kind, values) {
+  const config = EFFECTS[kind];
+  const source = bx.getImageData(0, 0, width(), height());
+  const result = maskEffect(runEffect(kind, source, values), source, selectionMask());
+  pushUndo();
+  bx.putImageData(result, 0, 0);
+  rememberEffect(config.title, () => applyEffect(kind, values));
+  setStatus(`${config.title} applied${selectionNote()}`);
+}
+
+/* Effects → Repeat runs the last filter again with the settings it was given,
+   over whatever is selected now. Gaussian Blur and Add Noise keep their own
+   dialogs, so they hand their repeat in here too. */
+function rememberEffect(title, repeat) {
+  lastEffect = { title, repeat };
+  const button = appRoot.querySelector('[data-cmd="repeat-effect"]');
+  if (!button) return;
+  button.querySelector('.rm-repeat-label').textContent = `Repeat ${title}`;
+  button.disabled = false;
+}
+
+appRoot.querySelector('#effectForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (!activeEffect || !effectOriginal) return;
+  const kind = activeEffect, values = effectValues();
+  const original = effectOriginal;
+  clearTimeout(effectTimer); effectTimer = 0;
+  if (activeLayer.id === original.layerId) bx.putImageData(original.pixels, 0, 0);
+  endEffectPreview(false);
+  hideModal('effectModal');
+  applyEffect(kind, values);
+});
+
 const ADJUSTMENTS = {
   'brightness-contrast': { title: 'Brightness / Contrast', fields: [['Brightness', -100, 100, 0, 1], ['Contrast', -100, 100, 0, 1]] },
   levels: { title: 'Levels', fields: [['Black point', 0, 254, 0, 1], ['Gamma', .1, 3, 1, .05], ['White point', 1, 255, 255, 1]] },
@@ -2036,6 +3087,7 @@ const modals = new Map([...appRoot.querySelectorAll('.paint-modal')].map(modal =
 const showModal = id => modals.get(id).classList.add('open');
 const hideModal = id => {
   if (id === 'gaussianBlurModal') cancelGaussianPreview();
+  if (id === 'effectModal') endEffectPreview(true);
   modals.get(id).classList.remove('open');
 };
 modals.forEach(modal => {
@@ -2211,6 +3263,11 @@ appRoot.querySelector('#gaussianBlurForm').addEventListener('submit', event => {
   const original = gaussianPreviewOriginal; bx.putImageData(original, 0, 0);
   gaussianPreviewOriginal = null; effectPreviewing = false; stack.classList.remove('adjust-busy');
   pushUndo(); renderGaussianBlur(radius, original); confineToSelection(original); hideModal('gaussianBlurModal');
+  rememberEffect('Gaussian Blur', () => {
+    const source = bx.getImageData(0, 0, width(), height());
+    pushUndo(); renderGaussianBlur(radius, source); confineToSelection(source);
+    setStatus(`Gaussian Blur applied at ${radius.toFixed(1)}px radius${selectionNote()}`);
+  });
   setStatus(`Gaussian Blur applied at ${radius.toFixed(1)}px radius${selectionNote()}`);
 });
 appRoot.querySelector('#gaussianRadius').addEventListener('input', previewGaussianBlur);
@@ -2218,7 +3275,9 @@ appRoot.querySelector('#noiseForm').addEventListener('submit', event => {
   event.preventDefault();
   const amount = Number(appRoot.querySelector('#noiseAmount').value);
   if (!Number.isFinite(amount) || amount < 0.1 || amount > 100) return;
-  hideModal('noiseModal'); addNoise(amount, appRoot.querySelector('#noiseMonochrome').checked);
+  const monochrome = appRoot.querySelector('#noiseMonochrome').checked;
+  hideModal('noiseModal'); addNoise(amount, monochrome);
+  rememberEffect('Add Noise', () => addNoise(amount, monochrome));
 });
 
 function cancelLiveContentPreview(clear = true) {
@@ -2798,12 +3857,24 @@ function runCmd(cmd) {
     else status.textContent = 'Apply or cancel Form-Detecting Scale before using another command';
     return;
   }
-  if (effectPreviewing) { setStatus('Apply or cancel the effect preview before using another command'); return; }
+  /* One filter dialog can hand straight over to another, the way the
+     adjustments do: the running preview is rolled back first. */
+  if (effectPreviewing) {
+    const wanted = cmd.startsWith('effect-') && EFFECTS[cmd.slice(7)] ? cmd.slice(7) : null;
+    if (wanted || cmd === 'gaussian-blur') {
+      hideModal('gaussianBlurModal'); hideModal('effectModal');
+      if (wanted) openEffect(wanted); else openGaussianBlur();
+      return;
+    }
+    setStatus('Apply or cancel the effect preview before using another command'); return;
+  }
   if (adjustPreviewing) {
     if (cmd.startsWith('adjust-') && ADJUSTMENTS[cmd.slice(7)]) { openAdjustment(cmd.slice(7)); return; }
     if (cmd === 'histogram') { closeAdjustment(true); openHistogram(); return; }
+    if (cmd.startsWith('effect-') && EFFECTS[cmd.slice(7)]) { closeAdjustment(true); openEffect(cmd.slice(7)); return; }
     setStatus('Apply or cancel the adjustment preview before using another command'); return;
   }
+  if (cmd.startsWith('effect-') && EFFECTS[cmd.slice(7)]) { openEffect(cmd.slice(7)); return; }
   if (cmd.startsWith('dither-')) {
     if (!ditherApi) { setStatus('Dithering is unavailable — paint-dither.js did not load'); return; }
     if (cmd === 'dither-repeat') ditherApi.repeat();
@@ -2854,6 +3925,9 @@ function runCmd(cmd) {
     case 'remove-bg': openBgRemoval(); break;
     case 'gaussian-blur': openGaussianBlur(); break;
     case 'noise': showModal('noiseModal'); appRoot.querySelector('#noiseAmount').focus(); break;
+    case 'repeat-effect':
+      if (lastEffect) lastEffect.repeat(); else setStatus('No effect has been applied yet');
+      break;
     case 'clear': {
       pushUndo(); bx.save();
       if (selection) { traceSelectionPath(bx); bx.clip(); }
