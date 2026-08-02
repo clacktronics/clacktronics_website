@@ -977,12 +977,20 @@ windows, and desktop actions.
   jobs are cancelled so dragging stays responsive. The exact-size dialog remains
   available alongside it. The final full-resolution worker pass shrinks or
   enlarges every layer along shared low-detail paths, optionally protecting the
-  current selection. The zoom tool
+  current selection. Every setting the armed tool has lives in one options bar
+  under the menus, the way a photo editor arranges it: the tool's name, its size
+  where size means anything, its own controls (the brush's Softness, a healing
+  brush's Hardness, liquify's warp mode) and a line of help, with the canvas
+  zoom parked on the right beside 1:1 and Fit buttons. The zoom tool
   supports 12.5%–800% views, and brush-based tools show their live footprint
-  over the canvas. A non-destructive
-  50% X/Y offset checkbox below Tool Size animates into a wrapped, fully
-  editable seam-checking view. A second checkbox mirrors new paint strokes
-  across the Y axis. The two effects that need a neural network share an
+  over the canvas. The View menu holds Zoom In/Out, Actual Size, Fit to Screen,
+  Fit to Width and a grid toggle; the same three zoom levels are on the canvas
+  right-click menu while the zoom tool is armed. The grid draws over the picture
+  without touching the pixels, doubling its cell size as the view zooms out so
+  the lines never crowd, with every eighth line drawn stronger. A non-destructive
+  50% X/Y offset (Image → Check Seams) animates into a wrapped, fully
+  editable seam-checking view. Effects → Mirror Paint mirrors new paint strokes
+  across either axis or both. The two effects that need a neural network share an
   **Effects → AI** submenu, and both run in a Web Worker so a download or a long
   inference never freezes the painting. **Remove Background** cuts the subject
   out onto transparency using the MODNet model (Apache-2.0) with the vendored
