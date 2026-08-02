@@ -83,13 +83,17 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 /* a child selector, so a nested .rm-dd submenu is not dragged open along
  * with the menu that contains it */
 .rm.open > .rm-dd { display: block; }
-.rm-dd button {
+/* menu items are buttons, except the "Open app in new tab" link ClackOS adds
+ * to an app running in a window — a real link, so it can be middle-clicked or
+ * copied like any other */
+.rm-dd button, .rm-dd a {
   all: unset; box-sizing: border-box; display: flex; align-items: center; width: 100%; cursor: pointer;
   gap: 8px; padding: 7px 14px; font: inherit; font-size: 12px; color: var(--control-text); white-space: nowrap;
 }
 .rm-dd .pixel-icon { width: 16px; height: 16px; }
-.rm-dd button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
+.rm-dd button:hover:not(:disabled), .rm-dd a:hover { background: var(--ink); color: var(--menu-text); }
 .rm-dd button:disabled { color: var(--disabled-text); cursor: default; }
+.rm-dd a:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
 .rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
 
 .app-lbl {
