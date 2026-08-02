@@ -930,7 +930,7 @@ windows, and desktop actions.
 - `applications/paint.html` (Applications → ClackPaint) — a classic bitmap
   editor: pencil, brush, eraser, airbrush, flood fill, colour picker, clone
   stamp, soft blur, line, rectangle (outline/filled), ellipse and rectangular
-  selection tools; Gaussian Blur and Noise effects; the
+  selection tools; a full Effects menu (see below); the
   classic 28-colour box with left/right-click foreground/background
   colours; arbitrary bitmap dimensions up to 8192 × 8192; undo/redo; local or
   website background opening; PNG saving and uploading straight to the web host
@@ -943,9 +943,23 @@ windows, and desktop actions.
   size. Rectangular, freehand-lasso and edge-snapping magnetic-lasso
   selections crawl with animated marching ants, and can be copied or cut
   directly to a new layer from the canvas right-click menu. A selection confines
-  every filter and effect — adjustments, Gaussian Blur, Noise, dithering,
-  background removal, invert, flip and clear all stop at its exact outline, not
-  just its bounding box — and each one applies to the active layer alone.
+  every filter and effect — adjustments, every entry in the Effects menu,
+  dithering, background removal, invert, flip and clear all stop at its exact
+  outline, not just its bounding box — and each one applies to the active layer
+  alone. The Effects menu groups its filters the way Photoshop, GIMP and
+  Photopea do: **Blur** (Gaussian, Box, Motion, Radial — spin or zoom),
+  **Sharpen** (Sharpen, Unsharp Mask, High Pass), **Stylize** (Emboss, Find
+  Edges, Maximum, Minimum, and a Custom Matrix taking a 3 × 3 or 5 × 5
+  convolution kernel with divisor and offset), **Pixelate** (Mosaic, Colour
+  Halftone with rotated CMYK screens, Crystallize), **Distort** (Twirl, Pinch /
+  Spherize, Polar Coordinates, Wave, Ripple) and **Render** (tileable fractal
+  Clouds between the current colours, Lens Flare). One dialog serves them all:
+  it builds whatever controls the chosen filter asks for, previews the result
+  live on the layer, and rolls the pixels back if you cancel — and on a picture
+  large enough for the preview to stutter it waits for the slider to be let go
+  instead. Filters that can sample beyond an edge wrap around by default, so a
+  seamless tile stays seamless, and Effects → Repeat runs the last filter again
+  with the settings it was given.
   Edit → Free Transform (Ctrl/⌘-T) lifts the selection, or the whole active
   layer when nothing is selected, onto a floating frame: drag inside it to move,
   drag a handle to scale (Shift on a corner keeps the aspect ratio, dragging
