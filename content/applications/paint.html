@@ -23,13 +23,27 @@
 <link rel="stylesheet" href="../../assets/css/file-manager.css">
 <script src="../../assets/js/backgrounds.js"></script>
 <style>
-.paint-bg-intro p { font-size: 12px; line-height: 1.7; }
-.paint-bg-intro p + p { margin-top: 8px; }
-.paint-bg-progress { border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); height: 18px; overflow: hidden; margin: 4px 0; }
-.paint-bg-progress > div { height: 100%; width: 0%; background: var(--leaf-deep); transition: width 0.2s; }
-.paint-bg-detail { font-size: 10.5px; color: var(--sage); line-height: 1.6; min-height: 1.4em; }
-.paint-bg-credit { font-size: 10px; color: var(--sage); line-height: 1.6; margin-top: 2px; }
-.paint-bg-credit a { color: var(--leaf-deep); text-decoration: underline; }
+/* ---- shared by the two Effects → AI dialogs: both fetch a model once, both
+   want a download bar, a line of detail and a credit ---- */
+.paint-ai-intro p { font-size: 12px; line-height: 1.7; }
+.paint-ai-intro p + p { margin-top: 8px; }
+.paint-ai-progress { border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); height: 18px; overflow: hidden; margin: 4px 0; }
+.paint-ai-progress > div { height: 100%; width: 0%; background: var(--leaf-deep); transition: width 0.2s; }
+.paint-ai-detail { font-size: 10.5px; color: var(--sage); line-height: 1.6; min-height: 1.4em; }
+.paint-ai-credit { font-size: 10px; color: var(--sage); line-height: 1.6; margin-top: 2px; }
+.paint-ai-credit a { color: var(--leaf-deep); text-decoration: underline; }
+.paint-dream-fields { display: flex; flex-direction: column; gap: 9px; }
+.paint-dream-fields label:not(.paint-check) { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.paint-dream-fields label:not(.paint-check) > span { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; }
+.paint-dream-fields input[type="range"] { flex: 1; min-width: 0; max-width: 150px; }
+.paint-dream-fields select { flex: 1; min-width: 0; max-width: 250px; }
+.paint-dream-fields output { font-size: 11px; color: var(--sage); min-width: 34px; text-align: right; }
+.paint-dream-note { font-size: 10.5px; color: var(--sage); line-height: 1.6; }
+/* Both dialogs hide their start button while the model works. .btn resets
+   `all`, and a display of its own beats the browser's [hidden] rule, so the
+   attribute has to be honoured explicitly — likewise anything laid out with a
+   display of its own. */
+.btn[hidden], .paint-dream-fields[hidden] { display: none; }
 .paint-upload-result:not([hidden]) { display: flex; align-items: center; gap: 10px; }
 .paint-upload-result a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--leaf-deep); text-decoration: underline; }
 
@@ -255,8 +269,6 @@
       <button data-cmd="clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear Image</button>
       <button data-cmd="flip-h"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Flip Horizontal</button>
       <button data-cmd="flip-v"><span class="pixel-icon" data-icon="align-vertical-space-between" aria-hidden="true"></span>Flip Vertical</button>
-      <div class="sep"></div>
-      <button data-cmd="remove-bg"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Remove Background…</button>
     </div></div>
     <div class="rm"><button>Effects</button><div class="rm-dd">
       <div class="rm-sub">
@@ -338,6 +350,14 @@
           <button data-cmd="dither-threshold"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span><span class="rm-item">Threshold / Average…<small>Fixed, mean, Otsu, adaptive local mean</small></span></button>
           <div class="sep"></div>
           <button data-cmd="dither-repeat"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span><span class="rm-item">Repeat Last Dither</span></button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span><span class="rm-item">AI</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd">
+          <button data-cmd="deep-dream"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span><span class="rm-item">DeepDream…<small>Grows dogs, birds and eyes out of the picture, as Google's 2015 original did</small></span></button>
+          <button data-cmd="remove-bg"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span><span class="rm-item">Remove Background…<small>Cuts the subject out onto transparency</small></span></button>
         </div>
       </div>
       <div class="sep"></div>
@@ -471,7 +491,7 @@
       </div>
       <div data-caview="progress" hidden>
         <div class="paint-progress" role="progressbar" aria-label="Form-detecting resize progress"><div></div></div>
-        <p class="paint-bg-detail">Preparing image…</p>
+        <p class="paint-ai-detail">Preparing image…</p>
       </div>
       <div class="paint-dialog-actions">
         <button type="button" class="btn ghost" id="formDetectingCancel" data-close="formDetectingModal">Cancel</button>
@@ -551,18 +571,55 @@
   <div class="paint-modal-box paint-dialog">
     <header><span id="bgRemoveTitle">Remove Background</span><button type="button" data-close="bgRemoveModal" aria-label="Close">×</button></header>
     <div class="paint-dialog-body">
-      <div class="paint-bg-intro" data-bgview="intro">
+      <div class="paint-ai-intro" data-bgview="intro">
         <p>Cut the main subject out of the picture and make the rest transparent. A small AI model (<b>MODNet</b>) runs entirely in your browser — the image is never uploaded.</p>
         <p>The first run downloads the model (about <b>13&nbsp;MB</b>) from the Hugging Face Hub, then your browser caches it so later runs start straight away.</p>
       </div>
       <div data-bgview="loading" hidden>
-        <div class="paint-bg-progress" role="progressbar" aria-label="Model download progress"><div></div></div>
-        <p class="paint-bg-detail">Starting…</p>
+        <div class="paint-ai-progress" role="progressbar" aria-label="Model download progress"><div></div></div>
+        <p class="paint-ai-detail">Starting…</p>
       </div>
-      <p class="paint-bg-credit">Model: <a href="https://huggingface.co/Xenova/modnet" target="_blank" rel="noopener">MODNet</a> · Apache-2.0 · Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a></p>
+      <p class="paint-ai-credit">Model: <a href="https://huggingface.co/Xenova/modnet" target="_blank" rel="noopener">MODNet</a> · Apache-2.0 · Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a></p>
       <div class="paint-dialog-actions">
         <button type="button" class="btn ghost" data-close="bgRemoveModal">Cancel</button>
         <button type="button" class="btn primary" id="bgRemoveStart">Remove Background</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DeepDream. Unlike every other filter this one cannot live in the shared
+     effect dialog: it takes seconds to minutes rather than milliseconds, so it
+     runs in a worker and reports back, showing the picture after each octave
+     instead of previewing live. -->
+<div class="paint-modal" id="deepDreamModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="deepDreamTitle">
+  <div class="paint-modal-box paint-dialog">
+    <header><span id="deepDreamTitle">DeepDream</span><button type="button" data-close="deepDreamModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <div class="paint-ai-intro" data-dreamview="intro">
+        <p>Google's 2015 DeepDream, run on your own machine. The picture is pushed towards whatever one layer of an image-recognition network already thinks it can see, over and over, until the network's own imagination grows out of it — dogs, birds and eyes, because that is what its training pictures were full of.</p>
+        <p>The first run fetches the network (about <b>12&nbsp;MB</b>) from this site; your browser then caches it. Nothing is uploaded.</p>
+      </div>
+      <div class="paint-dream-fields" data-dreamview="intro">
+        <label>Layer <span><select id="dreamLayer"></select></span></label>
+        <p class="paint-dream-note" id="dreamLayerNote"></p>
+        <label class="paint-check"><input id="dreamOneFeature" type="checkbox"> Chase a single feature</label>
+        <label>Feature <span><input id="dreamChannel" type="range" min="0" max="511" step="1" value="0" disabled><output id="dreamChannelValue">0</output></span></label>
+        <label>Strength <span><input id="dreamStep" type="range" min="0.2" max="6" step="0.1" value="1.5"><output id="dreamStepValue">1.5</output></span></label>
+        <label>Steps per octave <span><input id="dreamIterations" type="range" min="1" max="30" step="1" value="10"><output id="dreamIterationsValue">10</output></span></label>
+        <label>Octaves <span><input id="dreamOctaves" type="range" min="1" max="6" step="1" value="4"><output id="dreamOctavesValue">4</output></span></label>
+        <label class="paint-check"><input id="dreamSmooth" type="checkbox"> Smooth (spread the detail across scales)</label>
+        <p class="paint-dream-note" id="dreamCost"></p>
+      </div>
+      <div data-dreamview="running" hidden>
+        <div class="paint-ai-progress" role="progressbar" aria-label="Dream progress"><div></div></div>
+        <p class="paint-ai-detail">Starting…</p>
+        <p class="paint-dream-note">The layer shows each octave as it finishes. Cancel puts the picture back.</p>
+      </div>
+      <p class="paint-ai-credit">Model: <a href="https://storage.googleapis.com/download.tensorflow.org/models/inception5h.zip" target="_blank" rel="noopener">inception5h</a> · Apache-2.0 · Engine: <a href="https://github.com/tensorflow/tfjs" target="_blank" rel="noopener">TensorFlow.js</a></p>
+      <div class="paint-dialog-actions">
+        <button type="button" class="btn ghost" data-close="deepDreamModal">Cancel</button>
+        <button type="button" class="btn primary" id="dreamStart">Dream</button>
       </div>
     </div>
   </div>
@@ -694,6 +751,7 @@ function activateLayer(layer) {
   if (freeTransform && layer !== activeLayer) { status.textContent = 'Apply or cancel the free transform before changing layers'; return; }
   if ((adjustPreviewing || effectPreviewing) && layer !== activeLayer) { setStatus('Apply or cancel the live preview before changing layers'); return; }
   if (ditherPreviewing && layer !== activeLayer) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
+  if (dreamOriginal && layer !== activeLayer) { setStatus('Cancel the dream before changing layers'); return; }
   if (contentTransform && layer !== activeLayer) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
   activeLayer = layer;
   base = layer.canvas;
@@ -3830,7 +3888,7 @@ const contentModal = appRoot.querySelector('#formDetectingModal');
 const contentFormView = contentModal.querySelector('[data-caview="form"]');
 const contentProgressView = contentModal.querySelector('[data-caview="progress"]');
 const contentProgressBar = contentProgressView.querySelector('.paint-progress > div');
-const contentDetail = contentProgressView.querySelector('.paint-bg-detail');
+const contentDetail = contentProgressView.querySelector('.paint-ai-detail');
 const contentStart = appRoot.querySelector('#formDetectingStart');
 let contentWorker = null, contentToken = 0, contentJob = null;
 
@@ -3958,8 +4016,8 @@ zoomSlider.addEventListener('input', () => setZoom(ZOOM_LEVELS[Number(zoomSlider
 const BG_MODEL_KEY = 'clackos-paint-bg-model-downloaded';
 const bgModal = appRoot.querySelector('#bgRemoveModal');
 const bgViews = bgModal.querySelectorAll('[data-bgview]');
-const bgProgressBar = bgModal.querySelector('.paint-bg-progress > div');
-const bgDetail = bgModal.querySelector('.paint-bg-detail');
+const bgProgressBar = bgModal.querySelector('.paint-ai-progress > div');
+const bgDetail = bgModal.querySelector('.paint-ai-detail');
 const bgStartBtn = appRoot.querySelector('#bgRemoveStart');
 let bgWorker = null, bgRunToken = 0, bgSize = null;
 
@@ -4053,10 +4111,235 @@ bgStartBtn.addEventListener('click', startBgRemoval);
 /* closing the dialog (button, backdrop or Escape) abandons an in-flight run */
 bgModal.addEventListener('click', event => { if (event.target.closest('[data-close]')) { bgRunToken++; bgSize = null; } });
 bgModal.addEventListener('pointerdown', event => { if (event.target === bgModal) { bgRunToken++; bgSize = null; } });
+
+/* ---- DeepDream — inception5h through TensorFlow.js, in a worker ----
+ * Gradient ascent on one layer of an image-recognition network: the picture is
+ * nudged, over and over, towards whatever that layer already half-sees in it.
+ * Unlike the filters in EFFECTS this takes seconds to minutes, so it cannot
+ * preview live — the worker sends the picture back after every octave instead,
+ * and cancelling puts the original back. */
+const DREAM_MODEL_KEY = 'clackos-paint-dream-model-downloaded';
+/* Layers worth dreaming on, shallow to deep. What each one grows is not a
+   matter of taste but of what it learnt to spot: the early layers know edges
+   and weave, the late ones know whole animals. */
+const DREAM_LAYERS = [
+  { id: 'conv2d2', label: 'Fur and weave', channels: 192,
+    note: 'Very early. Fills the picture with fine texture rather than objects.' },
+  { id: 'mixed3b', label: 'Swirls and edges', channels: 480,
+    note: 'Ornamental — curls, ripples and braided edges.' },
+  { id: 'mixed4c', label: 'Puppy-slugs (the classic)', channels: 512,
+    note: 'The layer behind the pictures everyone remembers from 2015.' },
+  { id: 'mixed4d_3x3_bottleneck_pre_relu', label: 'Flowers and snouts', channels: 144,
+    note: 'The notebook’s favourite. Fewer features, so single ones are worth chasing.' },
+  { id: 'mixed4e', label: 'Limbs and beaks', channels: 832,
+    note: 'Parts of animals, assembled out of whatever was underneath.' },
+  { id: 'mixed5b', label: 'Eyes and faces', channels: 1024,
+    note: 'Deepest. Grows whole dog and bird faces, and eyes in everything.' },
+];
+
+const dreamModal = appRoot.querySelector('#deepDreamModal');
+const dreamViews = dreamModal.querySelectorAll('[data-dreamview]');
+const dreamBar = dreamModal.querySelector('.paint-ai-progress > div');
+const dreamDetail = dreamModal.querySelector('.paint-ai-detail');
+const dreamStartBtn = appRoot.querySelector('#dreamStart');
+const dreamLayerSelect = appRoot.querySelector('#dreamLayer');
+const dreamLayerNote = appRoot.querySelector('#dreamLayerNote');
+const dreamOneFeature = appRoot.querySelector('#dreamOneFeature');
+const dreamChannel = appRoot.querySelector('#dreamChannel');
+const dreamSmooth = appRoot.querySelector('#dreamSmooth');
+let dreamWorker = null, dreamToken = 0, dreamOriginal = null;
+
+const showDreamView = name => dreamViews.forEach(view => { view.hidden = view.dataset.dreamview !== name; });
+const dreamRange = id => Number(appRoot.querySelector(`#${id}`).value);
+
+DREAM_LAYERS.forEach(layer => {
+  const option = document.createElement('option');
+  option.value = layer.id; option.textContent = layer.label;
+  dreamLayerSelect.append(option);
+});
+dreamLayerSelect.value = 'mixed4c';
+
+function syncDreamLayer() {
+  const layer = DREAM_LAYERS.find(entry => entry.id === dreamLayerSelect.value);
+  /* the network's own name for it, for anyone following the 2015 notebook */
+  dreamLayerNote.textContent = `${layer.id} · ${layer.note}`;
+  dreamChannel.max = String(layer.channels - 1);
+  if (Number(dreamChannel.value) > layer.channels - 1) dreamChannel.value = '0';
+  dreamChannel.disabled = !dreamOneFeature.checked;
+  appRoot.querySelector('#dreamChannelValue').textContent =
+    dreamOneFeature.checked ? `${dreamChannel.value} / ${layer.channels - 1}` : 'all';
+}
+
+/* the sliders all read back the same way */
+[['dreamStep', 1], ['dreamIterations', 0], ['dreamOctaves', 0]].forEach(([id, places]) => {
+  const input = appRoot.querySelector(`#${id}`), readout = appRoot.querySelector(`#${id}Value`);
+  input.addEventListener('input', () => { readout.textContent = Number(input.value).toFixed(places); });
+});
+dreamLayerSelect.addEventListener('change', syncDreamLayer);
+dreamOneFeature.addEventListener('change', syncDreamLayer);
+dreamChannel.addEventListener('input', syncDreamLayer);
+
+function ensureDreamWorker() {
+  if (dreamWorker) return dreamWorker;
+  dreamWorker = new Worker(new URL('paint-deepdream-worker.js', appUrl), { type: 'module' });
+  dreamWorker.onerror = event => failDream(event.message || 'worker failed to start');
+  dreamWorker.onmessage = event => {
+    const msg = event.data;
+    if (msg.token !== undefined && msg.token !== dreamToken) return; /* a run we walked away from */
+    switch (msg.type) {
+      case 'loading': dreamDetail.textContent = msg.detail; break;
+      case 'progress': {
+        if (!msg.total) break;
+        dreamBar.style.width = Math.min(100, msg.loaded / msg.total * 100).toFixed(1) + '%';
+        dreamDetail.textContent = `Fetching the network — ${(msg.loaded / 1048576).toFixed(1)} / ${(msg.total / 1048576).toFixed(1)} MB (cached for next time)`;
+        break;
+      }
+      case 'ready':
+        localStorage.setItem(DREAM_MODEL_KEY, '1');
+        dreamBar.style.width = '0%';
+        setStatus(msg.device === 'webgl' ? 'Dreaming on your GPU…' : 'Dreaming on the CPU — this will take a while…');
+        break;
+      case 'tick': {
+        const done = (msg.octave - 1 + msg.iteration / msg.iterations) / msg.octaves;
+        dreamBar.style.width = (done * 100).toFixed(1) + '%';
+        dreamDetail.textContent = `Octave ${msg.octave} of ${msg.octaves}, step ${msg.iteration} of ${msg.iterations}`;
+        break;
+      }
+      case 'preview': paintDream(msg); break;
+      case 'result': finishDream(msg); break;
+      case 'error': failDream(msg.message); break;
+    }
+  };
+  return dreamWorker;
+}
+
+/* Draw a dreamed picture — an octave preview or the finished thing — over the
+   layer it came from, keeping anything outside the selection as it was. */
+function paintDream(msg) {
+  if (!dreamOriginal || dreamOriginal.layerId !== activeLayer.id) return;
+  if (msg.width !== width() || msg.height !== height()) return;
+  canonicaliseSeam();
+  bx.clearRect(0, 0, width(), height());
+  bx.putImageData(new ImageData(new Uint8ClampedArray(msg.data), msg.width, msg.height), 0, 0);
+  if (dreamOriginal.confine) confineToSelection(dreamOriginal.pixels);
+  reapplySeam();
+  renderLayerPanel();
+}
+
+function restoreDream() {
+  if (!dreamOriginal || dreamOriginal.layerId !== activeLayer.id) return;
+  if (dreamOriginal.pixels.width !== width() || dreamOriginal.pixels.height !== height()) return;
+  canonicaliseSeam();
+  bx.putImageData(dreamOriginal.pixels, 0, 0);
+  reapplySeam();
+  renderLayerPanel();
+}
+
+function startDream() {
+  const source = canonicalActiveCanvas();
+  const pixels = source.getContext('2d').getImageData(0, 0, source.width, source.height);
+  const buffer = pixels.data.buffer;                 /* a fresh buffer — safe to transfer */
+  /* Everything the run is judged against later: the picture as it was, and
+     which layer it belongs to. A selection only confines the dream in the
+     canonical view — under a seam shift it sits in shifted coordinates. */
+  dreamOriginal = {
+    layerId: activeLayer.id,
+    pixels: bx.getImageData(0, 0, width(), height()),
+    confine: !!selection && !seamAppliedX && !seamAppliedY,
+    label: DREAM_LAYERS.find(entry => entry.id === dreamLayerSelect.value).label,
+  };
+  const job = {
+    layer: dreamLayerSelect.value,
+    channel: dreamOneFeature.checked ? Number(dreamChannel.value) : -1,
+    step: dreamRange('dreamStep'),
+    iterations: dreamRange('dreamIterations'),
+    octaves: dreamRange('dreamOctaves'),
+    octaveScale: 1.4,
+    smooth: dreamSmooth.checked,
+  };
+  const token = ++dreamToken;
+  showDreamView('running');
+  dreamStartBtn.hidden = true;
+  dreamBar.style.width = '0%';
+  dreamDetail.textContent = 'Starting…';
+  setStatus(localStorage.getItem(DREAM_MODEL_KEY) ? 'Dreaming…' : 'Fetching the DeepDream network…');
+  ensureDreamWorker().postMessage(
+    { type: 'run', token, data: buffer, width: source.width, height: source.height, ...job },
+    [buffer]
+  );
+}
+
+function finishDream(msg) {
+  if (!dreamModal.classList.contains('open')) { dreamOriginal = null; return; }
+  if (!dreamOriginal || dreamOriginal.layerId !== activeLayer.id
+      || msg.width !== width() || msg.height !== height()) {
+    dreamOriginal = null;
+    hideModal('deepDreamModal');
+    setStatus('The picture changed before the dream finished; nothing was applied');
+    return;
+  }
+  /* The previews have been painting over the layer as they arrived, so put the
+     picture back before the undo snapshot — otherwise undo would land on a
+     half-finished octave rather than on what the user started with. */
+  restoreDream();
+  pushUndo();
+  paintDream(msg);
+  const label = dreamOriginal.label.toLowerCase();
+  const confined = dreamOriginal.confine;
+  hideModal('deepDreamModal');
+  dreamOriginal = null;
+  rememberEffect('DeepDream', () => { openDeepDream(); startDream(); });
+  setStatus(`DeepDream — ${label}${confined ? ' (selection only)' : ''}`);
+}
+
+function failDream(message) {
+  dreamToken++;
+  restoreDream();
+  dreamOriginal = null;
+  showDreamView('intro');
+  dreamStartBtn.hidden = false;
+  dreamDetail.textContent = '';
+  dreamBar.style.width = '0%';
+  setStatus(`DeepDream failed: ${message}`);
+}
+
+function cancelDream() {
+  const running = !!dreamOriginal;
+  if (running) {
+    dreamWorker?.postMessage({ type: 'cancel', token: dreamToken });
+    dreamToken++;
+    restoreDream();
+    dreamOriginal = null;
+  }
+  hideModal('deepDreamModal');
+  if (running) setStatus('DeepDream cancelled; the picture is back as it was');
+}
+
+function openDeepDream() {
+  dreamStartBtn.hidden = false;
+  dreamDetail.textContent = '';
+  dreamBar.style.width = '0%';
+  syncDreamLayer();
+  /* Cost is the picture's area times the steps, and there is no honest way to
+     hide it: say so before the button is pressed rather than after. */
+  const megapixels = width() * height() / 1e6;
+  appRoot.querySelector('#dreamCost').textContent =
+    `${width()} × ${height()} px${selection ? ', dreaming the whole layer and keeping only the selection' : ''}. `
+    + (megapixels > 1.5
+      ? 'A picture this large takes minutes even on a GPU — try fewer steps first.'
+      : 'Seconds on a GPU; minutes if your browser has to fall back to the processor.');
+  showDreamView('intro');
+  showModal('deepDreamModal');
+}
+
+dreamStartBtn.addEventListener('click', startDream);
+dreamModal.addEventListener('click', event => { if (event.target.closest('[data-close]')) cancelDream(); });
+
 const disconnect = () => {
   stopAnts();
   if (freeTransform) finishFreeTransform(false);
   if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
+  if (dreamWorker) { dreamWorker.terminate(); dreamWorker = null; }
   if (contentWorker) { contentWorker.terminate(); contentWorker = null; }
   cancelLiveContentPreview(true);
   if (appRoot.querySelector('#adjustModal').classList.contains('open')) closeAdjustment(true);
@@ -4166,6 +4449,7 @@ function runCmd(cmd) {
     case 'mirror-y': setMirrorMode('y'); break;
     case 'mirror-both': setMirrorMode('both'); break;
     case 'remove-bg': openBgRemoval(); break;
+    case 'deep-dream': openDeepDream(); break;
     case 'gaussian-blur': openGaussianBlur(); break;
     case 'noise': showModal('noiseModal'); appRoot.querySelector('#noiseAmount').focus(); break;
     case 'repeat-effect':
@@ -4290,6 +4574,9 @@ appRoot.addEventListener('keydown', event => {
   if (contentTransform && event.key === 'Escape') { event.preventDefault(); finishFormDetectingTransform(false); return; }
   if (contentTransform && event.key === 'Enter' && !/^(INPUT|BUTTON)$/.test(event.target.tagName || '')) { event.preventDefault(); finishFormDetectingTransform(true); return; }
   if (event.key === 'Escape' && appRoot.querySelector('#adjustModal').classList.contains('open')) { event.preventDefault(); closeAdjustment(true); return; }
+  /* the dream dialog is data-keep-open, so the blanket Escape below skips it:
+     abandoning a long run deliberately is worth its own line */
+  if (event.key === 'Escape' && dreamModal.classList.contains('open')) { event.preventDefault(); cancelDream(); return; }
   if (event.key === 'Escape') {
     closeContextMenu();
     if (contentModal.classList.contains('open')) { hideModal('formDetectingModal'); if (contentJob) stopFormDetecting(true); }
