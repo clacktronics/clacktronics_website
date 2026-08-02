@@ -910,9 +910,15 @@ async function navigateWindow(rec, id) {
 /* The dissolve works at the finest grain the screen has — one noise pixel per
  * device pixel — so a mask the size of the window is far too expensive to
  * re-encode on every step: a full-window PNG costs 20-60ms each time. The
- * noise is a tile of this many CSS pixels repeated across the window instead,
+ * noise is a tile of this many pixels repeated across the window instead,
  * which encodes in a couple of milliseconds. At single-pixel grain the repeat
- * is not something the eye picks up in four hundred milliseconds. */
+ * is not something the eye picks up in four hundred milliseconds.
+ *
+ * The tile is this size in device pixels, not CSS pixels: it is drawn smaller
+ * on a dense display rather than larger, so the grain stays one noise pixel
+ * per device pixel while the encoding costs the same on every screen. A tile
+ * scaled up for a retina display costs four times as much to encode, which is
+ * more than a step's worth of frame budget on a slower encoder. */
 const DISSOLVE_TILE = 256;
 /* how many steps clear the window, and how long the whole thing takes */
 const DISSOLVE_STEPS = 20, DISSOLVE_MS = 420;
@@ -1064,10 +1070,11 @@ function dissolveWindow(rec, done) {
   }
 
   /* one noise pixel per device pixel, so nothing is resampled on its way to
-   * the screen and the dissolve is as fine as the display can draw. A very
-   * dense display is capped rather than encoding a tile four times the size */
-  const scale = Math.min(Math.max(Math.round(window.devicePixelRatio || 1), 1), 2);
-  const side = DISSOLVE_TILE * scale;
+   * the screen and the dissolve is as fine as the display can draw: the tile
+   * is always the same image, laid down smaller the denser the display */
+  const scale = Math.min(Math.max(Math.round(window.devicePixelRatio || 1), 1), 3);
+  const side = DISSOLVE_TILE;
+  const tile = side / scale;
   const total = side * side;
   const canvas = ctx.canvas;
   canvas.width = canvas.height = side;
@@ -1087,21 +1094,54 @@ function dissolveWindow(rec, done) {
   }
 
   el.classList.add('dissolving');
-  setMask(el, null, { size: `${DISSOLVE_TILE}px ${DISSOLVE_TILE}px`, repeat: 'repeat' });
+  setMask(el, null, { size: `${tile}px ${tile}px`, repeat: 'repeat' });
+
+  /* Handing the mask a freshly encoded image is not the end of it: Firefox
+   * decodes the images CSS asks for off the main thread, and a mask layer
+   * whose image has not arrived yet contributes nothing — the window is not
+   * half dissolved, it is gone. Chrome and Safari decode a data URL on the
+   * spot, which is why the same code dissolves there and blinks out here.
+   *
+   * So each step's tile is decoded before it is given to the mask, and the
+   * next one is not encoded until the last has landed: a browser that cannot
+   * keep up takes the window out in fewer, coarser steps instead of losing
+   * the dissolve altogether. `latest` keeps the newest frame's image alive
+   * until it has been painted, and drops any that decode out of order. */
+  let latest = null, waiting = false;
+  const showFrame = () => {
+    ctx.putImageData(noise, 0, 0);
+    const url = canvas.toDataURL();
+    const image = new Image();
+    latest = image;
+    waiting = true;
+    const paint = () => {
+      if (latest !== image) return;
+      waiting = false;
+      if (el.isConnected) setMask(el, `url("${url}")`);
+    };
+    image.src = url;
+    /* decode() rejects on a detached document as readily as on a bad image,
+       and either way the frame is no worse off painted than skipped */
+    if (typeof image.decode === 'function') image.decode().then(paint, paint);
+    else paint();
+  };
 
   let cleared = 0, step = 0;
   const start = performance.now();
   const tick = now => {
     if (!el.isConnected) return;
-    const due = Math.ceil((now - start) / (DISSOLVE_MS / DISSOLVE_STEPS));
-    if (due > step) {
-      step = Math.min(DISSOLVE_STEPS, due);
+    const elapsed = now - start;
+    const due = Math.min(DISSOLVE_STEPS, Math.ceil(elapsed / (DISSOLVE_MS / DISSOLVE_STEPS)));
+    if (due > step && !waiting) {
+      step = due;
       const target = Math.round(total * step / DISSOLVE_STEPS);
       for (; cleared < target; cleared++) mask[order[cleared]] = 0;
-      ctx.putImageData(noise, 0, 0);
-      setMask(el, `url("${canvas.toDataURL()}")`);
+      showFrame();
     }
-    if (step >= DISSOLVE_STEPS) done();
+    /* the last step clears the tile completely, so there is nothing left to
+       see and the window goes; the deadline is there so a browser that never
+       manages to decode a frame still gets the window off the desktop */
+    if ((step >= DISSOLVE_STEPS && !waiting) || elapsed > DISSOLVE_MS * 3) done();
     else requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
