@@ -104,9 +104,36 @@
 .paint-layer-details { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .paint-layer-blend { width: 100%; min-width: 0; height: 19px; padding: 0 2px; border: 1px solid var(--paper-line); border-radius: 3px; background: var(--paper-deep); color: var(--control-text); font: 9px/1 'IBM Plex Mono', monospace; }
 /* The tool palette grew past the point where one long column of icons could be
-   read, so the tools are grouped and each group is captioned. */
-.paint-tool-group { grid-column: span 2; margin: 8px 0 0; font-size: 8px; letter-spacing: .16em; text-transform: uppercase; color: var(--sage); }
-.paint-tool-group:first-child { margin-top: 0; }
+   read, so each group is a menu button and its tools live in a drop-down. The
+   rail is then short enough to see at a glance, and the drop-down has room for
+   names next to the icons. */
+.paint-tools { display: flex; flex-direction: column; gap: 5px; width: 78px; overflow-x: hidden; overflow-y: auto; }
+.paint-tool-menu { position: relative; }
+.paint-tool-menu-btn, .paint-tool-solo {
+  all: unset; box-sizing: border-box; cursor: pointer; width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px;
+  border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--control-text);
+}
+.paint-tool-menu-btn:hover, .paint-tool-solo:hover { background: var(--paper-deep); }
+.paint-tool-menu-btn:focus-visible, .paint-tool-solo:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.paint-tool-menu-btn.active, .paint-tool-solo.active { background: var(--ink); color: var(--menu-text); }
+.paint-tool-menu-icon { width: 20px; height: 20px; }
+.paint-tool-menu-label { font-size: 8px; letter-spacing: .1em; text-transform: uppercase; line-height: 1.2; }
+.paint-tool-dd {
+  position: fixed; z-index: 30; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px;
+  width: max-content; max-width: min(280px, calc(100vw - 16px)); padding: 5px;
+  border: 1px solid var(--window-border); border-radius: 7px; background: var(--paper);
+  box-shadow: var(--shadow-distance) var(--shadow-distance) 0 color-mix(in srgb, var(--shadow) var(--shadow-alpha), transparent);
+}
+.paint-tool-dd[hidden] { display: none; }
+.paint-tool-dd .paint-tool { justify-content: flex-start; gap: 6px; padding: 5px 7px; min-height: 28px; }
+.paint-tool-dd .paint-tool .pixel-icon { width: 17px; height: 17px; flex: none; }
+.paint-tool-name { font-size: 10px; white-space: nowrap; }
+.paint-tool-solo .paint-zoom-icon { margin: 3px 0 1px; }
+@media (max-width: 560px) {
+  .paint-tools { width: 62px; gap: 4px; }
+  .paint-tool-dd { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 /* One options row per tool, in the place every photo editor puts it: under the
    menus, above the picture. Tools with nothing to set hide it entirely. */
 .paint-options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 6px 14px; border-bottom: 1px solid var(--paper-line); background: var(--paper-deep); font-size: 11px; }
@@ -408,45 +435,68 @@
 
   <div class="paint-main">
     <div class="paint-tools" role="toolbar" aria-label="Tools">
-      <p class="paint-tool-group">Paint</p>
-      <button class="paint-tool active" data-tool="pencil" title="Pencil" aria-label="Pencil"><span class="pixel-icon icon-only" data-icon="pencil" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="brush" title="Brush" aria-label="Brush"><span class="pixel-icon icon-only" data-icon="brush" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="eraser" title="Eraser" aria-label="Eraser"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="spray" title="Airbrush" aria-label="Airbrush"><span class="pixel-icon icon-only" data-icon="spray-can" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="fill" title="Fill with colour" aria-label="Fill with colour"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="picker" title="Pick colour" aria-label="Pick colour"><span class="pixel-icon icon-only" data-icon="pipette" aria-hidden="true"></span></button>
-      <p class="paint-tool-group">Shapes</p>
-      <button class="paint-tool" data-tool="line" title="Line" aria-label="Line"><span class="pixel-icon icon-only" data-icon="arrow-right" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="rect" title="Rectangle" aria-label="Rectangle"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="ellipse" title="Ellipse" aria-label="Ellipse"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="rect-fill" title="Filled rectangle" aria-label="Filled rectangle"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
-      <p class="paint-tool-group">Select</p>
-      <button class="paint-tool" data-tool="select" title="Rectangular selection" aria-label="Rectangular selection"><span class="pixel-icon icon-only" data-icon="lasso" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="lasso" title="Freehand lasso" aria-label="Freehand lasso"><span class="pixel-icon icon-only" data-icon="git-commit" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="magnetic-lasso" title="Magnetic lasso — trace near an edge" aria-label="Magnetic lasso"><span class="pixel-icon icon-only" data-icon="target" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="wand" title="Magic wand — select everything of a similar colour" aria-label="Magic wand"><span class="pixel-icon icon-only" data-icon="zap" aria-hidden="true"></span></button>
-      <p class="paint-tool-group">Repair</p>
-      <button class="paint-tool" data-tool="clone" title="Clone stamp — Alt-click to choose source" aria-label="Clone stamp"><span class="pixel-icon icon-only" data-icon="copy" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="heal" title="Healing brush — Alt-click a good area, then paint over the bad one" aria-label="Healing brush"><span class="pixel-icon icon-only" data-icon="plus-box" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="spot-heal" title="Spot healing brush — paint over a blemish and let it find its own source" aria-label="Spot healing brush"><span class="pixel-icon icon-only" data-icon="bug" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="patch" title="Patch tool — lasso a patch, then drag it onto clean pixels" aria-label="Patch tool"><span class="pixel-icon icon-only" data-icon="scissors" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="patch-brush" title="Patch brush — paint the patch freehand, then drag it onto clean pixels" aria-label="Patch brush"><span class="pixel-icon icon-only" data-icon="shapes" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="red-eye" title="Red eye — click a pupil" aria-label="Red eye removal"><span class="pixel-icon icon-only" data-icon="target" aria-hidden="true"></span></button>
-      <p class="paint-tool-group">Texture</p>
-      <button class="paint-tool" data-tool="blur" title="Blur" aria-label="Blur"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="sharpen" title="Sharpen brush" aria-label="Sharpen brush"><span class="pixel-icon icon-only" data-icon="brackets" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="smudge" title="Smudge — drag the colour along the stroke" aria-label="Smudge"><span class="pixel-icon icon-only" data-icon="arrow-bar-right" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="soften" title="Soften — smooths shading but keeps edges" aria-label="Soften"><span class="pixel-icon icon-only" data-icon="volume" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="clarity" title="Clarity — local contrast, not sharpening" aria-label="Clarity brush"><span class="pixel-icon icon-only" data-icon="analytics" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="liquify" title="Liquify — push, bloat, pucker and twirl the pixels" aria-label="Liquify"><span class="pixel-icon icon-only" data-icon="reload" aria-hidden="true"></span></button>
-      <p class="paint-tool-group">Tone</p>
-      <button class="paint-tool" data-tool="dodge" title="Dodge — lighten" aria-label="Dodge"><span class="pixel-icon icon-only" data-icon="eye" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="burn" title="Burn — darken" aria-label="Burn"><span class="pixel-icon icon-only" data-icon="eye-off" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="sponge" title="Sponge — saturate or desaturate" aria-label="Sponge"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="color-replace" title="Colour replacement — paint the foreground colour on, keeping the shading" aria-label="Colour replacement brush"><span class="pixel-icon icon-only" data-icon="invert" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="selective" title="Selective adjustment — drop a pin and adjust what looks like it" aria-label="Selective adjustment"><span class="pixel-icon icon-only" data-icon="map-pin" aria-hidden="true"></span></button>
-      <p class="paint-tool-group">View</p>
-      <button class="paint-tool" data-tool="zoom" title="Zoom — click to zoom in, Shift-click or Alt-click to zoom out" aria-label="Zoom"><span class="paint-zoom-icon" aria-hidden="true"></span></button>
+      <div class="paint-tool-menu">
+        <button type="button" class="paint-tool-menu-btn" aria-haspopup="true" aria-expanded="false" title="Paint tools"><span class="pixel-icon icon-only paint-tool-menu-icon" data-icon="pencil" aria-hidden="true"></span><span class="paint-tool-menu-label">Paint</span></button>
+        <div class="paint-tool-dd" role="menu" aria-label="Paint tools" hidden>
+          <button class="paint-tool active" data-tool="pencil" title="Pencil" aria-label="Pencil"><span class="pixel-icon" data-icon="pencil" aria-hidden="true"></span><span class="paint-tool-name">Pencil</span></button>
+          <button class="paint-tool" data-tool="brush" title="Brush" aria-label="Brush"><span class="pixel-icon" data-icon="brush" aria-hidden="true"></span><span class="paint-tool-name">Brush</span></button>
+          <button class="paint-tool" data-tool="eraser" title="Eraser" aria-label="Eraser"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span><span class="paint-tool-name">Eraser</span></button>
+          <button class="paint-tool" data-tool="spray" title="Airbrush" aria-label="Airbrush"><span class="pixel-icon" data-icon="spray-can" aria-hidden="true"></span><span class="paint-tool-name">Airbrush</span></button>
+          <button class="paint-tool" data-tool="fill" title="Fill with colour" aria-label="Fill with colour"><span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span><span class="paint-tool-name">Fill</span></button>
+          <button class="paint-tool" data-tool="picker" title="Pick colour" aria-label="Pick colour"><span class="pixel-icon" data-icon="pipette" aria-hidden="true"></span><span class="paint-tool-name">Pick Colour</span></button>
+        </div>
+      </div>
+      <div class="paint-tool-menu">
+        <button type="button" class="paint-tool-menu-btn" aria-haspopup="true" aria-expanded="false" title="Shape tools"><span class="pixel-icon icon-only paint-tool-menu-icon" data-icon="arrow-right" aria-hidden="true"></span><span class="paint-tool-menu-label">Shapes</span></button>
+        <div class="paint-tool-dd" role="menu" aria-label="Shape tools" hidden>
+          <button class="paint-tool" data-tool="line" title="Line" aria-label="Line"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span><span class="paint-tool-name">Line</span></button>
+          <button class="paint-tool" data-tool="rect" title="Rectangle" aria-label="Rectangle"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span><span class="paint-tool-name">Rectangle</span></button>
+          <button class="paint-tool" data-tool="ellipse" title="Ellipse" aria-label="Ellipse"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span><span class="paint-tool-name">Ellipse</span></button>
+          <button class="paint-tool" data-tool="rect-fill" title="Filled rectangle" aria-label="Filled rectangle"><span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span><span class="paint-tool-name">Filled Rect</span></button>
+        </div>
+      </div>
+      <div class="paint-tool-menu">
+        <button type="button" class="paint-tool-menu-btn" aria-haspopup="true" aria-expanded="false" title="Selection tools"><span class="pixel-icon icon-only paint-tool-menu-icon" data-icon="lasso" aria-hidden="true"></span><span class="paint-tool-menu-label">Select</span></button>
+        <div class="paint-tool-dd" role="menu" aria-label="Selection tools" hidden>
+          <button class="paint-tool" data-tool="select" title="Rectangular selection" aria-label="Rectangular selection"><span class="pixel-icon" data-icon="lasso" aria-hidden="true"></span><span class="paint-tool-name">Rectangle</span></button>
+          <button class="paint-tool" data-tool="lasso" title="Freehand lasso" aria-label="Freehand lasso"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span><span class="paint-tool-name">Lasso</span></button>
+          <button class="paint-tool" data-tool="magnetic-lasso" title="Magnetic lasso — trace near an edge" aria-label="Magnetic lasso"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span><span class="paint-tool-name">Magnetic</span></button>
+          <button class="paint-tool" data-tool="wand" title="Magic wand — select everything of a similar colour" aria-label="Magic wand"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span><span class="paint-tool-name">Magic Wand</span></button>
+        </div>
+      </div>
+      <div class="paint-tool-menu">
+        <button type="button" class="paint-tool-menu-btn" aria-haspopup="true" aria-expanded="false" title="Repair tools"><span class="pixel-icon icon-only paint-tool-menu-icon" data-icon="copy" aria-hidden="true"></span><span class="paint-tool-menu-label">Repair</span></button>
+        <div class="paint-tool-dd" role="menu" aria-label="Repair tools" hidden>
+          <button class="paint-tool" data-tool="clone" title="Clone stamp — Alt-click to choose source" aria-label="Clone stamp"><span class="pixel-icon" data-icon="copy" aria-hidden="true"></span><span class="paint-tool-name">Clone Stamp</span></button>
+          <button class="paint-tool" data-tool="heal" title="Healing brush — Alt-click a good area, then paint over the bad one" aria-label="Healing brush"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span><span class="paint-tool-name">Heal</span></button>
+          <button class="paint-tool" data-tool="spot-heal" title="Spot healing brush — paint over a blemish and let it find its own source" aria-label="Spot healing brush"><span class="pixel-icon" data-icon="bug" aria-hidden="true"></span><span class="paint-tool-name">Spot Heal</span></button>
+          <button class="paint-tool" data-tool="patch" title="Patch tool — lasso a patch, then drag it onto clean pixels" aria-label="Patch tool"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span><span class="paint-tool-name">Patch</span></button>
+          <button class="paint-tool" data-tool="patch-brush" title="Patch brush — paint the patch freehand, then drag it onto clean pixels" aria-label="Patch brush"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span><span class="paint-tool-name">Patch Brush</span></button>
+          <button class="paint-tool" data-tool="red-eye" title="Red eye — click a pupil" aria-label="Red eye removal"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span><span class="paint-tool-name">Red Eye</span></button>
+        </div>
+      </div>
+      <div class="paint-tool-menu">
+        <button type="button" class="paint-tool-menu-btn" aria-haspopup="true" aria-expanded="false" title="Texture tools"><span class="pixel-icon icon-only paint-tool-menu-icon" data-icon="circle" aria-hidden="true"></span><span class="paint-tool-menu-label">Texture</span></button>
+        <div class="paint-tool-dd" role="menu" aria-label="Texture tools" hidden>
+          <button class="paint-tool" data-tool="blur" title="Blur" aria-label="Blur"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span><span class="paint-tool-name">Blur</span></button>
+          <button class="paint-tool" data-tool="sharpen" title="Sharpen brush" aria-label="Sharpen brush"><span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span><span class="paint-tool-name">Sharpen</span></button>
+          <button class="paint-tool" data-tool="smudge" title="Smudge — drag the colour along the stroke" aria-label="Smudge"><span class="pixel-icon" data-icon="arrow-bar-right" aria-hidden="true"></span><span class="paint-tool-name">Smudge</span></button>
+          <button class="paint-tool" data-tool="soften" title="Soften — smooths shading but keeps edges" aria-label="Soften"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span><span class="paint-tool-name">Soften</span></button>
+          <button class="paint-tool" data-tool="clarity" title="Clarity — local contrast, not sharpening" aria-label="Clarity brush"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span><span class="paint-tool-name">Clarity</span></button>
+          <button class="paint-tool" data-tool="liquify" title="Liquify — push, bloat, pucker and twirl the pixels" aria-label="Liquify"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span><span class="paint-tool-name">Liquify</span></button>
+        </div>
+      </div>
+      <div class="paint-tool-menu">
+        <button type="button" class="paint-tool-menu-btn" aria-haspopup="true" aria-expanded="false" title="Tone tools"><span class="pixel-icon icon-only paint-tool-menu-icon" data-icon="eye" aria-hidden="true"></span><span class="paint-tool-menu-label">Tone</span></button>
+        <div class="paint-tool-dd" role="menu" aria-label="Tone tools" hidden>
+          <button class="paint-tool" data-tool="dodge" title="Dodge — lighten" aria-label="Dodge"><span class="pixel-icon" data-icon="eye" aria-hidden="true"></span><span class="paint-tool-name">Dodge</span></button>
+          <button class="paint-tool" data-tool="burn" title="Burn — darken" aria-label="Burn"><span class="pixel-icon" data-icon="eye-off" aria-hidden="true"></span><span class="paint-tool-name">Burn</span></button>
+          <button class="paint-tool" data-tool="sponge" title="Sponge — saturate or desaturate" aria-label="Sponge"><span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span><span class="paint-tool-name">Sponge</span></button>
+          <button class="paint-tool" data-tool="color-replace" title="Colour replacement — paint the foreground colour on, keeping the shading" aria-label="Colour replacement brush"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span><span class="paint-tool-name">Replace</span></button>
+          <button class="paint-tool" data-tool="selective" title="Selective adjustment — drop a pin and adjust what looks like it" aria-label="Selective adjustment"><span class="pixel-icon" data-icon="map-pin" aria-hidden="true"></span><span class="paint-tool-name">Selective</span></button>
+        </div>
+      </div>
+      <button class="paint-tool paint-tool-solo" data-tool="zoom" title="Zoom — click to zoom in, Shift-click or Alt-click to zoom out" aria-label="Zoom"><span class="paint-zoom-icon" aria-hidden="true"></span><span class="paint-tool-menu-label">Zoom</span></button>
       <div class="paint-size">
         <span class="app-lbl">Tool size</span>
         <input type="range" min="1" max="32" value="3" aria-label="Tool size">
@@ -1448,8 +1498,63 @@ appRoot.querySelectorAll('.paint-tool').forEach(button => {
     else if (tool === 'blur') setStatus('Blur brush selected; Tool Size controls the soft brush radius');
     else if (tool === 'zoom') setStatus(`Zoom tool selected at ${Math.round(zoom * 100)}%; click to zoom in, Shift-click or Alt-click to zoom out`);
     else setStatus(`${button.getAttribute('aria-label') || button.title} selected`);
+    syncToolMenus(button);
+    closeToolMenus();
   });
 });
+
+/* The tool rail is a row of group menus. Each menu button wears the icon of the
+   tool last chosen from it, so the rail still says what is armed without the
+   drop-down being open. */
+const toolMenus = [...appRoot.querySelectorAll('.paint-tool-menu')];
+const soloTools = [...appRoot.querySelectorAll('.paint-tool-solo')];
+function closeToolMenus() {
+  toolMenus.forEach(menu => {
+    menu.querySelector(':scope > .paint-tool-dd').hidden = true;
+    menu.querySelector(':scope > .paint-tool-menu-btn').setAttribute('aria-expanded', 'false');
+  });
+}
+function openToolMenu(menu) {
+  closeMenus(); closeToolMenus();
+  const opener = menu.querySelector(':scope > .paint-tool-menu-btn');
+  const panel = menu.querySelector(':scope > .paint-tool-dd');
+  panel.hidden = false;
+  opener.setAttribute('aria-expanded', 'true');
+  /* fixed positioning keeps the panel clear of the rail's own scrollbox, so it
+     is placed by hand and nudged back inside the window when it would spill */
+  const anchor = opener.getBoundingClientRect();
+  panel.style.left = '0px'; panel.style.top = '0px';
+  const size = panel.getBoundingClientRect();
+  let left = anchor.right + 4;
+  if (left + size.width > window.innerWidth - 8) left = Math.max(8, anchor.left - size.width - 4);
+  let top = anchor.top;
+  if (top + size.height > window.innerHeight - 8) top = Math.max(8, window.innerHeight - 8 - size.height);
+  panel.style.left = `${Math.round(left)}px`;
+  panel.style.top = `${Math.round(top)}px`;
+}
+function syncToolMenus(chosen) {
+  toolMenus.forEach(menu => {
+    const opener = menu.querySelector(':scope > .paint-tool-menu-btn');
+    const icon = opener.querySelector('.paint-tool-menu-icon');
+    const owns = menu.contains(chosen);
+    if (owns) {
+      const source = chosen.querySelector('.pixel-icon');
+      if (source) icon.dataset.icon = source.dataset.icon;
+      opener.title = `${chosen.getAttribute('aria-label') || chosen.title} — ${opener.querySelector('.paint-tool-menu-label').textContent} tools`;
+    }
+    opener.classList.toggle('active', owns);
+  });
+  soloTools.forEach(button => button.classList.toggle('active', button === chosen));
+}
+toolMenus.forEach(menu => {
+  menu.querySelector(':scope > .paint-tool-menu-btn').addEventListener('click', event => {
+    event.stopPropagation();
+    const isOpen = !menu.querySelector(':scope > .paint-tool-dd').hidden;
+    if (isOpen) closeToolMenus(); else openToolMenu(menu);
+  });
+});
+appRoot.querySelector('.paint-tools').addEventListener('scroll', closeToolMenus);
+syncToolMenus(appRoot.querySelector('.paint-tool.active'));
 
 const evPos = event => {
   const rect = base.getBoundingClientRect();
@@ -5761,7 +5866,7 @@ const closeMenus = () => { closeSubMenus(); rms.forEach(menu => {
   panel.classList.remove('rm-scroll'); panel.style.maxHeight = '';
 }); };
 rms.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
-  event.stopPropagation(); const wasOpen = menu.classList.contains('open'); closeMenus();
+  event.stopPropagation(); const wasOpen = menu.classList.contains('open'); closeMenus(); closeToolMenus();
   if (!wasOpen) {
     menu.classList.add('open');
     const panel = menu.querySelector(':scope > .rm-dd'), rect = panel.getBoundingClientRect();
@@ -5804,7 +5909,10 @@ appRoot.querySelector('.rm-bar').addEventListener('click', event => {
   const command = event.target.closest('[data-cmd]');
   if (!command || command.disabled) return; closeMenus(); runCmd(command.dataset.cmd);
 });
-appRoot.addEventListener('click', event => { if (!event.target.closest('.rm')) closeMenus(); });
+appRoot.addEventListener('click', event => {
+  if (!event.target.closest('.rm')) closeMenus();
+  if (!event.target.closest('.paint-tool-menu')) closeToolMenus();
+});
 appRoot.addEventListener('keydown', event => {
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName || '');
   if (freeTransform) {
@@ -5828,7 +5936,7 @@ appRoot.addEventListener('keydown', event => {
      abandoning a long run deliberately is worth its own line */
   if (event.key === 'Escape' && dreamModal.classList.contains('open')) { event.preventDefault(); cancelDream(); return; }
   if (event.key === 'Escape') {
-    closeContextMenu();
+    closeContextMenu(); closeToolMenus();
     if (contentModal.classList.contains('open')) { hideModal('formDetectingModal'); if (contentJob) stopFormDetecting(true); }
     modals.forEach(modal => { if (!modal.hasAttribute('data-keep-open')) hideModal(modal.id); });
   }
