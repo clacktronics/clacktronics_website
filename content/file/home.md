@@ -1,7 +1,9 @@
 ---
 title: clacktronics.co.uk
+seoTitle: Clacktronics — open source Eurorack modules and DIY synth kits
 style: page
 tagline: Hardware for people who dont bother to read the datasheet twice.
+description: Open source Eurorack modules, DIY synth kits and electronics projects by Ben Barwise — plus ClackOS, a browser desktop of electronics tools.
 ---
 # Clacktronics
 

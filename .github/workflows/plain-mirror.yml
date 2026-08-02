@@ -14,6 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The sitemap's <lastmod> for each page is the date its markdown was
+          # last committed, so the build needs the history to read it from. The
+          # default shallow checkout has one commit and would date every page
+          # the same; build_plain_site.py detects that and writes no lastmod at
+          # all rather than a wrong one, so without this the dates just vanish.
+          fetch-depth: 0
 
       - name: Regenerate blog index first
         # This job and the blog-index job start from the same push, so the tree
@@ -31,8 +38,11 @@ jobs:
         run: python3 scripts/build_plain_site.py
 
       - name: Commit the mirror if it changed
-        # sitemap.xml and robots.txt are generated alongside the mirror (they
-        # list its pages), so they are committed with it.
+        # sitemap.xml, robots.txt, feed.xml and 404.html are generated alongside
+        # the mirror (they list, syndicate and back-stop its pages), so they are
+        # committed with it. All four live at the repo root because that is the
+        # only place a crawler, a feed reader or Apache's ErrorDocument will
+        # look for them.
         run: |
           # Drop the blog windows rebuilt above; committing them here would
           # collide with the blog-index job pushing the same files.
@@ -40,10 +50,10 @@ jobs:
           # checkout leaves behind as an untracked file and git pull trips on.)
           git checkout -- content/file
           git clean -fd content/file
-          if [ -n "$(git status --porcelain plain sitemap.xml robots.txt)" ]; then
+          if [ -n "$(git status --porcelain plain sitemap.xml robots.txt feed.xml 404.html)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add plain sitemap.xml robots.txt
+            git add plain sitemap.xml robots.txt feed.xml 404.html
             git commit -m "Rebuild plain HTML mirror"
             # the blog-index workflow may push concurrently
             git pull --rebase

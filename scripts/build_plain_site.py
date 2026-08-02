@@ -10,6 +10,7 @@ inline. Run it after editing content:
 
     python3 scripts/build_plain_site.py
 """
+import datetime
 import html
 import html.parser
 import json
@@ -17,6 +18,7 @@ import os
 import posixpath
 import re
 import pathlib
+import subprocess
 import unicodedata
 import urllib.parse
 
@@ -38,6 +40,24 @@ SITE_NAME = 'Clacktronics'
 # today, so both normally agree.
 SITE_URL = (os.environ.get('SITE_URL', '').strip()
             or site.get('siteUrl', 'https://clacktronics.co.uk/')).rstrip('/') + '/'
+
+# Path part of SITE_URL ('/' at the root, '/temp/' when staged in a subfolder).
+# Root-absolute links in generated files that are served from an unknown depth —
+# 404.html, which Apache returns for any URL — have to be built from this rather
+# than assuming the site sits at the origin root.
+SITE_PATH = urllib.parse.urlsplit(SITE_URL).path or '/'
+
+# Profiles that are the same organisation as this site, for schema.org sameAs.
+# Search engines use them to tie the site to an entity rather than treating it
+# as an unrelated domain. Editable in site.json so a new profile does not need a
+# code change.
+SAME_AS = [u for u in site.get('sameAs', []) if isinstance(u, str) and u.strip()]
+
+# The blog feed lives at the origin root beside sitemap.xml and robots.txt.
+FEED_FILE = 'feed.xml'
+FEED_URL = SITE_URL + FEED_FILE
+FEED_TITLE = f'{SITE_NAME} — blog'
+FEED_DESCRIPTION = ('Electronics, Eurorack and workshop notes from Clacktronics.')
 
 # ---------------------------------------------------------------- collect
 def collect_pages():
@@ -148,6 +168,18 @@ def page_title(meta, body):
     m = re.search(r'^#\s+(.+)$', body, re.M)
     return strip_markdown(m.group(1)) if m else SITE_NAME
 
+def search_title(meta, body):
+    """The title crawlers see, which is not always the one the desktop shows.
+
+    A window title has a title bar's worth of room and sits inside a site the
+    reader has already arrived at; a search result has neither luxury and has to
+    say what the page is to someone who has never been here. `seoTitle:` in the
+    frontmatter splits the two when one string cannot do both — the home page
+    window says `clacktronics.co.uk`, which is a fine window title and a wasted
+    search result.
+    """
+    return meta.get('seoTitle', '').strip() or page_title(meta, body)
+
 def head_title(title):
     """Search results show the site name, so add it when the title lacks it."""
     return title if 'clacktronics' in title.lower() else f'{title} — {SITE_NAME}'
@@ -201,22 +233,40 @@ def post_date(md_rel):
     m = re.match(r'(\d{4}-\d{2}-\d{2})', posixpath.basename(md_rel))
     return m.group(1) if m else ''
 
+def organization():
+    """The publisher node, reused by every BlogPosting and the home page."""
+    data = {'@type': 'Organization', 'name': SITE_NAME, 'url': SITE_URL}
+    if SAME_AS:
+        data['sameAs'] = SAME_AS
+    return data
+
 def json_ld(md_rel, page_out, title, description, image):
     """Schema.org metadata: BlogPosting for posts, WebSite for the home page."""
     url = page_url(page_out)
     if page_out.startswith('blog/'):
         data = {'@context': 'https://schema.org', '@type': 'BlogPosting',
                 'headline': title, 'url': url, 'mainEntityOfPage': url,
-                'publisher': {'@type': 'Organization', 'name': SITE_NAME,
-                              'url': SITE_URL}}
+                'publisher': organization()}
         date = post_date(md_rel)
         if date:
             data['datePublished'] = date
         if image:
             data['image'] = image
     elif page_out == 'index.html':
-        data = {'@context': 'https://schema.org', '@type': 'WebSite',
-                'name': SITE_NAME, 'url': SITE_URL}
+        # Two nodes rather than one: WebSite is the site, Organization is who
+        # runs it, and only the second carries sameAs — which is what lets a
+        # search engine connect this domain to the same people elsewhere
+        # instead of reading it as an unrelated site that happens to exist.
+        website = {'@type': 'WebSite', 'name': SITE_NAME, 'url': SITE_URL,
+                   'publisher': {'@id': SITE_URL + '#organization'}}
+        if description:
+            website['description'] = description
+        org = organization()
+        org['@id'] = SITE_URL + '#organization'
+        return ('<script type="application/ld+json">%s</script>\n'
+                % json.dumps({'@context': 'https://schema.org',
+                              '@graph': [website, org]},
+                             ensure_ascii=False).replace('</', r'<\/'))
     else:
         return ''
     if description:
@@ -226,7 +276,7 @@ def json_ld(md_rel, page_out, title, description, image):
 
 def head_meta(md_rel, page_out, meta, body):
     """The crawler-facing part of <head>: description, canonical, OG, JSON-LD."""
-    title = page_title(meta, body)
+    title = search_title(meta, body)
     description = summarise(meta, body)
     image = first_image(body, page_out)
     noindex = 'noindex' in meta.get('robots', '').lower()
@@ -248,8 +298,86 @@ def head_meta(md_rel, page_out, meta, body):
         tags.append(f'<meta property="og:image" content="{esc(image)}">')
     tags.append('<meta name="twitter:card" content="%s">'
                 % ('summary_large_image' if image else 'summary'))
+    # Feed autodiscovery. Every page advertises it, not just the blog ones:
+    # readers and crawlers look for it wherever they happen to land.
+    tags.append('<link rel="alternate" type="application/rss+xml" '
+                f'title="{esc(FEED_TITLE)}" href="{esc(FEED_URL)}">')
     ld = json_ld(md_rel, page_out, title, description, image)
     return '\n'.join(tags) + '\n' + ld, noindex
+
+def git_commit_dates():
+    """Last commit date (YYYY-MM-DD) for every tracked file under content/.
+
+    Only blog posts carry a date in their filename, so without this the other
+    pages reach the sitemap with no <lastmod> at all. One `git log` walk rather
+    than a call per file: the first time a path appears is its newest commit.
+
+    Two cases give nothing back rather than something wrong. A shallow clone
+    (CI's default checkout) has one commit, so every file would report the same
+    invented date — worse than silence, because a sitemap that claims everything
+    changed today teaches a crawler to stop believing it. And outside a git
+    checkout there is nothing to read. Both fall back to no lastmod.
+    """
+    def git(*args):
+        return subprocess.run(('git', '-C', str(root)) + args,
+                              capture_output=True, text=True, check=True).stdout
+    try:
+        if git('rev-parse', '--is-shallow-repository').strip() == 'true':
+            print('note: shallow clone — sitemap written without lastmod dates')
+            return {}
+        log = git('log', '--format=%cs', '--name-only', '--', 'content')
+    except (subprocess.CalledProcessError, OSError):
+        print('note: no git history available — sitemap written without lastmod')
+        return {}
+    dates, date = {}, ''
+    for line in log.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if re.fullmatch(r'\d{4}-\d{2}-\d{2}', line):
+            date = line
+        else:
+            dates.setdefault(line, date)
+    return dates
+
+COMMIT_DATES = git_commit_dates()
+
+def last_modified(md_rel):
+    """Sitemap <lastmod> for a page: when its markdown last changed.
+
+    A blog post's filename date is when it was *written*, which is the date the
+    page shows and the date in its BlogPosting — but a post edited years later
+    has genuinely changed, and that is what lastmod is asking about. So the
+    commit date wins where there is one, and the filename is the fallback for a
+    file git has never seen (a new post in the working tree).
+    """
+    return COMMIT_DATES.get('content/' + md_rel, '') or post_date(md_rel)
+
+def application_pages():
+    """Standalone application pages that are worth listing in the sitemap.
+
+    The applications are hand-written HTML rather than generated from markdown,
+    so this reads the decision out of the files instead of keeping a second copy
+    of the list here: a shell that carries `robots: noindex` is desktop
+    furniture (the theme editor, the file manager, the games) and stays out,
+    anything else is a tool someone might search for and goes in.
+
+    The URL is rebuilt from SITE_URL rather than lifted from each file's
+    canonical link, which is hardcoded to the live site — a staged build should
+    list the pages it is actually serving, not point at the real ones.
+    """
+    apps = content / 'applications'
+    found = []
+    for f in sorted(apps.rglob('*.html')):
+        head = f.read_text(encoding='utf-8', errors='replace')[:4000]
+        if re.search(r'<meta\s+name="robots"[^>]*noindex', head, re.I):
+            continue
+        if not re.search(r'<link\s+rel="canonical"', head, re.I):
+            continue      # not yet described for crawlers; leave it alone
+        rel = f.relative_to(content).as_posix()
+        found.append((SITE_URL + 'content/' + rel,
+                      COMMIT_DATES.get('content/' + rel, '')))
+    return found
 
 def build_sitemap(entries):
     """A sitemap of the mirror — the only per-page URLs the site has."""
@@ -261,6 +389,41 @@ def build_sitemap(entries):
     return ('<?xml version="1.0" encoding="UTF-8"?>\n'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
             + '\n'.join(urls) + '\n</urlset>\n')
+
+def rfc822(date):
+    """YYYY-MM-DD -> the date format RSS wants."""
+    d = datetime.date.fromisoformat(date)
+    return d.strftime('%a, %d %b %Y 00:00:00 +0000')
+
+def build_feed(items):
+    """RSS 2.0 for the blog, newest first.
+
+    A feed is how aggregators and the crawlers that follow them find new posts
+    without re-reading the whole site, and it is the one thing a sitemap does
+    not do: it carries the writing itself, not just a list of URLs.
+    """
+    entries = []
+    for title, url, description, date in items:
+        parts = [f'      <title>{esc(title)}</title>',
+                 f'      <link>{esc(url)}</link>',
+                 f'      <guid isPermaLink="true">{esc(url)}</guid>']
+        if date:
+            parts.append(f'      <pubDate>{esc(rfc822(date))}</pubDate>')
+        if description:
+            parts.append(f'      <description>{esc(description)}</description>')
+        entries.append('    <item>\n' + '\n'.join(parts) + '\n    </item>')
+    # A feed states its own address so a copy that has been passed around can
+    # still be traced back to the site it came from.
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n'
+            '  <channel>\n'
+            f'    <title>{esc(FEED_TITLE)}</title>\n'
+            f'    <link>{esc(SITE_URL)}plain/blog.html</link>\n'
+            f'    <description>{esc(FEED_DESCRIPTION)}</description>\n'
+            '    <language>en</language>\n'
+            f'    <atom:link href="{esc(FEED_URL)}" rel="self" '
+            'type="application/rss+xml"/>\n'
+            + '\n'.join(entries) + '\n  </channel>\n</rss>\n')
 
 def build_robots():
     """robots.txt, generated so the Sitemap line follows SITE_URL."""
@@ -1069,23 +1232,87 @@ body.plain-mirror main { flex: 1; width: 100%; }
 .build-stamp { font-size: 11px; opacity: 0.6; }
 '''
 
+def build_404():
+    """The page Apache serves for anything that isn't there.
+
+    Apache returns this document for a request to any path, so every URL in it
+    has to be root-absolute — a relative stylesheet href would resolve against
+    whatever imaginary directory the visitor asked for and load nothing. The
+    paths are built from SITE_PATH so a build staged in a subfolder still points
+    at its own assets.
+
+    noindex because a soft 404 in the index is worse than no page at all; the
+    status code is still a real 404, this only keeps the body out of results.
+    """
+    def at(path):
+        return esc(SITE_PATH + path)
+    theme = site.get('theme', 'clackos.css')
+    return f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
+<title>Page not found — {esc(SITE_NAME)}</title>
+<meta name="robots" content="noindex,follow">
+<link rel="stylesheet" href="{at('assets/css/icons.css')}">
+<link rel="stylesheet" href="{at('assets/css/clackos.css')}">
+<link rel="stylesheet" href="{at('assets/css/content.css')}">
+<link rel="stylesheet" href="{at('assets/themes/' + theme)}">
+<link rel="stylesheet" href="{at('plain/' + STYLE)}">
+</head>
+<body class="plain-mirror">
+<main>
+<div class="page">
+<h1>Page not found</h1>
+<p class="tagline">404 — that address doesn't lead anywhere.</p>
+<div class="rule"></div>
+<p>The page may have moved when this site replaced the two that came before it.
+The blog and the project pages are all still here, under new addresses:</p>
+<div class="ctas"><a class="btn primary" href="{at('plain/index.html')}">Home</a><a class="btn ghost" href="{at('plain/blog.html')}">Blog</a><a class="btn ghost" href="{at('plain/euroclack.html')}">EuroClack</a><a class="btn ghost" href="{at('plain/archive.html')}">Archive</a></div>
+<p>The <a href="{at('plain/archive.html')}">archive</a> keeps frozen copies of the
+older websites, so an old link's content is usually still readable there.</p>
+</div>
+</main>
+<div id="plain-site-footer"><a href="{at('')}">Switch to the ClackOS desktop version</a></div>
+</body>
+</html>
+'''
+
 def main():
-    indexable = []
+    indexable, posts = [], []
     for md_rel, page_out in PAGES.items():
         dest = out_root / page_out
         dest.parent.mkdir(parents=True, exist_ok=True)
         page, noindex = render_page(md_rel, page_out)
         dest.write_text(page, encoding='utf-8', newline='\n')
-        if not noindex:
-            indexable.append((page_url(page_out), post_date(md_rel)))
+        if noindex:
+            continue
+        indexable.append((page_url(page_out), last_modified(md_rel)))
+        # Posts live in blog/, the listings (blog.html, blog-page-N.html) do
+        # not — so this picks up the writing and none of the indexes of it.
+        if page_out.startswith('blog/'):
+            meta, body = parse_front_matter(
+                (content / md_rel).read_text(encoding='utf-8'))
+            posts.append((search_title(meta, body), page_url(page_out),
+                          summarise(meta, body), post_date(md_rel)))
+    # Newest first, and an undated post sorts last rather than first.
+    posts.sort(key=lambda item: item[3] or '', reverse=True)
+    apps = application_pages()
+    indexable += apps
     (out_root / STYLE).write_text(CSS, encoding='utf-8', newline='\n')
-    # robots.txt and sitemap.xml only work from the origin root, so they sit
-    # beside index.html rather than in the mirror they describe.
+    # robots.txt, sitemap.xml, feed.xml and 404.html only work from the origin
+    # root, so they sit beside index.html rather than in the mirror they cover.
     (root / 'sitemap.xml').write_text(build_sitemap(indexable),
                                       encoding='utf-8', newline='\n')
     (root / 'robots.txt').write_text(build_robots(), encoding='utf-8', newline='\n')
+    (root / FEED_FILE).write_text(build_feed(posts), encoding='utf-8', newline='\n')
+    (root / '404.html').write_text(build_404(), encoding='utf-8', newline='\n')
+    dated = sum(1 for _, lastmod in indexable if lastmod)
     print(f'wrote {len(PAGES)} pages to {out_root.relative_to(root)}/')
-    print(f'wrote sitemap.xml ({len(indexable)} urls) and robots.txt for {SITE_URL}')
+    print(f'wrote sitemap.xml ({len(indexable)} urls — {len(apps)} of them '
+          f'applications, {dated} with lastmod), robots.txt, '
+          f'{FEED_FILE} ({len(posts)} posts) and 404.html for {SITE_URL}')
 
 if __name__ == '__main__':
     main()

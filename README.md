@@ -1062,7 +1062,8 @@ like everyone else — the mirror is a choice, not a redirect — so each page
 footer links back to the desktop version, and the taskbar links to the mirror.
 
 The mirror is generated — don't edit `plain/` by hand (the same run also writes
-the root `sitemap.xml` and `robots.txt`; see [Search engines](#search-engines)).
+the root `sitemap.xml`, `robots.txt`, `feed.xml` and `404.html`; see
+[Search engines](#search-engines)).
 A GitHub Actions
 workflow (`.github/workflows/plain-mirror.yml`) regenerates it automatically
 whenever anything under `content/` changes. To rebuild it locally:
@@ -1081,10 +1082,69 @@ generator produces the metadata that makes it indexable:
 - a per-page `<title>` (with the site name appended when the frontmatter title
   doesn't already carry it), `<meta name="description">`, Open Graph and
   Twitter-card tags, and a self-referencing `<link rel="canonical">`;
-- `sitemap.xml` and `robots.txt` at the repo root — both only work from the
-  origin root, so they sit beside `index.html` rather than inside `plain/`;
-- `BlogPosting` JSON-LD on posts (with `datePublished` from the filename) and
-  `WebSite` JSON-LD on the home page.
+- `sitemap.xml`, `robots.txt`, `feed.xml` and `404.html` at the repo root — all
+  four only work from the origin root, so they sit beside `index.html` rather
+  than inside `plain/`;
+- `BlogPosting` JSON-LD on posts (with `datePublished` from the filename) and,
+  on the home page, a `WebSite` + `Organization` pair. Only the second carries
+  `sameAs`, which is what ties this domain to the same people elsewhere; the
+  profile list is `"sameAs"` in `content/site.json`, so adding one is a config
+  change rather than a code change.
+
+### Titles that have two jobs
+
+A window title and a search result want different things: the first has a title
+bar's worth of room inside a site the reader has already reached, the second has
+to say what the page is to somebody who has never been here. Where one string
+can't do both, `seoTitle:` in the frontmatter sets the `<title>` and `og:title`
+while `title:` goes on carrying the ClackOS window — which is why the home page
+window still says `clacktronics.co.uk` and its search result doesn't.
+
+### Sitemap dates
+
+`<lastmod>` is the date a page's markdown was last committed, read from `git log`
+in one pass. A blog post's filename date is when it was *written* — that stays in
+the visible date and in `datePublished` — but a post edited years later has
+genuinely changed, which is what `lastmod` is asking about; the filename is the
+fallback for a file git hasn't seen yet.
+
+This needs real history, so both workflows that run the generator check out with
+`fetch-depth: 0`. On a shallow clone every file reports the same commit date, so
+the generator prints a note and writes **no** `lastmod` at all rather than
+telling crawlers the whole site changed today.
+
+### The blog feed
+
+`feed.xml` is RSS 2.0 of the posts, newest first, built from the same titles,
+descriptions and dates as the mirror pages — listings (`blog.html`,
+`blog-page-N.html`) and `noindex` pages stay out. Every mirror page and the
+desktop shell advertise it with `<link rel="alternate">`, so a reader or crawler
+finds it wherever it lands.
+
+### Applications
+
+The apps under `content/applications/` are hand-written HTML, not generated, and
+each one is a real URL that the plain mirror links to — so each carries its own
+description, canonical and Open Graph tags. The distinctive tools (the Eurorack
+panel generator, the PCB heater designer, the simulators) are indexed; the
+desktop's own furniture — theme editor, file manager, games, text editor — is
+`noindex,follow`.
+
+The generator reads that decision back out of the files: a shell with a
+canonical link and no `noindex` goes into the sitemap, everything else doesn't.
+So an app changes its own indexing by editing its own `<head>`, and there is no
+second list to keep in step. Their canonical links are hardcoded to the live
+origin (unlike the mirror's, which follow `SITE_URL`) — if the domain ever
+changes, they need a find-and-replace.
+
+### The 404 page
+
+Two websites came before this one and their URLs are still linked from other
+people's pages, so `404.html` is generated with the site's styling and points at
+the blog, the projects and the archive of the old sites. `.htaccess` wires it up
+with `ErrorDocument 404 /404.html` — a server-root path, so it tracks `SUBDIR`
+in the deploy workflow. It is `noindex`: a soft 404 in the index is worse than
+no page at all.
 
 `index.html` carries a relative `<link rel="canonical" href="plain/index.html">`
 so the empty desktop shell doesn't compete with the mirror's copy of the same

@@ -52,6 +52,10 @@
     "pastMonths": 24
   },
   "siteUrl": "https://clacktronics.co.uk/",
+  "sameAs": [
+    "https://github.com/clacktronics",
+    "https://lu.ma/clacktronics"
+  ],
   "fileAssociations": "content/file-associations.json",
   "assetUpload": "assets/upload.php",
   "media": {

@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Clacktronics — blog</title>
+    <link>https://clacktronics.co.uk/plain/blog.html</link>
+    <description>Electronics, Eurorack and workshop notes from Clacktronics.</description>
+    <language>en</language>
+    <atom:link href="https://clacktronics.co.uk/feed.xml" rel="self" type="application/rss+xml"/>
+    <item>
+      <title>PCB Heater Design tool</title>
+      <link>https://clacktronics.co.uk/plain/blog/2026-07-27-new-post.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2026-07-27-new-post.html</guid>
+      <pubDate>Mon, 27 Jul 2026 00:00:00 +0000</pubDate>
+      <description>I needed to create a PCB design tool that would work out the trace width and length to heat at an approximate power at a defined voltage. Also whilst I…</description>
+    </item>
+    <item>
+      <title>Build Your Own Modular</title>
+      <link>https://clacktronics.co.uk/plain/blog/2024-06-27-Build-Your-Own-Modular-book.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2024-06-27-Build-Your-Own-Modular-book.html</guid>
+      <pubDate>Thu, 27 Jun 2024 00:00:00 +0000</pubDate>
+      <description>I have just released a new projects called BUILD YOUR OWN MODULAR, it is a ring binder book that contains all the PCBs and the documentation to build your…</description>
+    </item>
+    <item>
+      <title>New EuroClack Kits</title>
+      <link>https://clacktronics.co.uk/plain/blog/2024-06-27-Two-new-kits.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2024-06-27-Two-new-kits.html</guid>
+      <pubDate>Thu, 27 Jun 2024 00:00:00 +0000</pubDate>
+      <description>There are two new Eurorack kits, one is called ProtoPSU which is a breadboardable power supply to create +-12V and 5V from a 15V supply. The other is…</description>
+    </item>
+    <item>
+      <title>EuroClack - Mini Speaker</title>
+      <link>https://clacktronics.co.uk/plain/blog/2019-08-09-euroclack.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2019-08-09-euroclack.html</guid>
+      <pubDate>Fri, 09 Aug 2019 00:00:00 +0000</pubDate>
+      <description>I am back to producing audio equipment! There is a new section under &quot;Reasearch&quot; called EuroClack, it is for synth DIY and I am producing and selling full…</description>
+    </item>
+    <item>
+      <title>Flip dots with Python</title>
+      <link>https://clacktronics.co.uk/plain/blog/2019-01-03-flipdots.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2019-01-03-flipdots.html</guid>
+      <pubDate>Thu, 03 Jan 2019 00:00:00 +0000</pubDate>
+      <description>I have been working on a project for an artist that uses flip dot display panels. Flip dot/disc displays are a bygone technology that were typically used…</description>
+    </item>
+    <item>
+      <title>Boldport Club</title>
+      <link>https://clacktronics.co.uk/plain/blog/2019-01-02-Boldport.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2019-01-02-Boldport.html</guid>
+      <pubDate>Wed, 02 Jan 2019 00:00:00 +0000</pubDate>
+      <description>In 2017 I started working for Boldport a PCB design company that specialises in attractive circuit boards and runs boldport club a monthly subscription…</description>
+    </item>
+    <item>
+      <title>Paris Opera</title>
+      <link>https://clacktronics.co.uk/plain/blog/2017-06-26-Paris_Opera.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2017-06-26-Paris_Opera.html</guid>
+      <pubDate>Mon, 26 Jun 2017 00:00:00 +0000</pubDate>
+      <description>I had the rare opportunity to be a part of a project at the Palais Garnier, that is one of the main Opera house’s in Paris. I was working with Haroon…</description>
+    </item>
+    <item>
+      <title>Cryptocoin ticker</title>
+      <link>https://clacktronics.co.uk/plain/blog/2017-06-20-cryptocoin_ticker.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2017-06-20-cryptocoin_ticker.html</guid>
+      <pubDate>Tue, 20 Jun 2017 00:00:00 +0000</pubDate>
+      <description>A Quick 5 minute build and possibly a prototype for a future project. I took the Pimoroni micro dot display, which is suitably retro looking, like an…</description>
+    </item>
+    <item>
+      <title>Scanner Cloud</title>
+      <link>https://clacktronics.co.uk/plain/blog/2016-05-18-Scanner_Cloud.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2016-05-18-Scanner_Cloud.html</guid>
+      <pubDate>Wed, 18 May 2016 00:00:00 +0000</pubDate>
+      <description>Yes its true, I now do more than synths so my posts have diversified a bit although some new synth stuff coming soon, watch this space! This is a project…</description>
+    </item>
+    <item>
+      <title>Shapeoko 2 Wasteboard</title>
+      <link>https://clacktronics.co.uk/plain/blog/2016-03-20-Shapeoko-2-clamping-wasteboard.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2016-03-20-Shapeoko-2-clamping-wasteboard.html</guid>
+      <pubDate>Sun, 20 Mar 2016 00:00:00 +0000</pubDate>
+      <description>I have been using my Shapeoko on an off over the past few months and the most frustrating thing is clamping. Nothing is more annoying when you have…</description>
+    </item>
+    <item>
+      <title>CAD with code [OpenSCAD]</title>
+      <link>https://clacktronics.co.uk/plain/blog/2016-01-16-Openscad.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2016-01-16-Openscad.html</guid>
+      <pubDate>Sat, 16 Jan 2016 00:00:00 +0000</pubDate>
+      <description>If you like to think in code this CAD program is great, especially if the design can be broken down into primitives. This is an example of a very basic…</description>
+    </item>
+    <item>
+      <title>VGA cap</title>
+      <link>https://clacktronics.co.uk/plain/blog/2016-01-16-VGA_cap.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2016-01-16-VGA_cap.html</guid>
+      <pubDate>Sat, 16 Jan 2016 00:00:00 +0000</pubDate>
+      <description>Here is a PCB I have designed, it was made in response to the release of the Raspberry Pi Zero. For a low cost it helps to break out the analogue outputs…</description>
+    </item>
+    <item>
+      <title>Colours, Speakers and Pulses</title>
+      <link>https://clacktronics.co.uk/plain/blog/2016-01-13-Colours-speakers-pw.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2016-01-13-Colours-speakers-pw.html</guid>
+      <pubDate>Wed, 13 Jan 2016 00:00:00 +0000</pubDate>
+      <description>This is a story about what I currently do, I have moved a little bit away from synthesizers but still make audio electronics for artist Haroon Mirza and…</description>
+    </item>
+    <item>
+      <title>Wanted - &#x27;Tympani&#x27; or &#x27;lo Tom&#x27; info</title>
+      <link>https://clacktronics.co.uk/plain/blog/2015-03-25-Star-synare-tympani-lo-tom.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2015-03-25-Star-synare-tympani-lo-tom.html</guid>
+      <pubDate>Wed, 25 Mar 2015 00:00:00 +0000</pubDate>
+      <description>Clacktronics is trying to improve the Analogue drum lab and I am looking for information about them. This could be in schematic in repair manual form (…</description>
+    </item>
+    <item>
+      <title>Casting expanded polystyrene</title>
+      <link>https://clacktronics.co.uk/plain/blog/2015-03-18-casting_expanded_polystyrene.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2015-03-18-casting_expanded_polystyrene.html</guid>
+      <pubDate>Wed, 18 Mar 2015 00:00:00 +0000</pubDate>
+      <description>I am currently designing a small desktop rotating speaker, it is basically a miniature version of a rotating polystyrene Leslie baffle that is found in…</description>
+    </item>
+    <item>
+      <title>IRCAM</title>
+      <link>https://clacktronics.co.uk/plain/blog/2015-03-02-IRCAM.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2015-03-02-IRCAM.html</guid>
+      <pubDate>Mon, 02 Mar 2015 00:00:00 +0000</pubDate>
+      <description>As part of a research project involving Boulez&#x27;s Anthèmes II I managed to visit IRCAM in Paris last week and got to see how they put together the piece.…</description>
+    </item>
+    <item>
+      <title>New Website</title>
+      <link>https://clacktronics.co.uk/plain/blog/2015-03-02-New_Website.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2015-03-02-New_Website.html</guid>
+      <pubDate>Mon, 02 Mar 2015 00:00:00 +0000</pubDate>
+      <description>2014 nothing happened... Finally I am back, I have been occupied for a while. I decided to move the website away from wordpress as I was geting sick of…</description>
+    </item>
+    <item>
+      <title>Tottenham to Walthamstow</title>
+      <link>https://clacktronics.co.uk/plain/blog/2013-05-07-tottenham-to-walthamstow.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2013-05-07-tottenham-to-walthamstow.html</guid>
+      <pubDate>Tue, 07 May 2013 00:00:00 +0000</pubDate>
+      <description>After 3 years in Tottenham Hale, I have now moved across the reservoirs to Walthamstow where I can now build a proper Workshop in a shed! Here is my old…</description>
+    </item>
+    <item>
+      <title>Cri &quot;baby&quot; Call</title>
+      <link>https://clacktronics.co.uk/plain/blog/2013-02-16-cri-baby-call.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2013-02-16-cri-baby-call.html</guid>
+      <pubDate>Sat, 16 Feb 2013 00:00:00 +0000</pubDate>
+      <description>I found this at work, at first it looked like some kind of intercom but then I realised it is called a &quot;Cri Call&quot;. It is an old valve based baby monitor!…</description>
+    </item>
+    <item>
+      <title>The 3D printed bandwagon</title>
+      <link>https://clacktronics.co.uk/plain/blog/2013-01-09-the-3d-printed-bandwagon.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2013-01-09-the-3d-printed-bandwagon.html</guid>
+      <pubDate>Wed, 09 Jan 2013 00:00:00 +0000</pubDate>
+      <description>Yes, I have also been swept up in the hype, after a few years of looking at them and wishing I could afford to make one I took the plunge as I worked out…</description>
+    </item>
+    <item>
+      <title>Clacktronics does LED Projects</title>
+      <link>https://clacktronics.co.uk/plain/blog/2013-01-04-clacktronics-does-led-projects.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2013-01-04-clacktronics-does-led-projects.html</guid>
+      <pubDate>Fri, 04 Jan 2013 00:00:00 +0000</pubDate>
+      <description>I quite often get approached by artists and designers to produce electronic parts for them. Recently I seem to have made a lot of LED projects! Above is…</description>
+    </item>
+    <item>
+      <title>Maplin ADA Delay</title>
+      <link>https://clacktronics.co.uk/plain/blog/2013-01-04-maplin-ada-delay.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2013-01-04-maplin-ada-delay.html</guid>
+      <pubDate>Fri, 04 Jan 2013 00:00:00 +0000</pubDate>
+      <description>I had this one sitting on my desk a while. Whilst at the Music Hackspace in London another member (Bioni Samp) showed me this to look at. At first I…</description>
+    </item>
+    <item>
+      <title>Rebel Tech - Stoichea</title>
+      <link>https://clacktronics.co.uk/plain/blog/2012-07-01-592.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2012-07-01-592.html</guid>
+      <pubDate>Sun, 01 Jul 2012 00:00:00 +0000</pubDate>
+      <description>Recently I have been working with Rebel Tech to release a new Eurorack module range based in London. It has been really interesting and something I have…</description>
+    </item>
+    <item>
+      <title>Clacktronics back in new year!</title>
+      <link>https://clacktronics.co.uk/plain/blog/2012-01-25-clacktronics-back-in-new-year.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2012-01-25-clacktronics-back-in-new-year.html</guid>
+      <pubDate>Wed, 25 Jan 2012 00:00:00 +0000</pubDate>
+      <description>There has been a bit of silence recently, this is because I have a new job! assisting in the design and installation of electronic works for the artist…</description>
+    </item>
+    <item>
+      <title>Star Synare 3 Page</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-09-29-star-synare-3-page.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-09-29-star-synare-3-page.html</guid>
+      <pubDate>Thu, 29 Sep 2011 00:00:00 +0000</pubDate>
+      <description>New Page on the Star Synare 3 in the Analog Drum Lab project - making a DIY PCB soon so watch out! If you have any information on this drum or you own it…</description>
+    </item>
+    <item>
+      <title>Lazertran Tutorial</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-09-27-lazertran-tutorial.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-09-27-lazertran-tutorial.html</guid>
+      <pubDate>Tue, 27 Sep 2011 00:00:00 +0000</pubDate>
+      <description>I have written a new lazertran tutorial This is how I make a lot of one offs and small batches. Soon I will be moving to screen print , so I will put up…</description>
+    </item>
+    <item>
+      <title>Oxford OSCar</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-09-27-oxford-oscar.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-09-27-oxford-oscar.html</guid>
+      <pubDate>Tue, 27 Sep 2011 00:00:00 +0000</pubDate>
+      <description>Sadly I ran out of time on this one, the problem was it had suffered a power supply failure. The positive 5v rail was completely down and it seemed some…</description>
+    </item>
+    <item>
+      <title>Modded Realistic Reverb 2</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-09-05-modded-realistic-reverb-2.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-09-05-modded-realistic-reverb-2.html</guid>
+      <pubDate>Mon, 05 Sep 2011 00:00:00 +0000</pubDate>
+      <description>I made this for Owen at Flesh and Bone Studios in Hackney after he saw this original post. I had a bit more time to make it properly and I tried to make…</description>
+    </item>
+    <item>
+      <title>Another Day, Another Couple of Wasps</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-08-30-another-day-another-couple-of-wasps.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-08-30-another-day-another-couple-of-wasps.html</guid>
+      <pubDate>Tue, 30 Aug 2011 00:00:00 +0000</pubDate>
+      <description>I must seem to be obsessed at them moment , but wasps just keep coming my way! .. I guess there are a lot of broken ones out their because most of them…</description>
+    </item>
+    <item>
+      <title>Wasp Patch Pad by SYNFINITY</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-07-28-wasp-patch-pad.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-07-28-wasp-patch-pad.html</guid>
+      <pubDate>Thu, 28 Jul 2011 00:00:00 +0000</pubDate>
+      <description>Just got these patch pads from Michael at Synfinity. It is a pad of pages printed with the Wasp decal so you can easily write down patches the old…</description>
+    </item>
+    <item>
+      <title>Wasp Drive - First batch complete!!</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-07-04-wasp-drive-first-batch-complete.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-07-04-wasp-drive-first-batch-complete.html</guid>
+      <pubDate>Mon, 04 Jul 2011 00:00:00 +0000</pubDate>
+      <description>Here is the first batch of Clacktronics new products, it is a Wasp Filter with a driving input, see more info here (wayback mirror).</description>
+    </item>
+    <item>
+      <title>Octave Kitten Repair</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-06-22-octave-kitten-repair.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-06-22-octave-kitten-repair.html</guid>
+      <pubDate>Wed, 22 Jun 2011 00:00:00 +0000</pubDate>
+      <description>A cut down Cat, but no less brilliant sounding synthesizer built by the NY company Octave in the late seventies. Features very nice sounding feature rich…</description>
+    </item>
+    <item>
+      <title>Video Synthesis Part 1 : Getting into Video Circuits</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-06-22-video-synthesis-part-1-getting-into-video-circuits.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-06-22-video-synthesis-part-1-getting-into-video-circuits.html</guid>
+      <pubDate>Wed, 22 Jun 2011 00:00:00 +0000</pubDate>
+      <description>Frame from video by Gijs Gieskes Just recently I have been researching how to work with analogue video, specifically Composite (the yellow phono connector…</description>
+    </item>
+    <item>
+      <title>Yamaha CS-10 Sub Octave Mod</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-06-22-yamahacs10.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-06-22-yamahacs10.html</guid>
+      <pubDate>Wed, 22 Jun 2011 00:00:00 +0000</pubDate>
+      <description>The Yamaha CS series has some unique features inside and out. Most of the circuitry uses quite unusual IC&#x27;s (custom perhaps?) . The VCO for a start uses…</description>
+    </item>
+    <item>
+      <title>EDP Wasp Deluxe Repair</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-06-08-edp-wasp-deluxe.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-06-08-edp-wasp-deluxe.html</guid>
+      <pubDate>Wed, 08 Jun 2011 00:00:00 +0000</pubDate>
+      <description>The Wasp Deluxe was an enhancement on the original Wasp, they removed the touch keyboard, put it in a big wooden case with a real keyboard and added an…</description>
+    </item>
+    <item>
+      <title>(Late) Spring Cleanout - AVRsyn</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-06-07-late-spring-cleanout-avrsyn.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-06-07-late-spring-cleanout-avrsyn.html</guid>
+      <pubDate>Tue, 07 Jun 2011 00:00:00 +0000</pubDate>
+      <description>Getting rid of items I have been sitting on too long, here is an AVRsyn by Elby Designs. It is an AVR based Analogue Modelling synth. It is quite cool and…</description>
+    </item>
+    <item>
+      <title>MFOS Soundlab Synthesizer with MIDI</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-06-05-midsoundlab.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-06-05-midsoundlab.html</guid>
+      <pubDate>Sun, 05 Jun 2011 00:00:00 +0000</pubDate>
+      <description>This was a one off project to see if I could fit MIDI into the simple MFOS soundlab (Designed by Ray Wilson see musicfromouterspace.com ) it was built…</description>
+    </item>
+    <item>
+      <title>Roland Chorus Echo SRE-555 Repair</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-04-23-roland-sre555.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-04-23-roland-sre555.html</guid>
+      <pubDate>Sat, 23 Apr 2011 00:00:00 +0000</pubDate>
+      <description>This was a Roland Chorus Echo SRE-555 in a desperate need of service, It was bought second hand from Japan and was damaged in transit. It is actually just…</description>
+    </item>
+    <item>
+      <title>Press N Peel Printing service</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-04-21-press-n-peel-printing-service.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-04-21-press-n-peel-printing-service.html</guid>
+      <pubDate>Thu, 21 Apr 2011 00:00:00 +0000</pubDate>
+      <description>For the DIY builder I am offering a laser printing service for press n peel transfers, simply send me your images and I will arrange and print them onto…</description>
+    </item>
+    <item>
+      <title>EDP Wasp Restoration Part 1.</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-04-20-edp-wasp-restoration-part-1.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-04-20-edp-wasp-restoration-part-1.html</guid>
+      <pubDate>Wed, 20 Apr 2011 00:00:00 +0000</pubDate>
+      <description>I am currently re-building a Wasp from the ground up, it was stripped completely of components so I could scan and make my own copy of it for personal…</description>
+    </item>
+    <item>
+      <title>Realistic Reverb Noismaking Mods</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-04-07-realistic-reverb-noismaking-mods.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-04-07-realistic-reverb-noismaking-mods.html</guid>
+      <pubDate>Thu, 07 Apr 2011 00:00:00 +0000</pubDate>
+      <description>I found this Realistic Reverb in quite a bad state without a case at a car boot sale, I was intrigued, this is one of those effects that are notorious for…</description>
+    </item>
+    <item>
+      <title>Juno 60 Memory Repair</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-03-14-juno-60-memory-repair.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-03-14-juno-60-memory-repair.html</guid>
+      <pubDate>Mon, 14 Mar 2011 00:00:00 +0000</pubDate>
+      <description>This Juno 60 was brought to me because it had had its memory replaced but it was still loosing it memory after a while. Opening it up revealed a bath of…</description>
+    </item>
+    <item>
+      <title>AKG BX-20 Repair</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-02-07-akg-bx-20-repair.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-02-07-akg-bx-20-repair.html</guid>
+      <pubDate>Mon, 07 Feb 2011 00:00:00 +0000</pubDate>
+      <description>Amazing spring reverb that was bought of ebay broken, because of its size I had to fix it on site. It was producing no sound at all (most equipment has a…</description>
+    </item>
+    <item>
+      <title>Roland Space Echo RE-201 Repair</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-01-31-roland-re201-repair.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-01-31-roland-re201-repair.html</guid>
+      <pubDate>Mon, 31 Jan 2011 00:00:00 +0000</pubDate>
+      <description>This space echo didn&#x27;t have anything major wrong with it, just there were a lot of small problems that made it a bit poor for performing. It is a really…</description>
+    </item>
+    <item>
+      <title>Amdek PCK-100</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-01-27-amdek-pck-100.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-01-27-amdek-pck-100.html</guid>
+      <pubDate>Thu, 27 Jan 2011 00:00:00 +0000</pubDate>
+      <description>Analogue electronic drum pad by Amdek a DIY kit version of the Boss PC-2. I was asked to build one. Everything was fine. except the rubber pads seem to…</description>
+    </item>
+    <item>
+      <title>Small Eddystone / Hammond Enclosures</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-01-27-enclosures.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-01-27-enclosures.html</guid>
+      <pubDate>Thu, 27 Jan 2011 00:00:00 +0000</pubDate>
+      <description>Just bought samples of Hammond Enclosures Eddystone 11451 and 27969 they would make excellent mini pedals for a boost or some kind of feedback loop pedal</description>
+    </item>
+    <item>
+      <title>Octave Cat SRM Repair</title>
+      <link>https://clacktronics.co.uk/plain/blog/2011-01-25-octave-cat-srm-repair.html</link>
+      <guid isPermaLink="true">https://clacktronics.co.uk/plain/blog/2011-01-25-octave-cat-srm-repair.html</guid>
+      <pubDate>Tue, 25 Jan 2011 00:00:00 +0000</pubDate>
+      <description>This keyboard has a strange duophonic mode that is fun but slightly useless, it assigns one VCO to the lower pressed key and the other VCO to the upper…</description>
+    </item>
+  </channel>
+</rss>
