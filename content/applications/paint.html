@@ -160,10 +160,20 @@
   <div class="rm-bar">
     <div class="rm"><button>File</button><div class="rm-dd">
       <button data-cmd="new"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>New</button>
-      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open…</button>
-      <button data-cmd="open-layer"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Open as Layer…</button>
-      <button data-cmd="open-site"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>Open from website…</button>
-      <button data-cmd="open-site-layer"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>Open from website as layer…</button>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span><span class="rm-item">Open</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd">
+          <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Local…</button>
+          <button data-cmd="open-site"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>From website…</button>
+        </div>
+      </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span><span class="rm-item">Open as Layer</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd">
+          <button data-cmd="open-layer"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Local…</button>
+          <button data-cmd="open-site-layer"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>From website…</button>
+        </div>
+      </div>
       <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save</button>
       <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As…</button>
       <button data-cmd="upload-site"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload to website…</button>
