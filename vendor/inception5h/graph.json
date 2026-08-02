@@ -1,0 +1,2622 @@
+{
+ "source": "https://storage.googleapis.com/download.tensorflow.org/models/inception5h.zip",
+ "sha256": "d13569f6a98159de37e92e9c8ec4dae8f674fbf475f69fe6199b514f756d4364",
+ "licence": "Apache-2.0, Copyright 2015 The TensorFlow Authors",
+ "note": "Convolutional trunk of inception5h, cut after mixed5b",
+ "imagenetMean": 117.0,
+ "dtype": "float16",
+ "weights": {
+  "conv2d0_w": {
+   "offset": 0,
+   "shape": [
+    7,
+    7,
+    3,
+    64
+   ]
+  },
+  "conv2d0_b": {
+   "offset": 18816,
+   "shape": [
+    64
+   ]
+  },
+  "conv2d1_w": {
+   "offset": 18944,
+   "shape": [
+    1,
+    1,
+    64,
+    64
+   ]
+  },
+  "conv2d1_b": {
+   "offset": 27136,
+   "shape": [
+    64
+   ]
+  },
+  "conv2d2_w": {
+   "offset": 27264,
+   "shape": [
+    3,
+    3,
+    64,
+    192
+   ]
+  },
+  "conv2d2_b": {
+   "offset": 248448,
+   "shape": [
+    192
+   ]
+  },
+  "mixed3a_1x1_w": {
+   "offset": 248832,
+   "shape": [
+    1,
+    1,
+    192,
+    64
+   ]
+  },
+  "mixed3a_1x1_b": {
+   "offset": 273408,
+   "shape": [
+    64
+   ]
+  },
+  "mixed3a_3x3_bottleneck_w": {
+   "offset": 273536,
+   "shape": [
+    1,
+    1,
+    192,
+    96
+   ]
+  },
+  "mixed3a_3x3_bottleneck_b": {
+   "offset": 310400,
+   "shape": [
+    96
+   ]
+  },
+  "mixed3a_3x3_w": {
+   "offset": 310592,
+   "shape": [
+    3,
+    3,
+    96,
+    128
+   ]
+  },
+  "mixed3a_3x3_b": {
+   "offset": 531776,
+   "shape": [
+    128
+   ]
+  },
+  "mixed3a_5x5_bottleneck_w": {
+   "offset": 532032,
+   "shape": [
+    1,
+    1,
+    192,
+    16
+   ]
+  },
+  "mixed3a_5x5_bottleneck_b": {
+   "offset": 538176,
+   "shape": [
+    16
+   ]
+  },
+  "mixed3a_5x5_w": {
+   "offset": 538208,
+   "shape": [
+    5,
+    5,
+    16,
+    32
+   ]
+  },
+  "mixed3a_5x5_b": {
+   "offset": 563808,
+   "shape": [
+    32
+   ]
+  },
+  "mixed3a_pool_reduce_w": {
+   "offset": 563872,
+   "shape": [
+    1,
+    1,
+    192,
+    32
+   ]
+  },
+  "mixed3a_pool_reduce_b": {
+   "offset": 576160,
+   "shape": [
+    32
+   ]
+  },
+  "mixed3b_1x1_w": {
+   "offset": 576224,
+   "shape": [
+    1,
+    1,
+    256,
+    128
+   ]
+  },
+  "mixed3b_1x1_b": {
+   "offset": 641760,
+   "shape": [
+    128
+   ]
+  },
+  "mixed3b_3x3_bottleneck_w": {
+   "offset": 642016,
+   "shape": [
+    1,
+    1,
+    256,
+    128
+   ]
+  },
+  "mixed3b_3x3_bottleneck_b": {
+   "offset": 707552,
+   "shape": [
+    128
+   ]
+  },
+  "mixed3b_3x3_w": {
+   "offset": 707808,
+   "shape": [
+    3,
+    3,
+    128,
+    192
+   ]
+  },
+  "mixed3b_3x3_b": {
+   "offset": 1150176,
+   "shape": [
+    192
+   ]
+  },
+  "mixed3b_5x5_bottleneck_w": {
+   "offset": 1150560,
+   "shape": [
+    1,
+    1,
+    256,
+    32
+   ]
+  },
+  "mixed3b_5x5_bottleneck_b": {
+   "offset": 1166944,
+   "shape": [
+    32
+   ]
+  },
+  "mixed3b_5x5_w": {
+   "offset": 1167008,
+   "shape": [
+    5,
+    5,
+    32,
+    96
+   ]
+  },
+  "mixed3b_5x5_b": {
+   "offset": 1320608,
+   "shape": [
+    96
+   ]
+  },
+  "mixed3b_pool_reduce_w": {
+   "offset": 1320800,
+   "shape": [
+    1,
+    1,
+    256,
+    64
+   ]
+  },
+  "mixed3b_pool_reduce_b": {
+   "offset": 1353568,
+   "shape": [
+    64
+   ]
+  },
+  "mixed4a_1x1_w": {
+   "offset": 1353696,
+   "shape": [
+    1,
+    1,
+    480,
+    192
+   ]
+  },
+  "mixed4a_1x1_b": {
+   "offset": 1538016,
+   "shape": [
+    192
+   ]
+  },
+  "mixed4a_3x3_bottleneck_w": {
+   "offset": 1538400,
+   "shape": [
+    1,
+    1,
+    480,
+    96
+   ]
+  },
+  "mixed4a_3x3_bottleneck_b": {
+   "offset": 1630560,
+   "shape": [
+    96
+   ]
+  },
+  "mixed4a_3x3_w": {
+   "offset": 1630752,
+   "shape": [
+    3,
+    3,
+    96,
+    204
+   ]
+  },
+  "mixed4a_3x3_b": {
+   "offset": 1983264,
+   "shape": [
+    204
+   ]
+  },
+  "mixed4a_5x5_bottleneck_w": {
+   "offset": 1983672,
+   "shape": [
+    1,
+    1,
+    480,
+    16
+   ]
+  },
+  "mixed4a_5x5_bottleneck_b": {
+   "offset": 1999032,
+   "shape": [
+    16
+   ]
+  },
+  "mixed4a_5x5_w": {
+   "offset": 1999064,
+   "shape": [
+    5,
+    5,
+    16,
+    48
+   ]
+  },
+  "mixed4a_5x5_b": {
+   "offset": 2037464,
+   "shape": [
+    48
+   ]
+  },
+  "mixed4a_pool_reduce_w": {
+   "offset": 2037560,
+   "shape": [
+    1,
+    1,
+    480,
+    64
+   ]
+  },
+  "mixed4a_pool_reduce_b": {
+   "offset": 2099000,
+   "shape": [
+    64
+   ]
+  },
+  "mixed4b_1x1_w": {
+   "offset": 2099128,
+   "shape": [
+    1,
+    1,
+    508,
+    160
+   ]
+  },
+  "mixed4b_1x1_b": {
+   "offset": 2261688,
+   "shape": [
+    160
+   ]
+  },
+  "mixed4b_3x3_bottleneck_w": {
+   "offset": 2262008,
+   "shape": [
+    1,
+    1,
+    508,
+    112
+   ]
+  },
+  "mixed4b_3x3_bottleneck_b": {
+   "offset": 2375800,
+   "shape": [
+    112
+   ]
+  },
+  "mixed4b_3x3_w": {
+   "offset": 2376024,
+   "shape": [
+    3,
+    3,
+    112,
+    224
+   ]
+  },
+  "mixed4b_3x3_b": {
+   "offset": 2827608,
+   "shape": [
+    224
+   ]
+  },
+  "mixed4b_5x5_bottleneck_w": {
+   "offset": 2828056,
+   "shape": [
+    1,
+    1,
+    508,
+    24
+   ]
+  },
+  "mixed4b_5x5_bottleneck_b": {
+   "offset": 2852440,
+   "shape": [
+    24
+   ]
+  },
+  "mixed4b_5x5_w": {
+   "offset": 2852488,
+   "shape": [
+    5,
+    5,
+    24,
+    64
+   ]
+  },
+  "mixed4b_5x5_b": {
+   "offset": 2929288,
+   "shape": [
+    64
+   ]
+  },
+  "mixed4b_pool_reduce_w": {
+   "offset": 2929416,
+   "shape": [
+    1,
+    1,
+    508,
+    64
+   ]
+  },
+  "mixed4b_pool_reduce_b": {
+   "offset": 2994440,
+   "shape": [
+    64
+   ]
+  },
+  "mixed4c_1x1_w": {
+   "offset": 2994568,
+   "shape": [
+    1,
+    1,
+    512,
+    128
+   ]
+  },
+  "mixed4c_1x1_b": {
+   "offset": 3125640,
+   "shape": [
+    128
+   ]
+  },
+  "mixed4c_3x3_bottleneck_w": {
+   "offset": 3125896,
+   "shape": [
+    1,
+    1,
+    512,
+    128
+   ]
+  },
+  "mixed4c_3x3_bottleneck_b": {
+   "offset": 3256968,
+   "shape": [
+    128
+   ]
+  },
+  "mixed4c_3x3_w": {
+   "offset": 3257224,
+   "shape": [
+    3,
+    3,
+    128,
+    256
+   ]
+  },
+  "mixed4c_3x3_b": {
+   "offset": 3847048,
+   "shape": [
+    256
+   ]
+  },
+  "mixed4c_5x5_bottleneck_w": {
+   "offset": 3847560,
+   "shape": [
+    1,
+    1,
+    512,
+    24
+   ]
+  },
+  "mixed4c_5x5_bottleneck_b": {
+   "offset": 3872136,
+   "shape": [
+    24
+   ]
+  },
+  "mixed4c_5x5_w": {
+   "offset": 3872184,
+   "shape": [
+    5,
+    5,
+    24,
+    64
+   ]
+  },
+  "mixed4c_5x5_b": {
+   "offset": 3948984,
+   "shape": [
+    64
+   ]
+  },
+  "mixed4c_pool_reduce_w": {
+   "offset": 3949112,
+   "shape": [
+    1,
+    1,
+    512,
+    64
+   ]
+  },
+  "mixed4c_pool_reduce_b": {
+   "offset": 4014648,
+   "shape": [
+    64
+   ]
+  },
+  "mixed4d_1x1_w": {
+   "offset": 4014776,
+   "shape": [
+    1,
+    1,
+    512,
+    112
+   ]
+  },
+  "mixed4d_1x1_b": {
+   "offset": 4129464,
+   "shape": [
+    112
+   ]
+  },
+  "mixed4d_3x3_bottleneck_w": {
+   "offset": 4129688,
+   "shape": [
+    1,
+    1,
+    512,
+    144
+   ]
+  },
+  "mixed4d_3x3_bottleneck_b": {
+   "offset": 4277144,
+   "shape": [
+    144
+   ]
+  },
+  "mixed4d_3x3_w": {
+   "offset": 4277432,
+   "shape": [
+    3,
+    3,
+    144,
+    288
+   ]
+  },
+  "mixed4d_3x3_b": {
+   "offset": 5023928,
+   "shape": [
+    288
+   ]
+  },
+  "mixed4d_5x5_bottleneck_w": {
+   "offset": 5024504,
+   "shape": [
+    1,
+    1,
+    512,
+    32
+   ]
+  },
+  "mixed4d_5x5_bottleneck_b": {
+   "offset": 5057272,
+   "shape": [
+    32
+   ]
+  },
+  "mixed4d_5x5_w": {
+   "offset": 5057336,
+   "shape": [
+    5,
+    5,
+    32,
+    64
+   ]
+  },
+  "mixed4d_5x5_b": {
+   "offset": 5159736,
+   "shape": [
+    64
+   ]
+  },
+  "mixed4d_pool_reduce_w": {
+   "offset": 5159864,
+   "shape": [
+    1,
+    1,
+    512,
+    64
+   ]
+  },
+  "mixed4d_pool_reduce_b": {
+   "offset": 5225400,
+   "shape": [
+    64
+   ]
+  },
+  "mixed4e_1x1_w": {
+   "offset": 5225528,
+   "shape": [
+    1,
+    1,
+    528,
+    256
+   ]
+  },
+  "mixed4e_1x1_b": {
+   "offset": 5495864,
+   "shape": [
+    256
+   ]
+  },
+  "mixed4e_3x3_bottleneck_w": {
+   "offset": 5496376,
+   "shape": [
+    1,
+    1,
+    528,
+    160
+   ]
+  },
+  "mixed4e_3x3_bottleneck_b": {
+   "offset": 5665336,
+   "shape": [
+    160
+   ]
+  },
+  "mixed4e_3x3_w": {
+   "offset": 5665656,
+   "shape": [
+    3,
+    3,
+    160,
+    320
+   ]
+  },
+  "mixed4e_3x3_b": {
+   "offset": 6587256,
+   "shape": [
+    320
+   ]
+  },
+  "mixed4e_5x5_bottleneck_w": {
+   "offset": 6587896,
+   "shape": [
+    1,
+    1,
+    528,
+    32
+   ]
+  },
+  "mixed4e_5x5_bottleneck_b": {
+   "offset": 6621688,
+   "shape": [
+    32
+   ]
+  },
+  "mixed4e_5x5_w": {
+   "offset": 6621752,
+   "shape": [
+    5,
+    5,
+    32,
+    128
+   ]
+  },
+  "mixed4e_5x5_b": {
+   "offset": 6826552,
+   "shape": [
+    128
+   ]
+  },
+  "mixed4e_pool_reduce_w": {
+   "offset": 6826808,
+   "shape": [
+    1,
+    1,
+    528,
+    128
+   ]
+  },
+  "mixed4e_pool_reduce_b": {
+   "offset": 6961976,
+   "shape": [
+    128
+   ]
+  },
+  "mixed5a_1x1_w": {
+   "offset": 6962232,
+   "shape": [
+    1,
+    1,
+    832,
+    256
+   ]
+  },
+  "mixed5a_1x1_b": {
+   "offset": 7388216,
+   "shape": [
+    256
+   ]
+  },
+  "mixed5a_3x3_bottleneck_w": {
+   "offset": 7388728,
+   "shape": [
+    1,
+    1,
+    832,
+    160
+   ]
+  },
+  "mixed5a_3x3_bottleneck_b": {
+   "offset": 7654968,
+   "shape": [
+    160
+   ]
+  },
+  "mixed5a_3x3_w": {
+   "offset": 7655288,
+   "shape": [
+    3,
+    3,
+    160,
+    320
+   ]
+  },
+  "mixed5a_3x3_b": {
+   "offset": 8576888,
+   "shape": [
+    320
+   ]
+  },
+  "mixed5a_5x5_bottleneck_w": {
+   "offset": 8577528,
+   "shape": [
+    1,
+    1,
+    832,
+    48
+   ]
+  },
+  "mixed5a_5x5_bottleneck_b": {
+   "offset": 8657400,
+   "shape": [
+    48
+   ]
+  },
+  "mixed5a_5x5_w": {
+   "offset": 8657496,
+   "shape": [
+    5,
+    5,
+    48,
+    128
+   ]
+  },
+  "mixed5a_5x5_b": {
+   "offset": 8964696,
+   "shape": [
+    128
+   ]
+  },
+  "mixed5a_pool_reduce_w": {
+   "offset": 8964952,
+   "shape": [
+    1,
+    1,
+    832,
+    128
+   ]
+  },
+  "mixed5a_pool_reduce_b": {
+   "offset": 9177944,
+   "shape": [
+    128
+   ]
+  },
+  "mixed5b_1x1_w": {
+   "offset": 9178200,
+   "shape": [
+    1,
+    1,
+    832,
+    384
+   ]
+  },
+  "mixed5b_1x1_b": {
+   "offset": 9817176,
+   "shape": [
+    384
+   ]
+  },
+  "mixed5b_3x3_bottleneck_w": {
+   "offset": 9817944,
+   "shape": [
+    1,
+    1,
+    832,
+    192
+   ]
+  },
+  "mixed5b_3x3_bottleneck_b": {
+   "offset": 10137432,
+   "shape": [
+    192
+   ]
+  },
+  "mixed5b_3x3_w": {
+   "offset": 10137816,
+   "shape": [
+    3,
+    3,
+    192,
+    384
+   ]
+  },
+  "mixed5b_3x3_b": {
+   "offset": 11464920,
+   "shape": [
+    384
+   ]
+  },
+  "mixed5b_5x5_bottleneck_w": {
+   "offset": 11465688,
+   "shape": [
+    1,
+    1,
+    832,
+    48
+   ]
+  },
+  "mixed5b_5x5_bottleneck_b": {
+   "offset": 11545560,
+   "shape": [
+    48
+   ]
+  },
+  "mixed5b_5x5_w": {
+   "offset": 11545656,
+   "shape": [
+    5,
+    5,
+    48,
+    128
+   ]
+  },
+  "mixed5b_5x5_b": {
+   "offset": 11852856,
+   "shape": [
+    128
+   ]
+  },
+  "mixed5b_pool_reduce_w": {
+   "offset": 11853112,
+   "shape": [
+    1,
+    1,
+    832,
+    128
+   ]
+  },
+  "mixed5b_pool_reduce_b": {
+   "offset": 12066104,
+   "shape": [
+    128
+   ]
+  }
+ },
+ "ops": [
+  {
+   "op": "input",
+   "name": "input"
+  },
+  {
+   "op": "conv2d",
+   "name": "conv2d0_pre_relu/conv",
+   "input": "input",
+   "filter": "conv2d0_w",
+   "strides": [
+    2,
+    2
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "conv2d0_pre_relu",
+   "input": "conv2d0_pre_relu/conv",
+   "bias": "conv2d0_b"
+  },
+  {
+   "op": "relu",
+   "name": "conv2d0",
+   "input": "conv2d0_pre_relu"
+  },
+  {
+   "op": "maxPool",
+   "name": "maxpool0",
+   "input": "conv2d0",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    2,
+    2
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "lrn",
+   "name": "localresponsenorm0",
+   "input": "maxpool0",
+   "depthRadius": 5,
+   "bias": 2.0,
+   "alpha": 9.999999747378752e-05,
+   "beta": 0.5
+  },
+  {
+   "op": "conv2d",
+   "name": "conv2d1_pre_relu/conv",
+   "input": "localresponsenorm0",
+   "filter": "conv2d1_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "valid"
+  },
+  {
+   "op": "biasAdd",
+   "name": "conv2d1_pre_relu",
+   "input": "conv2d1_pre_relu/conv",
+   "bias": "conv2d1_b"
+  },
+  {
+   "op": "relu",
+   "name": "conv2d1",
+   "input": "conv2d1_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "conv2d2_pre_relu/conv",
+   "input": "conv2d1",
+   "filter": "conv2d2_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "conv2d2_pre_relu",
+   "input": "conv2d2_pre_relu/conv",
+   "bias": "conv2d2_b"
+  },
+  {
+   "op": "relu",
+   "name": "conv2d2",
+   "input": "conv2d2_pre_relu"
+  },
+  {
+   "op": "lrn",
+   "name": "localresponsenorm1",
+   "input": "conv2d2",
+   "depthRadius": 5,
+   "bias": 2.0,
+   "alpha": 9.999999747378752e-05,
+   "beta": 0.5
+  },
+  {
+   "op": "maxPool",
+   "name": "maxpool1",
+   "input": "localresponsenorm1",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    2,
+    2
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3a_1x1_pre_relu/conv",
+   "input": "maxpool1",
+   "filter": "mixed3a_1x1_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3a_1x1_pre_relu",
+   "input": "mixed3a_1x1_pre_relu/conv",
+   "bias": "mixed3a_1x1_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3a_1x1",
+   "input": "mixed3a_1x1_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3a_3x3_bottleneck_pre_relu/conv",
+   "input": "maxpool1",
+   "filter": "mixed3a_3x3_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3a_3x3_bottleneck_pre_relu",
+   "input": "mixed3a_3x3_bottleneck_pre_relu/conv",
+   "bias": "mixed3a_3x3_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3a_3x3_bottleneck",
+   "input": "mixed3a_3x3_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3a_3x3_pre_relu/conv",
+   "input": "mixed3a_3x3_bottleneck",
+   "filter": "mixed3a_3x3_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3a_3x3_pre_relu",
+   "input": "mixed3a_3x3_pre_relu/conv",
+   "bias": "mixed3a_3x3_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3a_3x3",
+   "input": "mixed3a_3x3_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3a_5x5_bottleneck_pre_relu/conv",
+   "input": "maxpool1",
+   "filter": "mixed3a_5x5_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3a_5x5_bottleneck_pre_relu",
+   "input": "mixed3a_5x5_bottleneck_pre_relu/conv",
+   "bias": "mixed3a_5x5_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3a_5x5_bottleneck",
+   "input": "mixed3a_5x5_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3a_5x5_pre_relu/conv",
+   "input": "mixed3a_5x5_bottleneck",
+   "filter": "mixed3a_5x5_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3a_5x5_pre_relu",
+   "input": "mixed3a_5x5_pre_relu/conv",
+   "bias": "mixed3a_5x5_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3a_5x5",
+   "input": "mixed3a_5x5_pre_relu"
+  },
+  {
+   "op": "maxPool",
+   "name": "mixed3a_pool",
+   "input": "maxpool1",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3a_pool_reduce_pre_relu/conv",
+   "input": "mixed3a_pool",
+   "filter": "mixed3a_pool_reduce_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3a_pool_reduce_pre_relu",
+   "input": "mixed3a_pool_reduce_pre_relu/conv",
+   "bias": "mixed3a_pool_reduce_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3a_pool_reduce",
+   "input": "mixed3a_pool_reduce_pre_relu"
+  },
+  {
+   "op": "concat",
+   "name": "mixed3a",
+   "inputs": [
+    "mixed3a_1x1",
+    "mixed3a_3x3",
+    "mixed3a_5x5",
+    "mixed3a_pool_reduce"
+   ],
+   "axis": 3
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3b_1x1_pre_relu/conv",
+   "input": "mixed3a",
+   "filter": "mixed3b_1x1_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3b_1x1_pre_relu",
+   "input": "mixed3b_1x1_pre_relu/conv",
+   "bias": "mixed3b_1x1_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3b_1x1",
+   "input": "mixed3b_1x1_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3b_3x3_bottleneck_pre_relu/conv",
+   "input": "mixed3a",
+   "filter": "mixed3b_3x3_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3b_3x3_bottleneck_pre_relu",
+   "input": "mixed3b_3x3_bottleneck_pre_relu/conv",
+   "bias": "mixed3b_3x3_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3b_3x3_bottleneck",
+   "input": "mixed3b_3x3_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3b_3x3_pre_relu/conv",
+   "input": "mixed3b_3x3_bottleneck",
+   "filter": "mixed3b_3x3_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3b_3x3_pre_relu",
+   "input": "mixed3b_3x3_pre_relu/conv",
+   "bias": "mixed3b_3x3_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3b_3x3",
+   "input": "mixed3b_3x3_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3b_5x5_bottleneck_pre_relu/conv",
+   "input": "mixed3a",
+   "filter": "mixed3b_5x5_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3b_5x5_bottleneck_pre_relu",
+   "input": "mixed3b_5x5_bottleneck_pre_relu/conv",
+   "bias": "mixed3b_5x5_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3b_5x5_bottleneck",
+   "input": "mixed3b_5x5_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3b_5x5_pre_relu/conv",
+   "input": "mixed3b_5x5_bottleneck",
+   "filter": "mixed3b_5x5_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3b_5x5_pre_relu",
+   "input": "mixed3b_5x5_pre_relu/conv",
+   "bias": "mixed3b_5x5_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3b_5x5",
+   "input": "mixed3b_5x5_pre_relu"
+  },
+  {
+   "op": "maxPool",
+   "name": "mixed3b_pool",
+   "input": "mixed3a",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed3b_pool_reduce_pre_relu/conv",
+   "input": "mixed3b_pool",
+   "filter": "mixed3b_pool_reduce_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed3b_pool_reduce_pre_relu",
+   "input": "mixed3b_pool_reduce_pre_relu/conv",
+   "bias": "mixed3b_pool_reduce_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed3b_pool_reduce",
+   "input": "mixed3b_pool_reduce_pre_relu"
+  },
+  {
+   "op": "concat",
+   "name": "mixed3b",
+   "inputs": [
+    "mixed3b_1x1",
+    "mixed3b_3x3",
+    "mixed3b_5x5",
+    "mixed3b_pool_reduce"
+   ],
+   "axis": 3
+  },
+  {
+   "op": "maxPool",
+   "name": "maxpool4",
+   "input": "mixed3b",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    2,
+    2
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4a_1x1_pre_relu/conv",
+   "input": "maxpool4",
+   "filter": "mixed4a_1x1_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4a_1x1_pre_relu",
+   "input": "mixed4a_1x1_pre_relu/conv",
+   "bias": "mixed4a_1x1_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4a_1x1",
+   "input": "mixed4a_1x1_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4a_3x3_bottleneck_pre_relu/conv",
+   "input": "maxpool4",
+   "filter": "mixed4a_3x3_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4a_3x3_bottleneck_pre_relu",
+   "input": "mixed4a_3x3_bottleneck_pre_relu/conv",
+   "bias": "mixed4a_3x3_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4a_3x3_bottleneck",
+   "input": "mixed4a_3x3_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4a_3x3_pre_relu/conv",
+   "input": "mixed4a_3x3_bottleneck",
+   "filter": "mixed4a_3x3_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4a_3x3_pre_relu",
+   "input": "mixed4a_3x3_pre_relu/conv",
+   "bias": "mixed4a_3x3_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4a_3x3",
+   "input": "mixed4a_3x3_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4a_5x5_bottleneck_pre_relu/conv",
+   "input": "maxpool4",
+   "filter": "mixed4a_5x5_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4a_5x5_bottleneck_pre_relu",
+   "input": "mixed4a_5x5_bottleneck_pre_relu/conv",
+   "bias": "mixed4a_5x5_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4a_5x5_bottleneck",
+   "input": "mixed4a_5x5_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4a_5x5_pre_relu/conv",
+   "input": "mixed4a_5x5_bottleneck",
+   "filter": "mixed4a_5x5_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4a_5x5_pre_relu",
+   "input": "mixed4a_5x5_pre_relu/conv",
+   "bias": "mixed4a_5x5_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4a_5x5",
+   "input": "mixed4a_5x5_pre_relu"
+  },
+  {
+   "op": "maxPool",
+   "name": "mixed4a_pool",
+   "input": "maxpool4",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4a_pool_reduce_pre_relu/conv",
+   "input": "mixed4a_pool",
+   "filter": "mixed4a_pool_reduce_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4a_pool_reduce_pre_relu",
+   "input": "mixed4a_pool_reduce_pre_relu/conv",
+   "bias": "mixed4a_pool_reduce_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4a_pool_reduce",
+   "input": "mixed4a_pool_reduce_pre_relu"
+  },
+  {
+   "op": "concat",
+   "name": "mixed4a",
+   "inputs": [
+    "mixed4a_1x1",
+    "mixed4a_3x3",
+    "mixed4a_5x5",
+    "mixed4a_pool_reduce"
+   ],
+   "axis": 3
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4b_1x1_pre_relu/conv",
+   "input": "mixed4a",
+   "filter": "mixed4b_1x1_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4b_1x1_pre_relu",
+   "input": "mixed4b_1x1_pre_relu/conv",
+   "bias": "mixed4b_1x1_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4b_1x1",
+   "input": "mixed4b_1x1_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4b_3x3_bottleneck_pre_relu/conv",
+   "input": "mixed4a",
+   "filter": "mixed4b_3x3_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4b_3x3_bottleneck_pre_relu",
+   "input": "mixed4b_3x3_bottleneck_pre_relu/conv",
+   "bias": "mixed4b_3x3_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4b_3x3_bottleneck",
+   "input": "mixed4b_3x3_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4b_3x3_pre_relu/conv",
+   "input": "mixed4b_3x3_bottleneck",
+   "filter": "mixed4b_3x3_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4b_3x3_pre_relu",
+   "input": "mixed4b_3x3_pre_relu/conv",
+   "bias": "mixed4b_3x3_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4b_3x3",
+   "input": "mixed4b_3x3_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4b_5x5_bottleneck_pre_relu/conv",
+   "input": "mixed4a",
+   "filter": "mixed4b_5x5_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4b_5x5_bottleneck_pre_relu",
+   "input": "mixed4b_5x5_bottleneck_pre_relu/conv",
+   "bias": "mixed4b_5x5_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4b_5x5_bottleneck",
+   "input": "mixed4b_5x5_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4b_5x5_pre_relu/conv",
+   "input": "mixed4b_5x5_bottleneck",
+   "filter": "mixed4b_5x5_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4b_5x5_pre_relu",
+   "input": "mixed4b_5x5_pre_relu/conv",
+   "bias": "mixed4b_5x5_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4b_5x5",
+   "input": "mixed4b_5x5_pre_relu"
+  },
+  {
+   "op": "maxPool",
+   "name": "mixed4b_pool",
+   "input": "mixed4a",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4b_pool_reduce_pre_relu/conv",
+   "input": "mixed4b_pool",
+   "filter": "mixed4b_pool_reduce_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4b_pool_reduce_pre_relu",
+   "input": "mixed4b_pool_reduce_pre_relu/conv",
+   "bias": "mixed4b_pool_reduce_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4b_pool_reduce",
+   "input": "mixed4b_pool_reduce_pre_relu"
+  },
+  {
+   "op": "concat",
+   "name": "mixed4b",
+   "inputs": [
+    "mixed4b_1x1",
+    "mixed4b_3x3",
+    "mixed4b_5x5",
+    "mixed4b_pool_reduce"
+   ],
+   "axis": 3
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4c_1x1_pre_relu/conv",
+   "input": "mixed4b",
+   "filter": "mixed4c_1x1_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4c_1x1_pre_relu",
+   "input": "mixed4c_1x1_pre_relu/conv",
+   "bias": "mixed4c_1x1_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4c_1x1",
+   "input": "mixed4c_1x1_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4c_3x3_bottleneck_pre_relu/conv",
+   "input": "mixed4b",
+   "filter": "mixed4c_3x3_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4c_3x3_bottleneck_pre_relu",
+   "input": "mixed4c_3x3_bottleneck_pre_relu/conv",
+   "bias": "mixed4c_3x3_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4c_3x3_bottleneck",
+   "input": "mixed4c_3x3_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4c_3x3_pre_relu/conv",
+   "input": "mixed4c_3x3_bottleneck",
+   "filter": "mixed4c_3x3_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4c_3x3_pre_relu",
+   "input": "mixed4c_3x3_pre_relu/conv",
+   "bias": "mixed4c_3x3_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4c_3x3",
+   "input": "mixed4c_3x3_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4c_5x5_bottleneck_pre_relu/conv",
+   "input": "mixed4b",
+   "filter": "mixed4c_5x5_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4c_5x5_bottleneck_pre_relu",
+   "input": "mixed4c_5x5_bottleneck_pre_relu/conv",
+   "bias": "mixed4c_5x5_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4c_5x5_bottleneck",
+   "input": "mixed4c_5x5_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4c_5x5_pre_relu/conv",
+   "input": "mixed4c_5x5_bottleneck",
+   "filter": "mixed4c_5x5_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4c_5x5_pre_relu",
+   "input": "mixed4c_5x5_pre_relu/conv",
+   "bias": "mixed4c_5x5_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4c_5x5",
+   "input": "mixed4c_5x5_pre_relu"
+  },
+  {
+   "op": "maxPool",
+   "name": "mixed4c_pool",
+   "input": "mixed4b",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4c_pool_reduce_pre_relu/conv",
+   "input": "mixed4c_pool",
+   "filter": "mixed4c_pool_reduce_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4c_pool_reduce_pre_relu",
+   "input": "mixed4c_pool_reduce_pre_relu/conv",
+   "bias": "mixed4c_pool_reduce_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4c_pool_reduce",
+   "input": "mixed4c_pool_reduce_pre_relu"
+  },
+  {
+   "op": "concat",
+   "name": "mixed4c",
+   "inputs": [
+    "mixed4c_1x1",
+    "mixed4c_3x3",
+    "mixed4c_5x5",
+    "mixed4c_pool_reduce"
+   ],
+   "axis": 3
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4d_1x1_pre_relu/conv",
+   "input": "mixed4c",
+   "filter": "mixed4d_1x1_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4d_1x1_pre_relu",
+   "input": "mixed4d_1x1_pre_relu/conv",
+   "bias": "mixed4d_1x1_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4d_1x1",
+   "input": "mixed4d_1x1_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4d_3x3_bottleneck_pre_relu/conv",
+   "input": "mixed4c",
+   "filter": "mixed4d_3x3_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4d_3x3_bottleneck_pre_relu",
+   "input": "mixed4d_3x3_bottleneck_pre_relu/conv",
+   "bias": "mixed4d_3x3_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4d_3x3_bottleneck",
+   "input": "mixed4d_3x3_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4d_3x3_pre_relu/conv",
+   "input": "mixed4d_3x3_bottleneck",
+   "filter": "mixed4d_3x3_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4d_3x3_pre_relu",
+   "input": "mixed4d_3x3_pre_relu/conv",
+   "bias": "mixed4d_3x3_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4d_3x3",
+   "input": "mixed4d_3x3_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4d_5x5_bottleneck_pre_relu/conv",
+   "input": "mixed4c",
+   "filter": "mixed4d_5x5_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4d_5x5_bottleneck_pre_relu",
+   "input": "mixed4d_5x5_bottleneck_pre_relu/conv",
+   "bias": "mixed4d_5x5_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4d_5x5_bottleneck",
+   "input": "mixed4d_5x5_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4d_5x5_pre_relu/conv",
+   "input": "mixed4d_5x5_bottleneck",
+   "filter": "mixed4d_5x5_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4d_5x5_pre_relu",
+   "input": "mixed4d_5x5_pre_relu/conv",
+   "bias": "mixed4d_5x5_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4d_5x5",
+   "input": "mixed4d_5x5_pre_relu"
+  },
+  {
+   "op": "maxPool",
+   "name": "mixed4d_pool",
+   "input": "mixed4c",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4d_pool_reduce_pre_relu/conv",
+   "input": "mixed4d_pool",
+   "filter": "mixed4d_pool_reduce_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4d_pool_reduce_pre_relu",
+   "input": "mixed4d_pool_reduce_pre_relu/conv",
+   "bias": "mixed4d_pool_reduce_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4d_pool_reduce",
+   "input": "mixed4d_pool_reduce_pre_relu"
+  },
+  {
+   "op": "concat",
+   "name": "mixed4d",
+   "inputs": [
+    "mixed4d_1x1",
+    "mixed4d_3x3",
+    "mixed4d_5x5",
+    "mixed4d_pool_reduce"
+   ],
+   "axis": 3
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4e_1x1_pre_relu/conv",
+   "input": "mixed4d",
+   "filter": "mixed4e_1x1_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4e_1x1_pre_relu",
+   "input": "mixed4e_1x1_pre_relu/conv",
+   "bias": "mixed4e_1x1_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4e_1x1",
+   "input": "mixed4e_1x1_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4e_3x3_bottleneck_pre_relu/conv",
+   "input": "mixed4d",
+   "filter": "mixed4e_3x3_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4e_3x3_bottleneck_pre_relu",
+   "input": "mixed4e_3x3_bottleneck_pre_relu/conv",
+   "bias": "mixed4e_3x3_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4e_3x3_bottleneck",
+   "input": "mixed4e_3x3_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4e_3x3_pre_relu/conv",
+   "input": "mixed4e_3x3_bottleneck",
+   "filter": "mixed4e_3x3_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4e_3x3_pre_relu",
+   "input": "mixed4e_3x3_pre_relu/conv",
+   "bias": "mixed4e_3x3_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4e_3x3",
+   "input": "mixed4e_3x3_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4e_5x5_bottleneck_pre_relu/conv",
+   "input": "mixed4d",
+   "filter": "mixed4e_5x5_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4e_5x5_bottleneck_pre_relu",
+   "input": "mixed4e_5x5_bottleneck_pre_relu/conv",
+   "bias": "mixed4e_5x5_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4e_5x5_bottleneck",
+   "input": "mixed4e_5x5_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4e_5x5_pre_relu/conv",
+   "input": "mixed4e_5x5_bottleneck",
+   "filter": "mixed4e_5x5_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4e_5x5_pre_relu",
+   "input": "mixed4e_5x5_pre_relu/conv",
+   "bias": "mixed4e_5x5_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4e_5x5",
+   "input": "mixed4e_5x5_pre_relu"
+  },
+  {
+   "op": "maxPool",
+   "name": "mixed4e_pool",
+   "input": "mixed4d",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed4e_pool_reduce_pre_relu/conv",
+   "input": "mixed4e_pool",
+   "filter": "mixed4e_pool_reduce_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed4e_pool_reduce_pre_relu",
+   "input": "mixed4e_pool_reduce_pre_relu/conv",
+   "bias": "mixed4e_pool_reduce_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed4e_pool_reduce",
+   "input": "mixed4e_pool_reduce_pre_relu"
+  },
+  {
+   "op": "concat",
+   "name": "mixed4e",
+   "inputs": [
+    "mixed4e_1x1",
+    "mixed4e_3x3",
+    "mixed4e_5x5",
+    "mixed4e_pool_reduce"
+   ],
+   "axis": 3
+  },
+  {
+   "op": "maxPool",
+   "name": "maxpool10",
+   "input": "mixed4e",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    2,
+    2
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5a_1x1_pre_relu/conv",
+   "input": "maxpool10",
+   "filter": "mixed5a_1x1_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5a_1x1_pre_relu",
+   "input": "mixed5a_1x1_pre_relu/conv",
+   "bias": "mixed5a_1x1_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5a_1x1",
+   "input": "mixed5a_1x1_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5a_3x3_bottleneck_pre_relu/conv",
+   "input": "maxpool10",
+   "filter": "mixed5a_3x3_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5a_3x3_bottleneck_pre_relu",
+   "input": "mixed5a_3x3_bottleneck_pre_relu/conv",
+   "bias": "mixed5a_3x3_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5a_3x3_bottleneck",
+   "input": "mixed5a_3x3_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5a_3x3_pre_relu/conv",
+   "input": "mixed5a_3x3_bottleneck",
+   "filter": "mixed5a_3x3_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5a_3x3_pre_relu",
+   "input": "mixed5a_3x3_pre_relu/conv",
+   "bias": "mixed5a_3x3_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5a_3x3",
+   "input": "mixed5a_3x3_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5a_5x5_bottleneck_pre_relu/conv",
+   "input": "maxpool10",
+   "filter": "mixed5a_5x5_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5a_5x5_bottleneck_pre_relu",
+   "input": "mixed5a_5x5_bottleneck_pre_relu/conv",
+   "bias": "mixed5a_5x5_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5a_5x5_bottleneck",
+   "input": "mixed5a_5x5_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5a_5x5_pre_relu/conv",
+   "input": "mixed5a_5x5_bottleneck",
+   "filter": "mixed5a_5x5_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5a_5x5_pre_relu",
+   "input": "mixed5a_5x5_pre_relu/conv",
+   "bias": "mixed5a_5x5_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5a_5x5",
+   "input": "mixed5a_5x5_pre_relu"
+  },
+  {
+   "op": "maxPool",
+   "name": "mixed5a_pool",
+   "input": "maxpool10",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5a_pool_reduce_pre_relu/conv",
+   "input": "mixed5a_pool",
+   "filter": "mixed5a_pool_reduce_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5a_pool_reduce_pre_relu",
+   "input": "mixed5a_pool_reduce_pre_relu/conv",
+   "bias": "mixed5a_pool_reduce_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5a_pool_reduce",
+   "input": "mixed5a_pool_reduce_pre_relu"
+  },
+  {
+   "op": "concat",
+   "name": "mixed5a",
+   "inputs": [
+    "mixed5a_1x1",
+    "mixed5a_3x3",
+    "mixed5a_5x5",
+    "mixed5a_pool_reduce"
+   ],
+   "axis": 3
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5b_1x1_pre_relu/conv",
+   "input": "mixed5a",
+   "filter": "mixed5b_1x1_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5b_1x1_pre_relu",
+   "input": "mixed5b_1x1_pre_relu/conv",
+   "bias": "mixed5b_1x1_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5b_1x1",
+   "input": "mixed5b_1x1_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5b_3x3_bottleneck_pre_relu/conv",
+   "input": "mixed5a",
+   "filter": "mixed5b_3x3_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5b_3x3_bottleneck_pre_relu",
+   "input": "mixed5b_3x3_bottleneck_pre_relu/conv",
+   "bias": "mixed5b_3x3_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5b_3x3_bottleneck",
+   "input": "mixed5b_3x3_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5b_3x3_pre_relu/conv",
+   "input": "mixed5b_3x3_bottleneck",
+   "filter": "mixed5b_3x3_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5b_3x3_pre_relu",
+   "input": "mixed5b_3x3_pre_relu/conv",
+   "bias": "mixed5b_3x3_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5b_3x3",
+   "input": "mixed5b_3x3_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5b_5x5_bottleneck_pre_relu/conv",
+   "input": "mixed5a",
+   "filter": "mixed5b_5x5_bottleneck_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5b_5x5_bottleneck_pre_relu",
+   "input": "mixed5b_5x5_bottleneck_pre_relu/conv",
+   "bias": "mixed5b_5x5_bottleneck_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5b_5x5_bottleneck",
+   "input": "mixed5b_5x5_bottleneck_pre_relu"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5b_5x5_pre_relu/conv",
+   "input": "mixed5b_5x5_bottleneck",
+   "filter": "mixed5b_5x5_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5b_5x5_pre_relu",
+   "input": "mixed5b_5x5_pre_relu/conv",
+   "bias": "mixed5b_5x5_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5b_5x5",
+   "input": "mixed5b_5x5_pre_relu"
+  },
+  {
+   "op": "maxPool",
+   "name": "mixed5b_pool",
+   "input": "mixed5a",
+   "ksize": [
+    3,
+    3
+   ],
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "conv2d",
+   "name": "mixed5b_pool_reduce_pre_relu/conv",
+   "input": "mixed5b_pool",
+   "filter": "mixed5b_pool_reduce_w",
+   "strides": [
+    1,
+    1
+   ],
+   "pad": "same"
+  },
+  {
+   "op": "biasAdd",
+   "name": "mixed5b_pool_reduce_pre_relu",
+   "input": "mixed5b_pool_reduce_pre_relu/conv",
+   "bias": "mixed5b_pool_reduce_b"
+  },
+  {
+   "op": "relu",
+   "name": "mixed5b_pool_reduce",
+   "input": "mixed5b_pool_reduce_pre_relu"
+  },
+  {
+   "op": "concat",
+   "name": "mixed5b",
+   "inputs": [
+    "mixed5b_1x1",
+    "mixed5b_3x3",
+    "mixed5b_5x5",
+    "mixed5b_pool_reduce"
+   ],
+   "axis": 3
+  }
+ ],
+ "channels": {
+  "input": 3,
+  "conv2d0_pre_relu/conv": 64,
+  "conv2d0_pre_relu": 64,
+  "conv2d0": 64,
+  "maxpool0": 64,
+  "localresponsenorm0": 64,
+  "conv2d1_pre_relu/conv": 64,
+  "conv2d1_pre_relu": 64,
+  "conv2d1": 64,
+  "conv2d2_pre_relu/conv": 192,
+  "conv2d2_pre_relu": 192,
+  "conv2d2": 192,
+  "localresponsenorm1": 192,
+  "maxpool1": 192,
+  "mixed3a_1x1_pre_relu/conv": 64,
+  "mixed3a_1x1_pre_relu": 64,
+  "mixed3a_1x1": 64,
+  "mixed3a_3x3_bottleneck_pre_relu/conv": 96,
+  "mixed3a_3x3_bottleneck_pre_relu": 96,
+  "mixed3a_3x3_bottleneck": 96,
+  "mixed3a_3x3_pre_relu/conv": 128,
+  "mixed3a_3x3_pre_relu": 128,
+  "mixed3a_3x3": 128,
+  "mixed3a_5x5_bottleneck_pre_relu/conv": 16,
+  "mixed3a_5x5_bottleneck_pre_relu": 16,
+  "mixed3a_5x5_bottleneck": 16,
+  "mixed3a_5x5_pre_relu/conv": 32,
+  "mixed3a_5x5_pre_relu": 32,
+  "mixed3a_5x5": 32,
+  "mixed3a_pool": 192,
+  "mixed3a_pool_reduce_pre_relu/conv": 32,
+  "mixed3a_pool_reduce_pre_relu": 32,
+  "mixed3a_pool_reduce": 32,
+  "mixed3a": 256,
+  "mixed3b_1x1_pre_relu/conv": 128,
+  "mixed3b_1x1_pre_relu": 128,
+  "mixed3b_1x1": 128,
+  "mixed3b_3x3_bottleneck_pre_relu/conv": 128,
+  "mixed3b_3x3_bottleneck_pre_relu": 128,
+  "mixed3b_3x3_bottleneck": 128,
+  "mixed3b_3x3_pre_relu/conv": 192,
+  "mixed3b_3x3_pre_relu": 192,
+  "mixed3b_3x3": 192,
+  "mixed3b_5x5_bottleneck_pre_relu/conv": 32,
+  "mixed3b_5x5_bottleneck_pre_relu": 32,
+  "mixed3b_5x5_bottleneck": 32,
+  "mixed3b_5x5_pre_relu/conv": 96,
+  "mixed3b_5x5_pre_relu": 96,
+  "mixed3b_5x5": 96,
+  "mixed3b_pool": 256,
+  "mixed3b_pool_reduce_pre_relu/conv": 64,
+  "mixed3b_pool_reduce_pre_relu": 64,
+  "mixed3b_pool_reduce": 64,
+  "mixed3b": 480,
+  "maxpool4": 480,
+  "mixed4a_1x1_pre_relu/conv": 192,
+  "mixed4a_1x1_pre_relu": 192,
+  "mixed4a_1x1": 192,
+  "mixed4a_3x3_bottleneck_pre_relu/conv": 96,
+  "mixed4a_3x3_bottleneck_pre_relu": 96,
+  "mixed4a_3x3_bottleneck": 96,
+  "mixed4a_3x3_pre_relu/conv": 204,
+  "mixed4a_3x3_pre_relu": 204,
+  "mixed4a_3x3": 204,
+  "mixed4a_5x5_bottleneck_pre_relu/conv": 16,
+  "mixed4a_5x5_bottleneck_pre_relu": 16,
+  "mixed4a_5x5_bottleneck": 16,
+  "mixed4a_5x5_pre_relu/conv": 48,
+  "mixed4a_5x5_pre_relu": 48,
+  "mixed4a_5x5": 48,
+  "mixed4a_pool": 480,
+  "mixed4a_pool_reduce_pre_relu/conv": 64,
+  "mixed4a_pool_reduce_pre_relu": 64,
+  "mixed4a_pool_reduce": 64,
+  "mixed4a": 508,
+  "mixed4b_1x1_pre_relu/conv": 160,
+  "mixed4b_1x1_pre_relu": 160,
+  "mixed4b_1x1": 160,
+  "mixed4b_3x3_bottleneck_pre_relu/conv": 112,
+  "mixed4b_3x3_bottleneck_pre_relu": 112,
+  "mixed4b_3x3_bottleneck": 112,
+  "mixed4b_3x3_pre_relu/conv": 224,
+  "mixed4b_3x3_pre_relu": 224,
+  "mixed4b_3x3": 224,
+  "mixed4b_5x5_bottleneck_pre_relu/conv": 24,
+  "mixed4b_5x5_bottleneck_pre_relu": 24,
+  "mixed4b_5x5_bottleneck": 24,
+  "mixed4b_5x5_pre_relu/conv": 64,
+  "mixed4b_5x5_pre_relu": 64,
+  "mixed4b_5x5": 64,
+  "mixed4b_pool": 508,
+  "mixed4b_pool_reduce_pre_relu/conv": 64,
+  "mixed4b_pool_reduce_pre_relu": 64,
+  "mixed4b_pool_reduce": 64,
+  "mixed4b": 512,
+  "mixed4c_1x1_pre_relu/conv": 128,
+  "mixed4c_1x1_pre_relu": 128,
+  "mixed4c_1x1": 128,
+  "mixed4c_3x3_bottleneck_pre_relu/conv": 128,
+  "mixed4c_3x3_bottleneck_pre_relu": 128,
+  "mixed4c_3x3_bottleneck": 128,
+  "mixed4c_3x3_pre_relu/conv": 256,
+  "mixed4c_3x3_pre_relu": 256,
+  "mixed4c_3x3": 256,
+  "mixed4c_5x5_bottleneck_pre_relu/conv": 24,
+  "mixed4c_5x5_bottleneck_pre_relu": 24,
+  "mixed4c_5x5_bottleneck": 24,
+  "mixed4c_5x5_pre_relu/conv": 64,
+  "mixed4c_5x5_pre_relu": 64,
+  "mixed4c_5x5": 64,
+  "mixed4c_pool": 512,
+  "mixed4c_pool_reduce_pre_relu/conv": 64,
+  "mixed4c_pool_reduce_pre_relu": 64,
+  "mixed4c_pool_reduce": 64,
+  "mixed4c": 512,
+  "mixed4d_1x1_pre_relu/conv": 112,
+  "mixed4d_1x1_pre_relu": 112,
+  "mixed4d_1x1": 112,
+  "mixed4d_3x3_bottleneck_pre_relu/conv": 144,
+  "mixed4d_3x3_bottleneck_pre_relu": 144,
+  "mixed4d_3x3_bottleneck": 144,
+  "mixed4d_3x3_pre_relu/conv": 288,
+  "mixed4d_3x3_pre_relu": 288,
+  "mixed4d_3x3": 288,
+  "mixed4d_5x5_bottleneck_pre_relu/conv": 32,
+  "mixed4d_5x5_bottleneck_pre_relu": 32,
+  "mixed4d_5x5_bottleneck": 32,
+  "mixed4d_5x5_pre_relu/conv": 64,
+  "mixed4d_5x5_pre_relu": 64,
+  "mixed4d_5x5": 64,
+  "mixed4d_pool": 512,
+  "mixed4d_pool_reduce_pre_relu/conv": 64,
+  "mixed4d_pool_reduce_pre_relu": 64,
+  "mixed4d_pool_reduce": 64,
+  "mixed4d": 528,
+  "mixed4e_1x1_pre_relu/conv": 256,
+  "mixed4e_1x1_pre_relu": 256,
+  "mixed4e_1x1": 256,
+  "mixed4e_3x3_bottleneck_pre_relu/conv": 160,
+  "mixed4e_3x3_bottleneck_pre_relu": 160,
+  "mixed4e_3x3_bottleneck": 160,
+  "mixed4e_3x3_pre_relu/conv": 320,
+  "mixed4e_3x3_pre_relu": 320,
+  "mixed4e_3x3": 320,
+  "mixed4e_5x5_bottleneck_pre_relu/conv": 32,
+  "mixed4e_5x5_bottleneck_pre_relu": 32,
+  "mixed4e_5x5_bottleneck": 32,
+  "mixed4e_5x5_pre_relu/conv": 128,
+  "mixed4e_5x5_pre_relu": 128,
+  "mixed4e_5x5": 128,
+  "mixed4e_pool": 528,
+  "mixed4e_pool_reduce_pre_relu/conv": 128,
+  "mixed4e_pool_reduce_pre_relu": 128,
+  "mixed4e_pool_reduce": 128,
+  "mixed4e": 832,
+  "maxpool10": 832,
+  "mixed5a_1x1_pre_relu/conv": 256,
+  "mixed5a_1x1_pre_relu": 256,
+  "mixed5a_1x1": 256,
+  "mixed5a_3x3_bottleneck_pre_relu/conv": 160,
+  "mixed5a_3x3_bottleneck_pre_relu": 160,
+  "mixed5a_3x3_bottleneck": 160,
+  "mixed5a_3x3_pre_relu/conv": 320,
+  "mixed5a_3x3_pre_relu": 320,
+  "mixed5a_3x3": 320,
+  "mixed5a_5x5_bottleneck_pre_relu/conv": 48,
+  "mixed5a_5x5_bottleneck_pre_relu": 48,
+  "mixed5a_5x5_bottleneck": 48,
+  "mixed5a_5x5_pre_relu/conv": 128,
+  "mixed5a_5x5_pre_relu": 128,
+  "mixed5a_5x5": 128,
+  "mixed5a_pool": 832,
+  "mixed5a_pool_reduce_pre_relu/conv": 128,
+  "mixed5a_pool_reduce_pre_relu": 128,
+  "mixed5a_pool_reduce": 128,
+  "mixed5a": 832,
+  "mixed5b_1x1_pre_relu/conv": 384,
+  "mixed5b_1x1_pre_relu": 384,
+  "mixed5b_1x1": 384,
+  "mixed5b_3x3_bottleneck_pre_relu/conv": 192,
+  "mixed5b_3x3_bottleneck_pre_relu": 192,
+  "mixed5b_3x3_bottleneck": 192,
+  "mixed5b_3x3_pre_relu/conv": 384,
+  "mixed5b_3x3_pre_relu": 384,
+  "mixed5b_3x3": 384,
+  "mixed5b_5x5_bottleneck_pre_relu/conv": 48,
+  "mixed5b_5x5_bottleneck_pre_relu": 48,
+  "mixed5b_5x5_bottleneck": 48,
+  "mixed5b_5x5_pre_relu/conv": 128,
+  "mixed5b_5x5_pre_relu": 128,
+  "mixed5b_5x5": 128,
+  "mixed5b_pool": 832,
+  "mixed5b_pool_reduce_pre_relu/conv": 128,
+  "mixed5b_pool_reduce_pre_relu": 128,
+  "mixed5b_pool_reduce": 128,
+  "mixed5b": 1024
+ }
+}
