@@ -139,6 +139,16 @@
 .paint-options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 6px 14px; border-bottom: 1px solid var(--paper-line); background: var(--paper-deep); font-size: 11px; }
 .paint-options[hidden] { display: none; }
 .paint-options-tool { font-weight: 600; letter-spacing: .1em; text-transform: uppercase; font-size: 9px; color: var(--leaf-deep); }
+/* The fields of the armed tool are rebuilt on every tool change; size, hint and
+   zoom are permanent fixtures either side of them. */
+.paint-options-fields { display: contents; }
+.paint-options-zoom { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.paint-options .paint-option-hint[hidden], .paint-options .paint-option[hidden] { display: none; }
+/* app.css stacks the tool-size slider in the old rail; in the bar it is a row
+   like every other option. */
+.paint-options .paint-size { flex-direction: row; gap: 6px; margin: 0; }
+.paint-options .paint-size input { width: 96px; }
+.paint-zoom-control input { width: 90px; margin: 0; }
 .paint-option { display: flex; align-items: center; gap: 6px; }
 .paint-option > span { color: var(--sage); }
 .paint-option input[type="range"] { width: 96px; }
@@ -167,10 +177,6 @@
 .paint-modal .paint-modal-box > header { cursor: grab; touch-action: none; user-select: none; }
 .paint-modal .paint-modal-box > header:active { cursor: grabbing; }
 .paint-modal .paint-dialog-body { overflow-y: auto; min-height: 0; }
-.paint-zoom-control { grid-column: span 2; flex: none; display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
-.paint-zoom-control > span { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; color: var(--sage); font-size: 10px; }
-.paint-zoom-control > span > b { font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--leaf-deep); }
-.paint-zoom-control input { width: 100%; margin: 0; }
 .paint-blur-readout { min-width: 54px; display: inline-block; text-align: right; font-variant-numeric: tabular-nums; color: var(--sage); }
 #gaussianBlurModal label > span { display: flex; align-items: center; gap: 8px; flex: 1; }
 #gaussianBlurModal input[type="range"] { flex: 1; min-width: 120px; }
@@ -197,6 +203,18 @@
   background-size: 16px 16px;
   background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
+/* View → Show Grid. The lines are drawn in difference blending so they stay
+   readable over dark and light pixels alike, and their spacing is handed in
+   from the zoom so the grid always lands on whole image pixels. */
+.paint-grid {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none; mix-blend-mode: difference;
+  background-image:
+    repeating-linear-gradient(to right, rgba(255,255,255,.55) 0 1px, transparent 1px var(--paint-grid-major, 128px)),
+    repeating-linear-gradient(to bottom, rgba(255,255,255,.55) 0 1px, transparent 1px var(--paint-grid-major, 128px)),
+    repeating-linear-gradient(to right, rgba(255,255,255,.22) 0 1px, transparent 1px var(--paint-grid-step, 16px)),
+    repeating-linear-gradient(to bottom, rgba(255,255,255,.22) 0 1px, transparent 1px var(--paint-grid-step, 16px));
+}
+.paint-grid[hidden] { display: none; }
 .paint-transform-box { position: absolute; inset: -2px; z-index: 5; border: 1px dashed #fff; outline: 1px dashed #000; pointer-events: none; }
 .paint-transform-box[hidden] { display: none; }
 .paint-stack .content-transform-preview { z-index: 4; pointer-events: none; image-rendering: auto; }
@@ -268,6 +286,16 @@
       </div>
       <div class="sep"></div>
       <button data-cmd="content-fill"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Content-Aware Fill</button>
+    </div></div>
+    <div class="rm"><button>View</button><div class="rm-dd">
+      <button data-cmd="zoom-in"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Zoom In</button>
+      <button data-cmd="zoom-out"><span class="pixel-icon" data-icon="minus-box" aria-hidden="true"></span>Zoom Out</button>
+      <div class="sep"></div>
+      <button data-cmd="zoom-100"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Actual Size (100%)</button>
+      <button data-cmd="zoom-fit"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Fit to Screen</button>
+      <button data-cmd="zoom-fit-width"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Fit to Width</button>
+      <div class="sep"></div>
+      <button data-cmd="toggle-grid" aria-pressed="false"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Show Grid<span class="mi-check"></span></button>
     </div></div>
     <div class="rm"><button>Layer</button><div class="rm-dd">
       <button data-cmd="layer-new"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>New Layer</button>
@@ -431,7 +459,20 @@
     </div></div>
   </div>
 
-  <div class="paint-options" role="toolbar" aria-label="Tool options" hidden></div>
+  <!-- One bar under the menus carries everything about the armed tool: its name,
+       its size, its own settings and a hint, with the canvas zoom parked on the
+       right where a photo editor keeps it. -->
+  <div class="paint-options" role="toolbar" aria-label="Tool options">
+    <span class="paint-options-tool"></span>
+    <label class="paint-option paint-size" hidden><span>Size</span><input type="range" min="1" max="32" value="3" aria-label="Tool size"><output>3</output></label>
+    <span class="paint-options-fields"></span>
+    <span class="paint-option-hint" hidden></span>
+    <span class="paint-options-zoom">
+      <label class="paint-option paint-zoom-control"><span>Zoom</span><input id="paintZoomSlider" type="range" min="0" max="6" step="1" value="3" aria-label="Canvas zoom"><output id="paintZoomValue">100%</output></label>
+      <button type="button" class="btn ghost" data-cmd="zoom-100" title="Actual size">1:1</button>
+      <button type="button" class="btn ghost" data-cmd="zoom-fit" title="Fit the whole image in the window">Fit</button>
+    </span>
+  </div>
 
   <div class="paint-main">
     <div class="paint-tools" role="toolbar" aria-label="Tools">
@@ -497,11 +538,6 @@
         </div>
       </div>
       <button class="paint-tool paint-tool-solo" data-tool="zoom" title="Zoom — click to zoom in, Shift-click or Alt-click to zoom out" aria-label="Zoom"><span class="paint-zoom-icon" aria-hidden="true"></span><span class="paint-tool-menu-label">Zoom</span></button>
-      <div class="paint-size">
-        <span class="app-lbl">Tool size</span>
-        <input type="range" min="1" max="32" value="3" aria-label="Tool size">
-      </div>
-      <label class="paint-zoom-control"><span><b>Zoom</b><output id="paintZoomValue">100%</output></span><input id="paintZoomSlider" type="range" min="0" max="6" step="1" value="3" aria-label="Canvas zoom"></label>
     </div>
 
     <div class="paint-canvas-wrap">
@@ -510,6 +546,7 @@
         <canvas class="seam-animation" width="640" height="400" hidden></canvas>
         <canvas class="overlay" width="640" height="400"></canvas>
         <canvas class="content-transform-preview" width="640" height="400" hidden aria-label="Live form-detecting scale preview"></canvas>
+        <div class="paint-grid" aria-hidden="true" hidden></div>
         <span class="paint-brush-cursor" aria-hidden="true" hidden></span>
         <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
         <span class="paint-brush-cursor mirrored" aria-hidden="true" hidden></span>
@@ -570,6 +607,14 @@
 </div>
 
 <div class="paint-context-menu" role="menu" aria-label="Canvas actions">
+  <!-- The zoom tool's own right-click menu: the three zoom levels a picture is
+       usually looked at, shown only while that tool is armed. -->
+  <div class="paint-context-zoom" hidden>
+    <button type="button" data-context-action="zoom-100">Actual Size (100%)</button>
+    <button type="button" data-context-action="zoom-fit">Fit to Screen</button>
+    <button type="button" data-context-action="zoom-fit-width">Fit to Width</button>
+    <div class="sep"></div>
+  </div>
   <button type="button" data-context-action="cut-layer">Cut Selection to New Layer</button>
   <button type="button" data-context-action="copy-layer">Copy Selection to New Layer</button>
   <div class="sep"></div>
@@ -784,7 +829,14 @@ const ox = overlay.getContext('2d');
 const tx = contentTransformPreview.getContext('2d');
 const status = appRoot.querySelector('.paint-status');
 const sizeInput = appRoot.querySelector('.paint-size input');
+const sizeControl = appRoot.querySelector('.paint-size');
+const sizeValue = appRoot.querySelector('.paint-size output');
 const optionsBar = appRoot.querySelector('.paint-options');
+const optionsName = appRoot.querySelector('.paint-options-tool');
+const optionsFields = appRoot.querySelector('.paint-options-fields');
+const optionsHint = appRoot.querySelector('.paint-option-hint');
+const gridOverlay = appRoot.querySelector('.paint-grid');
+const gridCommand = appRoot.querySelector('[data-cmd="toggle-grid"]');
 const seamXButton = appRoot.querySelector('[data-cmd="seams-x"]');
 const seamYButton = appRoot.querySelector('[data-cmd="seams-y"]');
 const mirrorButtons = [...appRoot.querySelectorAll('[data-cmd^="mirror-"]')];
@@ -797,6 +849,7 @@ let layersCollapsed = false;
 const zoomSlider = appRoot.querySelector('#paintZoomSlider');
 const zoomValue = appRoot.querySelector('#paintZoomValue');
 const contextMenu = appRoot.querySelector('.paint-context-menu');
+const contextZoomGroup = appRoot.querySelector('.paint-context-zoom');
 const MAX_DIMENSION = 8192;
 const CUSTOM_BG_KEY = 'clackos-custom-background';
 const LAYER_PANEL_KEY = 'clackpaint-layers-collapsed';
@@ -819,6 +872,7 @@ let gaussianPreviewOriginal = null;
 let fileName = 'untitled.png';
 let selection = null;
 let cloneSource = null, cloneOffset = null, strokeBuffer = null, mirrorStrokeBefore = null;
+let softStroke = null;
 const retouch = window.ClackRetouch || null;
 let healSource = null, healStroke = null, healOffset = null;
 let smudgeBuffer = null, replaceColour = null;
@@ -828,7 +882,7 @@ let selectivePin = null;
 let seamAppliedX = false, seamAppliedY = false;
 let mirrorMode = 'none';
 let seamAnimating = false, seamAnimationToken = 0;
-let zoom = 1, cursorPoint = null;
+let zoom = 1, cursorPoint = null, showGrid = false;
 let contentTransform = null;
 let freeTransform = null;
 let antsFrame = 0, antsPhase = 0, antsLast = 0;
@@ -1085,14 +1139,61 @@ function updateStackSize() {
   const displayHeight = contentTransform?.targetHeight || height();
   stack.style.width = displayWidth * zoom + 'px';
   stack.style.height = displayHeight * zoom + 'px';
+  updateGrid();
 }
 
-function setZoom(nextZoom, focusPoint, clientX, clientY) {
+/* The grid never draws finer than the eye can follow: the cell doubles in image
+   pixels until a line is at least eight screen pixels from its neighbour, and
+   every eighth line is drawn stronger so the blocks can be counted. */
+function updateGrid() {
+  gridOverlay.hidden = !showGrid;
+  if (!showGrid) return;
+  let cell = 1;
+  while (cell * zoom < 8) cell *= 2;
+  const step = cell * zoom;
+  gridOverlay.style.setProperty('--paint-grid-step', `${step}px`);
+  gridOverlay.style.setProperty('--paint-grid-major', `${step * 8}px`);
+  return cell;
+}
+
+function toggleGrid() {
+  showGrid = !showGrid;
+  gridCommand.setAttribute('aria-pressed', String(showGrid));
+  const cell = updateGrid();
+  setStatus(showGrid ? `Grid on — one square is ${cell} × ${cell} px` : 'Grid off');
+}
+
+/* The zoom that fits the picture in the window, allowing for the padding round
+   the canvas wrap and the stack's own border. */
+function fitZoom(widthOnly) {
+  const room = size => Math.max(16, size - 20);
+  const scaleX = room(canvasWrap.clientWidth) / width();
+  const scaleY = room(canvasWrap.clientHeight) / height();
+  const wanted = widthOnly ? scaleX : Math.min(scaleX, scaleY);
+  return Math.max(ZOOM_LEVELS[0], Math.min(ZOOM_LEVELS[ZOOM_LEVELS.length - 1], wanted));
+}
+
+function zoomToFit(widthOnly) {
+  setZoom(fitZoom(widthOnly), null, null, null, widthOnly ? 'Fitted to the window width' : 'Fitted to the window');
+  if (widthOnly) canvasWrap.scrollTop = 0;
+}
+
+/* The View menu, the zoom tool's right-click menu and the two buttons on the
+   options bar all reach the same four view changes. */
+const VIEW_ZOOM_COMMANDS = {
+  'zoom-in': () => stepZoom(1),
+  'zoom-out': () => stepZoom(-1),
+  'zoom-100': () => setZoom(1, null, null, null, 'Actual size'),
+  'zoom-fit': () => zoomToFit(false),
+  'zoom-fit-width': () => zoomToFit(true)
+};
+
+function setZoom(nextZoom, focusPoint, clientX, clientY, note) {
   const next = Math.max(ZOOM_LEVELS[0], Math.min(ZOOM_LEVELS[ZOOM_LEVELS.length - 1], nextZoom));
   const zoomIndex = ZOOM_LEVELS.reduce((best, level, index) => Math.abs(level - next) < Math.abs(ZOOM_LEVELS[best] - next) ? index : best, 0);
   zoomSlider.value = zoomIndex; zoomValue.textContent = `${Math.round(next * 100)}%`;
   if (next === zoom) {
-    setStatus(`Zoom is already at ${Math.round(zoom * 100)}%`);
+    setStatus(note ? `${note} — zoom ${Math.round(zoom * 100)}%` : `Zoom is already at ${Math.round(zoom * 100)}%`);
     return;
   }
   const wrapRect = canvasWrap.getBoundingClientRect();
@@ -1106,7 +1207,7 @@ function setZoom(nextZoom, focusPoint, clientX, clientY) {
   canvasWrap.scrollTop = stack.offsetTop + (focus.y + 0.5) * zoom - viewportY;
   cursorPoint = null;
   hideBrushCursor();
-  setStatus(`Zoom ${Math.round(zoom * 100)}%`);
+  setStatus(note ? `${note} — zoom ${Math.round(zoom * 100)}%` : `Zoom ${Math.round(zoom * 100)}%`);
 }
 
 function stepZoom(direction, point, clientX, clientY) {
@@ -1126,7 +1227,7 @@ function updateOffsetPreview() {
   if (!dx && !dy) return;
   shiftBase(dx, dy);
   seamAppliedX = enabledX; seamAppliedY = enabledY;
-  cloneSource = null; cloneOffset = null; strokeBuffer = null;
+  cloneSource = null; cloneOffset = null; strokeBuffer = null; softStroke = null;
   healSource = null; healOffset = null; healStroke = null; smudgeBuffer = null;
   endLiquifySession(); if (patchState) clearPatchState(false);
   clearSelection();
@@ -1344,7 +1445,7 @@ function resizeSurfaces(w, h) {
   contentTransformPreview.width = w; contentTransformPreview.height = h; contentTransformPreview.hidden = true;
   seamAppliedX = false; seamAppliedY = false;
   updateStackSize();
-  cloneSource = null; cloneOffset = null; strokeBuffer = null;
+  cloneSource = null; cloneOffset = null; strokeBuffer = null; softStroke = null;
   healSource = null; healOffset = null; healStroke = null; smudgeBuffer = null;
   endLiquifySession(); if (patchState) clearPatchState(false);
   clearSelection();
@@ -1590,8 +1691,18 @@ const SELECTION_TOOLS = new Set(['select', 'lasso', 'magnetic-lasso']);
    it, which is how a selection is used in a photo editor. */
 const SELECTION_AWARE_TOOLS = new Set([...RETOUCH_TOOLS, 'patch', 'patch-brush', 'selective']);
 
+/* Every tool whose stroke, nib or line takes its width from the size slider.
+   Those are the tools the bar shows a Size control for; the rest hide it. */
+const TOOL_SIZE_TOOLS = new Set([
+  ...BRUSH_TOOLS, 'magnetic-lasso', 'line', 'rect', 'ellipse', 'rect-fill'
+]);
+TOOL_SIZE_TOOLS.delete('pencil');   /* the pencil is always one pixel wide */
+
 const TONE_RANGES = [['shadows', 'Shadows'], ['midtones', 'Midtones'], ['highlights', 'Highlights']];
 const TOOL_OPTIONS = {
+  brush: [
+    { id: 'softness', label: 'Softness', type: 'range', min: 0, max: 100, value: 0, step: 1, unit: '%' }
+  ],
   wand: [
     { id: 'tolerance', label: 'Tolerance', type: 'range', min: 0, max: 128, value: 32, step: 1 },
     { id: 'feather', label: 'Feather', type: 'range', min: 0, max: 20, value: 0, step: 1, unit: ' px' },
@@ -1693,19 +1804,15 @@ const stampHardness = () => (option('hardness', 55)) / 100;
 function renderToolOptions() {
   const fields = TOOL_OPTIONS[tool] || [];
   const hint = TOOL_HINTS[tool];
-  optionsBar.replaceChildren();
-  if (!fields.length && !hint) { optionsBar.hidden = true; return; }
-  optionsBar.hidden = false;
-  const name = document.createElement('span');
-  name.className = 'paint-options-tool';
-  name.textContent = appRoot.querySelector(`.paint-tool[data-tool="${tool}"]`)?.getAttribute('aria-label') || tool;
-  optionsBar.append(name);
+  optionsFields.replaceChildren();
+  optionsName.textContent = appRoot.querySelector(`.paint-tool[data-tool="${tool}"]`)?.getAttribute('aria-label') || tool;
+  sizeControl.hidden = !TOOL_SIZE_TOOLS.has(tool);
   fields.forEach(field => {
     if (field.type === 'button') {
       const button = document.createElement('button');
       button.type = 'button'; button.className = 'btn ghost'; button.textContent = field.label;
       button.addEventListener('click', () => toolOptionAction(field.id));
-      optionsBar.append(button);
+      optionsFields.append(button);
       return;
     }
     const row = document.createElement('label');
@@ -1737,13 +1844,10 @@ function renderToolOptions() {
       });
       row.append(input, readout);
     }
-    optionsBar.append(row);
+    optionsFields.append(row);
   });
-  if (hint) {
-    const note = document.createElement('span');
-    note.className = 'paint-option-hint'; note.innerHTML = hint;
-    optionsBar.append(note);
-  }
+  optionsHint.innerHTML = hint || '';
+  optionsHint.hidden = !hint;
 }
 
 function toolOptionAction(id) {
@@ -1877,6 +1981,47 @@ function finishMirroredStroke(sourcePoint) {
 function strokeSeg(a, b, color, lineWidth) {
   bx.strokeStyle = color; bx.lineWidth = lineWidth; bx.lineCap = 'round'; bx.lineJoin = 'round';
   paintMirrored(bx, () => { bx.beginPath(); bx.moveTo(a.x, a.y); bx.lineTo(b.x, b.y); bx.stroke(); });
+}
+
+/* ---- the brush's Softness ----
+ * A soft edge cannot be dabbed on one segment at a time: overlapping dabs pile
+ * their part-transparent rims up until the stroke is hard again. So the whole
+ * stroke is kept on a canvas of its own, drawn hard, and blurred as it is laid
+ * back over the pixels the stroke started from. The rim then stays soft however
+ * many times the pointer crosses its own path.
+ */
+const brushSoftness = () => (tool === 'brush' ? option('softness', 0) : 0) / 100;
+
+function beginSoftStroke() {
+  strokeBuffer = copyCanvas();
+  const canvas = document.createElement('canvas');
+  canvas.width = width(); canvas.height = height();
+  softStroke = { canvas, ctx: canvas.getContext('2d') };
+}
+
+function softStrokeSeg(a, b, color, lineWidth) {
+  if (!softStroke) { strokeSeg(a, b, color, lineWidth); return; }
+  const sx = softStroke.ctx;
+  sx.strokeStyle = color; sx.lineWidth = lineWidth; sx.lineCap = 'round'; sx.lineJoin = 'round';
+  paintMirrored(sx, () => { sx.beginPath(); sx.moveTo(a.x, a.y); sx.lineTo(b.x, b.y); sx.stroke(); });
+  renderSoftStroke(lineWidth);
+}
+
+function renderSoftStroke(lineWidth) {
+  if (!softStroke || !strokeBuffer) return;
+  const blur = Math.max(0.5, (lineWidth / 2) * brushSoftness());
+  bx.save();
+  bx.globalCompositeOperation = 'copy';
+  bx.filter = 'none';
+  bx.drawImage(strokeBuffer, 0, 0);
+  bx.globalCompositeOperation = 'source-over';
+  bx.filter = `blur(${blur}px)`;
+  bx.drawImage(softStroke.canvas, 0, 0);
+  bx.restore();
+}
+
+function endSoftStroke() {
+  softStroke = null; strokeBuffer = null;
 }
 
 function spray(point, color) {
@@ -2636,6 +2781,7 @@ function openContextMenu(event) {
   contextMenu.querySelector('[data-context-action="cut-layer"]').disabled = !selection;
   contextMenu.querySelector('[data-context-action="copy-layer"]').disabled = !selection;
   contextMenu.querySelector('[data-context-action="merge-layer"]').disabled = layers.indexOf(activeLayer) < 1;
+  contextZoomGroup.hidden = tool !== 'zoom';
   contextMenu.classList.add('open');
   const box = contextMenu.getBoundingClientRect();
   contextMenu.style.left = Math.max(4, Math.min(innerWidth - box.width - 4, event.clientX)) + 'px';
@@ -2647,7 +2793,8 @@ contextMenu.addEventListener('click', event => {
   const action = event.target.closest('[data-context-action]')?.dataset.contextAction;
   if (!action) return;
   closeContextMenu();
-  if (action === 'cut-layer') selectionToLayer(true);
+  if (VIEW_ZOOM_COMMANDS[action]) VIEW_ZOOM_COMMANDS[action]();
+  else if (action === 'cut-layer') selectionToLayer(true);
   else if (action === 'copy-layer') selectionToLayer(false);
   else if (action === 'new-layer') newLayer();
   else if (action === 'duplicate-layer') duplicateLayer();
@@ -2751,7 +2898,10 @@ stack.addEventListener('pointerdown', event => {
     if (SELECTION_AWARE_TOOLS.has(tool)) beginStrokeSelection();
     else { clearSelection(); strokeSelection = null; }
     if (tool === 'pencil') strokeSeg(point, point, drawColor, 1);
-    else if (tool === 'brush') strokeSeg(point, point, drawColor, toolSize());
+    else if (tool === 'brush') {
+      if (brushSoftness() > 0) { beginSoftStroke(); softStrokeSeg(point, point, drawColor, toolSize()); }
+      else strokeSeg(point, point, drawColor, toolSize());
+    }
     else if (tool === 'eraser') strokeSeg(point, point, bg, toolSize() * 3);
     else if (tool === 'spray') { spray(point, drawColor); sprayTimer = setInterval(() => spray(last, drawColor), 40); }
     else if (tool === 'clone') {
@@ -2807,7 +2957,10 @@ stack.addEventListener('pointermove', event => {
     renderSelection(preview);
   }
   else if (tool === 'pencil') strokeSeg(last, point, drawColor, 1);
-  else if (tool === 'brush') strokeSeg(last, point, drawColor, toolSize());
+  else if (tool === 'brush') {
+    if (softStroke) softStrokeSeg(last, point, drawColor, toolSize());
+    else strokeSeg(last, point, drawColor, toolSize());
+  }
   else if (tool === 'eraser') strokeSeg(last, point, bg, toolSize() * 3);
   else if (tool === 'clone') brushAlong(last, point, cloneAt);
   else if (tool === 'blur') brushAlong(last, point, blurAt);
@@ -2878,6 +3031,8 @@ function endDraw(event) {
     commitShape(point); setStatus('Shape drawn');
   } else if (tool === 'clone') {
     strokeBuffer = null; drawCloneSource(); setStatus('Clone stroke applied; Alt-click to choose a different source');
+  } else if (tool === 'brush') {
+    if (softStroke) { endSoftStroke(); setStatus('Soft brush stroke applied'); }
   } else if (tool === 'blur') {
     strokeBuffer = null; setStatus('Blur stroke applied');
   } else if (tool === 'heal' || tool === 'spot-heal') {
@@ -5353,8 +5508,17 @@ function setMirrorMode(mode) {
   if (cursorPoint) updateBrushCursor(cursorPoint);
 }
 
-sizeInput.addEventListener('input', () => { if (cursorPoint) updateBrushCursor(cursorPoint); });
+sizeInput.addEventListener('input', () => {
+  sizeValue.textContent = sizeInput.value;
+  if (cursorPoint) updateBrushCursor(cursorPoint);
+});
 zoomSlider.addEventListener('input', () => setZoom(ZOOM_LEVELS[Number(zoomSlider.value)]));
+/* The bar's own 1:1 and Fit buttons run the same commands as the View menu,
+   which is wired to the menu bar alone. */
+optionsBar.addEventListener('click', event => {
+  const command = event.target.closest('[data-cmd]');
+  if (command) runCmd(command.dataset.cmd);
+});
 
 /* ---- Background removal — MODNet via Transformers.js, run in a worker so the
  *      model download and inference never freeze the paint UI ---- */
@@ -5718,6 +5882,8 @@ if (window.ClackDither) {
 function runCmd(cmd) {
   /* Purely a view change, so it stays available while a preview is running. */
   if (cmd === 'layer-panel') { setLayersCollapsed(!layersCollapsed, true); return; }
+  if (cmd === 'toggle-grid') { toggleGrid(); return; }
+  if (VIEW_ZOOM_COMMANDS[cmd]) { VIEW_ZOOM_COMMANDS[cmd](); return; }
   /* A liquify mesh and a live patch are both tied to a snapshot of the layer,
      so any command that might change it settles them first. */
   endLiquifySession();
