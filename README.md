@@ -985,9 +985,25 @@ windows, and desktop actions.
   across the Y axis. The two effects that need a neural network share an
   **Effects → AI** submenu, and both run in a Web Worker so a download or a long
   inference never freezes the painting. **Remove Background** cuts the subject
-  out onto transparency using the MODNet model (Apache-2.0) with the vendored
-  Transformers.js — the picture never leaves the browser, and the ≈13 MB model
-  is fetched from the Hugging Face Hub once and cached. **DeepDream** is
+  out using the MODNet model (Apache-2.0) with the vendored Transformers.js —
+  the picture never leaves the browser, and the ≈13 MB model is fetched from
+  the Hugging Face Hub once and cached. What the worker sends back is the
+  matte, not a finished cut-out: one coverage byte per pixel, with hair, fur
+  and glass left in the middle ground. Every judgement about that matte is
+  then made in the dialog, against a live preview over a checkerboard that can
+  also be flipped to the matte itself or the picture before. **Cutoff** says
+  where along the fuzz the subject begins and **edge softness** how wide that
+  crossing is, **grow / shrink** pulls the edge in or pushes it out by up to
+  eight pixels, **feather** blurs it, and two tidying switches throw away the
+  specks found off in the background and close the holes left inside the
+  subject. A last switch swaps subject for background. The **Output** box then
+  decides what the cut-out is for: erasing the background in place, cutting or
+  copying the subject to a layer of its own, filling the background with the
+  second colour, putting the matte on a layer as a black-and-white mask, or
+  making the subject the selection and touching no pixels at all. Since the
+  shaping is arithmetic rather than inference, nothing needs the network twice
+  — the settings move under the slider, and reopening the dialog on the same
+  layer reuses the matte it already has. **DeepDream** is
   Google's 2015 original: gradient ascent on one layer of `inception5h`, the
   ImageNet GoogLeNet it was first done with, which is why what grows out of the
   picture is dogs, birds and eyes. Six layers are offered from fur and weave up
