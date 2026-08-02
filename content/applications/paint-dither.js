@@ -1518,6 +1518,8 @@ function computeInto(canvasWrite) {
   if (canvasWrite) {
     restoreOriginal();
     context.putImageData(slice, region.x, region.y);
+    /* the host trims the bounding-box result back to a lasso outline */
+    if (host.confine) host.confine(original);
   }
   return { values, slice };
 }

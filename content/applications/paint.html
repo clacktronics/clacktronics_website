@@ -119,6 +119,15 @@
 .paint-progress > div { width: 0; height: 100%; background: var(--leaf-deep); }
 .paint-dialog-body [data-caview="form"] { display: flex; flex-direction: column; gap: 12px; }
 .paint-dialog-body [data-caview="form"] > label:not(.paint-check) { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+/* Transparency reads as a checkerboard, the way every other bitmap editor
+   shows it. The stack sits under every layer canvas, so it shows through
+   wherever the pixels are see-through. */
+.paint-stack {
+  background-color: #ffffff;
+  background-image: linear-gradient(45deg, #c9c9c9 25%, transparent 25%), linear-gradient(-45deg, #c9c9c9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #c9c9c9 75%), linear-gradient(-45deg, transparent 75%, #c9c9c9 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
 .paint-transform-box { position: absolute; inset: -2px; z-index: 5; border: 1px dashed #fff; outline: 1px dashed #000; pointer-events: none; }
 .paint-transform-box[hidden] { display: none; }
 .paint-stack .content-transform-preview { z-index: 4; pointer-events: none; image-rendering: auto; }
@@ -134,6 +143,13 @@
 .paint-transform-toolbar { position: absolute; left: 50%; bottom: -44px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 5px 6px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); color: var(--control-text); box-shadow: 3px 3px 0 color-mix(in srgb,var(--shadow) var(--shadow-alpha),transparent); pointer-events: auto; white-space: nowrap; }
 .paint-transform-size { min-width: 92px; font-size: 10px; text-align: center; font-variant-numeric: tabular-nums; }
 .paint-transform-toolbar .btn { min-height: 24px; padding: 3px 8px; font-size: 10px; }
+/* Free transform floats the lifted pixels above the layers, so its frame is
+   placed in stack pixels rather than pinned to the canvas edges. */
+.paint-free-box { position: absolute; z-index: 6; box-sizing: border-box; border: 1px dashed #fff; outline: 1px dashed #000; pointer-events: auto; cursor: move; touch-action: none; }
+.paint-free-box[hidden], .paint-free-toolbar[hidden] { display: none; }
+.paint-free-rotate { all: unset; position: absolute; left: 50%; top: -26px; width: 11px; height: 11px; margin-left: -6px; box-sizing: border-box; border: 1px solid #000; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px #fff; pointer-events: auto; touch-action: none; cursor: grab; }
+.paint-free-rotate::before { content: ''; position: absolute; left: 5px; top: 10px; width: 1px; height: 14px; background: #000; box-shadow: 1px 0 0 #fff; }
+.paint-free-toolbar { z-index: 7; pointer-events: auto; }
 @media (max-width: 700px) { .paint-layer-panel { width: 132px; min-width: 112px; } .paint-layer-row { grid-template-columns: 20px 30px minmax(0,1fr); } .paint-layer-thumb { width: 28px; } }
 </style>
 <script src="../../assets/js/file-manager.js"></script>
@@ -145,7 +161,9 @@
     <div class="rm"><button>File</button><div class="rm-dd">
       <button data-cmd="new"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>New</button>
       <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open…</button>
+      <button data-cmd="open-layer"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Open as Layer…</button>
       <button data-cmd="open-site"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>Open from website…</button>
+      <button data-cmd="open-site-layer"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>Open from website as layer…</button>
       <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save</button>
       <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As…</button>
       <button data-cmd="upload-site"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload to website…</button>
@@ -155,6 +173,10 @@
     <div class="rm"><button>Edit</button><div class="rm-dd">
       <button data-cmd="undo"><span class="pixel-icon" data-icon="undo" aria-hidden="true"></span>Undo</button>
       <button data-cmd="redo"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Redo</button>
+      <div class="sep"></div>
+      <button data-cmd="free-transform"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Free Transform</button>
+      <button data-cmd="select-all"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Select All</button>
+      <button data-cmd="deselect"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>Deselect</button>
     </div></div>
     <div class="rm"><button>Layer</button><div class="rm-dd">
       <button data-cmd="layer-new"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>New Layer</button>
@@ -296,6 +318,22 @@
             <button type="button" class="btn ghost" data-transform-action="cancel">Cancel</button>
             <button type="button" class="btn primary" data-transform-action="apply">Apply</button>
           </div>
+        </div>
+        <div class="paint-free-box" hidden aria-label="Free transform handles">
+          <button type="button" class="paint-transform-handle" data-handle="nw" aria-label="Scale from top left"></button>
+          <button type="button" class="paint-transform-handle" data-handle="n" aria-label="Scale from top"></button>
+          <button type="button" class="paint-transform-handle" data-handle="ne" aria-label="Scale from top right"></button>
+          <button type="button" class="paint-transform-handle" data-handle="e" aria-label="Scale from right"></button>
+          <button type="button" class="paint-transform-handle" data-handle="se" aria-label="Scale from bottom right"></button>
+          <button type="button" class="paint-transform-handle" data-handle="s" aria-label="Scale from bottom"></button>
+          <button type="button" class="paint-transform-handle" data-handle="sw" aria-label="Scale from bottom left"></button>
+          <button type="button" class="paint-transform-handle" data-handle="w" aria-label="Scale from left"></button>
+          <button type="button" class="paint-free-rotate" data-handle="rotate" aria-label="Rotate"></button>
+        </div>
+        <div class="paint-transform-toolbar paint-free-toolbar" hidden>
+          <span class="paint-transform-size paint-free-size">640 × 400 px</span>
+          <button type="button" class="btn ghost" data-free-action="cancel">Cancel</button>
+          <button type="button" class="btn primary" data-free-action="apply">Apply</button>
         </div>
       </div>
     </div>
@@ -476,7 +514,10 @@ const stack = appRoot.querySelector('.paint-stack');
 const canvasWrap = appRoot.querySelector('.paint-canvas-wrap');
 const brushCursors = [...appRoot.querySelectorAll('.paint-brush-cursor')];
 const transformBox = appRoot.querySelector('.paint-transform-box');
-const transformSize = appRoot.querySelector('.paint-transform-size');
+const transformSize = appRoot.querySelector('.paint-transform-box .paint-transform-size');
+const freeBox = appRoot.querySelector('.paint-free-box');
+const freeToolbar = appRoot.querySelector('.paint-free-toolbar');
+const freeSize = appRoot.querySelector('.paint-free-size');
 let bx = base.getContext('2d', { willReadFrequently: true });
 const ax = seamAnimation.getContext('2d');
 const ox = overlay.getContext('2d');
@@ -522,6 +563,8 @@ let mirrorMode = 'none';
 let seamAnimating = false, seamAnimationToken = 0;
 let zoom = 1, cursorPoint = null;
 let contentTransform = null;
+let freeTransform = null;
+let antsFrame = 0, antsPhase = 0, antsLast = 0;
 let liveContentWorker = null, liveContentToken = 0, liveContentTimer = 0, liveContentLastRun = 0;
 const ZOOM_LEVELS = [0.125, 0.25, 0.5, 1, 2, 4, 8];
 const undoStack = [], redoStack = [];
@@ -559,6 +602,7 @@ function syncLayerCanvases() {
 
 function activateLayer(layer) {
   if (!layer || !layers.includes(layer)) return;
+  if (freeTransform && layer !== activeLayer) { status.textContent = 'Apply or cancel the free transform before changing layers'; return; }
   if ((adjustPreviewing || effectPreviewing) && layer !== activeLayer) { setStatus('Apply or cancel the live preview before changing layers'); return; }
   if (ditherPreviewing && layer !== activeLayer) { setStatus('Apply or cancel the dithering preview before changing layers'); return; }
   if (contentTransform && layer !== activeLayer) { status.textContent = 'Apply or cancel Form-Detecting Scale before changing layers'; return; }
@@ -789,6 +833,7 @@ function setZoom(nextZoom, focusPoint, clientX, clientY) {
   const focus = focusPoint || { x: width() / 2, y: height() / 2 };
   zoom = next;
   updateStackSize();
+  if (freeTransform) renderFreeTransform();
   canvasWrap.scrollLeft = stack.offsetLeft + (focus.x + 0.5) * zoom - viewportX;
   canvasWrap.scrollTop = stack.offsetTop + (focus.y + 0.5) * zoom - viewportY;
   cursorPoint = null;
@@ -888,7 +933,33 @@ function reapplySeam() {
 function clearSelection() {
   selection = null;
   cropButton.disabled = true;
+  stopAnts();
   ox.clearRect(0, 0, overlay.width, overlay.height);
+}
+
+/* ---- marching ants ----
+ * The classic crawl is one dash pattern walking anti-clockwise around the
+ * outline. Advancing the dash offset a step at a time (rather than every
+ * animation frame) keeps the speed the same on any refresh rate, and the
+ * loop stops itself the moment the selection or the overlay is needed for
+ * something else. */
+function stopAnts() {
+  cancelAnimationFrame(antsFrame);
+  antsFrame = 0;
+}
+
+function startAnts() {
+  if (antsFrame || !selection || freeTransform) return;
+  antsFrame = requestAnimationFrame(antsStep);
+}
+
+function antsStep(now) {
+  antsFrame = 0;
+  if (!selection || freeTransform || drawing) return;
+  if (now - antsLast < 80) { startAnts(); return; }
+  antsLast = now;
+  antsPhase = (antsPhase + 1) % 8;
+  renderSelection();
 }
 
 function selectionBounds(points) {
@@ -914,6 +985,28 @@ function traceSelectionPath(context, selected = selection, offsetX = 0, offsetY 
   }
 }
 
+/* Filters and effects run over the whole active layer and are then confined:
+   every pixel outside the selection is put back from the snapshot taken before
+   the operation. That works for any effect — including the canvas filters,
+   which cannot be clipped pixel-accurately — and keeps lasso and magnetic
+   selections as exact as rectangular ones. */
+function confineToSelection(before) {
+  if (!selection || !before || before.width !== width() || before.height !== height()) return false;
+  const mask = selectionMask();
+  if (!mask) return false;
+  const after = bx.getImageData(0, 0, width(), height());
+  const pixels = after.data, previous = before.data;
+  for (let i = 0, pixel = 0; i < pixels.length; i += 4, pixel++) {
+    if (mask[pixel]) continue;
+    pixels[i] = previous[i]; pixels[i + 1] = previous[i + 1];
+    pixels[i + 2] = previous[i + 2]; pixels[i + 3] = previous[i + 3];
+  }
+  bx.putImageData(after, 0, 0);
+  return true;
+}
+
+const selectionNote = () => selection ? ' (selection only)' : '';
+
 function selectionMask(selected = selection) {
   if (!selected) return null;
   const maskCanvas = document.createElement('canvas'); maskCanvas.width = width(); maskCanvas.height = height();
@@ -926,16 +1019,19 @@ function selectionMask(selected = selection) {
 
 function renderSelection(rect = selection) {
   ox.clearRect(0, 0, overlay.width, overlay.height);
-  if (!rect || rect.w < 1 || rect.h < 1) return;
+  if (!rect || rect.w < 1 || rect.h < 1) { stopAnts(); return; }
   ox.save();
-  ox.setLineDash([4, 3]);
+  ox.setLineDash([4, 4]);
   ox.lineWidth = 1;
+  ox.lineDashOffset = -antsPhase;
   ox.strokeStyle = '#ffffff';
   traceSelectionPath(ox, rect); ox.stroke();
-  ox.lineDashOffset = 3;
+  ox.lineDashOffset = -antsPhase + 4;
   ox.strokeStyle = '#000000';
   traceSelectionPath(ox, rect); ox.stroke();
   ox.restore();
+  /* a live drag preview redraws itself; only a settled selection crawls */
+  if (rect === selection) startAnts();
 }
 
 function resizeSurfaces(w, h) {
@@ -1053,6 +1149,7 @@ function pushUndo() {
 }
 
 function undo() {
+  if (freeTransform) finishFreeTransform(false);
   if (!undoStack.length) return;
   documentRevision++;
   if (snapshotBytes() <= MAX_UNDO_BYTES) redoStack.push(snapshot());
@@ -1061,6 +1158,7 @@ function undo() {
 }
 
 function redo() {
+  if (freeTransform) finishFreeTransform(false);
   if (!redoStack.length) return;
   documentRevision++;
   undoStack.push(snapshot());
@@ -1096,6 +1194,15 @@ const evPos = event => {
   return {
     x: Math.max(0, Math.min(width() - 1, Math.floor((event.clientX - rect.left) * width() / rect.width))),
     y: Math.max(0, Math.min(height() - 1, Math.floor((event.clientY - rect.top) * height() / rect.height)))
+  };
+};
+/* Free transform needs to follow the pointer past the canvas edge, so it uses
+   the unclamped, unrounded position. */
+const evPosExact = event => {
+  const rect = base.getBoundingClientRect();
+  return {
+    x: (event.clientX - rect.left) * width() / rect.width,
+    y: (event.clientY - rect.top) * height() / rect.height
   };
 };
 const rectFrom = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) });
@@ -1246,6 +1353,7 @@ function brushAlong(a, b, callback) {
 }
 
 function drawCloneSource() {
+  stopAnts();
   ox.clearRect(0, 0, width(), height());
   if (!cloneSource || tool !== 'clone') return;
   const radius = Math.max(5, toolSize() * 1.5);
@@ -1286,6 +1394,7 @@ function blurAt(point) {
 }
 
 function shapePreview(point) {
+  stopAnts();
   ox.clearRect(0, 0, width(), height());
   ox.strokeStyle = drawColor; ox.fillStyle = drawColor; ox.lineWidth = toolSize();
   const rect = rectFrom(start, point);
@@ -1371,6 +1480,7 @@ function closeContextMenu() { contextMenu.classList.remove('open'); }
 function openContextMenu(event) {
   event.preventDefault();
   if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before using canvas actions'); return; }
+  if (freeTransform) { status.textContent = 'Apply or cancel the free transform before using canvas actions'; return; }
   if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before using canvas actions'; return; }
   contextMenu.querySelector('[data-context-action="cut-layer"]').disabled = !selection;
   contextMenu.querySelector('[data-context-action="copy-layer"]').disabled = !selection;
@@ -1398,6 +1508,7 @@ stack.addEventListener('pointerdown', event => {
   if (event.button !== 0 && event.button !== 2) return;
   event.preventDefault();
   if (event.button === 2) return;
+  if (freeTransform) { status.textContent = 'Drag the frame or its handles, then Apply or Cancel the free transform'; return; }
   if (contentTransform) { status.textContent = 'Drag a transform handle, or Apply/Cancel the form-detecting scale'; return; }
   if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before painting'); return; }
   if (seamAnimating) { status.textContent = `Seam view is sliding into place — ${width()} × ${height()} px`; return; }
@@ -1571,10 +1682,14 @@ function previewGaussianBlur() {
   const radius = Number(appRoot.querySelector('#gaussianRadius').value);
   appRoot.querySelector('#gaussianRadiusValue').textContent = `${radius.toFixed(1)} px`;
   renderGaussianBlur(radius, gaussianPreviewOriginal);
+  confineToSelection(gaussianPreviewOriginal);
 }
 
 function openGaussianBlur() {
   gaussianPreviewOriginal = bx.getImageData(0, 0, width(), height()); effectPreviewing = true;
+  appRoot.querySelector('#gaussianBlurModal .app-status').textContent = selection
+    ? 'Live preview · softens the selected area of the active layer.'
+    : 'Live preview · softens the active layer. Tile edges wrap so the effect remains seamless.';
   stack.classList.add('adjust-busy'); showModal('gaussianBlurModal'); previewGaussianBlur();
   appRoot.querySelector('#gaussianRadius').focus();
 }
@@ -1587,12 +1702,13 @@ function cancelGaussianPreview() {
 }
 
 function addNoise(amount, monochrome) {
-  pushUndo(); clearSelection();
+  pushUndo();
+  const mask = selectionMask();
   const image = bx.getImageData(0, 0, width(), height()), data = image.data;
   const strength = 255 * amount / 100;
   const randomDelta = () => (Math.random() * 2 - 1) * strength;
-  for (let i = 0; i < data.length; i += 4) {
-    if (!data[i + 3]) continue;
+  for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+    if (!data[i + 3] || (mask && !mask[pixel])) continue;
     if (monochrome) {
       const delta = randomDelta();
       data[i] += delta; data[i + 1] += delta; data[i + 2] += delta;
@@ -1601,7 +1717,7 @@ function addNoise(amount, monochrome) {
     }
   }
   bx.putImageData(image, 0, 0);
-  setStatus(`${monochrome ? 'Monochromatic' : 'Colour'} noise applied at ${amount}%`);
+  setStatus(`${monochrome ? 'Monochromatic' : 'Colour'} noise applied at ${amount}%${selectionNote()}`);
 }
 
 const ADJUSTMENTS = {
@@ -1778,7 +1894,9 @@ function openAdjustment(kind) {
     input.addEventListener('input', () => { output.value = input.value; output.textContent = input.value; scheduleAdjustmentPreview(); });
     row.append(text, input, output); fields.append(row);
   });
-  appRoot.querySelector('#adjustHelp').textContent = 'Live preview · adjusts the active layer while preserving transparency.';
+  appRoot.querySelector('#adjustHelp').textContent = selection
+    ? 'Live preview · adjusts the selected area of the active layer while preserving transparency.'
+    : 'Live preview · adjusts the active layer while preserving transparency.';
   const buttons = appRoot.querySelector('#adjustForm .paint-dialog-actions'); buttons.querySelector('.primary').hidden = false; buttons.querySelector('.ghost').textContent = 'Cancel';
   showModal('adjustModal'); fields.querySelector('input')?.focus();
   scheduleAdjustmentPreview(); startHistogramUpdates();
@@ -1796,16 +1914,55 @@ appRoot.querySelector('#adjustForm').addEventListener('submit', event => {
   event.preventDefault(); if (!activeAdjustment || !adjustmentOriginal) return;
   const kind = activeAdjustment, title = ADJUSTMENTS[kind].title, values = adjustmentValues(), original = adjustmentOriginal;
   bx.putImageData(original.pixels, 0, 0); pushUndo(); bx.putImageData(adjustedImage(kind, values), 0, 0);
-  closeAdjustment(false); setStatus(`${title} applied`);
+  closeAdjustment(false); setStatus(`${title} applied${original.mask ? ' (selection only)' : ''}`);
 });
 
 const filePick = appRoot.querySelector('#paintFilePicker');
+let pickAsLayer = false;
 filePick.addEventListener('change', () => {
   const file = filePick.files[0]; filePick.value = '';
+  const asLayer = pickAsLayer; pickAsLayer = false;
   if (!file || !/^image\/(?:png|jpeg|gif|webp|bmp)$/i.test(file.type)) { if (file) setStatus('Please choose a bitmap image'); return; }
   const url = URL.createObjectURL(file);
-  loadImage(url, file.name).catch(() => {}).finally(() => URL.revokeObjectURL(url));
+  const open = asLayer ? loadImageAsLayer(url, file.name) : loadImage(url, file.name);
+  open.catch(() => {}).finally(() => URL.revokeObjectURL(url));
 });
+
+/* Opening as a layer keeps the document's size: the picture lands centred on a
+   new layer above the active one, scaled down only if it would not otherwise
+   fit. */
+function loadImageAsLayer(src, name) {
+  return new Promise((resolve, reject) => {
+    if (ditherPreviewing || contentTransform || freeTransform || adjustPreviewing || effectPreviewing) {
+      setStatus('Finish the current image operation before opening another picture');
+      reject(new Error('busy')); return;
+    }
+    const image = new Image();
+    const imageURL = new URL(src, appUrl);
+    if (imageURL.origin !== window.location.origin) image.crossOrigin = 'anonymous';
+    image.onload = () => {
+      if (image.naturalWidth > MAX_DIMENSION || image.naturalHeight > MAX_DIMENSION) {
+        const error = new Error(`Image is larger than ${MAX_DIMENSION} px`); setStatus(error.message); reject(error); return;
+      }
+      pushUndo();
+      const scale = Math.min(1, width() / image.naturalWidth, height() / image.naturalHeight);
+      const w = Math.max(1, Math.round(image.naturalWidth * scale));
+      const h = Math.max(1, Math.round(image.naturalHeight * scale));
+      const layerName = String(name || 'Layer').replace(/\.[^.]+$/, '') || 'Layer';
+      const layer = addLayer(layerName);
+      const context = layer.canvas.getContext('2d');
+      context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+      context.drawImage(image, Math.round((width() - w) / 2), Math.round((height() - h) / 2), w, h);
+      syncLayerCanvases(); clearSelection(); renderLayerPanel();
+      setStatus(`Opened ${name} as a new layer${scale < 1 ? ' (scaled to fit)' : ''}`);
+      resolve();
+    };
+    image.onerror = () => {
+      const error = new Error(`Could not open ${name} as a layer`); setStatus(error.message); reject(error);
+    };
+    image.src = src;
+  });
+}
 
 function loadImage(src, name, done) {
   return new Promise((resolve, reject) => {
@@ -1989,12 +2146,15 @@ appRoot.querySelector('#uploadCopy').addEventListener('click', async () => {
   }
 });
 
-function openWebsiteBrowser() {
+function openWebsiteBrowser(asLayer = false) {
   window.ClackOSFileManager.open({
     root: appRoot === document ? undefined : appRoot,
-    title: 'Open image from website',
+    title: asLayer ? 'Open image from website as a layer' : 'Open image from website',
     accept: item => item.kind === 'image',
-    onSelect: item => loadImage(item.drive === 'github' ? item.url : item.downloadUrl, item.name)
+    onSelect: item => {
+      const url = item.drive === 'github' ? item.url : item.downloadUrl;
+      return asLayer ? loadImageAsLayer(url, item.name) : loadImage(url, item.name);
+    }
   });
 }
 
@@ -2040,8 +2200,8 @@ appRoot.querySelector('#gaussianBlurForm').addEventListener('submit', event => {
   if (!gaussianPreviewOriginal || !Number.isFinite(radius) || radius < 0.1 || radius > 50) return;
   const original = gaussianPreviewOriginal; bx.putImageData(original, 0, 0);
   gaussianPreviewOriginal = null; effectPreviewing = false; stack.classList.remove('adjust-busy');
-  pushUndo(); clearSelection(); renderGaussianBlur(radius, original); hideModal('gaussianBlurModal');
-  setStatus(`Gaussian Blur applied at ${radius.toFixed(1)}px radius`);
+  pushUndo(); renderGaussianBlur(radius, original); confineToSelection(original); hideModal('gaussianBlurModal');
+  setStatus(`Gaussian Blur applied at ${radius.toFixed(1)}px radius${selectionNote()}`);
 });
 appRoot.querySelector('#gaussianRadius').addEventListener('input', previewGaussianBlur);
 appRoot.querySelector('#noiseForm').addEventListener('submit', event => {
@@ -2191,6 +2351,162 @@ transformBox.querySelectorAll('[data-handle]').forEach(handle => handle.addEvent
   };
   handle.addEventListener('pointermove', move); handle.addEventListener('pointerup', end); handle.addEventListener('pointercancel', end);
 }));
+
+/* ---- Free transform ----
+ * The selected pixels (or the whole active layer when nothing is selected) are
+ * lifted off the layer into a floating source canvas, drawn on the overlay
+ * while they are being moved, scaled and rotated, and stamped back down on
+ * Apply. Cancel simply puts the untouched layer back. Everything happens on the
+ * active layer only; other layers are never touched. */
+function freeTransformArea() {
+  if (!selection) return { x: 0, y: 0, w: width(), h: height() };
+  return { x: selection.x, y: selection.y, w: selection.w, h: selection.h };
+}
+
+function eraseFreeTransformSource() {
+  bx.save();
+  bx.globalCompositeOperation = 'destination-out';
+  bx.fillStyle = '#000';
+  if (freeTransform.hadSelection) { traceSelectionPath(bx, freeTransform.selection); bx.fill(); }
+  else bx.clearRect(0, 0, width(), height());
+  bx.restore();
+}
+
+function drawFreeTransform(context) {
+  const item = freeTransform;
+  context.save();
+  context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+  context.translate(item.cx, item.cy);
+  context.rotate(item.angle);
+  context.scale(item.w < 0 ? -1 : 1, item.h < 0 ? -1 : 1);
+  const w = Math.abs(item.w), h = Math.abs(item.h);
+  context.drawImage(item.source, -w / 2, -h / 2, w, h);
+  context.restore();
+}
+
+function renderFreeTransform() {
+  if (!freeTransform) return;
+  ox.clearRect(0, 0, width(), height());
+  drawFreeTransform(ox);
+  const item = freeTransform, w = Math.abs(item.w), h = Math.abs(item.h);
+  freeBox.style.left = (item.cx - w / 2) * zoom + 'px';
+  freeBox.style.top = (item.cy - h / 2) * zoom + 'px';
+  freeBox.style.width = w * zoom + 'px';
+  freeBox.style.height = h * zoom + 'px';
+  freeBox.style.transform = `rotate(${item.angle}rad)`;
+  const degrees = Math.round(item.angle * 180 / Math.PI);
+  freeSize.textContent = `${Math.round(w)} × ${Math.round(h)} px${degrees ? ` · ${degrees}°` : ''}`;
+  status.textContent = `Free transform — ${Math.round(w)} × ${Math.round(h)} px · drag to move, handles to scale, the top knob to rotate · Enter applies · Esc cancels`;
+}
+
+function beginFreeTransform() {
+  if (freeTransform) return;
+  if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale first'; return; }
+  if (ditherPreviewing) { setStatus('Apply or cancel the dithering preview before transforming'); return; }
+  if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before transforming'); return; }
+  if (seamAnimating || contentJob) { setStatus('Finish the current image operation first'); return; }
+  const area = freeTransformArea();
+  if (area.w < 1 || area.h < 1) { setStatus('Nothing to transform'); return; }
+  const source = document.createElement('canvas');
+  source.width = area.w; source.height = area.h;
+  const context = source.getContext('2d');
+  if (selection) { context.save(); traceSelectionPath(context, selection, area.x, area.y); context.clip(); }
+  context.drawImage(base, -area.x, -area.y);
+  if (selection) context.restore();
+  freeTransform = {
+    source, selection, hadSelection: !!selection,
+    original: bx.getImageData(0, 0, width(), height()),
+    cx: area.x + area.w / 2, cy: area.y + area.h / 2,
+    w: area.w, h: area.h, angle: 0
+  };
+  eraseFreeTransformSource();
+  stopAnts();
+  freeBox.hidden = false; freeToolbar.hidden = false;
+  hideBrushCursor();
+  seamXButton.disabled = true; seamYButton.disabled = true;
+  renderFreeTransform();
+}
+
+function finishFreeTransform(apply) {
+  const item = freeTransform;
+  if (!item) return;
+  freeTransform = null;
+  freeBox.hidden = true; freeToolbar.hidden = true;
+  ox.clearRect(0, 0, width(), height());
+  seamXButton.disabled = false; seamYButton.disabled = false;
+  bx.putImageData(item.original, 0, 0);
+  if (!apply) { renderSelection(); setStatus('Free transform cancelled'); return; }
+  pushUndo();
+  freeTransform = item; eraseFreeTransformSource(); drawFreeTransform(bx); freeTransform = null;
+  clearSelection(); renderLayerPanel();
+  setStatus(`Free transform applied to ${item.hadSelection ? 'the selection' : activeLayer.name}`);
+}
+
+/* Dragging inside the frame moves the pixels; the handles scale from the
+   opposite corner or edge, and the knob above the frame rotates. All of the
+   maths happens in the frame's own rotated axes so a scaled-then-rotated
+   transform still follows the pointer. */
+freeBox.addEventListener('pointerdown', event => {
+  if (!freeTransform) return;
+  event.preventDefault(); event.stopPropagation();
+  const handle = event.target.closest('[data-handle]');
+  const direction = handle?.dataset.handle || 'move';
+  const grip = handle || freeBox;
+  const item = freeTransform;
+  const startAngle = item.angle;
+  const cos = Math.cos(startAngle), sin = Math.sin(startAngle);
+  const startState = { cx: item.cx, cy: item.cy, w: item.w, h: item.h };
+  const startPoint = evPosExact(event);
+  /* only the eight compass handles scale — "move" and "rotate" carry letters
+     that would otherwise read as directions */
+  const compass = direction === 'move' || direction === 'rotate' ? '' : direction;
+  const sx = compass.includes('e') ? 1 : compass.includes('w') ? -1 : 0;
+  const sy = compass.includes('s') ? 1 : compass.includes('n') ? -1 : 0;
+  /* the point that stays put while a handle is dragged */
+  const anchor = {
+    x: startState.cx + (-sx * startState.w / 2) * cos - (-sy * startState.h / 2) * sin,
+    y: startState.cy + (-sx * startState.w / 2) * sin + (-sy * startState.h / 2) * cos
+  };
+  const pointerAngle = Math.atan2(startPoint.y - startState.cy, startPoint.x - startState.cx);
+  try { grip.setPointerCapture(event.pointerId); } catch {}
+
+  const move = moved => {
+    if (!freeTransform) return;
+    const point = evPosExact(moved);
+    if (direction === 'move') {
+      freeTransform.cx = startState.cx + (point.x - startPoint.x);
+      freeTransform.cy = startState.cy + (point.y - startPoint.y);
+    } else if (direction === 'rotate') {
+      let next = startAngle + Math.atan2(point.y - startState.cy, point.x - startState.cx) - pointerAngle;
+      if (moved.shiftKey) next = Math.round(next / (Math.PI / 12)) * (Math.PI / 12);
+      freeTransform.angle = next;
+    } else {
+      const dx = point.x - anchor.x, dy = point.y - anchor.y;
+      const local = { x: dx * cos + dy * sin, y: -dx * sin + dy * cos };
+      let nextWidth = sx ? sx * local.x : startState.w;
+      let nextHeight = sy ? sy * local.y : startState.h;
+      if (moved.shiftKey && sx && sy) {
+        const scale = Math.max(Math.abs(nextWidth / startState.w), Math.abs(nextHeight / startState.h));
+        nextWidth = Math.sign(nextWidth || 1) * Math.abs(startState.w) * scale;
+        nextHeight = Math.sign(nextHeight || 1) * Math.abs(startState.h) * scale;
+      }
+      const limit = value => Math.sign(value || 1) * Math.max(1, Math.min(MAX_DIMENSION, Math.abs(value)));
+      nextWidth = limit(nextWidth); nextHeight = limit(nextHeight);
+      freeTransform.w = nextWidth; freeTransform.h = nextHeight;
+      freeTransform.cx = anchor.x + (sx * nextWidth / 2) * cos - (sy * nextHeight / 2) * sin;
+      freeTransform.cy = anchor.y + (sx * nextWidth / 2) * sin + (sy * nextHeight / 2) * cos;
+    }
+    renderFreeTransform();
+  };
+  const end = () => {
+    grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', end); grip.removeEventListener('pointercancel', end);
+  };
+  grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
+});
+
+freeToolbar.addEventListener('pointerdown', event => event.stopPropagation());
+freeToolbar.querySelector('[data-free-action="cancel"]').addEventListener('click', event => { event.stopPropagation(); finishFreeTransform(false); });
+freeToolbar.querySelector('[data-free-action="apply"]').addEventListener('click', event => { event.stopPropagation(); finishFreeTransform(true); });
 
 transformBox.querySelector('.paint-transform-toolbar').addEventListener('pointerdown', event => event.stopPropagation());
 transformBox.querySelector('[data-transform-action="cancel"]').addEventListener('click', event => { event.stopPropagation(); finishFormDetectingTransform(false); });
@@ -2388,12 +2704,18 @@ function applyBgResult(msg) {
     setStatus('Canvas changed before the result arrived; background removal cancelled');
     return;
   }
-  pushUndo(); canonicaliseSeam();
+  pushUndo();
+  /* A selection confines the cutout, but only in the canonical view: while a
+     seam shift is on screen the selection sits in shifted coordinates. */
+  const before = selection && !seamAppliedX && !seamAppliedY ? bx.getImageData(0, 0, width(), height()) : null;
+  canonicaliseSeam();
   bx.clearRect(0, 0, width(), height());
   bx.putImageData(new ImageData(new Uint8ClampedArray(msg.data), msg.width, msg.height), 0, 0);
-  reapplySeam(); clearSelection();
+  if (before) confineToSelection(before);
+  reapplySeam();
+  if (before) renderSelection(); else clearSelection();
   hideModal('bgRemoveModal'); bgSize = null;
-  setStatus('Background removed — the subject now sits on transparency');
+  setStatus(`Background removed — the subject now sits on transparency${before ? ' (selection only)' : ''}`);
 }
 
 function finishBgError(message) {
@@ -2420,6 +2742,8 @@ bgStartBtn.addEventListener('click', startBgRemoval);
 bgModal.addEventListener('click', event => { if (event.target.closest('[data-close]')) { bgRunToken++; bgSize = null; } });
 bgModal.addEventListener('pointerdown', event => { if (event.target === bgModal) { bgRunToken++; bgSize = null; } });
 const disconnect = () => {
+  stopAnts();
+  if (freeTransform) finishFreeTransform(false);
   if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
   if (contentWorker) { contentWorker.terminate(); contentWorker = null; }
   cancelLiveContentPreview(true);
@@ -2437,6 +2761,9 @@ if (window.ClackDither) {
     width, height,
     getContext: () => bx,
     getSelection: () => selection,
+    /* the dither works on the selection's bounding box; this trims the result
+       back to the exact outline for lasso and magnetic-lasso selections */
+    confine: before => confineToSelection(before),
     getColours: () => ({ fg, bg, palette: COLORS }),
     getMountHost: () => appRoot === document ? null : appRoot.host,
     pushUndo, setStatus,
@@ -2451,6 +2778,11 @@ if (window.ClackDither) {
 function runCmd(cmd) {
   /* Purely a view change, so it stays available while a preview is running. */
   if (cmd === 'layer-panel') { setLayersCollapsed(!layersCollapsed, true); return; }
+  if (freeTransform) {
+    if (cmd === 'free-transform') finishFreeTransform(true);
+    else status.textContent = 'Apply or cancel the free transform before using another command';
+    return;
+  }
   if (contentTransform) {
     if (cmd === 'form-detecting-scale') finishFormDetectingTransform(false);
     else status.textContent = 'Apply or cancel Form-Detecting Scale before using another command';
@@ -2472,14 +2804,21 @@ function runCmd(cmd) {
   if (cmd.startsWith('adjust-') && ADJUSTMENTS[cmd.slice(7)]) { openAdjustment(cmd.slice(7)); return; }
   switch (cmd) {
     case 'new': pushUndo(); resetLayers(640, 400, 'Background'); bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); reapplySeam(); fileName = 'untitled.png'; setStatus('New image'); break;
-    case 'open': filePick.click(); break;
-    case 'open-site': openWebsiteBrowser(); break;
+    case 'open': pickAsLayer = false; filePick.click(); break;
+    case 'open-layer': pickAsLayer = true; filePick.click(); break;
+    case 'open-site': openWebsiteBrowser(false); break;
+    case 'open-site-layer': openWebsiteBrowser(true); break;
     case 'save': savePng(false); break;
     case 'saveas': savePng(true); break;
     case 'upload-site': openUploadDialog(); break;
     case 'set-background': setAsBackground(); break;
     case 'undo': undo(); break;
     case 'redo': redo(); break;
+    case 'free-transform': beginFreeTransform(); break;
+    case 'select-all':
+      selection = { type: 'rect', x: 0, y: 0, w: width(), h: height() };
+      cropButton.disabled = false; renderSelection(); setStatus('Everything selected'); break;
+    case 'deselect': clearSelection(); setStatus('Selection cleared'); break;
     case 'layer-new': newLayer(); break;
     case 'layer-duplicate': duplicateLayer(); break;
     case 'layer-rename': renameLayer(); break;
@@ -2505,17 +2844,38 @@ function runCmd(cmd) {
     case 'remove-bg': openBgRemoval(); break;
     case 'gaussian-blur': openGaussianBlur(); break;
     case 'noise': showModal('noiseModal'); appRoot.querySelector('#noiseAmount').focus(); break;
-    case 'clear': pushUndo(); clearSelection(); bx.fillStyle = bg; bx.fillRect(0, 0, width(), height()); setStatus('Image cleared to the background colour'); break;
-    case 'invert': {
-      pushUndo(); clearSelection(); const image = bx.getImageData(0, 0, width(), height()), data = image.data;
-      for (let i = 0; i < data.length; i += 4) { data[i] = 255 - data[i]; data[i + 1] = 255 - data[i + 1]; data[i + 2] = 255 - data[i + 2]; }
-      bx.putImageData(image, 0, 0); setStatus('Colours inverted'); break;
+    case 'clear': {
+      pushUndo(); bx.save();
+      if (selection) { traceSelectionPath(bx); bx.clip(); }
+      bx.fillStyle = bg; bx.fillRect(0, 0, width(), height()); bx.restore();
+      renderSelection(); setStatus(`Image cleared to the background colour${selectionNote()}`); break;
     }
+    case 'invert': {
+      pushUndo(); const mask = selectionMask();
+      const image = bx.getImageData(0, 0, width(), height()), data = image.data;
+      for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+        if (mask && !mask[pixel]) continue;
+        data[i] = 255 - data[i]; data[i + 1] = 255 - data[i + 1]; data[i + 2] = 255 - data[i + 2];
+      }
+      bx.putImageData(image, 0, 0); setStatus(`Colours inverted${selectionNote()}`); break;
+    }
+    /* With a selection the flip happens inside its bounding box, so the
+       selected pixels turn over in place rather than the whole layer. */
     case 'flip-h': case 'flip-v': {
-      pushUndo(); canonicaliseSeam(); const copy = copyCanvas(); clearSelection(); bx.save(); bx.clearRect(0, 0, width(), height());
-      if (cmd === 'flip-h') { bx.scale(-1, 1); bx.drawImage(copy, -width(), 0); }
-      else { bx.scale(1, -1); bx.drawImage(copy, 0, -height()); }
-      bx.restore(); reapplySeam(); setStatus(cmd === 'flip-h' ? 'Flipped horizontally' : 'Flipped vertically'); break;
+      pushUndo(); canonicaliseSeam();
+      const copy = copyCanvas();
+      const before = selection ? bx.getImageData(0, 0, width(), height()) : null;
+      const area = selection ? { x: selection.x, y: selection.y, w: selection.w, h: selection.h } : { x: 0, y: 0, w: width(), h: height() };
+      bx.save();
+      bx.beginPath(); bx.rect(area.x, area.y, area.w, area.h); bx.clip();
+      bx.clearRect(area.x, area.y, area.w, area.h);
+      if (cmd === 'flip-h') { bx.translate(area.x * 2 + area.w, 0); bx.scale(-1, 1); }
+      else { bx.translate(0, area.y * 2 + area.h); bx.scale(1, -1); }
+      bx.drawImage(copy, 0, 0);
+      bx.restore();
+      if (before) confineToSelection(before);
+      reapplySeam(); renderSelection();
+      setStatus(`${cmd === 'flip-h' ? 'Flipped horizontally' : 'Flipped vertically'}${selectionNote()}`); break;
     }
   }
 }
@@ -2586,6 +2946,20 @@ appRoot.querySelector('.rm-bar').addEventListener('click', event => {
 });
 appRoot.addEventListener('click', event => { if (!event.target.closest('.rm')) closeMenus(); });
 appRoot.addEventListener('keydown', event => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName || '');
+  if (freeTransform) {
+    if (event.key === 'Escape') { event.preventDefault(); finishFreeTransform(false); return; }
+    if (event.key === 'Enter' && !typing) { event.preventDefault(); finishFreeTransform(true); return; }
+  }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 't' && !typing) {
+    event.preventDefault(); runCmd('free-transform'); return;
+  }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd' && !typing) {
+    event.preventDefault(); runCmd('deselect'); return;
+  }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a' && !typing) {
+    event.preventDefault(); runCmd('select-all'); return;
+  }
   if (contentTransform && event.key === 'Escape') { event.preventDefault(); finishFormDetectingTransform(false); return; }
   if (contentTransform && event.key === 'Enter' && !/^(INPUT|BUTTON)$/.test(event.target.tagName || '')) { event.preventDefault(); finishFormDetectingTransform(true); return; }
   if (event.key === 'Escape' && appRoot.querySelector('#adjustModal').classList.contains('open')) { event.preventDefault(); closeAdjustment(true); return; }

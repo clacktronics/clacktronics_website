@@ -935,11 +935,23 @@ windows, and desktop actions.
   colours; arbitrary bitmap dimensions up to 8192 × 8192; undo/redo; local or
   website background opening; PNG saving and uploading straight to the web host
   (File → Upload to website…); image-size resampling, anchored
-  canvas resizing, crop selection, flip, invert and clear. Documents retain a
+  canvas resizing, crop selection, flip, invert and clear. Transparent pixels
+  show as a checkerboard behind the layer stack. Documents retain a
   reorderable layer stack with visibility, rename, duplicate, delete and merge
-  controls; rectangular, freehand-lasso and edge-snapping magnetic-lasso
-  selections can be copied or cut directly to a new layer from the canvas
-  right-click menu. Image → Form-Detecting Scale opens a Photoshop-style
+  controls; File → Open as Layer… (and its website equivalent) drops a picture
+  onto a new layer, centred and scaled to fit, without disturbing the document
+  size. Rectangular, freehand-lasso and edge-snapping magnetic-lasso
+  selections crawl with animated marching ants, and can be copied or cut
+  directly to a new layer from the canvas right-click menu. A selection confines
+  every filter and effect — adjustments, Gaussian Blur, Noise, dithering,
+  background removal, invert, flip and clear all stop at its exact outline, not
+  just its bounding box — and each one applies to the active layer alone.
+  Edit → Free Transform (Ctrl/⌘-T) lifts the selection, or the whole active
+  layer when nothing is selected, onto a floating frame: drag inside it to move,
+  drag a handle to scale (Shift on a corner keeps the aspect ratio, dragging
+  past the opposite edge flips), drag the knob above it to rotate (Shift snaps
+  to 15°), then Apply or press Enter; Esc puts the pixels back untouched.
+  Edit → Select All and Deselect (Ctrl/⌘-A and Ctrl/⌘-D) round out the menu. Image → Form-Detecting Scale opens a Photoshop-style
   transform box: drag any edge or corner handle, hold Shift on a corner to
   preserve the aspect ratio, then Apply (or press Enter). While a handle moves,
   a debounced low-resolution seam-carved proxy updates live; superseded worker
