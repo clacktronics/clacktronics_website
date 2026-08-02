@@ -609,6 +609,7 @@
         <label>Steps per octave <span><input id="dreamIterations" type="range" min="1" max="30" step="1" value="10"><output id="dreamIterationsValue">10</output></span></label>
         <label>Octaves <span><input id="dreamOctaves" type="range" min="1" max="6" step="1" value="4"><output id="dreamOctavesValue">4</output></span></label>
         <label class="paint-check"><input id="dreamSmooth" type="checkbox"> Smooth (spread the detail across scales)</label>
+        <p class="paint-dream-note" id="dreamCost"></p>
       </div>
       <div data-dreamview="running" hidden>
         <div class="paint-ai-progress" role="progressbar" aria-label="Dream progress"><div></div></div>
@@ -4319,6 +4320,14 @@ function openDeepDream() {
   dreamDetail.textContent = '';
   dreamBar.style.width = '0%';
   syncDreamLayer();
+  /* Cost is the picture's area times the steps, and there is no honest way to
+     hide it: say so before the button is pressed rather than after. */
+  const megapixels = width() * height() / 1e6;
+  appRoot.querySelector('#dreamCost').textContent =
+    `${width()} × ${height()} px${selection ? ', dreaming the whole layer and keeping only the selection' : ''}. `
+    + (megapixels > 1.5
+      ? 'A picture this large takes minutes even on a GPU — try fewer steps first.'
+      : 'Seconds on a GPU; minutes if your browser has to fall back to the processor.');
   showDreamView('intro');
   showModal('deepDreamModal');
 }
