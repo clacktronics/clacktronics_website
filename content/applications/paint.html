@@ -103,6 +103,23 @@
 .paint-layer-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; }
 .paint-layer-details { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .paint-layer-blend { width: 100%; min-width: 0; height: 19px; padding: 0 2px; border: 1px solid var(--paper-line); border-radius: 3px; background: var(--paper-deep); color: var(--control-text); font: 9px/1 'IBM Plex Mono', monospace; }
+/* The tool palette grew past the point where one long column of icons could be
+   read, so the tools are grouped and each group is captioned. */
+.paint-tool-group { grid-column: span 2; margin: 8px 0 0; font-size: 8px; letter-spacing: .16em; text-transform: uppercase; color: var(--sage); }
+.paint-tool-group:first-child { margin-top: 0; }
+/* One options row per tool, in the place every photo editor puts it: under the
+   menus, above the picture. Tools with nothing to set hide it entirely. */
+.paint-options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 6px 14px; border-bottom: 1px solid var(--paper-line); background: var(--paper-deep); font-size: 11px; }
+.paint-options[hidden] { display: none; }
+.paint-options-tool { font-weight: 600; letter-spacing: .1em; text-transform: uppercase; font-size: 9px; color: var(--leaf-deep); }
+.paint-option { display: flex; align-items: center; gap: 6px; }
+.paint-option > span { color: var(--sage); }
+.paint-option input[type="range"] { width: 96px; }
+.paint-option select { height: 21px; padding: 0 4px; border: 1px solid var(--ink); border-radius: 4px; background: var(--paper); color: var(--control-text); font: 10px/1 'IBM Plex Mono', monospace; }
+.paint-option output { min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; color: var(--sage); }
+.paint-option-hint { flex: 1; min-width: 140px; color: var(--sage); font-size: 10px; }
+.paint-option-hint b { color: var(--leaf-deep); font-weight: 600; }
+.paint-options .btn { min-height: 22px; padding: 2px 8px; font-size: 10px; }
 .paint-adjust-fields { display: flex; flex-direction: column; gap: 10px; }
 .paint-adjust-fields label { display: grid; grid-template-columns: minmax(105px,1fr) minmax(100px,1.4fr) 54px; align-items: center; gap: 8px; font-size: 11px; }
 .paint-adjust-fields input[type="range"] { width: 100%; }
@@ -179,6 +196,7 @@
 </style>
 <script src="../../assets/js/file-manager.js"></script>
 <script src="paint-dither.js" data-integrated-instance></script>
+<script src="paint-retouch.js" data-integrated-instance></script>
 </head>
 <body>
 <div class="app paint-app">
@@ -212,6 +230,17 @@
       <button data-cmd="free-transform"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Free Transform</button>
       <button data-cmd="select-all"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Select All</button>
       <button data-cmd="deselect"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>Deselect</button>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="lasso" aria-hidden="true"></span><span class="rm-item">Refine Selection</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
+          <button data-cmd="selection-grow"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Grow</button>
+          <button data-cmd="selection-shrink"><span class="pixel-icon" data-icon="minus-box" aria-hidden="true"></span>Shrink</button>
+          <button data-cmd="selection-feather"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>Feather…</button>
+          <button data-cmd="selection-invert"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Invert Selection</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <button data-cmd="content-fill"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Content-Aware Fill</button>
     </div></div>
     <div class="rm"><button>Layer</button><div class="rm-dd">
       <button data-cmd="layer-new"><span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>New Layer</button>
@@ -288,6 +317,7 @@
           <button data-cmd="effect-box-blur"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Box Blur…</button>
           <button data-cmd="effect-motion-blur"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Motion Blur…</button>
           <button data-cmd="effect-radial-blur"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Radial Blur…</button>
+          <button data-cmd="effect-surface-blur"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>Surface Blur…</button>
         </div>
       </div>
       <div class="rm-sub">
@@ -296,6 +326,7 @@
           <button data-cmd="effect-sharpen"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Sharpen…</button>
           <button data-cmd="effect-unsharp-mask"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Unsharp Mask…</button>
           <button data-cmd="effect-high-pass"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>High Pass…</button>
+          <button data-cmd="effect-clarity"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Clarity…</button>
         </div>
       </div>
       <div class="rm-sub">
@@ -326,6 +357,14 @@
           <button data-cmd="effect-polar"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Polar Coordinates…</button>
           <button data-cmd="effect-wave"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span>Wave…</button>
           <button data-cmd="effect-ripple"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>Ripple…</button>
+        </div>
+      </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span><span class="rm-item">Photo</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
+          <button data-cmd="effect-vignette"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Vignette…</button>
+          <button data-cmd="effect-graduated"><span class="pixel-icon" data-icon="align-vertical-space-between" aria-hidden="true"></span>Graduated Filter…</button>
+          <button data-cmd="effect-lens-correction"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span>Lens Correction…</button>
         </div>
       </div>
       <div class="rm-sub">
@@ -365,23 +404,48 @@
     </div></div>
   </div>
 
+  <div class="paint-options" role="toolbar" aria-label="Tool options" hidden></div>
+
   <div class="paint-main">
     <div class="paint-tools" role="toolbar" aria-label="Tools">
+      <p class="paint-tool-group">Paint</p>
       <button class="paint-tool active" data-tool="pencil" title="Pencil" aria-label="Pencil"><span class="pixel-icon icon-only" data-icon="pencil" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="select" title="Rectangular selection" aria-label="Rectangular selection"><span class="pixel-icon icon-only" data-icon="lasso" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="lasso" title="Freehand lasso" aria-label="Freehand lasso"><span class="pixel-icon icon-only" data-icon="git-commit" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="magnetic-lasso" title="Magnetic lasso — trace near an edge" aria-label="Magnetic lasso"><span class="pixel-icon icon-only" data-icon="target" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="brush" title="Brush" aria-label="Brush"><span class="pixel-icon icon-only" data-icon="brush" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="eraser" title="Eraser" aria-label="Eraser"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="spray" title="Airbrush" aria-label="Airbrush"><span class="pixel-icon icon-only" data-icon="spray-can" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="fill" title="Fill with colour" aria-label="Fill with colour"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="picker" title="Pick colour" aria-label="Pick colour"><span class="pixel-icon icon-only" data-icon="pipette" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="clone" title="Clone stamp — Alt-click to choose source" aria-label="Clone stamp"><span class="pixel-icon icon-only" data-icon="copy" aria-hidden="true"></span></button>
-      <button class="paint-tool" data-tool="blur" title="Blur" aria-label="Blur"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
+      <p class="paint-tool-group">Shapes</p>
       <button class="paint-tool" data-tool="line" title="Line" aria-label="Line"><span class="pixel-icon icon-only" data-icon="arrow-right" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="rect" title="Rectangle" aria-label="Rectangle"><span class="pixel-icon icon-only" data-icon="square" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="ellipse" title="Ellipse" aria-label="Ellipse"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
       <button class="paint-tool" data-tool="rect-fill" title="Filled rectangle" aria-label="Filled rectangle"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
+      <p class="paint-tool-group">Select</p>
+      <button class="paint-tool" data-tool="select" title="Rectangular selection" aria-label="Rectangular selection"><span class="pixel-icon icon-only" data-icon="lasso" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="lasso" title="Freehand lasso" aria-label="Freehand lasso"><span class="pixel-icon icon-only" data-icon="git-commit" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="magnetic-lasso" title="Magnetic lasso — trace near an edge" aria-label="Magnetic lasso"><span class="pixel-icon icon-only" data-icon="target" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="wand" title="Magic wand — select everything of a similar colour" aria-label="Magic wand"><span class="pixel-icon icon-only" data-icon="zap" aria-hidden="true"></span></button>
+      <p class="paint-tool-group">Repair</p>
+      <button class="paint-tool" data-tool="clone" title="Clone stamp — Alt-click to choose source" aria-label="Clone stamp"><span class="pixel-icon icon-only" data-icon="copy" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="heal" title="Healing brush — Alt-click a good area, then paint over the bad one" aria-label="Healing brush"><span class="pixel-icon icon-only" data-icon="plus-box" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="spot-heal" title="Spot healing brush — paint over a blemish and let it find its own source" aria-label="Spot healing brush"><span class="pixel-icon icon-only" data-icon="bug" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="patch" title="Patch tool — lasso a patch, then drag it onto clean pixels" aria-label="Patch tool"><span class="pixel-icon icon-only" data-icon="scissors" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="patch-brush" title="Patch brush — paint the patch freehand, then drag it onto clean pixels" aria-label="Patch brush"><span class="pixel-icon icon-only" data-icon="shapes" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="red-eye" title="Red eye — click a pupil" aria-label="Red eye removal"><span class="pixel-icon icon-only" data-icon="target" aria-hidden="true"></span></button>
+      <p class="paint-tool-group">Texture</p>
+      <button class="paint-tool" data-tool="blur" title="Blur" aria-label="Blur"><span class="pixel-icon icon-only" data-icon="circle" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="sharpen" title="Sharpen brush" aria-label="Sharpen brush"><span class="pixel-icon icon-only" data-icon="brackets" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="smudge" title="Smudge — drag the colour along the stroke" aria-label="Smudge"><span class="pixel-icon icon-only" data-icon="arrow-bar-right" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="soften" title="Soften — smooths shading but keeps edges" aria-label="Soften"><span class="pixel-icon icon-only" data-icon="volume" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="clarity" title="Clarity — local contrast, not sharpening" aria-label="Clarity brush"><span class="pixel-icon icon-only" data-icon="analytics" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="liquify" title="Liquify — push, bloat, pucker and twirl the pixels" aria-label="Liquify"><span class="pixel-icon icon-only" data-icon="reload" aria-hidden="true"></span></button>
+      <p class="paint-tool-group">Tone</p>
+      <button class="paint-tool" data-tool="dodge" title="Dodge — lighten" aria-label="Dodge"><span class="pixel-icon icon-only" data-icon="eye" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="burn" title="Burn — darken" aria-label="Burn"><span class="pixel-icon icon-only" data-icon="eye-off" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="sponge" title="Sponge — saturate or desaturate" aria-label="Sponge"><span class="pixel-icon icon-only" data-icon="colors-swatch" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="color-replace" title="Colour replacement — paint the foreground colour on, keeping the shading" aria-label="Colour replacement brush"><span class="pixel-icon icon-only" data-icon="invert" aria-hidden="true"></span></button>
+      <button class="paint-tool" data-tool="selective" title="Selective adjustment — drop a pin and adjust what looks like it" aria-label="Selective adjustment"><span class="pixel-icon icon-only" data-icon="map-pin" aria-hidden="true"></span></button>
+      <p class="paint-tool-group">View</p>
       <button class="paint-tool" data-tool="zoom" title="Zoom — click to zoom in, Shift-click or Alt-click to zoom out" aria-label="Zoom"><span class="paint-zoom-icon" aria-hidden="true"></span></button>
       <div class="paint-size">
         <span class="app-lbl">Tool size</span>
@@ -670,6 +734,7 @@ const ox = overlay.getContext('2d');
 const tx = contentTransformPreview.getContext('2d');
 const status = appRoot.querySelector('.paint-status');
 const sizeInput = appRoot.querySelector('.paint-size input');
+const optionsBar = appRoot.querySelector('.paint-options');
 const seamXButton = appRoot.querySelector('[data-cmd="seams-x"]');
 const seamYButton = appRoot.querySelector('[data-cmd="seams-y"]');
 const mirrorButtons = [...appRoot.querySelectorAll('[data-cmd^="mirror-"]')];
@@ -704,6 +769,12 @@ let gaussianPreviewOriginal = null;
 let fileName = 'untitled.png';
 let selection = null;
 let cloneSource = null, cloneOffset = null, strokeBuffer = null, mirrorStrokeBefore = null;
+const retouch = window.ClackRetouch || null;
+let healSource = null, healStroke = null, healOffset = null;
+let smudgeBuffer = null, replaceColour = null;
+let patchState = null, patchDrag = null, patchPaintMask = null, patchPreviewFrame = 0;
+let liquifyState = null, liquifyFrame = 0;
+let selectivePin = null;
 let seamAppliedX = false, seamAppliedY = false;
 let mirrorMode = 'none';
 let seamAnimating = false, seamAnimationToken = 0;
@@ -1006,6 +1077,8 @@ function updateOffsetPreview() {
   shiftBase(dx, dy);
   seamAppliedX = enabledX; seamAppliedY = enabledY;
   cloneSource = null; cloneOffset = null; strokeBuffer = null;
+  healSource = null; healOffset = null; healStroke = null; smudgeBuffer = null;
+  endLiquifySession(); if (patchState) clearPatchState(false);
   clearSelection();
 }
 
@@ -1123,7 +1196,15 @@ function polygonSelection(points, type = 'lasso') {
 
 function traceSelectionPath(context, selected = selection, offsetX = 0, offsetY = 0) {
   context.beginPath();
-  if (selected?.points?.length) {
+  if (selected?.contours?.length) {
+    /* A wand or a refined selection is a plane of coverage; the rings traced
+       round it are only for showing and for clipping. */
+    selected.contours.forEach(ring => {
+      context.moveTo(ring[0].x - offsetX, ring[0].y - offsetY);
+      for (let i = 1; i < ring.length; i++) context.lineTo(ring[i].x - offsetX, ring[i].y - offsetY);
+      context.closePath();
+    });
+  } else if (selected?.points?.length) {
     context.moveTo(selected.points[0].x - offsetX, selected.points[0].y - offsetY);
     for (let i = 1; i < selected.points.length; i++) context.lineTo(selected.points[i].x - offsetX, selected.points[i].y - offsetY);
     context.closePath();
@@ -1139,14 +1220,16 @@ function traceSelectionPath(context, selected = selection, offsetX = 0, offsetY 
    selections as exact as rectangular ones. */
 function confineToSelection(before) {
   if (!selection || !before || before.width !== width() || before.height !== height()) return false;
-  const mask = selectionMask();
+  const mask = selectionCoverage();
   if (!mask) return false;
   const after = bx.getImageData(0, 0, width(), height());
   const pixels = after.data, previous = before.data;
   for (let i = 0, pixel = 0; i < pixels.length; i += 4, pixel++) {
-    if (mask[pixel]) continue;
-    pixels[i] = previous[i]; pixels[i + 1] = previous[i + 1];
-    pixels[i + 2] = previous[i + 2]; pixels[i + 3] = previous[i + 3];
+    const coverage = mask[pixel];
+    if (coverage >= 1) continue;
+    for (let channel = 0; channel < 4; channel++) {
+      pixels[i + channel] = previous[i + channel] + (pixels[i + channel] - previous[i + channel]) * coverage;
+    }
   }
   bx.putImageData(after, 0, 0);
   return true;
@@ -1156,12 +1239,33 @@ const selectionNote = () => selection ? ' (selection only)' : '';
 
 function selectionMask(selected = selection) {
   if (!selected) return null;
+  const mask = new Uint8Array(width() * height());
+  if (selected.mask && selected.mask.length === mask.length) {
+    for (let i = 0; i < mask.length; i++) mask[i] = selected.mask[i] > .5 ? 1 : 0;
+    return mask;
+  }
   const maskCanvas = document.createElement('canvas'); maskCanvas.width = width(); maskCanvas.height = height();
   const context = maskCanvas.getContext('2d'); context.fillStyle = '#fff'; traceSelectionPath(context, selected); context.fill();
   const alpha = context.getImageData(0, 0, width(), height()).data;
-  const mask = new Uint8Array(width() * height());
   for (let i = 0; i < mask.length; i++) mask[i] = alpha[i * 4 + 3] > 0 ? 1 : 0;
   return mask;
+}
+
+/* The same shape, but keeping the part-covered edge pixels as fractions. A
+   feathered selection is only a selection whose coverage never reaches 1, so
+   everything that fades an effect in at the border reads this instead. */
+function selectionCoverage(selected = selection) {
+  if (!selected) return null;
+  const coverage = new Float32Array(width() * height());
+  if (selected.mask && selected.mask.length === coverage.length) {
+    coverage.set(selected.mask);
+    return coverage;
+  }
+  const maskCanvas = document.createElement('canvas'); maskCanvas.width = width(); maskCanvas.height = height();
+  const context = maskCanvas.getContext('2d'); context.fillStyle = '#fff'; traceSelectionPath(context, selected); context.fill();
+  const alpha = context.getImageData(0, 0, width(), height()).data;
+  for (let i = 0; i < coverage.length; i++) coverage[i] = alpha[i * 4 + 3] / 255;
+  return coverage;
 }
 
 function renderSelection(rect = selection) {
@@ -1191,6 +1295,8 @@ function resizeSurfaces(w, h) {
   seamAppliedX = false; seamAppliedY = false;
   updateStackSize();
   cloneSource = null; cloneOffset = null; strokeBuffer = null;
+  healSource = null; healOffset = null; healStroke = null; smudgeBuffer = null;
+  endLiquifySession(); if (patchState) clearPatchState(false);
   clearSelection();
 }
 
@@ -1265,6 +1371,11 @@ const snapshotBytes = () => width() * height() * 4 * layers.length;
 const stackBytes = items => items.reduce((total, item) => total + item.layers.reduce((sum, layer) => sum + layer.pixels.data.byteLength, 0), 0);
 
 function restore(snap) {
+  /* Undo replaces the pixels a liquify mesh or a live patch was measured
+     against, so neither can survive it. */
+  endLiquifySession();
+  if (patchState) clearPatchState(false);
+  healStroke = null;
   layers.forEach(layer => layer.canvas.remove());
   layers = snap.layers.map(saved => {
     const canvas = makeLayerCanvas(snap.width, snap.height);
@@ -1320,19 +1431,23 @@ renderLayerPanel();
 
 appRoot.querySelectorAll('.paint-tool').forEach(button => {
   button.addEventListener('click', () => {
+    if (tool !== button.dataset.tool) { endLiquifySession(); clearPatchState(false); }
     tool = button.dataset.tool;
     appRoot.querySelectorAll('.paint-tool').forEach(item => item.classList.toggle('active', item === button));
     stack.classList.toggle('zoom-tool', tool === 'zoom');
+    renderToolOptions();
     if (cursorPoint) updateBrushCursor(cursorPoint); else hideBrushCursor();
-    if (tool === 'clone' && cloneSource) drawCloneSource();
+    if ((tool === 'clone' && cloneSource) || (tool === 'heal' && healSource)) drawCloneSource();
     else if (!['select', 'lasso', 'magnetic-lasso'].includes(tool) && selection) renderSelection();
     if (tool === 'select') setStatus('Drag to select an area; right-click it for layer actions');
     else if (tool === 'lasso') setStatus('Drag around an area to make a freehand selection');
     else if (tool === 'magnetic-lasso') setStatus('Trace near an object edge; the lasso will snap to nearby contrast');
+    else if (tool === 'wand') setStatus('Click a colour to select everything like it; Shift-click adds, Alt-click takes away');
     else if (tool === 'clone') setStatus(cloneSource ? 'Clone source ready; drag to paint from it' : 'Alt-click the image to choose a clone source');
+    else if (tool === 'heal') setStatus(healSource ? 'Healing source ready; paint over the damage' : 'Alt-click a clean area to set the healing source');
     else if (tool === 'blur') setStatus('Blur brush selected; Tool Size controls the soft brush radius');
     else if (tool === 'zoom') setStatus(`Zoom tool selected at ${Math.round(zoom * 100)}%; click to zoom in, Shift-click or Alt-click to zoom out`);
-    else setStatus(`${button.title} selected`);
+    else setStatus(`${button.getAttribute('aria-label') || button.title} selected`);
   });
 });
 
@@ -1357,8 +1472,180 @@ const rectFrom = (a, b) => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: M
 let drawing = false, start = null, last = null, drawColor = '#000000', sprayTimer = 0;
 let lassoPoints = [], magnetPixels = null;
 const toolSize = () => +sizeInput.value;
-const BRUSH_TOOLS = new Set(['pencil', 'brush', 'eraser', 'spray', 'clone', 'blur']);
+/* The touch-up brushes all work the same way: read the pixels under the
+   footprint, hand them to a routine in paint-retouch.js, put them back. What
+   differs is the routine and the numbers in the options bar. */
+const RETOUCH_TOOLS = new Set([
+  'heal', 'spot-heal', 'patch-brush', 'smudge', 'sharpen', 'soften', 'clarity',
+  'dodge', 'burn', 'sponge', 'color-replace', 'red-eye', 'liquify'
+]);
+const BRUSH_TOOLS = new Set(['pencil', 'brush', 'eraser', 'spray', 'clone', 'blur', ...RETOUCH_TOOLS]);
 const SELECTION_TOOLS = new Set(['select', 'lasso', 'magnetic-lasso']);
+/* Tools that repair rather than paint leave a selection alone and work inside
+   it, which is how a selection is used in a photo editor. */
+const SELECTION_AWARE_TOOLS = new Set([...RETOUCH_TOOLS, 'patch', 'patch-brush', 'selective']);
+
+const TONE_RANGES = [['shadows', 'Shadows'], ['midtones', 'Midtones'], ['highlights', 'Highlights']];
+const TOOL_OPTIONS = {
+  wand: [
+    { id: 'tolerance', label: 'Tolerance', type: 'range', min: 0, max: 128, value: 32, step: 1 },
+    { id: 'feather', label: 'Feather', type: 'range', min: 0, max: 20, value: 0, step: 1, unit: ' px' },
+    { id: 'contiguous', label: 'Contiguous', type: 'check', value: true },
+    { id: 'sample', label: 'Sample', type: 'select', value: 'layer', options: [['layer', 'Active layer'], ['merged', 'All layers']] }
+  ],
+  heal: [
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 70, step: 1, unit: '%' },
+    { id: 'aligned', label: 'Aligned', type: 'check', value: true }
+  ],
+  'spot-heal': [
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 70, step: 1, unit: '%' },
+    { id: 'method', label: 'Method', type: 'select', value: 'proximity', options: [['proximity', 'Proximity match'], ['content', 'Content-aware']] }
+  ],
+  patch: [
+    { id: 'mode', label: 'Drag', type: 'select', value: 'source', options: [['source', 'Patch from where I drop it'], ['destination', 'Copy this patch to where I drop it']] },
+    { id: 'blend', label: 'Blend edges', type: 'check', value: true }
+  ],
+  'patch-brush': [
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 85, step: 1, unit: '%' },
+    { id: 'mode', label: 'Drag', type: 'select', value: 'source', options: [['source', 'Patch from where I drop it'], ['destination', 'Copy this patch to where I drop it']] },
+    { id: 'blend', label: 'Blend edges', type: 'check', value: true }
+  ],
+  smudge: [
+    { id: 'strength', label: 'Strength', type: 'range', min: 1, max: 99, value: 55, step: 1, unit: '%' },
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%' }
+  ],
+  sharpen: [
+    { id: 'strength', label: 'Strength', type: 'range', min: 1, max: 100, value: 35, step: 1, unit: '%' },
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%' }
+  ],
+  soften: [
+    { id: 'strength', label: 'Strength', type: 'range', min: 1, max: 100, value: 65, step: 1, unit: '%' },
+    { id: 'detail', label: 'Keep detail', type: 'range', min: 2, max: 90, value: 22, step: 1 },
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 40, step: 1, unit: '%' }
+  ],
+  clarity: [
+    { id: 'strength', label: 'Strength', type: 'range', min: -100, max: 100, value: 45, step: 1, unit: '%' },
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 40, step: 1, unit: '%' }
+  ],
+  dodge: [
+    { id: 'range', label: 'Range', type: 'select', value: 'midtones', options: TONE_RANGES },
+    { id: 'exposure', label: 'Exposure', type: 'range', min: 1, max: 100, value: 18, step: 1, unit: '%' },
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 30, step: 1, unit: '%' }
+  ],
+  burn: [
+    { id: 'range', label: 'Range', type: 'select', value: 'midtones', options: TONE_RANGES },
+    { id: 'exposure', label: 'Exposure', type: 'range', min: 1, max: 100, value: 18, step: 1, unit: '%' },
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 30, step: 1, unit: '%' }
+  ],
+  sponge: [
+    { id: 'mode', label: 'Mode', type: 'select', value: 'saturate', options: [['saturate', 'Saturate'], ['desaturate', 'Desaturate']] },
+    { id: 'flow', label: 'Flow', type: 'range', min: 1, max: 100, value: 25, step: 1, unit: '%' },
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 30, step: 1, unit: '%' }
+  ],
+  'color-replace': [
+    { id: 'mode', label: 'Replace', type: 'select', value: 'color', options: [['color', 'Colour'], ['hue', 'Hue'], ['saturation', 'Saturation'], ['luminosity', 'Luminosity']] },
+    { id: 'tolerance', label: 'Tolerance', type: 'range', min: 1, max: 100, value: 30, step: 1 },
+    { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 70, step: 1, unit: '%' }
+  ],
+  'red-eye': [
+    { id: 'tolerance', label: 'Redness', type: 'range', min: 0, max: 100, value: 45, step: 1, unit: '%' },
+    { id: 'darken', label: 'Darken', type: 'range', min: 0, max: 100, value: 45, step: 1, unit: '%' }
+  ],
+  liquify: [
+    { id: 'mode', label: 'Warp', type: 'select', value: 'push', options: [
+      ['push', 'Push'], ['bloat', 'Bloat'], ['pucker', 'Pucker'],
+      ['twirl-right', 'Twirl right'], ['twirl-left', 'Twirl left'], ['reconstruct', 'Reconstruct']
+    ] },
+    { id: 'strength', label: 'Strength', type: 'range', min: 1, max: 100, value: 50, step: 1, unit: '%' },
+    { id: 'reset', label: 'Reset mesh', type: 'button' }
+  ]
+};
+
+const TOOL_HINTS = {
+  wand: 'Click a colour. Shift-click to add to the selection, Alt-click to take away.',
+  heal: '<b>Alt-click</b> a clean area to set the source, then paint over the damage.',
+  'spot-heal': 'Paint over the blemish and let go — the source is found for you.',
+  patch: 'Lasso the damage, then <b>drag inside it</b> onto clean pixels. Drag again to try another donor; Escape when you are happy.',
+  'patch-brush': 'Paint over the damage, then <b>drag inside it</b> onto clean pixels. Drag again to try another donor; Escape when you are happy.',
+  'red-eye': 'Click a pupil.',
+  'color-replace': 'Paints the foreground colour on, keeping the shading. The colour under the first click is the one replaced.',
+  liquify: 'Drag to warp. The picture is resampled from one snapshot, so the mesh can be pushed about without the detail wearing away.',
+  selective: 'Click the thing you want to change — a mask grows to whatever looks like the pixel under the pin.',
+  clone: '<b>Alt-click</b> to choose a source, then paint.',
+  smudge: 'Drags colour along the stroke, like a finger through wet paint.',
+  soften: 'Smooths shading and leaves edges alone — the skin-softening brush.',
+  clarity: 'Contrast at the brush’s own scale. Negative strength flattens instead.'
+};
+
+const toolSettings = {};
+Object.entries(TOOL_OPTIONS).forEach(([name, fields]) => {
+  toolSettings[name] = {};
+  fields.forEach(field => { if (field.type !== 'button') toolSettings[name][field.id] = field.value; });
+});
+const option = (id, fallback) => toolSettings[tool]?.[id] ?? fallback;
+const stampHardness = () => (option('hardness', 55)) / 100;
+
+function renderToolOptions() {
+  const fields = TOOL_OPTIONS[tool] || [];
+  const hint = TOOL_HINTS[tool];
+  optionsBar.replaceChildren();
+  if (!fields.length && !hint) { optionsBar.hidden = true; return; }
+  optionsBar.hidden = false;
+  const name = document.createElement('span');
+  name.className = 'paint-options-tool';
+  name.textContent = appRoot.querySelector(`.paint-tool[data-tool="${tool}"]`)?.getAttribute('aria-label') || tool;
+  optionsBar.append(name);
+  fields.forEach(field => {
+    if (field.type === 'button') {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'btn ghost'; button.textContent = field.label;
+      button.addEventListener('click', () => toolOptionAction(field.id));
+      optionsBar.append(button);
+      return;
+    }
+    const row = document.createElement('label');
+    row.className = 'paint-option';
+    const label = document.createElement('span'); label.textContent = field.label;
+    row.append(label);
+    if (field.type === 'check') {
+      const input = document.createElement('input');
+      input.type = 'checkbox'; input.checked = toolSettings[tool][field.id];
+      input.addEventListener('change', () => { toolSettings[tool][field.id] = input.checked; });
+      row.append(input);
+    } else if (field.type === 'select') {
+      const select = document.createElement('select');
+      field.options.forEach(([value, text]) => {
+        const item = document.createElement('option'); item.value = value; item.textContent = text; select.append(item);
+      });
+      select.value = toolSettings[tool][field.id];
+      select.addEventListener('change', () => { toolSettings[tool][field.id] = select.value; });
+      row.append(select);
+    } else {
+      const input = document.createElement('input');
+      input.type = 'range'; input.min = field.min; input.max = field.max; input.step = field.step;
+      input.value = toolSettings[tool][field.id];
+      const readout = document.createElement('output');
+      readout.textContent = `${input.value}${field.unit || ''}`;
+      input.addEventListener('input', () => {
+        toolSettings[tool][field.id] = Number(input.value);
+        readout.textContent = `${input.value}${field.unit || ''}`;
+      });
+      row.append(input, readout);
+    }
+    optionsBar.append(row);
+  });
+  if (hint) {
+    const note = document.createElement('span');
+    note.className = 'paint-option-hint'; note.innerHTML = hint;
+    optionsBar.append(note);
+  }
+}
+
+function toolOptionAction(id) {
+  if (id === 'reset') resetLiquify();
+}
+
+renderToolOptions();
 
 function buildMagnetPixels() {
   return compositeCanvas().getContext('2d').getImageData(0, 0, width(), height()).data;
@@ -1385,14 +1672,22 @@ function snapMagnetPoint(point) {
   return best;
 }
 
+const RETOUCH_DIAMETER = {
+  heal: 3, 'spot-heal': 3, 'patch-brush': 3, smudge: 3, sharpen: 3, soften: 3,
+  clarity: 3, dodge: 3, burn: 3, sponge: 3, 'color-replace': 3, 'red-eye': 2, liquify: 6
+};
+
 function brushDiameter() {
   if (tool === 'pencil') return 1;
   if (tool === 'brush') return toolSize();
   if (tool === 'eraser' || tool === 'clone') return toolSize() * 3;
   if (tool === 'spray') return toolSize() * 4 + 8;
   if (tool === 'blur') return Math.max(6, toolSize() * 4);
+  if (RETOUCH_DIAMETER[tool]) return Math.max(4, toolSize() * RETOUCH_DIAMETER[tool]);
   return 0;
 }
+
+const brushRadius = () => brushDiameter() / 2;
 
 function hideBrushCursor() {
   brushCursors.forEach(cursor => { cursor.hidden = true; });
@@ -1499,19 +1794,22 @@ function brushAlong(a, b, callback) {
   }
 }
 
+/* The crosshair that marks where a clone stamp — or a healing brush — is
+   taking its pixels from. */
 function drawCloneSource() {
   stopAnts();
   ox.clearRect(0, 0, width(), height());
-  if (!cloneSource || tool !== 'clone') return;
+  const source = tool === 'clone' ? cloneSource : tool === 'heal' ? healSource : null;
+  if (!source) return;
   const radius = Math.max(5, toolSize() * 1.5);
   ox.save();
   ox.strokeStyle = '#ffffff'; ox.lineWidth = 3;
-  ox.beginPath(); ox.arc(cloneSource.x, cloneSource.y, radius, 0, Math.PI * 2); ox.stroke();
+  ox.beginPath(); ox.arc(source.x, source.y, radius, 0, Math.PI * 2); ox.stroke();
   ox.strokeStyle = '#000000'; ox.lineWidth = 1; ox.setLineDash([3, 2]);
-  ox.beginPath(); ox.arc(cloneSource.x, cloneSource.y, radius, 0, Math.PI * 2); ox.stroke();
+  ox.beginPath(); ox.arc(source.x, source.y, radius, 0, Math.PI * 2); ox.stroke();
   ox.setLineDash([]);
-  ox.beginPath(); ox.moveTo(cloneSource.x - radius - 3, cloneSource.y); ox.lineTo(cloneSource.x + radius + 3, cloneSource.y);
-  ox.moveTo(cloneSource.x, cloneSource.y - radius - 3); ox.lineTo(cloneSource.x, cloneSource.y + radius + 3); ox.stroke();
+  ox.beginPath(); ox.moveTo(source.x - radius - 3, source.y); ox.lineTo(source.x + radius + 3, source.y);
+  ox.moveTo(source.x, source.y - radius - 3); ox.lineTo(source.x, source.y + radius + 3); ox.stroke();
   ox.restore();
 }
 
@@ -1538,6 +1836,607 @@ function blurAt(point) {
     bx.drawImage(strokeBuffer, 0, 0);
     bx.restore();
   });
+}
+
+/* ---- touch-up brushes ----
+ * Everything below shares one shape: work out the little box the brush covers,
+ * read it, apply a routine from paint-retouch.js through the soft round
+ * footprint, write it back. Keeping the box small is what lets the expensive
+ * routines — the bilateral filter, the Poisson solve — run at stroke speed. */
+
+let strokeSelection = null;
+
+function beginStrokeSelection() {
+  strokeSelection = selection ? selectionCoverage() : null;
+}
+
+/* The box is pinned to whole pixels and a fixed size, even though the stroke
+   arrives at fractional positions: the smudge bucket is kept between steps and
+   is only usable while the box it lives in stays the same shape. The soft
+   footprint inside it still lands sub-pixel. */
+function retouchBox(point, radius) {
+  const half = Math.ceil(radius) + 2;
+  const cx = Math.round(point.x), cy = Math.round(point.y);
+  const x0 = Math.max(0, cx - half), y0 = Math.max(0, cy - half);
+  const x1 = Math.min(width(), cx + half + 1), y1 = Math.min(height(), cy + half + 1);
+  return x1 > x0 && y1 > y0 ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : null;
+}
+
+/* The footprint, already trimmed to whatever is selected. */
+function footprintMask(box, point, radius, hardness, strength = 1) {
+  const mask = retouch.makeMask(box.w, box.h);
+  retouch.stampMask(mask, box.w, box.h, point.x + .5 - box.x, point.y + .5 - box.y, radius, hardness, strength);
+  if (strokeSelection) {
+    for (let y = 0; y < box.h; y++) for (let x = 0; x < box.w; x++) {
+      mask[y * box.w + x] *= strokeSelection[(box.y + y) * width() + box.x + x];
+    }
+  }
+  return mask;
+}
+
+function stampRetouch(point, apply, strength = 1) {
+  if (!retouch) return;
+  const radius = brushRadius();
+  const box = retouchBox(point, radius);
+  if (!box) return;
+  const mask = footprintMask(box, point, radius, stampHardness(), strength);
+  const image = bx.getImageData(box.x, box.y, box.w, box.h);
+  apply(image, mask, box, point);
+  bx.putImageData(image, box.x, box.y);
+}
+
+/* A three-tap binomial blur, run separably — enough of a low pass for the
+   sharpen and clarity brushes to have something to subtract. */
+function blurBox(image, radius) {
+  const w = image.width, h = image.height, data = image.data;
+  const passes = Math.max(1, Math.round(radius));
+  let current = Float32Array.from(data);
+  const next = new Float32Array(current.length);
+  for (let pass = 0; pass < passes; pass++) {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const left = (y * w + Math.max(0, x - 1)) * 4, right = (y * w + Math.min(w - 1, x + 1)) * 4;
+      for (let channel = 0; channel < 4; channel++) {
+        next[i + channel] = (current[left + channel] + current[i + channel] * 2 + current[right + channel]) / 4;
+      }
+    }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const up = (Math.max(0, y - 1) * w + x) * 4, down = (Math.min(h - 1, y + 1) * w + x) * 4;
+      for (let channel = 0; channel < 4; channel++) {
+        current[i + channel] = (next[up + channel] + next[i + channel] * 2 + next[down + channel]) / 4;
+      }
+    }
+  }
+  return current;
+}
+
+/* Dodge and burn ask which tones to work on; a bell curve over brightness is
+   smoother about it than the hard bands the name suggests. */
+function toneWeight(luma, range) {
+  if (range === 'shadows') return Math.exp(-((luma / .42) ** 2));
+  if (range === 'highlights') return Math.exp(-(((1 - luma) / .42) ** 2));
+  return Math.exp(-(((luma - .5) / .34) ** 2));
+}
+
+function dodgeBurnAt(point, lighten) {
+  const range = option('range', 'midtones');
+  const exposure = option('exposure', 18) / 100;
+  stampRetouch(point, (image, mask) => {
+    const data = image.data;
+    for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+      const coverage = mask[pixel];
+      if (coverage <= 0) continue;
+      const luma = (data[i] * .299 + data[i + 1] * .587 + data[i + 2] * .114) / 255;
+      const amount = coverage * exposure * toneWeight(luma, range);
+      if (amount <= 0) continue;
+      for (let channel = 0; channel < 3; channel++) {
+        const value = data[i + channel];
+        data[i + channel] = clampByte(lighten ? value + (255 - value) * amount : value - value * amount);
+      }
+    }
+  });
+}
+
+function spongeAt(point) {
+  const saturate = option('mode', 'saturate') === 'saturate';
+  const flow = option('flow', 25) / 100;
+  stampRetouch(point, (image, mask) => {
+    const data = image.data;
+    for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+      const coverage = mask[pixel];
+      if (coverage <= 0) continue;
+      const amount = coverage * flow;
+      const luma = data[i] * .299 + data[i + 1] * .587 + data[i + 2] * .114;
+      for (let channel = 0; channel < 3; channel++) {
+        const value = data[i + channel];
+        const target = saturate ? value + (value - luma) : luma;
+        data[i + channel] = clampByte(value + (target - value) * amount);
+      }
+    }
+  });
+}
+
+function sharpenAt(point) {
+  const amount = option('strength', 35) / 100 * 1.5;
+  stampRetouch(point, (image, mask) => {
+    const soft = blurBox(image, 1);
+    const data = image.data;
+    for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+      const coverage = mask[pixel];
+      if (coverage <= 0) continue;
+      for (let channel = 0; channel < 3; channel++) {
+        const value = data[i + channel];
+        data[i + channel] = clampByte(value + (value - soft[i + channel]) * amount * coverage);
+      }
+    }
+  });
+}
+
+function softenAt(point) {
+  const strength = option('strength', 65) / 100;
+  const detail = option('detail', 22);
+  stampRetouch(point, (image, mask) => {
+    const smooth = retouch.surfaceBlur(image, Math.max(2, brushRadius() / 3), detail).data;
+    const data = image.data;
+    for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+      const coverage = mask[pixel] * strength;
+      if (coverage <= 0) continue;
+      for (let channel = 0; channel < 3; channel++) {
+        data[i + channel] = clampByte(data[i + channel] + (smooth[i + channel] - data[i + channel]) * coverage);
+      }
+    }
+  });
+}
+
+function clarityAt(point) {
+  const amount = option('strength', 45) / 100;
+  stampRetouch(point, (image, mask) => {
+    const soft = blurBox(image, Math.max(2, Math.round(brushRadius() / 2)));
+    const data = image.data;
+    for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+      const coverage = mask[pixel];
+      if (coverage <= 0) continue;
+      const luma = (data[i] * .299 + data[i + 1] * .587 + data[i + 2] * .114) / 255;
+      const base = soft[i] * .299 + soft[i + 1] * .587 + soft[i + 2] * .114;
+      /* Easing off at both ends of the range is what keeps a bright edge from
+         growing a halo. */
+      const boost = ((data[i] * .299 + data[i + 1] * .587 + data[i + 2] * .114) - base) * amount * coverage * 4 * luma * (1 - luma);
+      for (let channel = 0; channel < 3; channel++) data[i + channel] = clampByte(data[i + channel] + boost);
+    }
+  });
+}
+
+function colourReplaceAt(point) {
+  if (!replaceColour) return;
+  const mode = option('mode', 'color');
+  const tolerance = option('tolerance', 30) * 4.4;
+  const [targetRed, targetGreen, targetBlue] = hexToRgb(drawColor);
+  const [targetHue, targetSaturation, targetLight] = rgbToHsl(targetRed, targetGreen, targetBlue);
+  stampRetouch(point, (image, mask) => {
+    const data = image.data;
+    for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+      const coverage = mask[pixel];
+      if (coverage <= 0) continue;
+      const distance = Math.abs(data[i] - replaceColour.r) + Math.abs(data[i + 1] - replaceColour.g) + Math.abs(data[i + 2] - replaceColour.b);
+      if (distance > tolerance) continue;
+      const [hue, saturation, light] = rgbToHsl(data[i], data[i + 1], data[i + 2]);
+      let mixed;
+      if (mode === 'hue') mixed = hslToRgb(targetHue, saturation, light);
+      else if (mode === 'saturation') mixed = hslToRgb(hue, targetSaturation, light);
+      else if (mode === 'luminosity') mixed = hslToRgb(hue, saturation, targetLight);
+      else mixed = hslToRgb(targetHue, targetSaturation, light);
+      /* Fading out with the distance stops the replacement stopping dead at
+         the tolerance edge. */
+      const strength = coverage * (1 - distance / tolerance * .35);
+      for (let channel = 0; channel < 3; channel++) {
+        data[i + channel] = clampByte(data[i + channel] + (mixed[channel] - data[i + channel]) * strength);
+      }
+    }
+  });
+}
+
+/* Smudge carries a footprint-sized bucket of colour along with the stroke: at
+   every step the bucket takes on a little of what is under it and leaves a
+   little of what it already had. */
+function smudgeAt(point) {
+  const radius = brushRadius();
+  const box = retouchBox(point, radius);
+  if (!box) return;
+  const image = bx.getImageData(box.x, box.y, box.w, box.h);
+  const data = image.data;
+  const rate = Math.min(.98, Math.max(.02, option('strength', 55) / 100));
+
+  /* The bucket is indexed relative to the footprint rather than to the canvas,
+     so it travels with the brush — that is the whole trick. Held in canvas
+     coordinates it would always agree with the pixels underneath it and
+     nothing would ever be dragged anywhere. It only starts again when the
+     footprint changes shape, which happens at the edges of the layer. */
+  if (!smudgeBuffer || smudgeBuffer.w !== box.w || smudgeBuffer.h !== box.h) {
+    smudgeBuffer = { w: box.w, h: box.h, data: Float32Array.from(data) };
+  }
+
+  const mask = footprintMask(box, point, radius, stampHardness());
+  const bucket = smudgeBuffer.data;
+  for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
+    const coverage = mask[pixel];
+    if (coverage <= 0) continue;
+    for (let channel = 0; channel < 4; channel++) {
+      bucket[i + channel] = bucket[i + channel] * rate + data[i + channel] * (1 - rate);
+      data[i + channel] = clampByte(data[i + channel] + (bucket[i + channel] - data[i + channel]) * coverage);
+    }
+  }
+  bx.putImageData(image, box.x, box.y);
+}
+
+function redEyeAt(point) {
+  if (!retouch) return;
+  const radius = Math.max(3, brushRadius());
+  const box = retouchBox(point, radius);
+  if (!box) return;
+  const image = bx.getImageData(box.x, box.y, box.w, box.h);
+  const changed = retouch.removeRedEye(image, point.x + .5 - box.x, point.y + .5 - box.y, radius,
+    option('tolerance', 45), option('darken', 45));
+  bx.putImageData(image, box.x, box.y);
+  setStatus(changed ? `Red eye cleaned up over ${changed} px` : 'Nothing red enough under the brush — try a bigger size or less redness');
+}
+
+/* ---- healing and the patch tools ----
+ * A stroke only records where it went; the Poisson solve runs once, when the
+ * pointer comes up, against the pixels as they were before the stroke started.
+ * That way the join is computed from clean data however much the brush
+ * overlapped itself. */
+
+function beginHealStroke(point, kind) {
+  /* Aligned keeps the distance between brush and source from one stroke to the
+     next, so a long repair can be made in several passes; unaligned starts
+     every stroke back at the source that was Alt-clicked. */
+  if (kind === 'heal') {
+    if (!healOffset || !option('aligned', true)) healOffset = { x: healSource.x - point.x, y: healSource.y - point.y };
+  }
+  healStroke = {
+    kind,
+    mask: retouch.makeMask(width(), height()),
+    snapshot: bx.getImageData(0, 0, width(), height()),
+    canvas: copyCanvas(),
+    offset: kind === 'heal' ? { ...healOffset } : null
+  };
+}
+
+function healStampAt(point) {
+  if (!healStroke) return;
+  const radius = brushRadius();
+  const box = retouchBox(point, radius);
+  if (!box) return;
+  const stamp = footprintMask(box, point, radius, stampHardness());
+  const mask = healStroke.mask, w = width();
+  for (let y = 0; y < box.h; y++) for (let x = 0; x < box.w; x++) {
+    const index = (box.y + y) * w + box.x + x, value = stamp[y * box.w + x];
+    if (value > mask[index]) mask[index] = value;
+  }
+  if (healStroke.kind === 'heal' && healStroke.offset) {
+    /* A rough clone while the pointer is down, so there is something to aim
+       with; the real blend replaces it on release. */
+    bx.save();
+    bx.beginPath(); bx.arc(point.x, point.y, radius, 0, Math.PI * 2); bx.clip();
+    bx.drawImage(healStroke.canvas, healStroke.offset.x, healStroke.offset.y);
+    bx.restore();
+  } else {
+    ox.save();
+    ox.fillStyle = 'rgba(255, 92, 92, .35)';
+    ox.beginPath(); ox.arc(point.x, point.y, radius, 0, Math.PI * 2); ox.fill();
+    ox.restore();
+  }
+}
+
+function finishHealStroke() {
+  if (!healStroke) return;
+  const stroke = healStroke;
+  healStroke = null;
+  ox.clearRect(0, 0, overlay.width, overlay.height);
+  const bounds = retouch.maskBounds(stroke.mask, width(), height(), .004);
+  if (!bounds) { renderSelection(); setStatus('Nothing was painted over'); return; }
+  const image = new ImageData(new Uint8ClampedArray(stroke.snapshot.data), width(), height());
+  if (stroke.kind === 'heal') {
+    const source = retouch.offsetImage(stroke.snapshot, stroke.offset.x, stroke.offset.y);
+    retouch.poissonBlend(image, source, stroke.mask, { box: bounds });
+    setStatus('Healed — the texture came from the source, the colour from the surroundings');
+  } else if (option('method', 'proximity') === 'content') {
+    setStatus('Filling from the surroundings…');
+    retouch.inpaint(image, stroke.mask, { seed: 4321 });
+    setStatus('Spot filled with matching texture from nearby');
+  } else {
+    const offset = retouch.bestSourceOffset(stroke.snapshot, stroke.mask, bounds);
+    const source = retouch.offsetImage(stroke.snapshot, offset.dx, offset.dy);
+    retouch.poissonBlend(image, source, stroke.mask, { box: bounds });
+    setStatus(`Spot healed from ${offset.dx}, ${offset.dy} px away`);
+  }
+  bx.putImageData(image, 0, 0);
+  renderLayerPanel();
+  renderSelection();
+}
+
+function shiftMask(mask, dx, dy) {
+  const w = width(), h = height();
+  const out = retouch.makeMask(w, h);
+  for (let y = 0; y < h; y++) {
+    const sy = y - dy;
+    if (sy < 0 || sy >= h) continue;
+    for (let x = 0; x < w; x++) {
+      const sx = x - dx;
+      if (sx < 0 || sx >= w) continue;
+      out[y * w + x] = mask[sy * w + sx];
+    }
+  }
+  return out;
+}
+
+function patchCovers(point) {
+  return !!patchState && patchState.mask[point.y * width() + point.x] > .35;
+}
+
+/* The patch brush paints its region into a mask and shows it as a wash, so you
+   can see what you have covered before you start hunting for a donor. */
+function patchPaintAt(point) {
+  if (!patchPaintMask) return;
+  const radius = brushRadius();
+  const box = retouchBox(point, radius);
+  if (!box) return;
+  const stamp = footprintMask(box, point, radius, stampHardness());
+  const w = width();
+  for (let y = 0; y < box.h; y++) for (let x = 0; x < box.w; x++) {
+    const index = (box.y + y) * w + box.x + x, value = stamp[y * box.w + x];
+    if (value > patchPaintMask[index]) patchPaintMask[index] = value;
+  }
+  ox.save();
+  ox.fillStyle = 'rgba(255, 212, 0, .3)';
+  ox.beginPath(); ox.arc(point.x, point.y, radius, 0, Math.PI * 2); ox.fill();
+  ox.restore();
+}
+
+function clearPatchState(announce) {
+  if (!patchState) return;
+  patchState = null; patchDrag = null;
+  cancelAnimationFrame(patchPreviewFrame); patchPreviewFrame = 0;
+  ox.clearRect(0, 0, overlay.width, overlay.height);
+  renderSelection();
+  if (announce) setStatus('Patch finished');
+}
+
+function makePatchState(mask) {
+  const bounds = retouch.maskBounds(mask, width(), height(), .004);
+  if (!bounds) return false;
+  patchState = {
+    mask,
+    bounds,
+    contours: retouch.maskContours(mask, width(), height(), .35),
+    base: bx.getImageData(0, 0, width(), height()),
+    canvas: copyCanvas(),
+    offset: { x: 0, y: 0 }
+  };
+  drawPatchOutline(0, 0);
+  return true;
+}
+
+function tracePatchPath(context, dx = 0, dy = 0) {
+  context.beginPath();
+  patchState.contours.forEach(ring => {
+    context.moveTo(ring[0].x + dx, ring[0].y + dy);
+    for (let i = 1; i < ring.length; i++) context.lineTo(ring[i].x + dx, ring[i].y + dy);
+    context.closePath();
+  });
+}
+
+function drawPatchOutline(dx, dy) {
+  stopAnts();
+  ox.clearRect(0, 0, overlay.width, overlay.height);
+  if (!patchState) return;
+  ox.save();
+  ox.lineWidth = 1;
+  ox.setLineDash([4, 4]);
+  ox.strokeStyle = '#ffffff'; tracePatchPath(ox, 0, 0); ox.stroke();
+  ox.lineDashOffset = 4; ox.strokeStyle = '#000000'; tracePatchPath(ox, 0, 0); ox.stroke();
+  if (dx || dy) {
+    ox.setLineDash([2, 3]); ox.lineDashOffset = 0;
+    ox.strokeStyle = '#ffd400'; tracePatchPath(ox, dx, dy); ox.stroke();
+  }
+  ox.restore();
+}
+
+/* While the patch is being dragged the donor is simply drawn through the
+   outline — fast, and close enough to aim with. The seamless version is
+   computed once, on release. */
+function renderPatchPreview() {
+  if (!patchState) return;
+  const { x: dx, y: dy } = patchState.offset;
+  const destination = option('mode', 'source') === 'destination';
+  bx.putImageData(patchState.base, 0, 0);
+  bx.save();
+  tracePatchPath(bx, destination ? dx : 0, destination ? dy : 0);
+  bx.clip();
+  bx.drawImage(patchState.canvas, destination ? dx : -dx, destination ? dy : -dy);
+  bx.restore();
+  drawPatchOutline(dx, dy);
+  renderLayerPanel();
+}
+
+function applyPatch() {
+  if (!patchState) return;
+  const { x: dx, y: dy } = patchState.offset;
+  if (!dx && !dy) { bx.putImageData(patchState.base, 0, 0); drawPatchOutline(0, 0); return; }
+  const destination = option('mode', 'source') === 'destination';
+  const image = new ImageData(new Uint8ClampedArray(patchState.base.data), width(), height());
+  const mask = destination ? shiftMask(patchState.mask, dx, dy) : patchState.mask;
+  const source = retouch.offsetImage(patchState.base, destination ? -dx : dx, destination ? -dy : dy);
+  const bounds = retouch.maskBounds(mask, width(), height(), .004);
+  if (bounds) {
+    if (option('blend', true)) retouch.poissonBlend(image, source, mask, { box: bounds });
+    else retouch.stampSource(image, source, mask);
+  }
+  bx.putImageData(image, 0, 0);
+  drawPatchOutline(dx, dy);
+  renderLayerPanel();
+  setStatus(destination
+    ? `Patch copied ${dx}, ${dy} px away — drag again to move it, Escape to finish`
+    : `Patched from ${dx}, ${dy} px away — drag again to try another source, Escape to finish`);
+}
+
+/* ---- liquify ----
+ * One snapshot, one mesh of displacements, and every stroke re-samples the
+ * snapshot rather than the pixels the last stroke left behind — so pushing a
+ * shape about for a minute costs the same detail as pushing it once. */
+
+function beginLiquify() {
+  if (liquifyState || !retouch) return;
+  pushUndo();
+  liquifyState = {
+    grid: retouch.makeWarpGrid(width(), height()),
+    pixels: bx.getImageData(0, 0, width(), height()),
+    layerId: activeLayer.id,
+    dirty: null
+  };
+}
+
+function endLiquifySession() {
+  if (!liquifyState) return;
+  cancelAnimationFrame(liquifyFrame); liquifyFrame = 0;
+  liquifyState = null;
+}
+
+function resetLiquify() {
+  if (!liquifyState) { setStatus('Nothing has been liquified yet'); return; }
+  liquifyState.grid = retouch.makeWarpGrid(width(), height());
+  bx.putImageData(liquifyState.pixels, 0, 0);
+  renderLayerPanel();
+  setStatus('Liquify mesh reset');
+}
+
+function markLiquifyDirty(box) {
+  const dirty = liquifyState.dirty;
+  liquifyState.dirty = dirty ? {
+    x: Math.min(dirty.x, box.x), y: Math.min(dirty.y, box.y),
+    w: Math.max(dirty.x + dirty.w, box.x + box.w) - Math.min(dirty.x, box.x),
+    h: Math.max(dirty.y + dirty.h, box.y + box.h) - Math.min(dirty.y, box.y)
+  } : box;
+  if (!liquifyFrame) liquifyFrame = requestAnimationFrame(renderLiquify);
+}
+
+function renderLiquify() {
+  liquifyFrame = 0;
+  if (!liquifyState || !liquifyState.dirty) return;
+  const box = liquifyState.dirty;
+  liquifyState.dirty = null;
+  const out = bx.createImageData(box.w, box.h), result = out.data;
+  const displacement = [0, 0], sample = [0, 0, 0, 0];
+  for (let y = 0; y < box.h; y++) for (let x = 0; x < box.w; x++) {
+    const px = box.x + x + .5, py = box.y + y + .5;
+    retouch.sampleWarp(liquifyState.grid, px, py, displacement);
+    sampleImage(liquifyState.pixels, px + displacement[0] - .5, py + displacement[1] - .5, false, sample);
+    const i = (y * box.w + x) * 4;
+    result[i] = sample[0]; result[i + 1] = sample[1]; result[i + 2] = sample[2]; result[i + 3] = sample[3];
+  }
+  bx.putImageData(out, box.x, box.y);
+  renderLayerPanel();
+}
+
+function liquifyAt(from, to) {
+  if (!liquifyState) return;
+  const radius = brushRadius();
+  const strength = option('strength', 50) / 100;
+  retouch.warpBrush(liquifyState.grid, option('mode', 'push'), to.x, to.y, radius, strength, to.x - from.x, to.y - from.y);
+  /* The displaced pixels can land a little outside the footprint, so the
+     redraw box is the footprint plus the reach of the mesh. */
+  const pad = radius + 8;
+  const box = {
+    x: Math.max(0, Math.floor(to.x - pad)),
+    y: Math.max(0, Math.floor(to.y - pad)),
+    w: 0, h: 0
+  };
+  box.w = Math.min(width(), Math.ceil(to.x + pad)) - box.x;
+  box.h = Math.min(height(), Math.ceil(to.y + pad)) - box.y;
+  if (box.w > 0 && box.h > 0) markLiquifyDirty(box);
+}
+
+/* ---- magic wand ---- */
+
+function maskSelection(mask) {
+  const bounds = retouch.maskBounds(mask, width(), height(), .004);
+  if (!bounds) return null;
+  return { type: 'mask', mask, contours: retouch.maskContours(mask, width(), height(), .35), ...bounds };
+}
+
+function wandAt(point, event) {
+  if (!retouch) return;
+  const merged = toolSettings.wand.sample === 'merged';
+  const image = merged
+    ? compositeCanvas().getContext('2d').getImageData(0, 0, width(), height())
+    : bx.getImageData(0, 0, width(), height());
+  let mask = retouch.magicWand(image, point.x, point.y, {
+    tolerance: toolSettings.wand.tolerance,
+    contiguous: toolSettings.wand.contiguous
+  });
+  const previous = selection && selection.mask && selection.mask.length === mask.length ? selection.mask : null;
+  if (previous && (event.shiftKey || event.altKey)) {
+    const combined = retouch.makeMask(width(), height());
+    for (let i = 0; i < combined.length; i++) {
+      combined[i] = event.shiftKey ? Math.max(previous[i], mask[i]) : Math.max(0, previous[i] - mask[i]);
+    }
+    mask = combined;
+  }
+  if (toolSettings.wand.feather > 0) mask = retouch.featherMask(mask, width(), height(), toolSettings.wand.feather);
+  selection = maskSelection(mask);
+  cropButton.disabled = !selection;
+  renderSelection();
+  let counted = 0;
+  if (selection) for (const value of selection.mask) if (value > .5) counted++;
+  setStatus(selection ? `Magic wand selected ${counted} px` : 'Nothing matched — try a higher tolerance');
+}
+
+/* ---- selection refinements ---- */
+
+function currentSelectionMask() {
+  if (!selection) return null;
+  if (selection.mask && selection.mask.length === width() * height()) return selection.mask;
+  return selectionCoverage();
+}
+
+function refineSelection(kind) {
+  if (!retouch) { setStatus('Retouching is unavailable — paint-retouch.js did not load'); return; }
+  if (!selection) { setStatus('Make a selection first'); return; }
+  const current = currentSelectionMask();
+  const amount = kind === 'feather' ? Number(prompt('Feather the selection by how many pixels?', '4')) : 2;
+  if (kind === 'feather' && (!Number.isFinite(amount) || amount <= 0)) { setStatus('Feathering cancelled'); return; }
+  let mask;
+  if (kind === 'grow') mask = retouch.dilateMask(current, width(), height(), amount);
+  else if (kind === 'shrink') mask = retouch.erodeMask(current, width(), height(), amount);
+  else if (kind === 'feather') mask = retouch.featherMask(current, width(), height(), amount);
+  else {
+    mask = retouch.makeMask(width(), height());
+    for (let i = 0; i < mask.length; i++) mask[i] = 1 - current[i];
+  }
+  const next = maskSelection(mask);
+  if (!next) { clearSelection(); setStatus('That left nothing selected'); return; }
+  selection = next;
+  cropButton.disabled = false;
+  renderSelection();
+  const labels = { grow: 'Selection grown by 2 px', shrink: 'Selection shrunk by 2 px', feather: `Selection feathered by ${amount} px`, invert: 'Selection inverted' };
+  setStatus(labels[kind]);
+}
+
+function contentAwareFill() {
+  if (!retouch) { setStatus('Retouching is unavailable — paint-retouch.js did not load'); return; }
+  if (!selection) { setStatus('Select the thing you want gone first'); return; }
+  const mask = currentSelectionMask();
+  const bounds = retouch.maskBounds(mask, width(), height(), .5);
+  if (!bounds) { setStatus('Nothing selected to fill'); return; }
+  pushUndo();
+  setStatus('Filling from the surroundings…');
+  const image = bx.getImageData(0, 0, width(), height());
+  retouch.inpaint(image, mask, { seed: 20250802 });
+  bx.putImageData(image, 0, 0);
+  renderLayerPanel();
+  rememberEffect('Content-Aware Fill', () => contentAwareFill());
+  setStatus(`Content-aware fill covered ${bounds.w} × ${bounds.h} px`);
 }
 
 function shapePreview(point) {
@@ -1670,12 +2569,60 @@ stack.addEventListener('pointerdown', event => {
     return;
   }
   if (tool === 'picker') { pickColor(point, right); return; }
+  if ((RETOUCH_TOOLS.has(tool) || tool === 'patch' || tool === 'wand' || tool === 'selective') && !retouch) {
+    setStatus('Retouching is unavailable — paint-retouch.js did not load'); return;
+  }
+  if (tool === 'wand') { wandAt(point, event); return; }
+  if (tool === 'selective') {
+    selectivePin = point;
+    setStatus('Selective adjustment pinned — the mask follows whatever looks like that pixel');
+    openEffect('selective');
+    return;
+  }
   if (tool === 'clone' && event.altKey) {
     clearSelection(); cloneSource = point; drawCloneSource();
     setStatus(`Clone source set at ${point.x}, ${point.y}; drag elsewhere to paint`);
     return;
   }
   if (tool === 'clone' && !cloneSource) { setStatus('Alt-click the image first to choose a clone source'); return; }
+  if (tool === 'heal' && event.altKey) {
+    healSource = point; healOffset = null; drawCloneSource();
+    setStatus(`Healing source set at ${point.x}, ${point.y}; paint over the damage`);
+    return;
+  }
+  if (tool === 'heal' && !healSource) { setStatus('Alt-click a clean area first to set the healing source'); return; }
+  if (tool === 'liquify') {
+    beginLiquify();
+    drawing = true; start = last = point;
+    try { stack.setPointerCapture(event.pointerId); } catch {}
+    return;
+  }
+  /* The patch tools have two moods: no region yet, so draw one; a region
+     already there, so drag it onto the pixels to borrow from. */
+  if (tool === 'patch' || tool === 'patch-brush') {
+    if (patchState && patchCovers(point)) {
+      patchDrag = { origin: point };
+      drawing = true; start = last = point;
+      try { stack.setPointerCapture(event.pointerId); } catch {}
+      setStatus('Drag onto the pixels you want to borrow, then let go');
+      return;
+    }
+    clearPatchState(false);
+    pushUndo();
+    strokeSelection = null;
+    drawing = true; start = last = point;
+    try { stack.setPointerCapture(event.pointerId); } catch {}
+    if (tool === 'patch') {
+      lassoPoints = [point];
+      renderSelection(null);
+      setStatus('Draw round the damage');
+    } else {
+      patchPaintMask = retouch.makeMask(width(), height());
+      patchPaintAt(point);
+      setStatus('Paint over the damage');
+    }
+    return;
+  }
   if (!SELECTION_TOOLS.has(tool)) {
     const undoSaved = pushUndo();
     const saved = undoSaved ? undoStack[undoStack.length - 1] : null;
@@ -1696,7 +2643,8 @@ stack.addEventListener('pointerdown', event => {
     renderSelection(tool === 'select' ? rectFrom(point, point) : null);
   }
   else {
-    clearSelection();
+    if (SELECTION_AWARE_TOOLS.has(tool)) beginStrokeSelection();
+    else { clearSelection(); strokeSelection = null; }
     if (tool === 'pencil') strokeSeg(point, point, drawColor, 1);
     else if (tool === 'brush') strokeSeg(point, point, drawColor, toolSize());
     else if (tool === 'eraser') strokeSeg(point, point, bg, toolSize() * 3);
@@ -1706,6 +2654,20 @@ stack.addEventListener('pointerdown', event => {
       strokeBuffer = copyCanvas(); cloneAt(point);
     }
     else if (tool === 'blur') { strokeBuffer = copyCanvas(); blurAt(point); }
+    else if (tool === 'heal' || tool === 'spot-heal') { beginHealStroke(point, tool); healStampAt(point); }
+    else if (tool === 'red-eye') redEyeAt(point);
+    else if (tool === 'color-replace') {
+      const sampled = bx.getImageData(point.x, point.y, 1, 1).data;
+      replaceColour = { r: sampled[0], g: sampled[1], b: sampled[2] };
+      colourReplaceAt(point);
+    }
+    else if (tool === 'smudge') { smudgeBuffer = null; smudgeAt(point); }
+    else if (tool === 'sharpen') sharpenAt(point);
+    else if (tool === 'soften') softenAt(point);
+    else if (tool === 'clarity') clarityAt(point);
+    else if (tool === 'dodge') dodgeBurnAt(point, true);
+    else if (tool === 'burn') dodgeBurnAt(point, false);
+    else if (tool === 'sponge') spongeAt(point);
     else shapePreview(point);
   }
 });
@@ -1714,6 +2676,23 @@ stack.addEventListener('pointermove', event => {
   const point = evPos(event);
   updateBrushCursor(point);
   if (!drawing) return;
+  if (patchDrag) {
+    patchState.offset = { x: point.x - patchDrag.origin.x, y: point.y - patchDrag.origin.y };
+    if (!patchPreviewFrame) {
+      patchPreviewFrame = requestAnimationFrame(() => { patchPreviewFrame = 0; renderPatchPreview(); });
+    }
+    last = point;
+    return;
+  }
+  if (tool === 'liquify') { liquifyAt(last, point); last = point; return; }
+  if (tool === 'patch-brush') { brushAlong(last, point, patchPaintAt); last = point; return; }
+  if (tool === 'patch') {
+    const previous = lassoPoints[lassoPoints.length - 1];
+    if (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) >= 2) lassoPoints.push(point);
+    renderSelection(lassoPoints.length > 1 ? { type: 'lasso', points: lassoPoints, ...selectionBounds(lassoPoints) } : null);
+    last = point;
+    return;
+  }
   if (tool === 'select') renderSelection(rectFrom(start, point));
   else if (tool === 'lasso' || tool === 'magnetic-lasso') {
     const next = tool === 'magnetic-lasso' ? snapMagnetPoint(point) : point;
@@ -1727,6 +2706,16 @@ stack.addEventListener('pointermove', event => {
   else if (tool === 'eraser') strokeSeg(last, point, bg, toolSize() * 3);
   else if (tool === 'clone') brushAlong(last, point, cloneAt);
   else if (tool === 'blur') brushAlong(last, point, blurAt);
+  else if (tool === 'heal' || tool === 'spot-heal') brushAlong(last, point, healStampAt);
+  else if (tool === 'smudge') brushAlong(last, point, smudgeAt);
+  else if (tool === 'sharpen') brushAlong(last, point, sharpenAt);
+  else if (tool === 'soften') brushAlong(last, point, softenAt);
+  else if (tool === 'clarity') brushAlong(last, point, clarityAt);
+  else if (tool === 'dodge') brushAlong(last, point, spot => dodgeBurnAt(spot, true));
+  else if (tool === 'burn') brushAlong(last, point, spot => dodgeBurnAt(spot, false));
+  else if (tool === 'sponge') brushAlong(last, point, spongeAt);
+  else if (tool === 'color-replace') brushAlong(last, point, colourReplaceAt);
+  else if (tool === 'red-eye') { /* one click per eye — dragging would only repeat it */ }
   else if (tool !== 'spray') shapePreview(point);
   last = point;
 });
@@ -1737,6 +2726,36 @@ function endDraw(event) {
   if (!drawing) return;
   drawing = false; clearInterval(sprayTimer);
   const point = evPos(event);
+  if (patchDrag) {
+    patchDrag = null;
+    cancelAnimationFrame(patchPreviewFrame); patchPreviewFrame = 0;
+    patchState.offset = { x: point.x - start.x, y: point.y - start.y };
+    applyPatch();
+    return;
+  }
+  if (tool === 'liquify') {
+    setStatus(`Liquified with the ${option('mode', 'push')} brush — keep going, or Reset mesh to start again`);
+    return;
+  }
+  if (tool === 'patch' || tool === 'patch-brush') {
+    let mask = null;
+    if (tool === 'patch') {
+      if (!lassoPoints.length || Math.hypot(point.x - lassoPoints[lassoPoints.length - 1].x, point.y - lassoPoints[lassoPoints.length - 1].y) > 1) lassoPoints.push(point);
+      const outline = polygonSelection(lassoPoints, 'lasso');
+      lassoPoints = [];
+      mask = outline ? selectionCoverage(outline) : null;
+    } else {
+      mask = patchPaintMask;
+      patchPaintMask = null;
+    }
+    ox.clearRect(0, 0, overlay.width, overlay.height);
+    if (mask && makePatchState(mask)) {
+      setStatus(`Patch of ${patchState.bounds.w} × ${patchState.bounds.h} px marked — now drag inside it onto clean pixels`);
+    } else {
+      setStatus('Nothing was marked — draw round the damage, or paint over it');
+    }
+    return;
+  }
   if (SELECTION_TOOLS.has(tool)) {
     if (tool === 'select') {
       const rect = rectFrom(start, point);
@@ -1756,8 +2775,15 @@ function endDraw(event) {
     strokeBuffer = null; drawCloneSource(); setStatus('Clone stroke applied; Alt-click to choose a different source');
   } else if (tool === 'blur') {
     strokeBuffer = null; setStatus('Blur stroke applied');
+  } else if (tool === 'heal' || tool === 'spot-heal') {
+    finishHealStroke();
+  } else if (tool === 'smudge') {
+    smudgeBuffer = null; setStatus('Smudged');
+  } else if (RETOUCH_TOOLS.has(tool)) {
+    setStatus(`${appRoot.querySelector(`.paint-tool[data-tool="${tool}"]`)?.getAttribute('aria-label')} stroke applied${selectionNote()}`);
   }
   if (!SELECTION_TOOLS.has(tool)) finishMirroredStroke(start);
+  strokeSelection = null;
 }
 stack.addEventListener('pointerup', endDraw);
 stack.addEventListener('pointercancel', endDraw);
@@ -2896,8 +3922,216 @@ const EFFECTS = {
       }
     ],
     run: (src, v) => lensFlareImage(src, v.brightness, v.centreX, v.centreY, v.lens)
+  },
+  'surface-blur': {
+    title: 'Surface Blur',
+    help: 'Smooths shading but leaves edges where they are — the filter behind skin softening.',
+    fields: [
+      { id: 'radius', label: 'Radius', type: 'range', min: 1, max: 24, value: 5, step: 1, unit: ' px' },
+      { id: 'threshold', label: 'Threshold', type: 'range', min: 2, max: 120, value: 25, step: 1 }
+    ],
+    run: (src, v) => retouch.surfaceBlur(src, v.radius, v.threshold)
+  },
+  clarity: {
+    title: 'Clarity',
+    help: 'Contrast at one scale only. Positive gives punch, negative gives the soft-focus look.',
+    fields: [
+      { id: 'amount', label: 'Amount', type: 'range', min: -100, max: 100, value: 40, step: 1, unit: '%' },
+      { id: 'radius', label: 'Radius', type: 'range', min: 2, max: 120, value: 24, step: 1, unit: ' px' },
+      { id: 'protect', label: 'Protect black and white', type: 'check', value: true }
+    ],
+    run: (src, v) => retouch.localContrast(src, blurredImage(src, v.radius, false), v.amount, v.protect)
+  },
+  vignette: {
+    title: 'Vignette',
+    help: 'Darkens or lightens the corners, the way a lens does wide open.',
+    fields: [
+      { id: 'amount', label: 'Amount', type: 'range', min: -100, max: 100, value: -40, step: 1, unit: '%' },
+      { id: 'midpoint', label: 'Midpoint', type: 'range', min: 5, max: 100, value: 55, step: 1, unit: '%' },
+      { id: 'feather', label: 'Feather', type: 'range', min: 1, max: 100, value: 55, step: 1, unit: '%' },
+      { id: 'roundness', label: 'Roundness', type: 'range', min: 0, max: 100, value: 60, step: 1, unit: '%' }
+    ],
+    run: (src, v) => vignetteImage(src, v.amount, v.midpoint, v.feather, v.roundness)
+  },
+  graduated: {
+    title: 'Graduated Filter',
+    help: 'One adjustment poured in through a straight edge — the photographer’s grey grad, for skies.',
+    fields: [
+      { id: 'angle', label: 'Angle', type: 'range', min: -180, max: 180, value: 0, step: 1, unit: '°' },
+      { id: 'position', label: 'Position', type: 'range', min: 0, max: 100, value: 40, step: 1, unit: '%' },
+      { id: 'softness', label: 'Softness', type: 'range', min: 1, max: 100, value: 35, step: 1, unit: '%' },
+      { id: 'exposure', label: 'Exposure', type: 'range', min: -100, max: 100, value: -35, step: 1, unit: '%' },
+      { id: 'saturation', label: 'Saturation', type: 'range', min: -100, max: 100, value: 0, step: 1, unit: '%' },
+      { id: 'warmth', label: 'Warmth', type: 'range', min: -100, max: 100, value: 0, step: 1, unit: '%' }
+    ],
+    run: (src, v) => graduatedImage(src, v)
+  },
+  'lens-correction': {
+    title: 'Lens Correction',
+    help: 'Straightens barrel or pincushion distortion and pulls the colour fringes back together.',
+    fields: [
+      { id: 'distortion', label: 'Distortion', type: 'range', min: -60, max: 60, value: 0, step: 1 },
+      { id: 'fringe', label: 'Fringe', type: 'range', min: -40, max: 40, value: 0, step: 1 },
+      { id: 'scale', label: 'Scale', type: 'range', min: 80, max: 140, value: 100, step: 1, unit: '%' },
+      { id: 'devignette', label: 'Corner lift', type: 'range', min: 0, max: 100, value: 0, step: 1, unit: '%' }
+    ],
+    run: (src, v) => lensCorrectionImage(src, v.distortion, v.fringe, v.scale, v.devignette)
+  },
+  selective: {
+    title: 'Selective Adjustment',
+    help: 'The pin decides what changes: pixels near it that look like it move, the rest stay put.',
+    fields: [
+      { id: 'size', label: 'Size', type: 'range', min: 2, max: 100, value: 25, step: 1, unit: '%' },
+      { id: 'tolerance', label: 'Similarity', type: 'range', min: 1, max: 100, value: 35, step: 1 },
+      { id: 'brightness', label: 'Brightness', type: 'range', min: -100, max: 100, value: 0, step: 1 },
+      { id: 'contrast', label: 'Contrast', type: 'range', min: -100, max: 100, value: 0, step: 1 },
+      { id: 'saturation', label: 'Saturation', type: 'range', min: -100, max: 100, value: 0, step: 1 },
+      { id: 'showMask', label: 'Show the mask', type: 'check', value: false }
+    ],
+    run: (src, v) => selectiveImage(src, v)
   }
 };
+
+/* A radial falloff from the centre. Negative amounts darken the corners, which
+   is the way round anybody actually wants it. */
+function vignetteImage(src, amount, midpoint, feather, roundness) {
+  const w = src.width, h = src.height, out = copyImage(src), data = out.data;
+  const centreX = w / 2, centreY = h / 2;
+  /* Roundness slides between a circle and an ellipse that follows the frame. */
+  const shortest = Math.min(centreX, centreY), longest = Math.hypot(centreX, centreY);
+  const radiusX = centreX + (shortest - centreX) * (roundness / 100);
+  const radiusY = centreY + (shortest - centreY) * (roundness / 100);
+  const inner = midpoint / 100 * (longest / Math.max(radiusX, radiusY));
+  const softness = Math.max(.02, feather / 100);
+  const gain = amount / 100;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const dx = (x + .5 - centreX) / radiusX, dy = (y + .5 - centreY) / radiusY;
+    const distance = Math.hypot(dx, dy);
+    const t = Math.max(0, Math.min(1, (distance - inner) / softness));
+    const falloff = smoothStep(t) * gain;
+    if (!falloff) continue;
+    const i = (y * w + x) * 4;
+    for (let channel = 0; channel < 3; channel++) {
+      const value = data[i + channel];
+      data[i + channel] = clampByte(falloff < 0 ? value * (1 + falloff) : value + (255 - value) * falloff);
+    }
+  }
+  return out;
+}
+
+function graduatedImage(src, values) {
+  const w = src.width, h = src.height, out = copyImage(src), data = out.data;
+  const angle = values.angle * Math.PI / 180;
+  const dirX = Math.sin(angle), dirY = -Math.cos(angle);
+  const diagonal = Math.hypot(w, h);
+  const line = (values.position / 100 - .5) * diagonal;
+  const softness = Math.max(1, values.softness / 100 * diagonal / 2);
+  const exposure = values.exposure / 100, saturation = values.saturation / 100, warmth = values.warmth / 100;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const distance = (x + .5 - w / 2) * dirX + (y + .5 - h / 2) * dirY;
+    const t = Math.max(0, Math.min(1, (line + softness - distance) / (softness * 2)));
+    const strength = smoothStep(t);
+    if (strength <= 0) continue;
+    const i = (y * w + x) * 4;
+    let red = data[i], green = data[i + 1], blue = data[i + 2];
+    if (exposure) {
+      const shift = exposure * strength;
+      red = shift > 0 ? red + (255 - red) * shift : red * (1 + shift);
+      green = shift > 0 ? green + (255 - green) * shift : green * (1 + shift);
+      blue = shift > 0 ? blue + (255 - blue) * shift : blue * (1 + shift);
+    }
+    if (saturation) {
+      const luma = red * .299 + green * .587 + blue * .114, amount = saturation * strength;
+      red += (red - luma) * amount; green += (green - luma) * amount; blue += (blue - luma) * amount;
+    }
+    if (warmth) {
+      const amount = warmth * strength * 40;
+      red += amount; blue -= amount;
+    }
+    data[i] = clampByte(red); data[i + 1] = clampByte(green); data[i + 2] = clampByte(blue);
+  }
+  return out;
+}
+
+/* Barrel and pincushion are a radial polynomial; the colour fringe is the same
+   polynomial applied a little harder to red and a little softer to blue. */
+function lensCorrectionImage(src, distortion, fringe, scale, devignette) {
+  const w = src.width, h = src.height, out = blankImage(w, h), data = out.data;
+  const centreX = w / 2, centreY = h / 2;
+  const norm = Math.hypot(centreX, centreY);
+  const k = distortion / 100, zoom = 100 / scale;
+  const sample = [0, 0, 0, 0], channels = [0, 0, 0];
+  const map = (x, y, extra) => {
+    const dx = (x - centreX) / norm, dy = (y - centreY) / norm;
+    const r2 = dx * dx + dy * dy;
+    const factor = (1 + (k + extra) * r2) * zoom;
+    return [centreX + dx * norm * factor, centreY + dy * norm * factor];
+  };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    const spread = fringe / 4000;
+    for (let channel = 0; channel < 3; channel++) {
+      const extra = channel === 0 ? spread : channel === 2 ? -spread : 0;
+      const [sx, sy] = map(x + .5, y + .5, extra);
+      sampleImage(src, sx - .5, sy - .5, false, sample);
+      channels[channel] = sample[channel];
+      if (channel === 1) data[i + 3] = sample[3];
+    }
+    let lift = 1;
+    if (devignette) {
+      const dx = (x + .5 - centreX) / norm, dy = (y + .5 - centreY) / norm;
+      lift = 1 + devignette / 100 * (dx * dx + dy * dy) * 1.4;
+    }
+    data[i] = clampByte(channels[0] * lift);
+    data[i + 1] = clampByte(channels[1] * lift);
+    data[i + 2] = clampByte(channels[2] * lift);
+  }
+  return out;
+}
+
+/* The Snapseed trick: one pin, and a mask that spreads to whatever nearby
+   pixels look like the one underneath it. */
+function selectiveImage(src, values) {
+  const w = src.width, h = src.height, out = copyImage(src), data = out.data, source = src.data;
+  const pin = selectivePin || { x: Math.floor(w / 2), y: Math.floor(h / 2) };
+  const centre = ((Math.min(h - 1, pin.y)) * w + Math.min(w - 1, pin.x)) * 4;
+  const pinRed = source[centre], pinGreen = source[centre + 1], pinBlue = source[centre + 2];
+  const radius = values.size / 100 * Math.hypot(w, h) / 2;
+  const tolerance = Math.max(1, values.tolerance * 3);
+  const brightness = values.brightness / 100, contrast = values.contrast / 100, saturation = values.saturation / 100;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    const distance = Math.hypot(x + .5 - pin.x, y + .5 - pin.y);
+    if (distance > radius) { if (values.showMask) { data[i] = data[i + 1] = data[i + 2] = 0; } continue; }
+    const difference = Math.abs(source[i] - pinRed) + Math.abs(source[i + 1] - pinGreen) + Math.abs(source[i + 2] - pinBlue);
+    const likeness = Math.max(0, 1 - difference / tolerance);
+    const reach = smoothStep(Math.max(0, 1 - distance / radius));
+    const coverage = likeness * reach;
+    if (values.showMask) {
+      const grey = clampByte(coverage * 255);
+      data[i] = grey; data[i + 1] = grey; data[i + 2] = grey;
+      continue;
+    }
+    if (coverage <= 0) continue;
+    let red = source[i], green = source[i + 1], blue = source[i + 2];
+    if (brightness) {
+      const shift = brightness * coverage;
+      red = shift > 0 ? red + (255 - red) * shift : red * (1 + shift);
+      green = shift > 0 ? green + (255 - green) * shift : green * (1 + shift);
+      blue = shift > 0 ? blue + (255 - blue) * shift : blue * (1 + shift);
+    }
+    if (contrast) {
+      const amount = 1 + contrast * coverage;
+      red = (red - 128) * amount + 128; green = (green - 128) * amount + 128; blue = (blue - 128) * amount + 128;
+    }
+    if (saturation) {
+      const luma = red * .299 + green * .587 + blue * .114, amount = saturation * coverage;
+      red += (red - luma) * amount; green += (green - luma) * amount; blue += (blue - luma) * amount;
+    }
+    data[i] = clampByte(red); data[i + 1] = clampByte(green); data[i + 2] = clampByte(blue);
+  }
+  return out;
+}
 
 /* Beyond this size a filter takes long enough that chasing the slider would
    stutter, so the preview waits for the control to be let go instead. */
@@ -3006,8 +4240,11 @@ function maskEffect(result, source, mask) {
   if (!mask) return result;
   const data = result.data, previous = source.data;
   for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
-    if (mask[pixel]) continue;
-    data[i] = previous[i]; data[i + 1] = previous[i + 1]; data[i + 2] = previous[i + 2]; data[i + 3] = previous[i + 3];
+    const coverage = mask[pixel];
+    if (coverage >= 1) continue;
+    for (let channel = 0; channel < 4; channel++) {
+      data[i + channel] = previous[i + channel] + (data[i + channel] - previous[i + channel]) * coverage;
+    }
   }
   return result;
 }
@@ -3038,7 +4275,7 @@ function openEffect(kind) {
   const config = EFFECTS[kind];
   if (!config) return;
   if (effectOriginal) endEffectPreview(true, false);
-  effectOriginal = { layerId: activeLayer.id, pixels: bx.getImageData(0, 0, width(), height()), mask: selectionMask() };
+  effectOriginal = { layerId: activeLayer.id, pixels: bx.getImageData(0, 0, width(), height()), mask: selectionCoverage() };
   activeEffect = kind; effectPreviewing = true; effectLive = width() * height() <= EFFECT_LIVE_PIXELS;
   stack.classList.add('adjust-busy');
   appRoot.querySelector('#effectTitle').textContent = config.title;
@@ -3052,7 +4289,7 @@ function openEffect(kind) {
 function applyEffect(kind, values) {
   const config = EFFECTS[kind];
   const source = bx.getImageData(0, 0, width(), height());
-  const result = maskEffect(runEffect(kind, source, values), source, selectionMask());
+  const result = maskEffect(runEffect(kind, source, values), source, selectionCoverage());
   pushUndo();
   bx.putImageData(result, 0, 0);
   rememberEffect(config.title, () => applyEffect(kind, values));
@@ -3125,9 +4362,12 @@ function hslToRgb(h, s, l) {
 function transformPixels(image, transform, mask = null) {
   const data = image.data;
   for (let i = 0, pixel = 0; i < data.length; i += 4, pixel++) {
-    if (!data[i + 3] || (mask && !mask[pixel])) continue;
+    const coverage = mask ? mask[pixel] : 1;
+    if (!data[i + 3] || coverage <= 0) continue;
     const next = transform(data[i], data[i + 1], data[i + 2], data[i + 3], pixel);
-    data[i] = clampByte(next[0]); data[i + 1] = clampByte(next[1]); data[i + 2] = clampByte(next[2]);
+    for (let channel = 0; channel < 3; channel++) {
+      data[i + channel] = clampByte(data[i + channel] + (next[channel] - data[i + channel]) * coverage);
+    }
   }
   return image;
 }
@@ -3244,7 +4484,7 @@ function closeAdjustment(cancel = true) {
 function openAdjustment(kind) {
   const config = ADJUSTMENTS[kind]; if (!config) return;
   if (appRoot.querySelector('#adjustModal').classList.contains('open')) closeAdjustment(true);
-  adjustmentOriginal = { layerId: activeLayer.id, pixels: bx.getImageData(0, 0, width(), height()), mask: selectionMask() };
+  adjustmentOriginal = { layerId: activeLayer.id, pixels: bx.getImageData(0, 0, width(), height()), mask: selectionCoverage() };
   adjustPreviewing = true; histogramOnly = false; stack.classList.add('adjust-busy');
   activeAdjustment = kind; appRoot.querySelector('#adjustTitle').textContent = config.title;
   const fields = appRoot.querySelector('#adjustFields'); fields.replaceChildren();
@@ -4373,6 +5613,10 @@ if (window.ClackDither) {
 function runCmd(cmd) {
   /* Purely a view change, so it stays available while a preview is running. */
   if (cmd === 'layer-panel') { setLayersCollapsed(!layersCollapsed, true); return; }
+  /* A liquify mesh and a live patch are both tied to a snapshot of the layer,
+     so any command that might change it settles them first. */
+  endLiquifySession();
+  if (patchState && cmd !== 'undo' && cmd !== 'redo') clearPatchState(false);
   if (freeTransform) {
     if (cmd === 'free-transform') finishFreeTransform(true);
     else status.textContent = 'Apply or cancel the free transform before using another command';
@@ -4426,6 +5670,11 @@ function runCmd(cmd) {
       selection = { type: 'rect', x: 0, y: 0, w: width(), h: height() };
       cropButton.disabled = false; renderSelection(); setStatus('Everything selected'); break;
     case 'deselect': clearSelection(); setStatus('Selection cleared'); break;
+    case 'selection-grow': refineSelection('grow'); break;
+    case 'selection-shrink': refineSelection('shrink'); break;
+    case 'selection-feather': refineSelection('feather'); break;
+    case 'selection-invert': refineSelection('invert'); break;
+    case 'content-fill': contentAwareFill(); break;
     case 'layer-new': newLayer(); break;
     case 'layer-duplicate': duplicateLayer(); break;
     case 'layer-rename': renameLayer(); break;
@@ -4571,6 +5820,7 @@ appRoot.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a' && !typing) {
     event.preventDefault(); runCmd('select-all'); return;
   }
+  if (patchState && event.key === 'Escape' && !typing) { event.preventDefault(); clearPatchState(true); return; }
   if (contentTransform && event.key === 'Escape') { event.preventDefault(); finishFormDetectingTransform(false); return; }
   if (contentTransform && event.key === 'Enter' && !/^(INPUT|BUTTON)$/.test(event.target.tagName || '')) { event.preventDefault(); finishFormDetectingTransform(true); return; }
   if (event.key === 'Escape' && appRoot.querySelector('#adjustModal').classList.contains('open')) { event.preventDefault(); closeAdjustment(true); return; }
