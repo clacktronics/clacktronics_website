@@ -227,8 +227,12 @@
    above everything else the app draws: menus, panels and the canvas menu. */
 .paint-modal { pointer-events: none; align-items: center; justify-content: center; padding: 18px; background: transparent; z-index: 100; }
 .paint-modal .paint-modal-box { pointer-events: auto; position: relative; width: min(390px, 100%); max-height: 100%; }
-/* Dragged, it stops being centred and is placed by hand inside the overlay. */
-.paint-modal .paint-modal-box.dragged { position: absolute; }
+/* Dragged, it stops being centred and is placed by hand — in the coordinates
+   of the screen rather than of the app. Fixed rather than absolute so that the
+   dialog is not clipped by the ClackOS window body it is mounted in: a dialog
+   can be pulled clear of the window and parked on the desktop beside it, out
+   of the way of the picture it is working on. */
+.paint-modal .paint-modal-box.dragged { position: fixed; max-height: calc(100vh - 12px); }
 .paint-modal .paint-modal-box > header { cursor: grab; touch-action: none; user-select: none; }
 .paint-modal .paint-modal-box > header:active { cursor: grabbing; }
 .paint-modal .paint-dialog-body { overflow-y: auto; min-height: 0; }
@@ -5459,20 +5463,34 @@ function setAsBackground() {
     const payload = { name: fileName, dataUrl };
     localStorage.setItem(CUSTOM_BG_KEY, JSON.stringify(payload));
     localStorage.setItem('clackos-wallpaper', CUSTOM_BG_NAME);
-    const message = { type: 'clackos-set-background-tile', ...payload };
-    if (appRoot !== document) {
-      appRoot.host.dispatchEvent(new CustomEvent('clackos-message', {
-        detail: message, bubbles: true, composed: true
-      }));
-    } else if (window.parent !== window) window.parent.postMessage(message, location.origin);
+    tellClackOS({ type: 'clackos-set-background-tile', ...payload });
     setStatus('Set as the repeating desktop background tile');
   } catch (error) {
     setStatus('Tile is too large for browser storage; reduce Image Size and try again');
   }
 }
 
+/* Tell the desktop something, if there is a desktop listening: an integrated
+ * app dispatches from its host element, a page in an iframe posts to its
+ * parent, and a page on its own has nobody to tell. */
+function tellClackOS(message) {
+  if (appRoot !== document) {
+    appRoot.host.dispatchEvent(new CustomEvent('clackos-message', {
+      detail: message, bubbles: true, composed: true
+    }));
+  } else if (window.parent !== window) window.parent.postMessage(message, location.origin);
+}
+
 const modals = new Map([...appRoot.querySelectorAll('.paint-modal')].map(modal => [modal.id, modal]));
 const anyModalOpen = () => [...modals.values()].some(modal => modal.classList.contains('open'));
+/* Dialogs stack in the order they were last touched, above the 100 the app
+ * draws its own furniture at, so the one being used is the one on top. */
+let dialogTop = 100;
+/* A dialog belongs above the picture it is editing, and above the window that
+ * picture is in: opening or closing one brings ClackPaint to the front of the
+ * desktop, so a dialog that has been parked outside the window is never left
+ * behind another window. */
+const raiseDialog = modal => { modal.style.zIndex = ++dialogTop; tellClackOS({ type: 'clackos-focus-window' }); };
 const showModal = id => {
   const modal = modals.get(id);
   /* A dialog opens in the middle of the app every time. Somewhere it was
@@ -5484,12 +5502,14 @@ const showModal = id => {
     dialogWindow.style.right = dialogWindow.style.bottom = '';
   }
   modal.classList.add('open');
+  raiseDialog(modal);
   lockBehindDialog();
 };
 const hideModal = id => {
   if (id === 'gaussianBlurModal') cancelGaussianPreview();
   if (id === 'effectModal') endEffectPreview(true);
   modals.get(id).classList.remove('open');
+  tellClackOS({ type: 'clackos-focus-window' });
   lockBehindDialog();
 };
 
@@ -5506,21 +5526,24 @@ function lockBehindDialog() {
 modals.forEach(modal => {
   const dialogWindow = modal.querySelector('.paint-modal-box'), handle = dialogWindow?.querySelector(':scope > header');
   if (!dialogWindow || !handle) return;
+  /* Whichever dialog was last taken hold of is the one drawn on top. */
+  dialogWindow.addEventListener('pointerdown', () => raiseDialog(modal));
   handle.addEventListener('pointerdown', event => {
     if (event.target.closest('button')) return;
     event.preventDefault();
     const rect = dialogWindow.getBoundingClientRect(), grabX = event.clientX - rect.left, grabY = event.clientY - rect.top;
-    /* Dialogs are placed inside the overlay, which is the app and no more, so
-     * a drag works in the overlay's coordinates and stops at its edges — the
-     * dialog cannot be dragged out of a ClackOS window and onto the desktop. */
-    const bounds = modal.getBoundingClientRect();
+    /* A dragged dialog is placed in the coordinates of the screen, not of the
+     * app, so it can be pulled out of a ClackOS window and parked on the
+     * desktop beside it. The screen is still the limit: a strip of the title
+     * bar stays on it, which is what there is to drag the dialog back by. */
     dialogWindow.classList.add('dragged');
     dialogWindow.style.width = rect.width + 'px'; dialogWindow.style.right = 'auto'; dialogWindow.style.bottom = 'auto';
-    dialogWindow.style.left = (rect.left - bounds.left) + 'px'; dialogWindow.style.top = (rect.top - bounds.top) + 'px';
+    dialogWindow.style.left = rect.left + 'px'; dialogWindow.style.top = rect.top + 'px';
     document.body.classList.add('win-drag');
     const move = moved => {
-      dialogWindow.style.left = Math.max(-rect.width + 70, Math.min(bounds.width - 70, moved.clientX - grabX - bounds.left)) + 'px';
-      dialogWindow.style.top = Math.max(0, Math.min(bounds.height - 34, moved.clientY - grabY - bounds.top)) + 'px';
+      const width = dialogWindow.offsetWidth || rect.width;
+      dialogWindow.style.left = Math.max(-width + 70, Math.min(window.innerWidth - 70, moved.clientX - grabX)) + 'px';
+      dialogWindow.style.top = Math.max(0, Math.min(window.innerHeight - 34, moved.clientY - grabY)) + 'px';
     };
     const up = () => {
       document.body.classList.remove('win-drag'); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
