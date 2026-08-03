@@ -754,6 +754,7 @@ async function openWindow(id, restore = null) {
           /* clicking into an app also hands it the keyboard: apps that render
            * to a canvas (emulators) never take focus on their own */
           f.contentDocument.addEventListener('pointerdown', () => {
+            closeMenus();          /* clicking into an app is "outside" the desktop menus */
             focusWindow(el);
             try { f.contentWindow.focus(); } catch {}
           });
@@ -1954,6 +1955,15 @@ function buildMenu(folder, def) {
 
 document.addEventListener('click', closeMenus);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
+
+/* The other half of that: a click on the desktop is "outside" for an app
+ * running in an iframe too, but its document never sees the click, so the menu
+ * it left open is closed from here (assets/js/app-menu.js, loaded by the app). */
+document.addEventListener('pointerdown', () => {
+  document.querySelectorAll('iframe.appframe').forEach(frame => {
+    try { frame.contentWindow?.ClackOSCloseAppMenus?.(); } catch {}
+  });
+});
 
 /* ---------------- Actions ---------------- */
 function runAction(action) {
