@@ -694,6 +694,10 @@ async function mountIntegratedApp(body, launchPage, title, onClose) {
     onClose(() => menuObserver.disconnect());
     syncMenuOverflow();
 
+    /* menus opening on hover, listening on this root rather than the document
+     * (see assets/js/app-menu.js) */
+    window.ClackOSMenus?.install(root);
+
     bindWebLinkRouting(root);
     addStandaloneAppLink(root, sourceUrl.href, appDefs.get(launchPage.split(/[?#]/)[0]));
   } catch (error) {

@@ -85,16 +85,24 @@
     closeAll(event.target?.ownerDocument || document);
   }
 
-  function install(doc) {
-    if (!doc || doc[INSTALLED]) return;
-    doc[INSTALLED] = true;
-    doc.addEventListener('pointerover', onPointerOver, true);
-    doc.addEventListener('keydown', onKeyDown);
-    doc.addEventListener('click', onClick);
+  /* A document listener is not enough for an app mounted in a shadow root:
+   * pointerover carries a relatedTarget, and an event whose target and
+   * relatedTarget retarget to the same node — the host, for any move from one
+   * menu to the next inside the same root — is never dispatched outside that
+   * root. The move in from the desktop is dispatched, which is why those
+   * menus opened on the way in but not as the pointer went along the bar.
+   * Listening on the root itself sees every move. */
+  function install(root) {
+    if (!root || root[INSTALLED]) return;
+    root[INSTALLED] = true;
+    root.addEventListener('pointerover', onPointerOver, true);
+    root.addEventListener('keydown', onKeyDown);
+    root.addEventListener('click', onClick);
   }
 
   install(document);
-  /* ClackOS closes the menus of an app in an iframe when the click that should
-   * dismiss them lands on the desktop instead */
+  /* ClackOS mounts an app into a shadow root, and closes the menus of an app
+   * in an iframe when the click that should dismiss them lands on the desktop */
+  window.ClackOSMenus = { install, closeAll };
   window.ClackOSCloseAppMenus = doc => closeAll(doc || document);
 })();
