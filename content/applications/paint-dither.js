@@ -59,12 +59,12 @@ const hexToRgb = hex => {
  * advertises `step`, the typical distance between neighbouring output values,
  * which the ordered and noise dithers use to size their offsets. */
 
-function levelQuantiser(levels, mono) {
-  /* levels are already in the working space and sorted low to high */
-  const TABLE = 1024;
-  const table = new Float32Array(TABLE);
-  for (let i = 0; i < TABLE; i++) {
-    const value = (i * 255) / (TABLE - 1);
+/* nearest of a level list, read off a table rather than searched per pixel */
+const LEVEL_TABLE = 1024;
+function levelTable(levels) {
+  const table = new Float32Array(LEVEL_TABLE);
+  for (let i = 0; i < LEVEL_TABLE; i++) {
+    const value = (i * 255) / (LEVEL_TABLE - 1);
     let best = levels[0], bestDistance = Infinity;
     for (const level of levels) {
       const distance = Math.abs(level - value);
@@ -72,12 +72,41 @@ function levelQuantiser(levels, mono) {
     }
     table[i] = best;
   }
-  const lookup = value => table[clamp(Math.round((value * (TABLE - 1)) / 255), 0, TABLE - 1)];
+  return table;
+}
+const levelLookup = (table, value) =>
+  table[clamp(Math.round((value * (LEVEL_TABLE - 1)) / 255), 0, LEVEL_TABLE - 1)];
+
+function levelQuantiser(levels, mono) {
+  /* levels are already in the working space and sorted low to high */
+  const table = levelTable(levels);
   return {
     mono,
     step: 255 / Math.max(1, levels.length - 1),
     size: levels.length,
-    q(r, g, b, out) { out[0] = lookup(r); out[1] = lookup(g); out[2] = lookup(b); }
+    q(r, g, b, out) {
+      out[0] = levelLookup(table, r); out[1] = levelLookup(table, g); out[2] = levelLookup(table, b);
+    }
+  };
+}
+
+/* One level list per channel, for output formats whose channels are not all
+   the same width — RGB565 keeps twice as many greens as reds, and dithering it
+   against a single shared step would scatter noise into a channel that did not
+   need it. */
+function channelQuantiser(levels) {
+  const tables = levels.map(levelTable);
+  const steps = levels.map(list => 255 / Math.max(1, list.length - 1));
+  return {
+    mono: false,
+    steps,
+    step: (steps[0] + steps[1] + steps[2]) / 3,
+    size: levels[0].length * levels[1].length * levels[2].length,
+    q(r, g, b, out) {
+      out[0] = levelLookup(tables[0], r);
+      out[1] = levelLookup(tables[1], g);
+      out[2] = levelLookup(tables[2], b);
+    }
   };
 }
 
@@ -141,6 +170,14 @@ function buildQuantiser(options, colours) {
   switch (options.palette) {
     case 'gray': return levelQuantiser(evenLevels(clamp(options.grayLevels | 0, 2, 64)), true);
     case 'rgb': return levelQuantiser(evenLevels(clamp(options.rgbLevels | 0, 2, 16)), false);
+    /* the two the exporter asks for: an exact colour list, or a level count
+       per channel that matches however many bits the pixel format keeps */
+    case 'custom': return listOf(options.customColours || [[0, 0, 0], [255, 255, 255]]);
+    case 'custom-gray': return levelQuantiser((options.customLevels || [0, 255]).map(toWorking), true);
+    case 'channels': {
+      const counts = options.channelLevels || [2, 2, 2];
+      return channelQuantiser(counts.map(count => evenLevels(clamp(count | 0, 2, 256))));
+    }
     case 'fgbg': return listOf([hexToRgb(colours.bg), hexToRgb(colours.fg)]);
     case 'paint': return listOf(colours.palette.map(hexToRgb));
     case 'web': return listOf(WEB_SAFE);
@@ -467,7 +504,9 @@ function runOrdered(job, options) {
   const { width, height, buffer, alpha, quantiser } = job;
   const { data: matrix, size } = orderedMatrix(options);
   const out = new Float32Array(3);
-  const amount = clamp((+options.strength || 0) / 100, 0, 3) * quantiser.step;
+  const scale = clamp((+options.strength || 0) / 100, 0, 3);
+  const steps = quantiser.steps || [quantiser.step, quantiser.step, quantiser.step];
+  const amount = scale * steps[0], amountG = scale * steps[1], amountB = scale * steps[2];
   const shift = options.channelShift ? [0, 1, 2] : [0, 0, 0];
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -476,8 +515,8 @@ function runOrdered(job, options) {
       const p = pixel * 3;
       const base = matrix[(y % size) * size + (x % size)] - 0.5;
       const offsetR = base * amount;
-      const offsetG = (options.channelShift ? matrix[((y + shift[1]) % size) * size + ((x + shift[1]) % size)] - 0.5 : base) * amount;
-      const offsetB = (options.channelShift ? matrix[((y + shift[2]) % size) * size + ((x + shift[2]) % size)] - 0.5 : base) * amount;
+      const offsetG = (options.channelShift ? matrix[((y + shift[1]) % size) * size + ((x + shift[1]) % size)] - 0.5 : base) * amountG;
+      const offsetB = (options.channelShift ? matrix[((y + shift[2]) % size) * size + ((x + shift[2]) % size)] - 0.5 : base) * amountB;
       quantiser.q(buffer[p] + offsetR, buffer[p + 1] + offsetG, buffer[p + 2] + offsetB, out);
       buffer[p] = out[0]; buffer[p + 1] = out[1]; buffer[p + 2] = out[2];
     }
@@ -501,7 +540,8 @@ function runNoise(job, options) {
     return;
   }
   const random = makeRandom(options.seed | 0);
-  const amount = clamp((+options.amplitude || 0) / 100, 0, 3) * quantiser.step;
+  const scale = clamp((+options.amplitude || 0) / 100, 0, 3);
+  const steps = quantiser.steps || [quantiser.step, quantiser.step, quantiser.step];
   const white = options.noise === 'white';
   const out = new Float32Array(3);
   for (let y = 0; y < height; y++) {
@@ -509,10 +549,10 @@ function runNoise(job, options) {
       const pixel = y * width + x;
       if (!alpha[pixel * 4 + 3]) continue;
       const p = pixel * 3;
-      const draw = () => (white ? clamp(gaussianFrom(random) / 3, -0.5, 0.5) : random() - 0.5) * amount;
-      const nr = draw();
-      const ng = options.monochrome ? nr : draw();
-      const nb = options.monochrome ? nr : draw();
+      const draw = channel => (white ? clamp(gaussianFrom(random) / 3, -0.5, 0.5) : random() - 0.5) * scale * steps[channel];
+      const nr = draw(0);
+      const ng = options.monochrome ? nr : draw(1);
+      const nb = options.monochrome ? nr : draw(2);
       quantiser.q(buffer[p] + nr, buffer[p + 1] + ng, buffer[p + 2] + nb, out);
       buffer[p] = out[0]; buffer[p + 1] = out[1]; buffer[p + 2] = out[2];
     }
@@ -1138,22 +1178,25 @@ const OPTION_LABEL = (list, value) => {
   return found ? found[1] : value;
 };
 
-function paramsFor(groupId) {
+/* withPalette false drops the "output colours" rows: the exporter chooses the
+   palette from the pixel format it is about to pack into, so offering a second
+   one would let you dither to colours the format cannot store. */
+function paramsFor(groupId, withPalette = true) {
   const group = GROUPS[groupId];
-  return group.noPalette ? group.params.slice() : [...group.params, ...sharedParams()];
+  return group.noPalette || !withPalette ? group.params.slice() : [...group.params, ...sharedParams()];
 }
 
-function defaultsFor(groupId) {
+function defaultsFor(groupId, withPalette = true) {
   const values = {};
-  for (const param of paramsFor(groupId)) values[param.key] = param.default;
+  for (const param of paramsFor(groupId, withPalette)) values[param.key] = param.default;
   Object.assign(values, GROUPS[groupId].defaults || {});
   return values;
 }
 
 /* numbers arrive from the DOM as strings; give the algorithms real values */
-function normalise(groupId, values) {
+function normalise(groupId, values, withPalette = true) {
   const out = {};
-  for (const param of paramsFor(groupId)) {
+  for (const param of paramsFor(groupId, withPalette)) {
     let value = values[param.key];
     if (param.type === 'check') value = !!value;
     else if (param.type === 'number' || param.type === 'range') value = (+value || 0) * (param.scale || 1);
@@ -1631,6 +1674,12 @@ function repeatLast() {
 
 window.ClackDither = {
   GROUPS,
+  /* The dialog above is one caller; the program-array exporter is the other,
+     and it drives the same algorithms headlessly with a palette of its own. */
+  params: paramsFor,
+  defaults: defaultsFor,
+  normalise,
+  apply: applyDither,
   init(api) { host = api; },
   open(groupId) { if (host) openPanel(groupId); },
   repeat() { if (host) repeatLast(); },

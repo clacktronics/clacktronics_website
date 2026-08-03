@@ -1066,8 +1066,88 @@ windows, and desktop actions.
   seconds on a GPU and minutes without one — so the worker sends the picture
   back after every octave, and cancelling (or Escape) puts the original back
   untouched. Nothing is uploaded: TensorFlow.js and the ≈12 MB network are both
-  served from this site. File → Set as background tile stores a PNG tile in the
-  browser and applies it to the desktop. Multi-instance.
+  served from this site. **File → Export → As Program Array…** turns the
+  picture into something a microcontroller can draw, and **File → Import → From
+  Program Array…** reads one back (both described below). File → Set as
+  background tile stores a PNG tile in the browser and applies it to the
+  desktop. Multi-instance.
+
+#### Exporting a picture as a program array
+
+`File → Export → As Program Array…` writes the canvas out as source code: a C
+array for the Arduino toolchain, a MicroPython `bytearray`, the bare numbers,
+or a `.bin` of the bytes themselves. The dialog is two panels — the settings,
+and what they produce — and the preview on the right is the **encoded bytes
+decoded back into a picture**, not the picture that went in, so a bit order or
+an endianness that does not match the display shows up here rather than on the
+bench.
+
+It opens at the picture's own size, with the pixel format guessed from the
+picture: two-tone artwork arrives as a 1-bit array, a photograph as RGB565.
+Everything after that is a choice:
+
+- **Output size.** Native by default, a custom width and height, or a **display
+  preset** — SSD1306 and SH1106 OLEDs, ST7735, ST7789 and ILI9341 TFTs, a 2.9"
+  e-paper panel, 8 × 8 and 16 × 16 WS2812 matrices, the Sense HAT — which sets
+  the size, the pixel format, the bit order and the scan its controller reads,
+  all in one go. Where the shapes do not match, the picture can be **fitted
+  inside with bars** down the sides, **filled to the screen and clipped**,
+  **stretched**, **centred at actual size** or **tiled**; the bars take the
+  background colour set beside them. Rotation by quarter turns and flips are
+  there too, because a panel is usually mounted the wrong way round.
+- **Pixel format.** 1/2/4/8-bit greyscale; indexed colour with a palette built
+  by median cut from the picture itself (or the ClackPaint box, the web-safe
+  216, an even grey ramp, or the two current colours) and 1/2/4/8-bit indices;
+  packed RGB332, RGB565, BGR565, RGB666, RGB888, BGR888, RGBA8888 or ARGB8888;
+  or YUV 4:2:2 as YUYV or UYVY, BT.601 or BT.709, full or studio range. Bytes
+  run along rows, down columns, or in the vertical pages of 8 an SSD1306
+  addresses, either bit order, with lines optionally padded to a whole byte —
+  and a **serpentine** option that reverses every other line, the way an LED
+  matrix is actually wired. A 1-bit transparency mask can come out alongside,
+  for the sprite calls that take an image and a mask.
+- **Dithering.** The whole of the Effects → Dithering menu is available here,
+  driven headlessly: error diffusion, ordered and halftone screens, noise,
+  pattern, dot diffusion, Riemersma and thresholding, with their own controls.
+  What it dithers *to* is decided by the pixel format rather than chosen
+  separately, so RGB565 is dithered against the 32/64/32 levels it can really
+  store rather than against a palette it cannot.
+- **Output.** Arduino/C with optional `PROGMEM`, MicroPython, or raw numbers;
+  hex or decimal; the array's name and how many numbers to a line. Naming the
+  **library** fills in the fiddly half — Adafruit_GFX `drawBitmap` and
+  `drawRGBBitmap`, U8g2's XBM, TFT_eSPI `pushImage`, LVGL, FastLED,
+  MicroPython's `framebuf` (with the right `MONO_HLSB`/`MONO_VLSB`/`GS4_HMSB`
+  constant worked out for the settings) and CircuitPython's `displayio` — and
+  writes the matching usage line into the comment.
+
+A **memory budget** panel puts the size in proportion: what the array costs as
+a percentage of the flash on an ATtiny85, an Uno, a Mega, a Blue Pill, an
+ESP8266 or ESP32, a Pico, a micro:bit v2 and a Teensy 4.0, and whether it would
+also fit in that part's RAM. Settings are remembered between sessions.
+
+`File → Import → From Program Array…` runs the same decoders the other way.
+Paste a C array or a Python `bytes` literal — or read a `.h`, `.py`, `.txt` or
+`.bin` file — and it comes back as a picture, opened as a new document or
+dropped onto a layer. Width, height and format are read out of the text where
+they are written down (`#define`s, a `framebuf` constant, a `drawXBMP` call, an
+`RGB565` mention); where they are not, it offers the sizes that would use
+exactly that many bytes, likeliest first. An indexed array takes its palette
+from a second box.
+
+The pixel work lives in `content/applications/paint-export.js`, which is pure —
+ImageData and options in, bytes and text out — so the same routines serve the
+live preview, the Copy button and the importer's decoder.
+
+#### Resampling
+
+`Image → Image Size…` chooses how the picture is resampled: **nearest
+neighbour** for pixel art, **box**, **bilinear**, **Mitchell**, **bicubic
+(Catmull–Rom)** or **Lanczos 3**, which is the default. The filter widens as
+the picture shrinks, so every source pixel lands in some destination pixel
+rather than being sampled past — the difference between a legible 128-pixel
+version of a photograph and an aliased one. Resampling runs on premultiplied
+alpha, so a transparent edge cannot bleed its colour, and optionally in linear
+light. The resampler lives in `paint-retouch.js` and is shared with the
+exporter's output-size box.
 
 The committed PNG tiles are generated by `scripts/build_background_tiles.py`
 (Pillow is required only when regenerating them). The runtime never loads SVG
