@@ -942,7 +942,16 @@ windows, and desktop actions.
   onto a new layer, centred and scaled to fit, without disturbing the document
   size. Rectangular, freehand-lasso and edge-snapping magnetic-lasso
   selections crawl with animated marching ants, and can be copied or cut
-  directly to a new layer from the canvas right-click menu. A selection confines
+  directly to a new layer from the canvas right-click menu. **Select Object**
+  joins them: click the thing you want and SlimSAM — Meta's Segment Anything,
+  pruned, run in a worker through the vendored Transformers.js — works out where
+  it ends. Where the magic wand asks what else is this colour, this asks what
+  this thing is, so a cat in front of a sofa comes out as one object across a
+  dozen colours. The model looks at the picture once and answers each click
+  against that one look, so shift-clicking to add a point and Alt-clicking to
+  mark where the object stops both come back in a fraction of a second; the
+  options bar chooses between the whole object, a part of it and a detail, or
+  takes whichever the model is surest of. It is fetched once (≈40 MB) and cached. A selection confines
   every filter and effect — adjustments, every entry in the Effects menu,
   dithering, background removal, invert, flip and clear all stop at its exact
   outline, not just its bounding box — and each one applies to the active layer
@@ -990,14 +999,28 @@ windows, and desktop actions.
   the lines never crowd, with every eighth line drawn stronger. A non-destructive
   50% X/Y offset (Image → Check Seams) animates into a wrapped, fully
   editable seam-checking view. Effects → Mirror Paint mirrors new paint strokes
-  across either axis or both. The two effects that need a neural network share an
-  **Effects → AI** submenu, and both run in a Web Worker so a download or a long
-  inference never freezes the painting. **Remove Background** cuts the subject
-  out using the MODNet model (Apache-2.0) with the vendored Transformers.js —
-  the picture never leaves the browser, and the ≈13 MB model is fetched from
-  the Hugging Face Hub once and cached. What the worker sends back is the
-  matte, not a finished cut-out: one coverage byte per pixel, with hair, fur
-  and glass left in the middle ground. Every judgement about that matte is
+  across either axis or both. The two effects that can call on a neural network
+  share an **Effects → AI** submenu, and both run in a Web Worker so a download
+  or a long inference never freezes the painting. **Remove Background** offers
+  twelve ways of cutting the subject out, all behind one set of sliders. Seven
+  are classic algorithms that download nothing and answer at once: a **chroma
+  key** working in Cb/Cr, so the shadow falling on the screen goes with the
+  screen; a **colour range** that opens on the picture's own corner colour; a
+  **flood in from the frame edges**, which spares a patch of sky-blue shirt
+  because the shirt is not joined to the sky; a **brightness threshold** for
+  scans and line art; **difference matting** against a second layer holding the
+  empty plate; **GrowCut** (Vezhnevets & Konouchine, 2005), a cellular automaton
+  grown out of a rough selection; and **frequency-tuned saliency** (Achanta et
+  al., 2009). Five are neural models run through the vendored Transformers.js,
+  each fetched from the Hugging Face Hub once and then cached by the browser:
+  **MODNet** (Apache-2.0, ≈13 MB, quick), **Open RMBG** (Apache-2.0), **BiRefNet
+  lite** and the full **BiRefNet** (MIT), and **BEN2** (MIT), which cuts the
+  cleanest edge of the five. Each takes the half-precision build where the
+  browser offers WebGPU and falls back to a precision that actually runs on the
+  CPU otherwise — on that path a heavy model takes a minute or two rather than
+  seconds. Whichever method runs, the picture never leaves the browser, and what
+  the worker sends back is the matte, not a finished cut-out: one coverage byte
+  per pixel, with hair, fur and glass left in the middle ground. Every judgement about that matte is
   then made in the dialog, against a live preview over a checkerboard that can
   also be flipped to the matte itself or the picture before. **Cutoff** says
   where along the fuzz the subject begins and **edge softness** how wide that
