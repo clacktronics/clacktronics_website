@@ -1546,7 +1546,7 @@ function applyAndClose() {
   const label = GROUPS[dialog.groupId].label;
   try {
     restoreOriginal();
-    host.pushUndo();
+    host.pushUndo(`${label} Dither`);
     const { values } = computeInto(true);
     lastRun = { groupId: dialog.groupId, values: currentValues() };
     closePanel(false);
@@ -1616,7 +1616,7 @@ function repeatLast() {
   if (!lastRun) { host.setStatus('No dither has been applied yet'); return; }
   const context = host.getContext();
   const rect = targetRegion();
-  host.pushUndo();
+  host.pushUndo(`${GROUPS[lastRun.groupId].label} Dither`);
   const full = context.getImageData(0, 0, host.width(), host.height());
   const slice = sliceOf(full, rect);
   const values = normalise(lastRun.groupId, lastRun.values);
