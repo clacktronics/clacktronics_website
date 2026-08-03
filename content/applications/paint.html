@@ -320,6 +320,20 @@
   background: var(--paper-deep); color: var(--control-text);
   font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; resize: vertical;
 }
+/* Open as raw data borrows the exporter's two-panel dialog wholesale; what it
+   adds is the offset scrub and the hex of the bytes being skipped. */
+.paint-raw-file { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.paint-raw-name, .paint-raw-readout { font-size: 10.5px; color: var(--sage); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paint-raw-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* the rows and buttons here are shown and hidden by the hidden attribute, and
+   a display of their own would otherwise outrank it */
+#rawOpenModal [hidden] { display: none; }
+.paint-raw-buttons .btn { font-size: 10.5px; padding: 3px 7px; }
+.paint-raw-scrub { display: flex; flex-direction: column; gap: 6px; padding-top: 9px; border-top: 1px solid var(--paper-line); }
+.paint-raw-slider { display: flex; align-items: center; gap: 9px; font-size: 11.5px; }
+.paint-raw-slider input[type="range"] { flex: 1; min-width: 0; }
+.paint-raw-hex { min-height: 88px; font-size: 10px; line-height: 1.45; }
+.paint-raw-over { outline: 2px dashed var(--leaf-deep); outline-offset: -4px; }
 @media (max-width: 820px) {
   .paint-export-body { flex-direction: column; overflow-y: auto; }
   .paint-export-controls { flex: none; overflow: visible; padding-right: 0; }
@@ -389,6 +403,7 @@
 <script src="paint-dither.js" data-integrated-instance></script>
 <script src="paint-retouch.js" data-integrated-instance></script>
 <script src="paint-export.js" data-integrated-instance></script>
+<script src="paint-raw.js" data-integrated-instance></script>
 <script src="../../assets/js/app-menu.js" defer></script>
 </head>
 <body>
@@ -401,6 +416,8 @@
         <div class="rm-dd rm-sub-dd">
           <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Local…</button>
           <button data-cmd="open-site"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>From website…</button>
+          <div class="sep"></div>
+          <button data-cmd="open-raw"><span class="pixel-icon" data-icon="cpu" aria-hidden="true"></span>As Raw Data…</button>
         </div>
       </div>
       <div class="rm-sub">
@@ -408,6 +425,8 @@
         <div class="rm-dd rm-sub-dd">
           <button data-cmd="open-layer"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Local…</button>
           <button data-cmd="open-site-layer"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>From website…</button>
+          <div class="sep"></div>
+          <button data-cmd="open-raw-layer"><span class="pixel-icon" data-icon="cpu" aria-hidden="true"></span>As Raw Data…</button>
         </div>
       </div>
       <div class="rm-sub">
@@ -1104,6 +1123,69 @@
   </div>
 </div>
 <input id="importFilePicker" type="file" accept=".h,.hpp,.c,.cpp,.py,.txt,.bin,.dat,text/plain" hidden>
+
+<!-- Open as raw data. The same decoders as the importer above, pointed at a
+     file instead of a pasted array, and with no accept list on the picker at
+     all: the whole point is that a file which is not a picture opens anyway.
+     The controls are built in paint-raw.js for the same reason the exporter's
+     are — what a format asks for differs enough that a written-out list would
+     be mostly hidden rows. -->
+<div class="paint-modal" id="rawOpenModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="rawOpenTitle">
+  <div class="paint-modal-box paint-export-box">
+    <header><span id="rawOpenTitle">Open as Raw Data</span><button type="button" data-close="rawOpenModal" aria-label="Close">×</button></header>
+    <div class="paint-export-body">
+      <div class="paint-export-controls">
+        <div class="paint-raw-file">
+          <button type="button" class="btn" id="rawChoose"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Choose a file…</button>
+          <span class="paint-raw-name" id="rawFileName">No file chosen</span>
+        </div>
+        <p class="paint-dream-note" id="rawNote">Any file will do — a picture, a font, a recording, a program. Drop one here.</p>
+        <div class="paint-raw-buttons">
+          <button type="button" class="btn" id="rawSkipHeader" hidden>Use the header</button>
+          <button type="button" class="btn" id="rawOpenProperly" hidden>Open it properly instead</button>
+        </div>
+        <div id="rawFields"></div>
+        <div class="paint-raw-scrub">
+          <label class="paint-raw-slider">Scrub the offset
+            <input type="range" id="rawOffsetSlider" min="0" max="0" step="1" value="0">
+          </label>
+          <span class="paint-raw-readout" id="rawOffsetReadout">0 of 0 B</span>
+          <div class="paint-raw-buttons">
+            <button type="button" class="btn" data-raw-nudge="offset:-1" title="One byte back">−1 B</button>
+            <button type="button" class="btn" data-raw-nudge="offset:1" title="One byte on">+1 B</button>
+            <button type="button" class="btn" data-raw-nudge="width:-1" title="One pixel narrower">−1 px</button>
+            <button type="button" class="btn" data-raw-nudge="width:1" title="One pixel wider">+1 px</button>
+            <button type="button" class="btn" data-raw-nudge="page:-1" title="Back one screenful of bytes">◂ page</button>
+            <button type="button" class="btn" data-raw-nudge="page:1" title="On one screenful of bytes">page ▸</button>
+            <button type="button" class="btn" id="rawGuess" title="Work the width out from the data">Guess size</button>
+          </div>
+        </div>
+        <div class="paint-raw-buttons" id="rawPaletteRow" hidden>
+          <button type="button" class="btn" id="rawPaletteChoose"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Palette file…</button>
+          <button type="button" class="btn" id="rawPaletteClear">Clear</button>
+          <span class="paint-raw-readout" id="rawPaletteName"></span>
+        </div>
+      </div>
+      <div class="paint-export-output">
+        <div class="paint-export-preview-wrap">
+          <canvas class="paint-export-preview" id="rawPreview" width="320" height="240" aria-label="Preview of the file read as a picture"></canvas>
+          <div class="paint-bg-views" role="group" aria-label="Preview shows">
+            <button type="button" class="btn" id="rawZoom" aria-pressed="false">Zoom 1:1</button>
+          </div>
+          <p class="paint-dream-note" id="rawSummary">Choose a file to see it.</p>
+        </div>
+        <pre class="paint-export-code paint-raw-hex" id="rawHex" tabindex="0" aria-label="The bytes at the offset"></pre>
+      </div>
+    </div>
+    <div class="paint-dialog-actions paint-export-actions">
+      <button type="button" class="btn ghost" data-close="rawOpenModal">Cancel</button>
+      <button type="button" class="btn" id="rawOpenLayer">Open as Layer</button>
+      <button type="button" class="btn primary" id="rawOpen">Open as Image</button>
+    </div>
+  </div>
+</div>
+<input id="rawFilePicker" type="file" hidden>
+<input id="rawPalettePicker" type="file" accept=".pal,.act,.gpl,.bin,.dat,.txt" hidden>
 
 <script>
 (() => {
@@ -5278,13 +5360,21 @@ appRoot.querySelector('#adjustForm').addEventListener('submit', event => {
 
 const filePick = appRoot.querySelector('#paintFilePicker');
 let pickAsLayer = false;
-filePick.addEventListener('change', () => {
-  const file = filePick.files[0]; filePick.value = '';
-  const asLayer = pickAsLayer; pickAsLayer = false;
-  if (!file || !/^image\/(?:png|jpeg|gif|webp|bmp)$/i.test(file.type)) { if (file) setStatus('Please choose a bitmap image'); return; }
+/* The raw loader hands a file back here when it turns out to be an ordinary
+   picture after all, so the browser's own decoders are one function away. */
+function openImageFile(file, asLayer) {
+  if (!file || !/^image\/(?:png|jpeg|gif|webp|bmp|svg\+xml)$/i.test(file.type)) {
+    if (file) setStatus('Please choose a bitmap image');
+    return;
+  }
   const url = URL.createObjectURL(file);
   const open = asLayer ? loadImageAsLayer(url, file.name) : loadImage(url, file.name);
   open.catch(() => {}).finally(() => URL.revokeObjectURL(url));
+}
+filePick.addEventListener('change', () => {
+  const file = filePick.files[0]; filePick.value = '';
+  const asLayer = pickAsLayer; pickAsLayer = false;
+  openImageFile(file, asLayer);
 });
 
 /* Opening as a layer keeps the document's size: the picture lands centred on a
@@ -7404,6 +7494,7 @@ const disconnect = () => {
   cancelLiveContentPreview(true);
   if (appRoot.querySelector('#adjustModal').classList.contains('open')) closeAdjustment(true);
   if (ditherApi?.destroy) ditherApi.destroy();
+  if (window.ClackRaw?.destroy) window.ClackRaw.destroy();
 };
 if (appRoot === document) window.addEventListener('pagehide', disconnect, { once: true });
 else appRoot.host.addEventListener('clackos-disconnect', disconnect, { once: true });
@@ -7427,6 +7518,17 @@ if (window.ClackDither) {
       stack.classList.toggle('dither-busy', busy);
       hideBrushCursor();
     }
+  });
+}
+
+/* ---- File → Open → As Raw Data — paint-raw.js drives the dialog; what it
+ *      needs from here is the canvas the picture ends up on, and a way back
+ *      out to the ordinary loader when the file turns out to be a PNG ---- */
+if (window.ClackRaw) {
+  window.ClackRaw.init({
+    appRoot, showModal, hideModal, setStatus,
+    loadImage, loadImageAsLayer,
+    openNormally: file => openImageFile(file, false)
   });
 }
 
@@ -8227,6 +8329,8 @@ function runCmd(cmd) {
     case 'new': pushUndo(); resetLayers(640, 400, 'Background'); bx.fillStyle = '#FFFFFF'; bx.fillRect(0, 0, width(), height()); reapplySeam(); fileName = 'untitled.png'; setStatus('New image'); break;
     case 'open': pickAsLayer = false; filePick.click(); break;
     case 'open-layer': pickAsLayer = true; filePick.click(); break;
+    case 'open-raw': window.ClackRaw?.open(false); break;
+    case 'open-raw-layer': window.ClackRaw?.open(true); break;
     case 'open-site': openWebsiteBrowser(false); break;
     case 'open-site-layer': openWebsiteBrowser(true); break;
     case 'save': savePng(false); break;

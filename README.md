@@ -962,7 +962,9 @@ windows, and desktop actions.
   reorderable layer stack with visibility, rename, duplicate, delete and merge
   controls; File → Open as Layer… (and its website equivalent) drops a picture
   onto a new layer, centred and scaled to fit, without disturbing the document
-  size. Rectangular, freehand-lasso and edge-snapping magnetic-lasso
+  size. File → Open → As Raw Data… opens a file that is not a picture at all —
+  a framebuffer dump, a sensor capture, anything — by guessing its width and
+  letting you scrub the offset until it lines up. Rectangular, freehand-lasso and edge-snapping magnetic-lasso
   selections crawl with animated marching ants, and can be copied or cut
   directly to a new layer from the canvas right-click menu. **Select Object**
   joins them: click the thing you want and SlimSAM — Meta's Segment Anything,
@@ -1136,6 +1138,41 @@ from a second box.
 The pixel work lives in `content/applications/paint-export.js`, which is pure —
 ImageData and options in, bytes and text out — so the same routines serve the
 live preview, the Copy button and the importer's decoder.
+
+#### Opening a file as raw data
+
+`File → Open → As Raw Data…` opens *any* file as a picture — a framebuffer
+dumped off a device, a sensor capture, a font, a recording, a program — by
+being told nothing about it and working the rest out. The picker has no accept
+list at all; a file that is not a picture opens just the same. Everything
+GIMP's raw loader offers is here: a byte offset, width and height, and its list
+of image types — 1 to 8-bit greyscale, 16-bit greyscale, indexed, packed RGB
+and RGBA in eight packings, planar RGB, YUV 4:2:2 — with a palette read from a
+`.pal`, `.gpl`, `.act` or raw triples file, in either channel order.
+
+What it adds is the part that makes the hunt bearable. The preview redraws
+while the offset slider is dragged, so a picture can be *scrubbed* into
+alignment rather than arrived at by arithmetic; ±1 byte and ±1 pixel nudges sit
+beside it, along with page buttons that step a whole screenful of bytes through
+a long file. **Guess size** takes the width from the data itself — lines of a
+picture resemble the line above them and nothing else does, so the byte spacing
+that minimises that difference is a line, with the pattern-repeat traps that
+catches ruled out by comparing against how badly an unrelated spacing scores.
+The file's first bytes are shown in hex and ASCII from the current offset, so
+the header being skipped is visible rather than counted. A file that turns out
+to be an ordinary PNG or JPEG says so and offers to open properly instead;
+BMP and uncompressed Targa fill the whole dialog in from their headers,
+padding and bottom-up rows included; a file whose length can only be an SRTM
+elevation tile is read as signed big-endian 16-bit and shaded with a terrain
+ramp. Row stride is separate from width, for framebuffers padded to a 4-byte
+boundary, and there are flips for the formats that count from the bottom.
+Settings are remembered between sessions; the result opens as a new document or
+as a layer.
+
+The dialog lives in `paint-raw.js`; the decoding is `paint-export.js`'s, run
+backwards, so anything ClackPaint wrote as a `.bin` reopens here byte for byte.
+Only the shapes the exporter has no use for — planar RGB and 16-bit samples —
+are implemented in the raw module itself.
 
 #### Resampling
 
