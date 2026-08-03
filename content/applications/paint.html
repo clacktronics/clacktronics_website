@@ -50,6 +50,16 @@
   background-size: 12px 12px;
   background-position: 0 0, 0 6px, 6px -6px, -6px 0;
 }
+/* The method chooser sits above the views rather than inside one: the picture
+   often decides the method — a green screen wants keying, a portrait in a room
+   wants a model — and swapping between them is the first thing anyone does. */
+.paint-bg-method { display: flex; flex-direction: column; gap: 9px; padding-bottom: 10px; border-bottom: 1px solid var(--paper-line); }
+.paint-bg-method > label { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.paint-bg-method > label > span { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; }
+.paint-bg-method select { flex: 1; min-width: 0; max-width: 250px; }
+.paint-bg-method input[type="color"] { width: 46px; height: 22px; padding: 0; border: 1px solid var(--ink); background: none; }
+.paint-bg-method .btn { min-height: 22px; padding: 2px 8px; font-size: 10px; white-space: nowrap; }
+.paint-bg-warn { color: var(--ink); }
 .paint-bg-views { display: flex; gap: 6px; }
 .paint-bg-views .btn { flex: 1; min-height: 22px; padding: 2px 6px; font-size: 10px; }
 .paint-bg-views .btn[aria-pressed="true"] { background: var(--ink); color: var(--menu-text); }
@@ -468,7 +478,7 @@
         <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span><span class="rm-item">AI</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
         <div class="rm-dd rm-sub-dd">
           <button data-cmd="deep-dream"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span><span class="rm-item">DeepDream…<small>Grows dogs, birds and eyes out of the picture, as Google's 2015 original did</small></span></button>
-          <button data-cmd="remove-bg"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span><span class="rm-item">Remove Background…<small>Cuts the subject out to transparency, a new layer or a selection</small></span></button>
+          <button data-cmd="remove-bg"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span><span class="rm-item">Remove Background…<small>Chroma key, flood fill, GrowCut or a neural model — to transparency, a new layer or a selection</small></span></button>
         </div>
       </div>
       <div class="sep"></div>
@@ -520,6 +530,7 @@
           <button class="paint-tool" data-tool="lasso" title="Freehand lasso" aria-label="Freehand lasso"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span><span class="paint-tool-name">Lasso</span></button>
           <button class="paint-tool" data-tool="magnetic-lasso" title="Magnetic lasso — trace near an edge" aria-label="Magnetic lasso"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span><span class="paint-tool-name">Magnetic</span></button>
           <button class="paint-tool" data-tool="wand" title="Magic wand — select everything of a similar colour" aria-label="Magic wand"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span><span class="paint-tool-name">Magic Wand</span></button>
+          <button class="paint-tool" data-tool="object-select" title="Select object — click a thing and the model works out where it ends" aria-label="Select object"><span class="pixel-icon" data-icon="box" aria-hidden="true"></span><span class="paint-tool-name">Select Object</span></button>
         </div>
       </div>
       <div class="paint-tool-menu">
@@ -749,10 +760,32 @@
   <div class="paint-modal-box paint-dialog">
     <header><span id="bgRemoveTitle">Remove Background</span><button type="button" data-close="bgRemoveModal" aria-label="Close">×</button></header>
     <div class="paint-dialog-body">
+      <div class="paint-bg-method">
+        <label>Method <span><select id="bgMethod">
+          <optgroup label="Classic — nothing to download, runs at once">
+            <option value="chroma">Chroma key — green or blue screen</option>
+            <option value="colour-range">Colour range — one colour, anywhere</option>
+            <option value="border-flood">Flood in from the edges</option>
+            <option value="brightness">Brightness — light or dark backdrop</option>
+            <option value="difference">Difference from another layer</option>
+            <option value="growcut">GrowCut — grow out of a rough selection</option>
+            <option value="saliency">Saliency — whatever stands out</option>
+          </optgroup>
+          <optgroup label="AI models — fetched once, then cached by your browser">
+            <option value="modnet" selected>MODNet — small and quick</option>
+            <option value="ormbg">Open RMBG — people, open licence</option>
+            <option value="birefnet-lite">BiRefNet lite — sharp edges</option>
+            <option value="ben2">BEN2 — the best edges here</option>
+            <option value="birefnet">BiRefNet — heaviest of the lot</option>
+          </optgroup>
+        </select></span></label>
+        <div class="paint-dream-fields" id="bgMethodFields"></div>
+        <p class="paint-dream-note" id="bgMethodNote"></p>
+      </div>
       <div class="paint-ai-intro" data-bgview="intro">
-        <p>Cut the main subject out of the picture and make the rest transparent. A small AI model (<b>MODNet</b>) runs entirely in your browser — the image is never uploaded.</p>
-        <p>The first run downloads the model (about <b>13&nbsp;MB</b>) from the Hugging Face Hub, then your browser caches it so later runs start straight away.</p>
-        <p>The model runs once and hands back a <b>matte</b> — a coverage map saying how much of each pixel is subject. Every setting afterwards reshapes that matte on the spot, so nothing has to be worked out twice.</p>
+        <p id="bgIntroText"></p>
+        <p id="bgIntroExtra"></p>
+        <p>Whatever runs hands back a <b>matte</b> — a coverage map saying how much of each pixel is subject. Every setting afterwards reshapes that matte on the spot, so nothing has to be worked out twice.</p>
       </div>
       <div data-bgview="loading" hidden>
         <div class="paint-ai-progress" role="progressbar" aria-label="Model download progress"><div></div></div>
@@ -785,7 +818,7 @@
           <p class="paint-dream-note" id="bgTuneNote"></p>
         </div>
       </div>
-      <p class="paint-ai-credit">Model: <a href="https://huggingface.co/Xenova/modnet" target="_blank" rel="noopener">MODNet</a> · Apache-2.0 · Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a></p>
+      <p class="paint-ai-credit" id="bgCredit"></p>
       <div class="paint-dialog-actions">
         <button type="button" class="btn ghost" data-close="bgRemoveModal">Cancel</button>
         <button type="button" class="btn" id="bgRemoveReset" hidden>Reset</button>
@@ -1643,6 +1676,7 @@ appRoot.querySelectorAll('.paint-tool').forEach(button => {
     else if (tool === 'lasso') setStatus('Drag around an area to make a freehand selection');
     else if (tool === 'magnetic-lasso') setStatus('Trace near an object edge; the lasso will snap to nearby contrast');
     else if (tool === 'wand') setStatus('Click a colour to select everything like it; Shift-click adds, Alt-click takes away');
+    else if (tool === 'object-select') setStatus('Click the thing you want selected; Shift-click adds a point to it, Alt-click marks where it stops');
     else if (tool === 'clone') setStatus(cloneSource ? 'Clone source ready; drag to paint from it' : 'Alt-click the image to choose a clone source');
     else if (tool === 'heal') setStatus(healSource ? 'Healing source ready; paint over the damage' : 'Alt-click a clean area to set the healing source');
     else if (tool === 'blur') setStatus('Blur brush selected; Tool Size controls the soft brush radius');
@@ -1758,6 +1792,13 @@ const TOOL_OPTIONS = {
     { id: 'contiguous', label: 'Contiguous', type: 'check', value: true },
     { id: 'sample', label: 'Sample', type: 'select', value: 'layer', options: [['layer', 'Active layer'], ['merged', 'All layers']] }
   ],
+  'object-select': [
+    { id: 'scope', label: 'Take', type: 'select', value: 'auto', options: [
+      ['auto', 'Whatever it is surest of'], ['2', 'The whole object'], ['1', 'The part'], ['0', 'The detail']
+    ] },
+    { id: 'feather', label: 'Feather', type: 'range', min: 0, max: 20, value: 0, step: 1, unit: ' px' },
+    { id: 'sample', label: 'Sample', type: 'select', value: 'merged', options: [['merged', 'All layers'], ['layer', 'Active layer']] }
+  ],
   heal: [
     { id: 'hardness', label: 'Hardness', type: 'range', min: 0, max: 100, value: 70, step: 1, unit: '%' },
     { id: 'aligned', label: 'Aligned', type: 'check', value: true }
@@ -1828,6 +1869,7 @@ const TOOL_OPTIONS = {
 
 const TOOL_HINTS = {
   wand: 'Click a colour. Shift-click to add to the selection, Alt-click to take away.',
+  'object-select': 'Click the thing you want. <b>Shift-click</b> adds another point to the same object, <b>Alt-click</b> marks somewhere it should stop. The model is fetched on the first click (about 40 MB) and looks at the picture once.',
   heal: '<b>Alt-click</b> a clean area to set the source, then paint over the damage.',
   'spot-heal': 'Paint over the blemish and let go — the source is found for you.',
   patch: 'Lasso the damage, then <b>drag inside it</b> onto clean pixels. Drag again to try another donor; Escape when you are happy.',
@@ -2870,10 +2912,11 @@ stack.addEventListener('pointerdown', event => {
     return;
   }
   if (tool === 'picker') { pickColor(point, right); return; }
-  if ((RETOUCH_TOOLS.has(tool) || tool === 'patch' || tool === 'wand' || tool === 'selective') && !retouch) {
+  if ((RETOUCH_TOOLS.has(tool) || tool === 'patch' || tool === 'wand' || tool === 'object-select' || tool === 'selective') && !retouch) {
     setStatus('Retouching is unavailable — paint-retouch.js did not load'); return;
   }
   if (tool === 'wand') { wandAt(point, event); return; }
+  if (tool === 'object-select') { objectSelectAt(point, event); return; }
   if (tool === 'selective') {
     selectivePin = point;
     setStatus('Selective adjustment pinned — the mask follows whatever looks like that pixel');
@@ -5579,7 +5622,7 @@ optionsBar.addEventListener('click', event => {
  * whether the edge is pulled in or pushed out, and what the cut-out is finally
  * used for. None of that needs the network again, so the settings move with
  * the picture on screen. */
-const BG_MODEL_KEY = 'clackos-paint-bg-model-downloaded';
+const BG_MODEL_KEY = 'clackos-paint-bg-models-downloaded';
 const bgModal = appRoot.querySelector('#bgRemoveModal');
 const bgViews = bgModal.querySelectorAll('[data-bgview]');
 const bgProgressBar = bgModal.querySelector('.paint-ai-progress > div');
@@ -5623,10 +5666,266 @@ const BG_DONE = {
   matte: ['Matte put on a new layer', 'Matte put on a new layer, the other way round'],
   select: ['The subject is now the selection', 'The background is now the selection']
 };
+/* ---- the methods on offer ----
+ * Two families behind one set of sliders. The classic algorithms are pure
+ * arithmetic on the pixels — nothing to fetch, an answer before the mouse is
+ * back on the button — and they are exact on the pictures they suit: a green
+ * screen, a product on a sweep, two frames from a tripod. The models guess, and
+ * guessing is what you want only when the answer is not in the pixels: a person
+ * in a room, where no colour tells you where they end.
+ *
+ * Sizes are given both ways round because the download depends on the machine:
+ * a browser with WebGPU takes the half-precision build, one without falls back
+ * to whatever precision that model can actually run on the CPU. */
+const BG_METHODS = {
+  chroma: {
+    kind: 'classic', name: 'Chroma key',
+    intro: 'Keys out one colour the way a television studio does — by hue alone, ignoring brightness, so the shadow falling across the screen behind the subject goes with it.',
+    note: 'Set the key to the screen colour. Tolerance is how far a pixel may drift from it before it counts as subject.',
+    credit: 'Chroma keying · colour-difference matting, in use since the 1950s',
+    params: [
+      { id: 'key', label: 'Key colour', type: 'colour', value: '#00b140' },
+      { id: 'tolerance', label: 'Tolerance', type: 'range', min: 1, max: 100, value: 35, step: 1 }
+    ]
+  },
+  'colour-range': {
+    kind: 'classic', name: 'Colour range',
+    intro: 'Every pixel near one colour becomes background, wherever it is in the frame. The plain-white-backdrop answer, and the one to reach for when the backdrop is lit evenly but is not a screen.',
+    note: 'Brightness counts here, unlike the chroma key — which is what you want for a white sweep and not what you want for a green screen.',
+    credit: 'Colour-range matting · distance from one colour in RGB',
+    params: [
+      { id: 'key', label: 'Background colour', type: 'colour', value: '#ffffff', sample: true },
+      { id: 'tolerance', label: 'Tolerance', type: 'range', min: 1, max: 100, value: 25, step: 1 }
+    ]
+  },
+  'border-flood': {
+    kind: 'classic', name: 'Flood from the edges',
+    intro: 'A magic wand run inwards from all four edges at once. Only background joined to the frame edge is removed, so a patch of sky-blue shirt survives while the sky itself does not.',
+    note: 'Tolerance is measured against the average colour of the frame edge. Already-transparent pixels count as background.',
+    credit: 'Flood fill from the frame edge · connected-region matting',
+    params: [{ id: 'tolerance', label: 'Tolerance', type: 'range', min: 1, max: 100, value: 20, step: 1 }]
+  },
+  brightness: {
+    kind: 'classic', name: 'Brightness',
+    intro: 'The oldest trick there is: the matte is simply how far each pixel is from the backdrop\'s brightness. Still the right answer for a scan, a line drawing, or anything shot on a light table.',
+    note: 'Cutoff becomes the threshold and Edge softness the anti-aliasing, so the two sliders below do the real work.',
+    credit: 'Luminance threshold · Rec. 601 luma',
+    params: [{ id: 'background', label: 'Backdrop is', type: 'select', value: 'light',
+      options: [['light', 'Light — dark subject'], ['dark', 'Dark — light subject']] }]
+  },
+  difference: {
+    kind: 'classic', name: 'Difference from another layer',
+    intro: 'Two frames from a camera that did not move: one with the subject, one of the empty scene. Whatever changed is the subject. Exact where it applies, and it needs the empty plate on a layer of its own.',
+    note: 'Pick the layer holding the empty scene. Raise the tolerance if the noise floor is coming through as subject.',
+    credit: 'Difference matting · the pre-bluescreen method',
+    params: [
+      { id: 'layer', label: 'Empty plate', type: 'layer', value: '' },
+      { id: 'tolerance', label: 'Tolerance', type: 'range', min: 1, max: 100, value: 18, step: 1 }
+    ]
+  },
+  growcut: {
+    kind: 'classic', name: 'GrowCut',
+    intro: 'A cellular automaton from 2005: every pixel is a cell that can be conquered by a neighbour, and a strong edge is expensive to cross. Subject and background grow out from their seeds until they meet along that edge.',
+    note: 'Make a rough selection round the subject first — that becomes the seed. Without one it starts from a blob in the middle of the frame and rarely lands anywhere useful.',
+    credit: 'GrowCut · Vezhnevets & Konouchine, 2005',
+    params: []
+  },
+  saliency: {
+    kind: 'classic', name: 'Saliency',
+    intro: 'Achanta\'s frequency-tuned saliency, 2009: blur the picture, then measure how far each pixel sits from the average colour of the whole frame. What stands out is what is left.',
+    note: 'Works when one subject stands clear of a settled background, and not at all on a busy picture. Free to try, which is the point.',
+    credit: 'Frequency-tuned saliency · Achanta et al., 2009',
+    params: []
+  },
+  modnet: {
+    kind: 'model', name: 'MODNet', size: '7–13 MB',
+    intro: 'A portrait matting network small enough to feel instant. The least accurate of the models here and by a distance the quickest to arrive, which makes it the one to try first.',
+    credit: ['MODNet', 'https://huggingface.co/Xenova/modnet', 'Apache-2.0'],
+    params: []
+  },
+  ormbg: {
+    kind: 'model', name: 'Open RMBG', size: '88–176 MB',
+    intro: 'Trained on people, and openly licensed all the way down — unlike the better-known RMBG models, which are free only for non-commercial use. Clearly better round hair than MODNet.',
+    credit: ['Open RMBG', 'https://huggingface.co/onnx-community/ormbg-ONNX', 'Apache-2.0'],
+    params: []
+  },
+  'birefnet-lite': {
+    kind: 'model', name: 'BiRefNet lite', size: '114 MB', heavyOnCpu: true,
+    intro: 'Bilateral reference segmentation, in its lighter form. Cuts a crisp shoulder line and keeps fine strands; the best quality here for the megabytes.',
+    credit: ['BiRefNet lite', 'https://huggingface.co/onnx-community/BiRefNet_lite-ONNX', 'MIT'],
+    params: []
+  },
+  ben2: {
+    kind: 'model', name: 'BEN2', size: '219 MB', heavyOnCpu: true,
+    intro: 'The cleanest matte of the lot on a portrait — individual hairs against a busy background, where the smaller models give a halo.',
+    credit: ['BEN2', 'https://huggingface.co/onnx-community/BEN2-ONNX', 'MIT'],
+    params: []
+  },
+  birefnet: {
+    kind: 'model', name: 'BiRefNet', size: '490 MB', heavyOnCpu: true,
+    intro: 'The full-size network the lite model is cut down from. Worth it only for a picture that has defeated everything else, and a long wait on the first run.',
+    credit: ['BiRefNet', 'https://huggingface.co/onnx-community/BiRefNet-ONNX', 'MIT'],
+    params: []
+  }
+};
+
+const bgMethodSelect = appRoot.querySelector('#bgMethod');
+const bgMethodFields = appRoot.querySelector('#bgMethodFields');
+const bgMethodNote = appRoot.querySelector('#bgMethodNote');
+const bgIntroText = appRoot.querySelector('#bgIntroText');
+const bgIntroExtra = appRoot.querySelector('#bgIntroExtra');
+const bgCredit = appRoot.querySelector('#bgCredit');
+/* one saved set of settings per method, so switching back and forth does not
+   lose the tolerance somebody just spent a minute finding */
+const bgParams = {};
+Object.entries(BG_METHODS).forEach(([method, spec]) => {
+  bgParams[method] = {};
+  spec.params.forEach(field => { bgParams[method][field.id] = field.value; });
+});
+
+const bgMethod = () => bgMethodSelect.value;
+/* methods whose colour the person has set for themselves; the rest are free to
+   be re-sampled from whatever picture the dialog is opened on next */
+const bgKeyChosen = new Set();
+const bgIsModel = method => BG_METHODS[method]?.kind === 'model';
+
+/* which models this browser has already fetched — a cached model means the
+   explainer is a waste of a click, so the run starts on its own */
+function bgDownloaded() {
+  try { return new Set(JSON.parse(localStorage.getItem(BG_MODEL_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function bgMarkDownloaded(method) {
+  const known = bgDownloaded();
+  if (known.has(method)) return;
+  known.add(method);
+  try { localStorage.setItem(BG_MODEL_KEY, JSON.stringify([...known])); } catch { /* private mode */ }
+}
+
 let bgWorker = null, bgRunToken = 0, bgRun = null, bgMatte = null, bgPreview = null;
 let bgShow = 'result', bgPreviewFrame = 0;
 
 const showBgView = name => bgViews.forEach(view => { view.hidden = view.dataset.bgview !== name; });
+
+/* The method's own controls are built rather than written out, because the two
+   that need a colour also need it sampled from the picture, and the one that
+   needs a layer cannot know the layers until the dialog opens. */
+function renderBgMethodFields() {
+  const spec = BG_METHODS[bgMethod()];
+  const values = bgParams[bgMethod()];
+  bgMethodFields.replaceChildren();
+  bgMethodFields.hidden = !spec.params.length;
+  spec.params.forEach(field => {
+    const row = document.createElement('label');
+    const label = document.createElement('span'); label.textContent = field.label;
+    const controls = document.createElement('span');
+    row.append(label, controls);
+    if (field.type === 'colour') {
+      const input = document.createElement('input');
+      input.type = 'color'; input.value = values[field.id];
+      input.addEventListener('input', () => { values[field.id] = input.value; bgKeyChosen.add(bgMethod()); });
+      controls.append(input);
+      const pick = document.createElement('button');
+      pick.type = 'button'; pick.className = 'btn ghost'; pick.textContent = 'From corners';
+      pick.title = 'Take the colour from the four corners of the picture';
+      pick.addEventListener('click', () => {
+        input.value = sampleBgCorners();
+        values[field.id] = input.value;
+        bgKeyChosen.add(bgMethod());
+        setStatus(`Background colour sampled from the corners: ${input.value}`);
+      });
+      controls.append(pick);
+    } else if (field.type === 'select' || field.type === 'layer') {
+      const select = document.createElement('select');
+      const options = field.type === 'layer'
+        ? layers.filter(layer => layer.id !== activeLayer.id).map(layer => [String(layer.id), layer.name])
+        : field.options;
+      if (!options.length) {
+        const item = document.createElement('option');
+        item.value = ''; item.textContent = 'No other layer';
+        select.append(item); select.disabled = true;
+      }
+      options.forEach(([value, text]) => {
+        const item = document.createElement('option'); item.value = value; item.textContent = text; select.append(item);
+      });
+      if (options.some(([value]) => value === String(values[field.id]))) select.value = String(values[field.id]);
+      else if (options.length) values[field.id] = select.value;
+      select.addEventListener('change', () => { values[field.id] = select.value; });
+      controls.append(select);
+    } else {
+      const input = document.createElement('input');
+      input.type = 'range'; input.min = field.min; input.max = field.max; input.step = field.step;
+      input.value = values[field.id];
+      const readout = document.createElement('output');
+      readout.textContent = input.value;
+      input.addEventListener('input', () => {
+        values[field.id] = Number(input.value);
+        readout.textContent = input.value;
+      });
+      controls.append(input, readout);
+    }
+    bgMethodFields.append(row);
+  });
+}
+
+/* the four corners of the layer, averaged — the same guess paint-matte.js
+   would make, made here so the swatch can show it before anything runs */
+function sampleBgCorners() {
+  const source = canonicalActiveCanvas();
+  const context = source.getContext('2d', { willReadFrequently: true });
+  const inset = Math.min(4, Math.floor(Math.min(source.width, source.height) / 8));
+  const spots = [[inset, inset], [source.width - 1 - inset, inset],
+                 [inset, source.height - 1 - inset], [source.width - 1 - inset, source.height - 1 - inset]];
+  let r = 0, g = 0, b = 0, counted = 0;
+  for (const [x, y] of spots) {
+    const pixel = context.getImageData(Math.max(0, x), Math.max(0, y), 1, 1).data;
+    if (pixel[3] < 8) continue;
+    r += pixel[0]; g += pixel[1]; b += pixel[2]; counted++;
+  }
+  if (!counted) return '#ffffff';
+  const hex = value => Math.round(value / counted).toString(16).padStart(2, '0');
+  return `#${hex(r)}${hex(g)}${hex(b)}`;
+}
+
+/* Whether this browser can put the models on the GPU decides both how big the
+   download is and whether the heavier ones are a wait or an afternoon, so it is
+   asked once and remembered. Until the answer arrives the dialog says nothing
+   about it rather than guessing. */
+let bgHasWebGPU = null;
+function checkBgWebGPU() {
+  if (bgHasWebGPU !== null) return;
+  bgHasWebGPU = false;
+  if (!('gpu' in navigator)) return;
+  navigator.gpu.requestAdapter().then(adapter => {
+    bgHasWebGPU = !!adapter;
+    if (bgModal.classList.contains('open')) syncBgMethod();
+  }).catch(() => { /* leave it at no */ });
+}
+
+function syncBgMethod() {
+  const method = bgMethod();
+  const spec = BG_METHODS[method];
+  renderBgMethodFields();
+  const slow = spec.heavyOnCpu && bgHasWebGPU === false
+    ? 'This browser has no WebGPU, so this model runs on the processor: expect a minute or two on a picture this size. MODNet, or any of the classic methods, answers at once.'
+    : '';
+  bgMethodNote.textContent = [spec.note, slow].filter(Boolean).join(' ');
+  bgMethodNote.hidden = !bgMethodNote.textContent;
+  bgMethodNote.classList.toggle('paint-bg-warn', !!slow);
+  bgIntroText.innerHTML = spec.intro;
+  if (spec.kind === 'model') {
+    bgIntroExtra.innerHTML = bgDownloaded().has(method)
+      ? 'This model is already in your browser\'s cache, so it starts straight away. It runs on your machine — the picture is never uploaded.'
+      : `The first run fetches the model (about <b>${spec.size}</b>, depending on whether your browser can use the GPU) from the Hugging Face Hub and caches it. It runs on your machine — the picture is never uploaded.`;
+    const [name, href, licence] = spec.credit;
+    bgCredit.innerHTML = `Model: <a href="${href}" target="_blank" rel="noopener">${name}</a> · ${licence} · Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a>`;
+  } else {
+    bgIntroExtra.textContent = 'Nothing is downloaded and nothing is uploaded: this one is arithmetic on the pixels already in front of you, and it finishes in a blink.';
+    bgCredit.textContent = spec.credit;
+  }
+  bgIntroExtra.hidden = false;
+  bgStartBtn.textContent = bgMatte ? 'Run again' : spec.kind === 'model' ? 'Remove Background' : 'Work out the matte';
+}
 
 function ensureBgWorker() {
   if (bgWorker) return bgWorker;
@@ -5643,11 +5942,13 @@ function ensureBgWorker() {
         bgDetail.textContent = `Downloading the model — ${(msg.loaded / 1048576).toFixed(1)} / ${(msg.total / 1048576).toFixed(1)} MB (cached for next time)`;
         break;
       }
-      case 'ready':
-        localStorage.setItem(BG_MODEL_KEY, '1');
+      case 'ready': {
+        const method = bgRun?.method || bgMethod();
+        if (bgIsModel(method)) bgMarkDownloaded(method);
         bgProgressBar.style.width = '100%';
         setStatus(msg.device === 'webgpu' ? 'Removing background on your GPU…' : 'Removing background…');
         break;
+      }
       case 'result': applyBgResult(msg); break;
       case 'error': finishBgError(msg.message); break;
     }
@@ -5655,22 +5956,109 @@ function ensureBgWorker() {
   return bgWorker;
 }
 
+/* A layer read the way canonicalActiveCanvas reads the active one: with the
+   seam preview's shift taken back out, so a matte and the picture it was made
+   from always agree about where a pixel is. */
+function canonicalLayerCanvas(layer) {
+  if (!seamAppliedX && !seamAppliedY) return layer.canvas;
+  const canonical = document.createElement('canvas');
+  canonical.width = width(); canonical.height = height();
+  const context = canonical.getContext('2d');
+  const dx = seamAppliedX ? ((-Math.floor(width() / 2) % width()) + width()) % width() : 0;
+  const dy = seamAppliedY ? ((-Math.floor(height() / 2) % height()) + height()) % height() : 0;
+  for (const x of [dx, dx - width()]) for (const y of [dy, dy - height()]) context.drawImage(layer.canvas, x, y);
+  return canonical;
+}
+
+/* GrowCut is seeded rather than guessed at, and the seeding is the whole art.
+   A rough selection is a promise about two things only: the subject is
+   somewhere inside it, and everything outside it is background. It says nothing
+   about the pixels just inside the boundary — those are usually background too,
+   which is exactly why the selection was rough. So the subject seed is a core
+   pulled well inside the selection, the background seed is everything outside
+   it, and the wide band between the two is left undecided for the automaton to
+   settle. Marking the whole selection as subject instead would leave nothing to
+   work out, and the answer would come back as the rectangle that was drawn. */
+function bgGrowCutSeeds(w, h) {
+  if (!selection) return null;
+  const inside = Float32Array.from(selectionCoverage());
+  /* The core is the middle of what was drawn — an ellipse inside the
+     selection's own box, kept clear of its edges. A plain erosion is not enough
+     on its own: erode a rectangle and the corners survive, and the corners of a
+     rectangle drawn round something are the parts least likely to be on it. */
+  const box = {
+    x: selection.x ?? 0, y: selection.y ?? 0,
+    w: selection.w || w, h: selection.h || h
+  };
+  const centreX = box.x + box.w / 2, centreY = box.y + box.h / 2;
+  let core = null;
+  for (const fraction of [.34, .42, .5]) {
+    const rx = Math.max(1, box.w * fraction), ry = Math.max(1, box.h * fraction);
+    const candidate = new Float32Array(w * h);
+    let counted = 0;
+    for (let y = 0; y < h; y++) {
+      const dy = (y - centreY) / ry;
+      for (let x = 0; x < w; x++) {
+        const at = y * w + x;
+        if (inside[at] <= .5) continue;
+        const dx = (x - centreX) / rx;
+        if (dx * dx + dy * dy > 1) continue;
+        candidate[at] = 1; counted++;
+      }
+    }
+    /* a thin or crescent-shaped selection may hold no such middle; widen until
+       there is something to be certain about, and fall back to the selection */
+    if (counted > 32) { core = candidate; break; }
+  }
+  if (!core) core = inside;
+  const outside = bgSpread(inside, w, h, Math.max(2, Math.round(Math.min(w, h) * .01)), true);
+  const seeds = new Uint8Array(w * h);
+  for (let i = 0; i < seeds.length; i++) {
+    if (core[i] > .5) seeds[i] = 1;
+    else if (outside[i] < .5) seeds[i] = 2;
+  }
+  return seeds;
+}
+
 function startBgRemoval() {
+  const method = bgMethod();
+  const spec = BG_METHODS[method];
   const source = canonicalActiveCanvas();
   const pixels = source.getContext('2d').getImageData(0, 0, source.width, source.height);
   const buffer = pixels.data.buffer; /* a fresh ImageData buffer — safe to transfer */
-  bgRun = { width: source.width, height: source.height, layerId: activeLayer.id, canvas: source };
+  const params = { ...bgParams[method] };
+  const transfer = [buffer];
+  const message = { type: 'run', token: 0, method, params, data: buffer, width: source.width, height: source.height };
+
+  if (params.key) params.key = hexToRgb(params.key);
+  if (method === 'difference') {
+    const plate = layers.find(layer => String(layer.id) === String(params.layer) && layer.id !== activeLayer.id);
+    if (!plate) {
+      setStatus('Difference matting needs a second layer holding the empty scene');
+      return;
+    }
+    const plateCanvas = canonicalLayerCanvas(plate);
+    const platePixels = plateCanvas.getContext('2d', { willReadFrequently: true })
+      .getImageData(0, 0, source.width, source.height);
+    message.reference = platePixels.data.buffer;
+    transfer.push(message.reference);
+  }
+  if (method === 'growcut') {
+    const seeds = bgGrowCutSeeds(source.width, source.height);
+    if (seeds) { message.seeds = seeds.buffer; transfer.push(seeds.buffer); }
+  }
+
+  bgRun = { width: source.width, height: source.height, layerId: activeLayer.id, canvas: source, method };
   bgMatte = null; bgPreview = null;
-  const token = ++bgRunToken;
+  message.token = ++bgRunToken;
   showBgView('loading');
   bgStartBtn.hidden = true; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
   bgProgressBar.style.width = '0%';
-  bgDetail.textContent = 'Starting…';
-  setStatus('Loading the background-removal model…');
-  ensureBgWorker().postMessage(
-    { type: 'run', token, data: buffer, width: source.width, height: source.height },
-    [buffer]
-  );
+  bgDetail.textContent = spec.kind === 'model' ? 'Starting…' : `Working out the matte with ${spec.name}…`;
+  setStatus(spec.kind === 'model'
+    ? `Loading ${spec.name}…`
+    : `Working out the matte with ${spec.name}…`);
+  ensureBgWorker().postMessage(message, transfer);
 }
 
 /* ---- shaping the matte ----
@@ -5913,12 +6301,16 @@ function syncBgFields() {
 function showBgTuning() {
   buildBgPreview();
   showBgView('tune');
-  bgStartBtn.hidden = true;
+  /* the method chooser stays live over the result: seeing one method's matte is
+     what tells you to try another, and Run again is right there to do it */
+  bgStartBtn.hidden = false;
+  bgStartBtn.textContent = 'Run again';
   bgApplyBtn.hidden = false;
   bgResetBtn.hidden = false;
+  const source = BG_METHODS[bgRun?.method || bgMethod()].name;
   bgTuneNote.textContent = selection
-    ? 'The model has run. Nothing changes until Apply — and a selection is on, so only that part is affected.'
-    : 'The model has run. Nothing changes until Apply; every setting reshapes the result it already gave.';
+    ? `${source} has run. Nothing changes until Apply — and a selection is on, so only that part is affected.`
+    : `${source} has run. Nothing changes until Apply; every setting reshapes the result it already gave.`;
   syncBgFields();
   drawBgPreview();
 }
@@ -5932,7 +6324,7 @@ function applyBgResult(msg) {
   }
   bgMatte = { data: new Uint8ClampedArray(msg.data), width: msg.width, height: msg.height };
   showBgTuning();
-  setStatus('Subject found — shape the cut-out, then Apply');
+  setStatus(`${BG_METHODS[bgRun.method]?.name || 'The matte'} is ready — shape the cut-out, then Apply`);
 }
 
 /* Turning the shaped matte into whatever the Output box asks for. Everything
@@ -6035,7 +6427,12 @@ function finishBgError(message) {
   bgStartBtn.hidden = false; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
   bgDetail.textContent = '';
   bgProgressBar.style.width = '0%';
-  setStatus(`Background removal failed: ${message}`);
+  syncBgMethod();
+  /* a model that will not run on this machine is a dead end until another is
+     chosen, and the classic methods always run, so say so rather than leaving
+     the failure looking like the end of the road */
+  const fallback = bgIsModel(bgMethod()) ? ' — try a classic method, or a smaller model' : '';
+  setStatus(`Background removal failed: ${message}${fallback}`);
 }
 
 /* Leaving the dialog abandons an in-flight run and lets the matte go: it is
@@ -6054,19 +6451,36 @@ function openBgRemoval() {
   bgProgressBar.style.width = '0%';
   showBgView('intro');
   showModal('bgRemoveModal');
-  /* a matte still standing for this very layer is worth reusing — the model
-     has nothing new to say about pixels it has already seen */
+  checkBgWebGPU();
+  /* the colour methods open on the picture's own backdrop rather than on white:
+     for most photographs that is the answer, or one nudge away from it */
+  const sampled = sampleBgCorners();
+  BG_METHODS['colour-range'].params.forEach(field => {
+    if (field.sample && !bgKeyChosen.has('colour-range')) bgParams['colour-range'][field.id] = sampled;
+  });
+  syncBgMethod();
+  /* a matte still standing for this very layer is worth reusing — nothing has
+     anything new to say about pixels it has already seen */
   if (bgMatte && bgRun && bgRun.layerId === activeLayer.id && bgMatte.width === width() && bgMatte.height === height()) {
+    if (bgRun.method) bgMethodSelect.value = bgRun.method;
+    syncBgMethod();
     showBgTuning();
     setStatus('Reusing the matte from the last run');
     return;
   }
   bgMatte = null; bgPreview = null;
-  /* model already cached from a previous run — skip the explainer and go */
-  if (localStorage.getItem(BG_MODEL_KEY)) startBgRemoval();
+  /* nothing to fetch, or the model is already cached — skip the explainer and
+     go. A method that would start a long download waits to be asked. */
+  if (!bgIsModel(bgMethod()) || bgDownloaded().has(bgMethod())) startBgRemoval();
 }
 
 bgStartBtn.addEventListener('click', startBgRemoval);
+bgMethodSelect.addEventListener('change', () => {
+  syncBgMethod();
+  /* the matte on screen belongs to the method that made it; switching method
+     leaves it in place until Run again, so the two can be compared */
+  setStatus(`${BG_METHODS[bgMethod()].name} chosen${bgMatte ? ' — Run again to try it' : ''}`);
+});
 bgApplyBtn.addEventListener('click', applyBgTuning);
 bgResetBtn.addEventListener('click', () => {
   Object.entries(BG_DEFAULTS).forEach(([key, value]) => {
@@ -6086,6 +6500,94 @@ bgShowButtons.forEach(button => button.addEventListener('click', () => {
 }));
 /* closing the dialog (× or Cancel) abandons the run and the matte with it */
 bgModal.addEventListener('click', event => { if (event.target.closest('[data-close]')) closeBgRemoval(); });
+
+/* ---- Select Object — Segment Anything, one click at a time ----
+ * The magic wand asks "what else is this colour?", which is a question about
+ * pixels. This asks "what is this thing?", which is a question about the
+ * picture, and only a model can answer it: a cat in front of a sofa is one
+ * object across a dozen colours, and the sofa behind it is another.
+ *
+ * SAM looks at the picture once — seconds — and answers clicks against that
+ * one look in a fraction of a second each, so the encoding is cached against
+ * the picture it was made from and only the clicks come back and forth.
+ * Alt-clicking adds a point the object must not reach, which is how you tell
+ * it the cat is not the cushion the cat is sitting on. */
+let samWorker = null, samToken = 0, samPoints = [], samImageId = null, samBusy = false;
+
+function ensureSamWorker() {
+  if (samWorker) return samWorker;
+  samWorker = new Worker(new URL('paint-sam-worker.js', appUrl), { type: 'module' });
+  samWorker.onerror = event => {
+    samBusy = false; samPoints = []; samImageId = null;
+    setStatus(`Select Object failed: ${event.message || 'worker failed to start'}`);
+  };
+  samWorker.onmessage = event => {
+    const msg = event.data;
+    if (msg.token !== undefined && msg.token !== samToken) return;
+    switch (msg.type) {
+      case 'loading': setStatus(msg.detail); break;
+      case 'progress':
+        if (!msg.total) break;
+        setStatus(`Fetching the object-select model — ${(msg.loaded / 1048576).toFixed(1)} / ${(msg.total / 1048576).toFixed(1)} MB (cached for next time)`);
+        break;
+      case 'mask': applyObjectSelection(msg); break;
+      case 'error':
+        samBusy = false; samPoints = []; samImageId = null;
+        setStatus(`Select Object failed: ${msg.message}`);
+        break;
+    }
+  };
+  return samWorker;
+}
+
+/* The embedding is only good for the pixels it was made from, so it is keyed
+   by everything that would change them. */
+const samImageKey = sample => `${documentRevision}:${sample}:${sample === 'merged' ? 'all' : activeLayer.id}:${width()}x${height()}`;
+
+function objectSelectAt(point, event) {
+  if (!retouch) { setStatus('Selection helpers are unavailable; paint-retouch.js did not load'); return; }
+  if (samBusy) { setStatus('Still working on the last click…'); return; }
+  const sample = option('sample', 'merged');
+  const key = samImageKey(sample);
+  /* a plain click starts a fresh object; the modifiers refine the last one */
+  const refining = (event.shiftKey || event.altKey) && samPoints.length && samImageId === key;
+  samPoints = refining ? [...samPoints, { x: point.x, y: point.y, positive: !event.altKey }]
+                       : [{ x: point.x, y: point.y, positive: true }];
+  samImageId = key;
+  const source = sample === 'merged' ? compositeCanvas() : copyCanvas();
+  const pixels = source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, width(), height());
+  const buffer = pixels.data.buffer;
+  samBusy = true;
+  setStatus(refining ? 'Refining the object…' : 'Working out what you clicked…');
+  ensureSamWorker().postMessage({
+    type: 'select', token: ++samToken, imageId: key,
+    data: buffer, width: width(), height: height(),
+    points: samPoints, scope: option('scope', 'auto')
+  }, [buffer]);
+}
+
+function applyObjectSelection(msg) {
+  samBusy = false;
+  if (msg.width !== width() || msg.height !== height()) {
+    samPoints = []; samImageId = null;
+    setStatus('The canvas changed while the model was working; click again');
+    return;
+  }
+  let mask = retouch.makeMask(width(), height());
+  for (let i = 0; i < mask.length; i++) mask[i] = msg.data[i] / 255;
+  const feather = option('feather', 0);
+  if (feather > 0) mask = retouch.featherMask(mask, width(), height(), feather);
+  const made = maskSelection(mask);
+  if (!made) {
+    setStatus('The model found nothing there — click on the object itself, or try another point');
+    return;
+  }
+  selection = made; cropButton.disabled = false; renderSelection();
+  let counted = 0;
+  for (const value of selection.mask) if (value > .5) counted++;
+  const confidence = Math.round((msg.scores?.[msg.chosen] ?? 0) * 100);
+  setStatus(`Object selected — ${counted} px, ${confidence}% sure${samPoints.length > 1 ? ` from ${samPoints.length} points` : ''}. Shift-click to add, Alt-click to trim.`);
+}
 
 /* ---- DeepDream — inception5h through TensorFlow.js, in a worker ----
  * Gradient ascent on one layer of an image-recognition network: the picture is
