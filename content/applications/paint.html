@@ -221,12 +221,14 @@
 .paint-effect-matrix input::-webkit-outer-spin-button, .paint-effect-matrix input::-webkit-inner-spin-button { appearance: none; margin: 0; }
 .paint-adjust-histogram { width: 100%; height: 118px; box-sizing: border-box; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); }
 .paint-adjust-stats { min-height: 1.4em; margin: -5px 0 0; padding: 0; font-size: 10px; color: var(--sage); font-variant-numeric: tabular-nums; }
-.paint-modal { pointer-events: none; align-items: flex-start; justify-content: flex-end; padding: 56px 18px 18px; background: transparent; }
 /* The overlay covers the app and nothing else — the whole page when ClackPaint
-   is a page, the window body when it is mounted in ClackOS. Dialogs are placed
-   inside it, in percentages of it, so they stay in the app rather than sizing
-   themselves against a browser window they may be only a small part of. */
-.paint-modal .paint-modal-box { pointer-events: auto; position: absolute; right: 18px; top: 56px; width: min(390px, calc(100% - 24px)); max-height: calc(100% - 74px); }
+   is a page, the window body when it is mounted in ClackOS. A dialog opens in
+   the middle of it, over the app it belongs to, sized in percentages of it, and
+   above everything else the app draws: menus, panels and the canvas menu. */
+.paint-modal { pointer-events: none; align-items: center; justify-content: center; padding: 18px; background: transparent; z-index: 100; }
+.paint-modal .paint-modal-box { pointer-events: auto; position: relative; width: min(390px, 100%); max-height: 100%; }
+/* Dragged, it stops being centred and is placed by hand inside the overlay. */
+.paint-modal .paint-modal-box.dragged { position: absolute; }
 .paint-modal .paint-modal-box > header { cursor: grab; touch-action: none; user-select: none; }
 .paint-modal .paint-modal-box > header:active { cursor: grabbing; }
 .paint-modal .paint-dialog-body { overflow-y: auto; min-height: 0; }
@@ -239,10 +241,13 @@
 .paint-blur-readout { min-width: 54px; display: inline-block; text-align: right; font-variant-numeric: tabular-nums; color: var(--sage); }
 #gaussianBlurModal label > span { display: flex; align-items: center; gap: 8px; flex: 1; }
 #gaussianBlurModal input[type="range"] { flex: 1; min-width: 120px; }
+/* on a phone a dialog sits at the bottom, where the thumbs are */
 @media (max-width: 700px) {
-  .paint-modal { padding: 0; }
-  .paint-modal .paint-modal-box { left: 10px; right: 10px; top: auto; bottom: 10px; width: auto; max-height: min(56vh, calc(100% - 20px)); }
+  .paint-modal { padding: 10px; align-items: flex-end; }
+  .paint-modal .paint-modal-box { width: 100%; max-height: min(56vh, 100%); }
 }
+/* the menu bar while a dialog is up: shut, and out of reach (see the lock) */
+.paint-app .rm-bar[inert] { opacity: .45; }
 
 /* ---- File → Export / Import as Program Array ----
    Wider than the other dialogs because it is really two panels: the settings,
@@ -250,7 +255,7 @@
    by side, so they stack and the code box gives up most of its height. */
 /* The paint dialogs are pinned to the top right rather than centred, and drag
    from their headers; this one keeps that but needs room for two panels. */
-.paint-modal .paint-export-box { width: min(940px, calc(100% - 36px)); max-height: calc(100% - 74px); }
+.paint-modal .paint-export-box { width: min(940px, 100%); max-height: 100%; }
 .paint-export-body { flex: 1 1 auto; display: flex; gap: 14px; padding: 14px; min-height: 0; overflow: hidden; }
 .paint-export-controls {
   flex: 0 0 352px; display: flex; flex-direction: column; gap: 9px;
@@ -323,7 +328,7 @@
 /* the shared rule drops every dialog to the bottom of a narrow screen and caps
    it at 56vh; two stacked panels need more of the height than that */
 @media (max-width: 700px) {
-  .paint-modal .paint-export-box { width: auto; max-height: min(78vh, calc(100% - 20px)); }
+  .paint-modal .paint-export-box { width: 100%; max-height: min(78vh, 100%); }
 }
 .paint-context-menu { position: fixed; z-index: 90; display: none; min-width: 180px; padding: 5px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); box-shadow: 4px 4px 0 color-mix(in srgb,var(--shadow) var(--shadow-alpha),transparent); }
 .paint-context-menu.open { display: block; }
@@ -2066,6 +2071,7 @@ function closeToolMenus() {
   });
 }
 function openToolMenu(menu) {
+  if (anyModalOpen()) return;      /* a dialog holds the app; see lockBehindDialog */
   closeMenus(); closeToolMenus();
   const opener = menu.querySelector(':scope > .paint-tool-menu-btn');
   const panel = menu.querySelector(':scope > .paint-tool-dd');
@@ -3233,6 +3239,7 @@ function selectionToLayer(cut) {
 function closeContextMenu() { contextMenu.classList.remove('open'); }
 function openContextMenu(event) {
   event.preventDefault();
+  if (anyModalOpen()) { setStatus('Close the dialog before using canvas actions'); return; }
   if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before using canvas actions'); return; }
   if (freeTransform) { status.textContent = 'Apply or cancel the free transform before using canvas actions'; return; }
   if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before using canvas actions'; return; }
@@ -5226,6 +5233,7 @@ function closeAdjustment(cancel = true) {
   const wasPreview = adjustPreviewing;
   adjustPreviewing = false; histogramOnly = false; activeAdjustment = null; adjustmentOriginal = null;
   stack.classList.remove('adjust-busy'); appRoot.querySelector('#adjustModal').classList.remove('open');
+  lockBehindDialog();
   renderLayerPanel();
   if (cancel && wasPreview) setStatus('Adjustment cancelled');
 }
@@ -5374,12 +5382,37 @@ function setAsBackground() {
 }
 
 const modals = new Map([...appRoot.querySelectorAll('.paint-modal')].map(modal => [modal.id, modal]));
-const showModal = id => modals.get(id).classList.add('open');
+const anyModalOpen = () => [...modals.values()].some(modal => modal.classList.contains('open'));
+const showModal = id => {
+  const modal = modals.get(id);
+  /* A dialog opens in the middle of the app every time. Somewhere it was
+     dragged to during an earlier visit is not where it is wanted next. */
+  const dialogWindow = modal.querySelector('.paint-modal-box');
+  if (dialogWindow) {
+    dialogWindow.classList.remove('dragged');
+    dialogWindow.style.left = dialogWindow.style.top = dialogWindow.style.width = '';
+    dialogWindow.style.right = dialogWindow.style.bottom = '';
+  }
+  modal.classList.add('open');
+  lockBehindDialog();
+};
 const hideModal = id => {
   if (id === 'gaussianBlurModal') cancelGaussianPreview();
   if (id === 'effectModal') endEffectPreview(true);
   modals.get(id).classList.remove('open');
+  lockBehindDialog();
 };
+
+/* A dialog is the only thing to be getting on with while it is up: the menu
+ * bar goes out of reach, and the tool menus and the canvas menu are shut and
+ * stay shut, so nothing can be started behind it. The canvas itself is left
+ * alone — the live previews are watched on it while their dialog is open. */
+function lockBehindDialog() {
+  const locked = anyModalOpen();
+  appRoot.querySelector('.rm-bar').toggleAttribute('inert', locked);
+  if (!locked) return;
+  closeMenus(); closeToolMenus(); closeContextMenu();
+}
 modals.forEach(modal => {
   const dialogWindow = modal.querySelector('.paint-modal-box'), handle = dialogWindow?.querySelector(':scope > header');
   if (!dialogWindow || !handle) return;
@@ -5391,6 +5424,7 @@ modals.forEach(modal => {
      * a drag works in the overlay's coordinates and stops at its edges — the
      * dialog cannot be dragged out of a ClackOS window and onto the desktop. */
     const bounds = modal.getBoundingClientRect();
+    dialogWindow.classList.add('dragged');
     dialogWindow.style.width = rect.width + 'px'; dialogWindow.style.right = 'auto'; dialogWindow.style.bottom = 'auto';
     dialogWindow.style.left = (rect.left - bounds.left) + 'px'; dialogWindow.style.top = (rect.top - bounds.top) + 'px';
     document.body.classList.add('win-drag');
