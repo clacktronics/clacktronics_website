@@ -233,6 +233,77 @@
   .paint-modal { padding: 0; }
   .paint-modal .paint-modal-box { left: 10px; right: 10px; top: auto; bottom: 10px; width: auto; max-height: 56vh; }
 }
+
+/* ---- File → Export / Import as Program Array ----
+   Wider than the other dialogs because it is really two panels: the settings,
+   and what they produce. Under about 820px there is no room to stand them side
+   by side, so they stack and the code box gives up most of its height. */
+/* The paint dialogs are pinned to the top right rather than centred, and drag
+   from their headers; this one keeps that but needs room for two panels. */
+.paint-modal .paint-export-box { width: min(940px, calc(100vw - 36px)); max-height: calc(100vh - 72px); }
+.paint-export-body { flex: 1 1 auto; display: flex; gap: 14px; padding: 14px; min-height: 0; overflow: hidden; }
+.paint-export-controls {
+  flex: 0 0 352px; display: flex; flex-direction: column; gap: 9px;
+  overflow-y: auto; padding-right: 8px;
+}
+.paint-export-output { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+.paint-export-group {
+  display: flex; flex-direction: column; gap: 9px;
+  padding-top: 9px; border-top: 1px solid var(--paper-line);
+}
+.paint-export-group:first-child { padding-top: 0; border-top: none; }
+.paint-export-group > h4 { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--sage); }
+.paint-export-group label:not(.paint-check) { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 11.5px; }
+.paint-export-group label:not(.paint-check) > span { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end; min-width: 0; }
+.paint-export-group select, .paint-export-group input[type="text"] { flex: 1; min-width: 0; max-width: 215px; font: inherit; font-size: 11px; }
+/* the labels are the part that can afford to wrap when a select needs the room */
+.paint-export-group label:not(.paint-check) > span:first-child { flex: 0 1 auto; text-align: right; }
+.paint-export-group input[type="number"] { width: 78px; padding: 4px 6px; border: 1px solid var(--ink); border-radius: 5px; background: var(--paper-deep); color: var(--control-text); font: inherit; font-size: 11px; }
+.paint-export-group input[type="range"] { flex: 1; min-width: 0; max-width: 130px; }
+.paint-export-group input[type="color"] { width: 44px; height: 22px; padding: 0; border: 1px solid var(--ink); background: none; }
+.paint-export-group output { font-size: 10.5px; color: var(--sage); min-width: 30px; text-align: right; }
+.paint-export-group .paint-check { font-size: 11.5px; }
+.paint-export-pair { display: flex; gap: 8px; align-items: center; }
+.paint-export-preview-wrap { display: flex; flex-direction: column; gap: 7px; }
+.paint-export-preview {
+  width: 100%; height: 232px; box-sizing: border-box; border: 1px solid var(--ink); border-radius: 6px;
+  image-rendering: pixelated; background-color: #ffffff;
+  background-image: linear-gradient(45deg, #c9c9c9 25%, transparent 25%), linear-gradient(-45deg, #c9c9c9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #c9c9c9 75%), linear-gradient(-45deg, transparent 75%, #c9c9c9 75%);
+  background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+}
+.paint-export-preview.zoomed { overflow: auto; }
+.paint-export-code {
+  flex: 1; min-height: 120px; overflow: auto; margin: 0; padding: 9px 11px;
+  border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep);
+  color: var(--control-text); font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
+  line-height: 1.5; white-space: pre; tab-size: 2;
+}
+.paint-export-budget { font-size: 11px; border: 1px solid var(--paper-line); border-radius: 6px; padding: 6px 9px; }
+.paint-export-budget summary { cursor: pointer; color: var(--sage); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; }
+.paint-export-budget > div { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; margin-top: 7px; }
+.paint-export-budget .mcu-name { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.paint-export-budget .mcu-bar { flex: none; width: 54px; height: 7px; border: 1px solid var(--ink); border-radius: 3px; overflow: hidden; background: var(--paper-deep); }
+.paint-export-budget .mcu-bar > i { display: block; height: 100%; background: var(--leaf-deep); }
+.paint-export-budget .mcu-over > i { background: var(--ink); }
+.paint-export-budget .mcu-figure { color: var(--sage); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.paint-export-budget .mcu-figure.over { color: var(--ink); }
+.paint-export-actions { padding: 0 14px 13px; }
+.paint-export-paste { display: flex; flex-direction: column; gap: 5px; font-size: 11.5px; }
+.paint-export-paste textarea {
+  width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid var(--ink); border-radius: 6px;
+  background: var(--paper-deep); color: var(--control-text);
+  font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; resize: vertical;
+}
+@media (max-width: 820px) {
+  .paint-export-body { flex-direction: column; overflow-y: auto; }
+  .paint-export-controls { flex: none; overflow: visible; padding-right: 0; }
+  .paint-export-code { min-height: 90px; max-height: 200px; }
+}
+/* the shared rule drops every dialog to the bottom of a narrow screen and caps
+   it at 56vh; two stacked panels need more of the height than that */
+@media (max-width: 700px) {
+  .paint-modal .paint-export-box { width: auto; max-height: 78vh; }
+}
 .paint-context-menu { position: fixed; z-index: 90; display: none; min-width: 180px; padding: 5px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); box-shadow: 4px 4px 0 color-mix(in srgb,var(--shadow) var(--shadow-alpha),transparent); }
 .paint-context-menu.open { display: block; }
 .paint-context-menu button { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 7px 9px; border-radius: 4px; color: var(--control-text); font-size: 11px; cursor: pointer; }
@@ -291,6 +362,7 @@
 <script src="../../assets/js/file-manager.js"></script>
 <script src="paint-dither.js" data-integrated-instance></script>
 <script src="paint-retouch.js" data-integrated-instance></script>
+<script src="paint-export.js" data-integrated-instance></script>
 <script src="../../assets/js/app-menu.js" defer></script>
 </head>
 <body>
@@ -312,8 +384,20 @@
           <button data-cmd="open-site-layer"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>From website…</button>
         </div>
       </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="cpu" aria-hidden="true"></span><span class="rm-item">Import</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
+          <button data-cmd="import-array"><span class="pixel-icon" data-icon="cpu" aria-hidden="true"></span>From Program Array…</button>
+        </div>
+      </div>
       <button data-cmd="save"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save</button>
       <button data-cmd="saveas"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save As…</button>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="cpu" aria-hidden="true"></span><span class="rm-item">Export</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
+          <button data-cmd="export-array"><span class="pixel-icon" data-icon="cpu" aria-hidden="true"></span>As Program Array…</button>
+        </div>
+      </div>
       <button data-cmd="upload-site"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Upload to website…</button>
       <div class="sep"></div>
       <button data-cmd="set-background"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>Set as background tile</button>
@@ -690,7 +774,9 @@
       <label>Width <span><input id="imageWidth" type="number" min="1" max="8192" required> px</span></label>
       <label>Height <span><input id="imageHeight" type="number" min="1" max="8192" required> px</span></label>
       <label class="paint-check"><input id="keepAspect" type="checkbox" checked> Preserve aspect ratio</label>
-      <p class="app-status">Resamples the image to the new pixel dimensions.</p>
+      <label>Resampling <span><select id="imageFilter"></select></span></label>
+      <label class="paint-check"><input id="imageLinear" type="checkbox" checked> Resample in linear light</label>
+      <p class="app-status" id="imageSizeNote">Resamples the image to the new pixel dimensions.</p>
       <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="imageSizeModal">Cancel</button><button class="btn primary">Resize</button></div>
     </div>
   </form>
@@ -919,6 +1005,79 @@
     </div>
   </form>
 </div>
+
+<!-- Export as a program array. The controls are built from a table in the
+     script rather than written out here: what a format needs — bit order for
+     mono, endianness for 565, a matrix for YUV — differs enough that a fixed
+     list would be mostly hidden rows. The right-hand side shows the bytes
+     decoded back into a picture, so a bit order that does not match the
+     display is visible here rather than on the bench. -->
+<div class="paint-modal" id="exportArrayModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="exportArrayTitle">
+  <div class="paint-modal-box paint-export-box">
+    <header><span id="exportArrayTitle">Export as Program Array</span><button type="button" data-close="exportArrayModal" aria-label="Close">×</button></header>
+    <div class="paint-export-body">
+      <div class="paint-export-controls" id="exportFields"></div>
+      <div class="paint-export-output">
+        <div class="paint-export-preview-wrap">
+          <canvas class="paint-export-preview" id="exportPreview" width="320" height="240" aria-label="Preview of the encoded picture"></canvas>
+          <div class="paint-bg-views" role="group" aria-label="Preview shows">
+            <button type="button" class="btn" data-exportshow="result" aria-pressed="true">Encoded</button>
+            <button type="button" class="btn" data-exportshow="before" aria-pressed="false">Original</button>
+            <button type="button" class="btn" id="exportZoom" aria-pressed="false">Zoom 1:1</button>
+          </div>
+          <p class="paint-dream-note" id="exportSummary"></p>
+        </div>
+        <details class="paint-export-budget" id="exportBudget" open>
+          <summary>Memory budget</summary>
+          <div id="exportBudgetRows"></div>
+        </details>
+        <pre class="paint-export-code" id="exportCode" tabindex="0"></pre>
+        <p class="paint-dream-note" id="exportNote"></p>
+      </div>
+    </div>
+    <div class="paint-dialog-actions paint-export-actions">
+      <button type="button" class="btn ghost" data-close="exportArrayModal">Close</button>
+      <button type="button" class="btn" id="exportCopy"><span class="pixel-icon" data-icon="copy" aria-hidden="true"></span>Copy</button>
+      <button type="button" class="btn" id="exportBinary"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Download .bin</button>
+      <button type="button" class="btn primary" id="exportDownload"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Download</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import: the exporter's decoders, run the other way. Anything this app
+     writes comes back exactly; other people's arrays usually come back too,
+     given the right shape, which is what the size list is for. -->
+<div class="paint-modal" id="importArrayModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="importArrayTitle">
+  <div class="paint-modal-box paint-export-box">
+    <header><span id="importArrayTitle">Import Program Array</span><button type="button" data-close="importArrayModal" aria-label="Close">×</button></header>
+    <div class="paint-export-body">
+      <div class="paint-export-controls">
+        <label class="paint-export-paste">Paste the array
+          <textarea id="importText" spellcheck="false" rows="8" placeholder="const uint8_t LOGO[1024] PROGMEM = { 0x00, 0xFF, … };"></textarea>
+        </label>
+        <div class="paint-dialog-actions" style="justify-content:flex-start">
+          <button type="button" class="btn" id="importFile"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Read a file…</button>
+        </div>
+        <div id="importFields"></div>
+        <label class="paint-export-paste" id="importPaletteRow" hidden>Palette array
+          <textarea id="importPaletteText" spellcheck="false" rows="3" placeholder="const uint16_t LOGO_PALETTE[16] = { … };"></textarea>
+        </label>
+      </div>
+      <div class="paint-export-output">
+        <div class="paint-export-preview-wrap">
+          <canvas class="paint-export-preview" id="importPreview" width="320" height="240" aria-label="Preview of the decoded picture"></canvas>
+          <p class="paint-dream-note" id="importSummary">Paste an array to see it.</p>
+        </div>
+      </div>
+    </div>
+    <div class="paint-dialog-actions paint-export-actions">
+      <button type="button" class="btn ghost" data-close="importArrayModal">Cancel</button>
+      <button type="button" class="btn" id="importAsLayer">Open as Layer</button>
+      <button type="button" class="btn primary" id="importOpen">Open as Image</button>
+    </div>
+  </div>
+</div>
+<input id="importFilePicker" type="file" accept=".h,.hpp,.c,.cpp,.py,.txt,.bin,.dat,text/plain" hidden>
 
 <script>
 (() => {
@@ -3332,13 +3491,43 @@ function validDimension(value) {
   return Number.isFinite(number) && number >= 1 && number <= MAX_DIMENSION ? number : null;
 }
 
+/* Canvas does its own thing when it rescales — one filter, chosen for it, in
+   gamma space — which shows on the two resizes that matter most here: shrinking
+   a picture towards a small display, where whole rows of pixels can go
+   unlooked-at, and blowing pixel art up, where it smears what should stay
+   hard. So the resampler in paint-retouch.js does it instead, with the filter
+   named in the dialog, and drawImage stays as the fallback for a page where
+   that file did not load. */
+function resampleOptions() {
+  return {
+    filter: appRoot.querySelector('#imageFilter')?.value || 'lanczos3',
+    linear: appRoot.querySelector('#imageLinear')?.checked !== false
+  };
+}
+
+function resampleCanvas(source, w, h, options) {
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const context = out.getContext('2d');
+  const retouch = window.ClackRetouch;
+  if (retouch?.resample && source.width && source.height) {
+    const from = source.getContext('2d').getImageData(0, 0, source.width, source.height);
+    context.putImageData(retouch.resample(from, w, h, options), 0, 0);
+    return out;
+  }
+  context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+  context.drawImage(source, 0, 0, w, h);
+  return out;
+}
+
 function resizeImage(w, h) {
+  const options = resampleOptions();
   pushUndo('Image Size'); canonicaliseSeam();
   const copies = layerCopies();
+  const scaled = copies.map(copy => resampleCanvas(copy, w, h, options));
   resizeSurfaces(w, h);
   layers.forEach((layer, index) => {
-    const context = layer.canvas.getContext('2d'); context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
-    context.drawImage(copies[index], 0, 0, w, h);
+    layer.canvas.getContext('2d').drawImage(scaled[index], 0, 0);
   });
   reapplySeam();
   renderLayerPanel();
@@ -5302,10 +5491,49 @@ function openWebsiteBrowser(asLayer = false) {
 
 const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/* Lanczos to start with — it is the one that keeps detail when shrinking, and
+   shrinking is what this dialog is mostly used for. Nearest is there for
+   pixel art, where every filter that averages is wrong. */
+const RESAMPLE_KEY = 'clackpaint-resample-filter';
+function fillResampleFilters() {
+  const select = appRoot.querySelector('#imageFilter');
+  if (!select || select.options.length) return;
+  const filters = window.ClackRetouch?.RESAMPLE_FILTERS;
+  if (!filters) { select.closest('label').hidden = true; appRoot.querySelector('#imageLinear').closest('label').hidden = true; return; }
+  for (const [id, filter] of Object.entries(filters)) {
+    const option = document.createElement('option');
+    option.value = id; option.textContent = filter.label;
+    select.append(option);
+  }
+  let saved = null;
+  try { saved = localStorage.getItem(RESAMPLE_KEY); } catch { /* private browsing */ }
+  select.value = saved && filters[saved] ? saved : 'lanczos3';
+  select.addEventListener('change', () => {
+    try { localStorage.setItem(RESAMPLE_KEY, select.value); } catch { /* private browsing */ }
+    updateImageSizeNote();
+  });
+  appRoot.querySelector('#imageLinear').addEventListener('change', updateImageSizeNote);
+}
+
+function updateImageSizeNote() {
+  const note = appRoot.querySelector('#imageSizeNote');
+  const w = validDimension(appRoot.querySelector('#imageWidth').value);
+  const h = validDimension(appRoot.querySelector('#imageHeight').value);
+  const shrinking = w && h && (w < width() || h < height());
+  const nearest = appRoot.querySelector('#imageFilter')?.value === 'nearest';
+  note.textContent = nearest
+    ? 'Nearest neighbour copies whole pixels — no averaging, no new colours.'
+    : shrinking
+      ? 'The filter widens as it shrinks, so every pixel is looked at rather than sampled past.'
+      : 'Resamples the image to the new pixel dimensions.';
+}
+
 function openImageSize() {
+  fillResampleFilters();
   appRoot.querySelector('#imageWidth').value = width();
   appRoot.querySelector('#imageHeight').value = height();
   appRoot.querySelector('#imageSizeForm').dataset.aspect = width() / height();
+  updateImageSizeNote();
   showModal('imageSizeModal'); appRoot.querySelector('#imageWidth').focus();
 }
 
@@ -5317,14 +5545,16 @@ function openCanvasSize() {
 
 const imageWidth = appRoot.querySelector('#imageWidth'), imageHeight = appRoot.querySelector('#imageHeight');
 imageWidth.addEventListener('input', () => {
-  if (!appRoot.querySelector('#keepAspect').checked) return;
-  const value = validDimension(imageWidth.value), aspect = +appRoot.querySelector('#imageSizeForm').dataset.aspect;
-  if (value) imageHeight.value = Math.max(1, Math.round(value / aspect));
+  const aspect = +appRoot.querySelector('#imageSizeForm').dataset.aspect;
+  const value = validDimension(imageWidth.value);
+  if (value && appRoot.querySelector('#keepAspect').checked) imageHeight.value = Math.max(1, Math.round(value / aspect));
+  updateImageSizeNote();
 });
 imageHeight.addEventListener('input', () => {
-  if (!appRoot.querySelector('#keepAspect').checked) return;
-  const value = validDimension(imageHeight.value), aspect = +appRoot.querySelector('#imageSizeForm').dataset.aspect;
-  if (value) imageWidth.value = Math.max(1, Math.round(value * aspect));
+  const aspect = +appRoot.querySelector('#imageSizeForm').dataset.aspect;
+  const value = validDimension(imageHeight.value);
+  if (value && appRoot.querySelector('#keepAspect').checked) imageWidth.value = Math.max(1, Math.round(value * aspect));
+  updateImageSizeNote();
 });
 appRoot.querySelector('#imageSizeForm').addEventListener('submit', event => {
   event.preventDefault(); const w = validDimension(imageWidth.value), h = validDimension(imageHeight.value);
@@ -7141,6 +7371,730 @@ if (window.ClackDither) {
   });
 }
 
+/* ---- File → Export / Import as Program Array ----------------------------
+ *
+ * paint-export.js does the work; this builds the dialog around it. The control
+ * list is a table rather than markup because each pixel format asks for a
+ * different half-dozen settings, and every change runs the whole pipeline
+ * again — scale, dither, pack, then unpack — so the preview shows the bytes
+ * as a display would read them rather than the picture that went in.
+ */
+const EXPORT_KEY = 'clackpaint-export-settings';
+const EXPORT_CODE_LIMIT = 512 * 1024;   /* bytes above which the code is made on demand */
+const EXPORT_SHOWN_CHARS = 64 * 1024;   /* how much of it the box shows */
+
+const EXPORT_DEFAULTS = {
+  preset: 'native', outWidth: 0, outHeight: 0, fit: 'contain',
+  filter: 'lanczos3', linearScale: true, rotate: 0, flipH: false, flipV: false,
+  background: '#000000', selectionOnly: false,
+  format: 'mono', monoBits: 1, invert: false,
+  paletteSource: 'median', paletteSize: 16, indexBits: 4, paletteFormat: 'rgb565',
+  pixelFormat: 'rgb565', endian: 'big', wordOutput: 'words',
+  yuvOrder: 'yuyv', matrix: '601', range: 'full', chroma: 'average',
+  scan: 'rows', serpentine: false, bitOrder: 'msb', rowAlign: true,
+  mask: false, maskCutoff: 128,
+  ditherGroup: 'error-diffusion', ditherValues: {},
+  language: 'arduino', library: 'generic', name: '', perLine: 12, radix: 'hex',
+  comments: true, progmem: true, dimensions: true, mutable: true
+};
+
+let exportValues = { ...EXPORT_DEFAULTS, ditherValues: {} };
+let exportSourceImage = null, exportPrepared = null, exportEncoded = null, exportPalette = null;
+let exportTimer = 0, exportShow = 'result', exportZoomed = false, exportBuilding = false;
+
+const exportApi = () => window.ClackExport;
+
+/* A picture that is already two-tone wants a 1-bit array; a photograph does
+   not. Guessing once, when the dialog opens, saves the first thing everybody
+   would otherwise have to change. */
+function guessExportFormat(image) {
+  const data = image.data;
+  const total = image.width * image.height;
+  const stride = Math.max(1, Math.floor(total / 20000));
+  const colours = new Set();
+  let grey = true;
+  for (let i = 0; i < total; i += stride) {
+    const p = i * 4;
+    if (data[p + 3] < 8) continue;
+    if (Math.abs(data[p] - data[p + 1]) > 6 || Math.abs(data[p + 1] - data[p + 2]) > 6) grey = false;
+    if (colours.size <= 64) colours.add((data[p] << 16) | (data[p + 1] << 8) | data[p + 2]);
+  }
+  if (grey && colours.size <= 2) return { format: 'mono', monoBits: 1, ditherGroup: 'none' };
+  if (grey) return { format: 'mono', monoBits: 4 };
+  if (colours.size <= 64) return { format: 'indexed', indexBits: 8, paletteSize: 32, ditherGroup: 'none' };
+  return { format: 'rgb', pixelFormat: 'rgb565' };
+}
+
+const exportScaled = () => {
+  const rotated = exportValues.rotate % 180 !== 0;
+  const w = rotated ? height() : width(), h = rotated ? width() : height();
+  return exportValues.outWidth !== w || exportValues.outHeight !== h;
+};
+const exportPacked = () => exportValues.format === 'mono' || exportValues.format === 'indexed';
+const exportBits = () => (exportValues.format === 'indexed' ? exportValues.indexBits : exportValues.monoBits);
+
+function exportFieldSpec() {
+  const api = exportApi();
+  const filters = Object.entries(window.ClackRetouch?.RESAMPLE_FILTERS || {}).map(([id, f]) => [id, f.label]);
+  const ditherGroups = [['none', 'None — nearest colour']].concat(
+    Object.entries(window.ClackDither?.GROUPS || {}).map(([id, group]) => [id, group.label]));
+  const libraries = Object.entries(api.LIBRARIES)
+    .filter(([, library]) => !library.languages || library.languages.includes(exportValues.language))
+    .map(([id, library]) => [id, library.label]);
+
+  return [
+    ['Output size', [
+      { key: 'preset', type: 'select', label: 'Display', options: api.PRESETS.map(preset => [preset.id, preset.label]) },
+      { key: 'outWidth', type: 'number', label: 'Width', min: 1, max: 4096, unit: 'px' },
+      { key: 'outHeight', type: 'number', label: 'Height', min: 1, max: 4096, unit: 'px' },
+      { key: 'fit', type: 'select', label: 'If the shape differs', options: api.FIT_MODES, showIf: exportScaled },
+      { key: 'filter', type: 'select', label: 'Resampling', options: filters, showIf: exportScaled },
+      { key: 'linearScale', type: 'check', label: 'Resample in linear light', showIf: exportScaled },
+      { key: 'rotate', type: 'select', label: 'Rotate', options: [[0, 'None'], [90, '90° clockwise'], [180, '180°'], [270, '90° anticlockwise']] },
+      { key: 'flipH', type: 'check', label: 'Flip horizontally' },
+      { key: 'flipV', type: 'check', label: 'Flip vertically' },
+      { key: 'background', type: 'color', label: 'Bars and transparency' },
+      { key: 'selectionOnly', type: 'check', label: 'The selection only', showIf: () => !!selection }
+    ]],
+    ['Pixel format', [
+      { key: 'format', type: 'select', label: 'Format', options: api.FORMATS },
+      { key: 'monoBits', type: 'select', label: 'Bit depth', options: [[1, '1 bit — black and white'], [2, '2 bits — 4 greys'], [4, '4 bits — 16 greys'], [8, '8 bits — 256 greys']], showIf: () => exportValues.format === 'mono' },
+      { key: 'invert', type: 'check', label: 'Invert — 1 means dark', showIf: () => exportValues.format === 'mono' },
+      { key: 'paletteSource', type: 'select', label: 'Palette', options: api.PALETTE_SOURCES, showIf: () => exportValues.format === 'indexed' },
+      { key: 'paletteSize', type: 'number', label: 'Colours', min: 2, max: 256, showIf: () => exportValues.format === 'indexed' && exportValues.paletteSource !== 'fgbg' },
+      { key: 'indexBits', type: 'select', label: 'Bits per index', options: [[1, '1 bit — 2 colours'], [2, '2 bits — 4'], [4, '4 bits — 16'], [8, '8 bits — 256']], showIf: () => exportValues.format === 'indexed' },
+      { key: 'paletteFormat', type: 'select', label: 'Palette entries', options: [['rgb888', 'RGB888 — 3 bytes'], ['rgb565', 'RGB565 — 2 bytes'], ['rgb332', 'RGB332 — 1 byte']], showIf: () => exportValues.format === 'indexed' },
+      { key: 'pixelFormat', type: 'select', label: 'Packing', options: Object.entries(api.RGB_PACKINGS).map(([id, packing]) => [id, packing.label]), showIf: () => exportValues.format === 'rgb' },
+      { key: 'endian', type: 'select', label: 'Byte order', options: [['big', 'Big-endian — high byte first'], ['little', 'Little-endian']], showIf: () => exportValues.format === 'rgb' && (api.RGB_PACKINGS[exportValues.pixelFormat]?.bytes === 2) },
+      { key: 'yuvOrder', type: 'select', label: 'Sample order', options: [['yuyv', 'YUYV (YUY2)'], ['uyvy', 'UYVY']], showIf: () => exportValues.format === 'yuv422' },
+      { key: 'matrix', type: 'select', label: 'Matrix', options: [['601', 'BT.601 — standard definition'], ['709', 'BT.709 — high definition']], showIf: () => exportValues.format === 'yuv422' || exportValues.format === 'mono' },
+      { key: 'range', type: 'select', label: 'Range', options: [['full', 'Full — 0 to 255'], ['studio', 'Studio — 16 to 235']], showIf: () => exportValues.format === 'yuv422' },
+      { key: 'chroma', type: 'select', label: 'Colour samples', options: [['average', 'Average across the pair'], ['nearest', 'Take the first pixel\'s']], showIf: () => exportValues.format === 'yuv422' },
+      { key: 'scan', type: 'select', label: 'Scan order', options: () => api.SCAN_ORDERS.filter(([id]) => id !== 'pages' || (exportValues.format === 'mono' && +exportValues.monoBits === 1)), showIf: () => exportValues.format !== 'yuv422' },
+      { key: 'serpentine', type: 'check', label: 'Serpentine — reverse every other line', showIf: () => exportValues.format !== 'yuv422' && exportValues.scan !== 'pages' },
+      { key: 'bitOrder', type: 'select', label: 'Bit order', options: [['msb', 'MSB first — first pixel in the top bit'], ['lsb', 'LSB first']], showIf: () => exportPacked() && (exportBits() < 8 || exportValues.scan === 'pages') },
+      { key: 'rowAlign', type: 'check', label: 'Pad each line to a whole byte', showIf: () => exportPacked() && exportBits() < 8 && exportValues.scan !== 'pages' },
+      { key: 'mask', type: 'check', label: 'Also emit a 1-bit transparency mask', showIf: () => exportValues.format !== 'yuv422' },
+      { key: 'maskCutoff', type: 'range', label: 'Mask cutoff', min: 1, max: 255, step: 1, showIf: () => exportValues.mask && exportValues.format !== 'yuv422' }
+    ]],
+    ['Dithering', [
+      { key: 'ditherGroup', type: 'select', label: 'Algorithm', options: ditherGroups, showIf: () => exportValues.format !== 'yuv422' },
+      ...exportDitherParams().map(param => ({ ...param, dither: true, key: 'd_' + param.key }))
+    ]],
+    ['Output', [
+      { key: 'language', type: 'select', label: 'Language', options: api.LANGUAGES },
+      { key: 'library', type: 'select', label: 'For', options: libraries },
+      { key: 'name', type: 'text', label: 'Name' },
+      { key: 'wordOutput', type: 'select', label: '16-bit pixels as', options: [['words', 'Words — one number a pixel'], ['bytes', 'Bytes']], showIf: () => exportValues.format === 'rgb' && api.RGB_PACKINGS[exportValues.pixelFormat]?.bytes === 2 && exportValues.language !== 'micropython' },
+      { key: 'radix', type: 'select', label: 'Numbers', options: [['hex', 'Hexadecimal'], ['dec', 'Decimal']], showIf: () => exportValues.language !== 'micropython' },
+      { key: 'perLine', type: 'number', label: 'Per line', min: 1, max: 64 },
+      { key: 'comments', type: 'check', label: 'Comments and usage' },
+      { key: 'dimensions', type: 'check', label: 'Width and height constants' },
+      { key: 'progmem', type: 'check', label: 'AVR PROGMEM', showIf: () => exportValues.language === 'arduino' },
+      { key: 'mutable', type: 'check', label: 'bytearray — writable by framebuf', showIf: () => exportValues.language === 'micropython' }
+    ]]
+  ];
+}
+
+/* the chosen dither's own controls, minus its palette rows: the pixel format
+   has already decided what colours there are to dither to */
+function exportDitherParams() {
+  const dither = window.ClackDither;
+  const group = exportValues.ditherGroup;
+  if (!dither || !group || group === 'none' || !dither.GROUPS[group] || exportValues.format === 'yuv422') return [];
+  return dither.params(group, false).map(param => ({
+    ...param,
+    showIf: param.showIf ? () => param.showIf(exportValues.ditherValues) : undefined
+  }));
+}
+
+function exportFieldElement(param) {
+  const row = document.createElement('label');
+  const options = typeof param.options === 'function' ? param.options() : param.options;
+  row.dataset.key = param.key;
+  if (param.type === 'check') {
+    row.className = 'paint-check';
+    const input = document.createElement('input');
+    input.type = 'checkbox'; input.dataset.exportKey = param.key;
+    const caption = document.createElement('span');
+    caption.textContent = param.label;
+    row.append(input, caption);
+    return row;
+  }
+  const caption = document.createElement('span');
+  caption.textContent = param.label;
+  const holder = document.createElement('span');
+  let input;
+  if (param.type === 'select') {
+    input = document.createElement('select');
+    for (const [value, text] of options) {
+      const option = document.createElement('option');
+      option.value = value; option.textContent = text;
+      input.append(option);
+    }
+  } else {
+    input = document.createElement('input');
+    input.type = param.type === 'range' ? 'range' : param.type === 'color' ? 'color' : param.type === 'text' ? 'text' : 'number';
+    if (param.min !== undefined) input.min = param.min;
+    if (param.max !== undefined) input.max = param.max;
+    if (param.step !== undefined) input.step = param.step;
+    if (param.type === 'text') input.spellcheck = false;
+  }
+  input.dataset.exportKey = param.key;
+  holder.append(input);
+  if (param.type === 'range') {
+    const readout = document.createElement('output');
+    holder.append(readout);
+    input.addEventListener('input', () => { readout.textContent = input.value + (param.unit || ''); });
+  } else if (param.unit) {
+    holder.append(document.createTextNode(' ' + param.unit));
+  }
+  row.append(caption, holder);
+  return row;
+}
+
+function exportValueOf(param) {
+  if (param.dither) return exportValues.ditherValues[param.key.slice(2)];
+  return exportValues[param.key];
+}
+
+/* Every change rebuilds the panel, because a format can add and remove whole
+   rows — so the field being typed into has to be put back afterwards, cursor
+   and all, or the name box would lose focus at every keystroke. */
+function heldExportField(host) {
+  const root = host.getRootNode();
+  const active = root.activeElement;
+  if (!active?.dataset?.exportKey || !host.contains(active)) return null;
+  let start = null, end = null;
+  /* number and colour inputs have no selection to read */
+  try { start = active.selectionStart; end = active.selectionEnd; } catch { /* not a text field */ }
+  return { key: active.dataset.exportKey, start, end };
+}
+
+function restoreExportField(host, held) {
+  if (!held) return;
+  const input = host.querySelector(`[data-export-key="${CSS.escape(held.key)}"]`);
+  if (!input) return;
+  input.focus();
+  if (held.start !== null) {
+    try { input.setSelectionRange(held.start, held.end); } catch { /* not a text field */ }
+  }
+}
+
+function buildExportFields() {
+  exportBuilding = true;
+  const host = appRoot.querySelector('#exportFields');
+  const held = heldExportField(host);
+  host.replaceChildren();
+  for (const [title, params] of exportFieldSpec()) {
+    const group = document.createElement('div');
+    group.className = 'paint-export-group';
+    const heading = document.createElement('h4');
+    heading.textContent = title;
+    group.append(heading);
+    let shown = 0;
+    for (const param of params) {
+      if (param.showIf && !param.showIf()) continue;
+      const row = exportFieldElement(param);
+      const input = row.querySelector('[data-export-key]');
+      const value = exportValueOf(param);
+      if (param.type === 'check') input.checked = !!value;
+      else input.value = value === undefined || value === '' ? (param.default ?? '') : value;
+      if (param.type === 'range') row.querySelector('output').textContent = input.value + (param.unit || '');
+      group.append(row);
+      shown++;
+    }
+    if (shown) host.append(group);
+  }
+  restoreExportField(host, held);
+  exportBuilding = false;
+}
+
+/* One handler for the whole panel: read what changed, deal with the settings
+   that pull others along with them, then rebuild and recompute. */
+function onExportInput(event) {
+  const input = event.target.closest('[data-export-key]');
+  if (!input || exportBuilding) return;
+  const key = input.dataset.exportKey;
+  const raw = input.type === 'checkbox' ? input.checked
+    : input.type === 'number' || input.type === 'range' ? Number(input.value)
+      : input.value;
+
+  if (key.startsWith('d_')) {
+    exportValues.ditherValues = { ...exportValues.ditherValues, [key.slice(2)]: raw };
+    scheduleExport(true);
+    return;
+  }
+  exportValues[key] = raw;
+
+  const api = exportApi();
+  if (key === 'preset') applyExportPreset(raw);
+  if (key === 'outWidth' || key === 'outHeight' || key === 'rotate') exportValues.preset = matchingExportPreset();
+  if (key === 'library') Object.assign(exportValues, api.LIBRARIES[raw]?.apply || {});
+  if (key === 'language') {
+    const library = api.LIBRARIES[exportValues.library];
+    if (library?.languages && !library.languages.includes(raw)) {
+      exportValues.library = raw === 'micropython' ? 'framebuf' : 'generic';
+      Object.assign(exportValues, api.LIBRARIES[exportValues.library]?.apply || {});
+    }
+    exportValues.perLine = raw === 'micropython' ? 16 : 12;
+  }
+  if (key === 'format') {
+    /* pages are a 1-bit mono idea; anything else has to leave them behind */
+    if (exportValues.format !== 'mono' && exportValues.scan === 'pages') exportValues.scan = 'rows';
+    if (exportValues.format === 'yuv422') exportValues.ditherGroup = 'none';
+  }
+  if (key === 'monoBits' && Number(raw) !== 1 && exportValues.scan === 'pages') exportValues.scan = 'rows';
+  if (key === 'paletteSize') {
+    /* enough index bits to reach the colours asked for */
+    const needed = Math.ceil(Math.log2(Math.max(2, raw)));
+    exportValues.indexBits = needed <= 1 ? 1 : needed <= 2 ? 2 : needed <= 4 ? 4 : 8;
+  }
+  if (key === 'indexBits') exportValues.paletteSize = Math.min(exportValues.paletteSize, 1 << raw);
+  if (key === 'ditherGroup' && raw !== 'none' && window.ClackDither?.GROUPS[raw]) {
+    exportValues.ditherValues = window.ClackDither.defaults(raw, false);
+  }
+  scheduleExport(true);
+}
+
+function applyExportPreset(id) {
+  const preset = exportApi().PRESETS.find(entry => entry.id === id);
+  if (!preset || preset.custom) return;
+  if (preset.native) {
+    const rotated = exportValues.rotate % 180 !== 0;
+    exportValues.outWidth = rotated ? height() : width();
+    exportValues.outHeight = rotated ? width() : height();
+    return;
+  }
+  exportValues.outWidth = preset.width;
+  exportValues.outHeight = preset.height;
+  Object.assign(exportValues, preset.options || {});
+  const library = exportApi().LIBRARIES[exportValues.library];
+  if (library?.apply) Object.assign(exportValues, library.apply, preset.options || {});
+  if (exportValues.ditherGroup && exportValues.ditherGroup !== 'none' && window.ClackDither?.GROUPS[exportValues.ditherGroup]) {
+    exportValues.ditherValues = { ...window.ClackDither.defaults(exportValues.ditherGroup, false), ...exportValues.ditherValues };
+  }
+}
+
+/* which preset, if any, the size in the boxes now matches */
+function matchingExportPreset() {
+  const rotated = exportValues.rotate % 180 !== 0;
+  const nativeW = rotated ? height() : width(), nativeH = rotated ? width() : height();
+  if (exportValues.outWidth === nativeW && exportValues.outHeight === nativeH) return 'native';
+  const found = exportApi().PRESETS.find(preset =>
+    preset.width === exportValues.outWidth && preset.height === exportValues.outHeight);
+  return found ? found.id : 'custom';
+}
+
+function exportColours() {
+  return { fg, bg, palette: COLORS };
+}
+
+/* the picture the export starts from: flattened, seam-corrected, and cropped
+   to the selection when that is what was asked for */
+function readExportSource() {
+  const canvas = canonicalCanvas();
+  const context = canvas.getContext('2d');
+  if (exportValues.selectionOnly && selection && selection.w > 0 && selection.h > 0) {
+    return context.getImageData(selection.x, selection.y, selection.w, selection.h);
+  }
+  return context.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+function scheduleExport(rebuild) {
+  clearTimeout(exportTimer);
+  exportTimer = setTimeout(() => {
+    if (rebuild) buildExportFields();
+    recomputeExport();
+  }, 120);
+}
+
+function recomputeExport() {
+  const api = exportApi();
+  const note = appRoot.querySelector('#exportNote');
+  try {
+    exportSourceImage = readExportSource();
+    exportPrepared = api.prepare(exportSourceImage, exportValues);
+    const { image, palette } = api.quantise(exportPrepared, exportValues, exportColours());
+    exportPalette = palette;
+    exportEncoded = api.encode(image, exportValues, palette);
+    if (exportValues.mask && exportValues.format !== 'yuv422') {
+      exportEncoded.mask = api.encodeMask(exportPrepared, exportValues);
+    }
+    exportEncoded.meta = { width: exportPrepared.width, height: exportPrepared.height };
+    drawExportPreview();
+    renderExportBudget();
+    saveExportSettings();
+    const total = exportEncoded.bytes.length + (exportEncoded.mask?.length || 0);
+    appRoot.querySelector('#exportSummary').textContent =
+      api.summaryLines(exportEncoded, exportValues, exportEncoded.meta).join(' · ') +
+      (exportEncoded.mask ? ` · mask ${api.humanBytes(exportEncoded.mask.length)}` : '') +
+      ` · ${api.humanBytes(total)}`;
+    if (exportEncoded.bytes.length > EXPORT_CODE_LIMIT) {
+      appRoot.querySelector('#exportCode').textContent = '';
+      note.textContent = `${api.humanBytes(total)} is too much to lay out as you type — Copy and Download still write the whole thing.`;
+      return;
+    }
+    const text = api.emit(exportEncoded, exportValues, exportEncoded.meta);
+    const code = appRoot.querySelector('#exportCode');
+    code.textContent = text.length > EXPORT_SHOWN_CHARS ? text.slice(0, EXPORT_SHOWN_CHARS) + '\n…' : text;
+    note.textContent = text.length > EXPORT_SHOWN_CHARS
+      ? 'Showing the first part; Copy and Download give all of it.' : '';
+  } catch (error) {
+    note.textContent = `Could not build the array: ${error.message}`;
+  }
+}
+
+function drawExportPreview() {
+  const api = exportApi();
+  const canvas = appRoot.querySelector('#exportPreview');
+  const shown = exportShow === 'before'
+    ? exportPrepared
+    : api.decode(exportEncoded.bytes, { ...exportValues, ...exportEncoded.meta }, exportPalette);
+  const source = document.createElement('canvas');
+  source.width = shown.width; source.height = shown.height;
+  source.getContext('2d').putImageData(shown, 0, 0);
+
+  const box = canvas.getBoundingClientRect();
+  canvas.width = Math.max(64, Math.round(box.width || 320));
+  canvas.height = Math.max(64, Math.round(box.height || 232));
+  const context = canvas.getContext('2d');
+  context.imageSmoothingEnabled = false;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  const scale = exportZoomed ? 1 : Math.min(canvas.width / shown.width, canvas.height / shown.height);
+  const w = shown.width * scale, h = shown.height * scale;
+  context.drawImage(source, Math.round((canvas.width - w) / 2), Math.round((canvas.height - h) / 2), w, h);
+}
+
+function renderExportBudget() {
+  const api = exportApi();
+  const total = exportEncoded.bytes.length + (exportEncoded.mask?.length || 0);
+  const host = appRoot.querySelector('#exportBudgetRows');
+  host.replaceChildren();
+  for (const mcu of api.budget(total)) {
+    const name = document.createElement('div');
+    name.className = 'mcu-name';
+    const bar = document.createElement('span');
+    bar.className = 'mcu-bar' + (mcu.fitsFlash ? '' : ' mcu-over');
+    const fill = document.createElement('i');
+    fill.style.width = Math.min(100, mcu.flashPercent).toFixed(1) + '%';
+    bar.append(fill);
+    const label = document.createElement('span');
+    label.textContent = mcu.label;
+    name.append(bar, label);
+    const figure = document.createElement('div');
+    figure.className = 'mcu-figure' + (mcu.fitsFlash ? '' : ' over');
+    figure.textContent = mcu.fitsFlash
+      ? `${mcu.flashPercent < 0.1 ? '<0.1' : mcu.flashPercent.toFixed(1)}% of flash${mcu.fitsRam ? '' : ' · too big for RAM'}`
+      : 'will not fit';
+    host.append(name, figure);
+  }
+}
+
+function exportFullText() {
+  return exportApi().emit(exportEncoded, exportValues, exportEncoded.meta);
+}
+
+function exportFileName(extension) {
+  return `${exportApi().identifierOf(exportValues.name || fileName)}.${extension}`;
+}
+
+function downloadBlob(blob, name) {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob); link.download = name; link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+}
+
+function openExportArray() {
+  if (!exportApi()) { setStatus('Exporting is unavailable — paint-export.js did not load'); return; }
+  loadExportSettings();
+  /* the settings are remembered, but the array's name belongs to the picture:
+     a name typed for one document must not follow the next one around */
+  if (exportValues.namedFor !== fileName) {
+    exportValues.name = exportApi().identifierOf(fileName);
+    exportValues.namedFor = fileName;
+  }
+  exportSourceImage = readExportSource();
+  if (!exportValues.outWidth || !exportValues.outHeight || exportValues.preset === 'native') {
+    exportValues.preset = 'native';
+    applyExportPreset('native');
+  }
+  if (!exportValues.formatChosen) {
+    Object.assign(exportValues, guessExportFormat(exportSourceImage));
+    exportValues.formatChosen = true;
+    if (exportValues.ditherGroup !== 'none' && window.ClackDither?.GROUPS[exportValues.ditherGroup]) {
+      exportValues.ditherValues = window.ClackDither.defaults(exportValues.ditherGroup, false);
+    }
+  }
+  exportShow = 'result'; exportZoomed = false;
+  appRoot.querySelectorAll('[data-exportshow]').forEach(button =>
+    button.setAttribute('aria-pressed', String(button.dataset.exportshow === 'result')));
+  appRoot.querySelector('#exportZoom').setAttribute('aria-pressed', 'false');
+  buildExportFields();
+  showModal('exportArrayModal');
+  recomputeExport();
+}
+
+function saveExportSettings() {
+  try { localStorage.setItem(EXPORT_KEY, JSON.stringify(exportValues)); } catch { /* private browsing */ }
+}
+
+function loadExportSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(EXPORT_KEY) || '{}');
+    exportValues = { ...EXPORT_DEFAULTS, ...saved, ditherValues: { ...(saved.ditherValues || {}) } };
+  } catch { exportValues = { ...EXPORT_DEFAULTS, ditherValues: {} }; }
+}
+
+appRoot.querySelector('#exportFields').addEventListener('input', onExportInput);
+appRoot.querySelector('#exportFields').addEventListener('change', onExportInput);
+appRoot.querySelector('#exportArrayModal').addEventListener('click', event => {
+  const view = event.target.closest('[data-exportshow]');
+  if (view) {
+    exportShow = view.dataset.exportshow;
+    appRoot.querySelectorAll('[data-exportshow]').forEach(button =>
+      button.setAttribute('aria-pressed', String(button === view)));
+    if (exportEncoded) drawExportPreview();
+  }
+});
+appRoot.querySelector('#exportZoom').addEventListener('click', event => {
+  exportZoomed = !exportZoomed;
+  event.currentTarget.setAttribute('aria-pressed', String(exportZoomed));
+  event.currentTarget.textContent = exportZoomed ? 'Fit' : 'Zoom 1:1';
+  if (exportEncoded) drawExportPreview();
+});
+appRoot.querySelector('#exportCopy').addEventListener('click', async () => {
+  if (!exportEncoded) return;
+  const text = exportFullText();
+  const note = appRoot.querySelector('#exportNote');
+  try {
+    await navigator.clipboard.writeText(text);
+    note.textContent = `Copied ${exportApi().humanBytes(text.length)} of source.`;
+  } catch {
+    /* no clipboard permission, or a page served over plain http: leave the
+       text selected so it can be copied from the keyboard */
+    const code = appRoot.querySelector('#exportCode');
+    const range = document.createRange();
+    range.selectNodeContents(code);
+    const selectionNow = window.getSelection();
+    selectionNow.removeAllRanges(); selectionNow.addRange(range);
+    note.textContent = 'Selected the code — press Ctrl/⌘-C to copy.';
+  }
+});
+appRoot.querySelector('#exportDownload').addEventListener('click', () => {
+  if (!exportEncoded) return;
+  const extension = exportValues.language === 'micropython' ? 'py' : exportValues.language === 'raw' ? 'txt' : 'h';
+  downloadBlob(new Blob([exportFullText()], { type: 'text/plain' }), exportFileName(extension));
+  setStatus(`Exported ${exportFileName(extension)}`);
+});
+appRoot.querySelector('#exportBinary').addEventListener('click', () => {
+  if (!exportEncoded) return;
+  const parts = [exportEncoded.bytes];
+  if (exportEncoded.mask) parts.push(exportEncoded.mask);
+  downloadBlob(new Blob(parts, { type: 'application/octet-stream' }), exportFileName('bin'));
+  setStatus(`Exported ${exportFileName('bin')}`);
+});
+
+/* ---- the importer ---- */
+
+const IMPORT_DEFAULTS = {
+  format: 'mono', monoBits: 1, invert: false, scan: 'rows', bitOrder: 'msb', rowAlign: true,
+  serpentine: false, indexBits: 8, pixelFormat: 'rgb565', endian: 'big',
+  yuvOrder: 'yuyv', matrix: '601', range: 'full', width: 0, height: 0
+};
+let importValues = { ...IMPORT_DEFAULTS };
+let importBytes = null, importPalette = null, importImage = null, importBuilding = false;
+
+function importFieldSpec() {
+  const api = exportApi();
+  return [
+    { key: 'format', type: 'select', label: 'Format', options: api.FORMATS },
+    { key: 'monoBits', type: 'select', label: 'Bit depth', options: [[1, '1 bit'], [2, '2 bits'], [4, '4 bits'], [8, '8 bits']], showIf: () => importValues.format === 'mono' },
+    { key: 'invert', type: 'check', label: 'Invert — 1 means dark', showIf: () => importValues.format === 'mono' },
+    { key: 'indexBits', type: 'select', label: 'Bits per index', options: [[1, '1 bit'], [2, '2 bits'], [4, '4 bits'], [8, '8 bits']], showIf: () => importValues.format === 'indexed' },
+    { key: 'pixelFormat', type: 'select', label: 'Packing', options: Object.entries(api.RGB_PACKINGS).map(([id, packing]) => [id, packing.label]), showIf: () => importValues.format === 'rgb' },
+    { key: 'endian', type: 'select', label: 'Byte order', options: [['big', 'Big-endian'], ['little', 'Little-endian']], showIf: () => importValues.format === 'rgb' && api.RGB_PACKINGS[importValues.pixelFormat]?.bytes === 2 },
+    { key: 'yuvOrder', type: 'select', label: 'Sample order', options: [['yuyv', 'YUYV (YUY2)'], ['uyvy', 'UYVY']], showIf: () => importValues.format === 'yuv422' },
+    { key: 'matrix', type: 'select', label: 'Matrix', options: [['601', 'BT.601'], ['709', 'BT.709']], showIf: () => importValues.format === 'yuv422' },
+    { key: 'range', type: 'select', label: 'Range', options: [['full', 'Full'], ['studio', 'Studio']], showIf: () => importValues.format === 'yuv422' },
+    { key: 'scan', type: 'select', label: 'Scan order', options: () => api.SCAN_ORDERS.filter(([id]) => id !== 'pages' || (importValues.format === 'mono' && +importValues.monoBits === 1)), showIf: () => importValues.format !== 'yuv422' },
+    { key: 'serpentine', type: 'check', label: 'Serpentine', showIf: () => importValues.format !== 'yuv422' && importValues.scan !== 'pages' },
+    { key: 'bitOrder', type: 'select', label: 'Bit order', options: [['msb', 'MSB first'], ['lsb', 'LSB first']], showIf: () => importValues.format === 'mono' || importValues.format === 'indexed' },
+    { key: 'rowAlign', type: 'check', label: 'Lines padded to a whole byte', showIf: () => (importValues.format === 'mono' || importValues.format === 'indexed') && importValues.scan !== 'pages' },
+    { key: 'size', type: 'select', label: 'Size', options: importSizeOptions },
+    { key: 'width', type: 'number', label: 'Width', min: 1, max: 4096, unit: 'px' },
+    { key: 'height', type: 'number', label: 'Height', min: 1, max: 4096, unit: 'px' }
+  ];
+}
+
+/* The sizes that would use exactly the bytes pasted in — for an array with no
+   dimensions written down anywhere, this is the only clue there is. */
+function importSizeOptions() {
+  if (!importBytes || !importBytes.length) return [['', 'Paste an array first']];
+  const sizes = exportApi().candidateSizes(importBytes.length, importValues);
+  const options = sizes.map(({ width, height }) => [`${width}x${height}`, `${width} × ${height}`]);
+  return options.length ? [['', 'Choose…'], ...options] : [['', 'No exact fit — set it below']];
+}
+
+function buildImportFields() {
+  importBuilding = true;
+  const host = appRoot.querySelector('#importFields');
+  const held = heldExportField(host);
+  host.replaceChildren();
+  const group = document.createElement('div');
+  group.className = 'paint-export-group';
+  for (const param of importFieldSpec()) {
+    if (param.showIf && !param.showIf()) continue;
+    const row = exportFieldElement(param);
+    const input = row.querySelector('[data-export-key]');
+    if (param.key === 'size') input.value = '';
+    else if (param.type === 'check') input.checked = !!importValues[param.key];
+    else input.value = importValues[param.key] ?? '';
+    group.append(row);
+  }
+  host.append(group);
+  restoreExportField(host, held);
+  appRoot.querySelector('#importPaletteRow').hidden = importValues.format !== 'indexed';
+  importBuilding = false;
+}
+
+function onImportInput(event) {
+  const input = event.target.closest('[data-export-key]');
+  if (!input || importBuilding) return;
+  const key = input.dataset.exportKey;
+  if (key === 'size') {
+    const [w, h] = input.value.split('x').map(Number);
+    if (w && h) { importValues.width = w; importValues.height = h; }
+  } else {
+    importValues[key] = input.type === 'checkbox' ? input.checked
+      : input.type === 'number' ? Number(input.value) : input.value;
+    if (key === 'format' && importValues.format !== 'mono' && importValues.scan === 'pages') importValues.scan = 'rows';
+  }
+  buildImportFields();
+  refreshImport();
+}
+
+function readImportText() {
+  const api = exportApi();
+  const text = appRoot.querySelector('#importText').value;
+  if (!text.trim()) { importBytes = null; importImage = null; return; }
+  const parsed = api.parse(text);
+  importBytes = parsed.bytes;
+  Object.assign(importValues, parsed.hints || {});
+  const paletteText = appRoot.querySelector('#importPaletteText').value;
+  importPalette = null;
+  if (importValues.format === 'indexed' && paletteText.trim()) {
+    const entries = api.parse(paletteText);
+    importPalette = [];
+    if (entries.unit === 2) {
+      /* 565 words, the way this exporter writes a palette */
+      for (let i = 0; i + 1 < entries.bytes.length; i += 2) {
+        const word = (entries.bytes[i] << 8) | entries.bytes[i + 1];
+        importPalette.push([
+          Math.round((((word >> 11) & 31) * 255) / 31),
+          Math.round((((word >> 5) & 63) * 255) / 63),
+          Math.round(((word & 31) * 255) / 31)
+        ]);
+      }
+    } else {
+      for (let i = 0; i + 2 < entries.bytes.length; i += 3) {
+        importPalette.push([entries.bytes[i], entries.bytes[i + 1], entries.bytes[i + 2]]);
+      }
+    }
+  }
+  /* nothing said how wide it is: take the likeliest shape that fits exactly */
+  if (!importValues.width || !importValues.height
+      || api.byteLength(importValues.width, importValues.height, importValues) > importBytes.length) {
+    const best = api.candidateSizes(importBytes.length, importValues, 1)[0];
+    if (best) { importValues.width = best.width; importValues.height = best.height; }
+  }
+}
+
+function refreshImport() {
+  const api = exportApi();
+  const summary = appRoot.querySelector('#importSummary');
+  const canvas = appRoot.querySelector('#importPreview');
+  const context = canvas.getContext('2d');
+  if (!importBytes || !importBytes.length || !importValues.width || !importValues.height) {
+    importImage = null;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    summary.textContent = 'Paste an array to see it.';
+    return;
+  }
+  try {
+    importImage = api.decode(importBytes, importValues, importPalette);
+    const source = document.createElement('canvas');
+    source.width = importImage.width; source.height = importImage.height;
+    source.getContext('2d').putImageData(importImage, 0, 0);
+    const box = canvas.getBoundingClientRect();
+    canvas.width = Math.max(64, Math.round(box.width || 320));
+    canvas.height = Math.max(64, Math.round(box.height || 232));
+    context.imageSmoothingEnabled = false;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    const scale = Math.min(canvas.width / importImage.width, canvas.height / importImage.height);
+    const w = importImage.width * scale, h = importImage.height * scale;
+    context.drawImage(source, Math.round((canvas.width - w) / 2), Math.round((canvas.height - h) / 2), w, h);
+    const needed = api.byteLength(importValues.width, importValues.height, importValues);
+    summary.textContent = `${importBytes.length.toLocaleString()} bytes read · ${importValues.width} × ${importValues.height} needs ${needed.toLocaleString()}`
+      + (needed > importBytes.length ? ' — not enough, the end will be blank' : needed < importBytes.length ? ' — the rest is ignored' : '');
+  } catch (error) {
+    summary.textContent = `Could not read that: ${error.message}`;
+  }
+}
+
+function openImportArray() {
+  if (!exportApi()) { setStatus('Importing is unavailable — paint-export.js did not load'); return; }
+  importValues = { ...IMPORT_DEFAULTS };
+  importBytes = null; importImage = null; importPalette = null;
+  appRoot.querySelector('#importText').value = '';
+  appRoot.querySelector('#importPaletteText').value = '';
+  buildImportFields();
+  refreshImport();
+  showModal('importArrayModal');
+  appRoot.querySelector('#importText').focus();
+}
+
+function finishImport(asLayer) {
+  if (!importImage) { setStatus('Nothing to import yet'); return; }
+  const canvas = document.createElement('canvas');
+  canvas.width = importImage.width; canvas.height = importImage.height;
+  canvas.getContext('2d').putImageData(importImage, 0, 0);
+  hideModal('importArrayModal');
+  const name = `imported-${importImage.width}x${importImage.height}.png`;
+  const url = canvas.toDataURL('image/png');
+  (asLayer ? loadImageAsLayer(url, name) : loadImage(url, name)).catch(() => {});
+}
+
+appRoot.querySelector('#importFields').addEventListener('input', onImportInput);
+appRoot.querySelector('#importFields').addEventListener('change', onImportInput);
+let importTextTimer = 0;
+for (const id of ['#importText', '#importPaletteText']) {
+  appRoot.querySelector(id).addEventListener('input', () => {
+    clearTimeout(importTextTimer);
+    importTextTimer = setTimeout(() => { readImportText(); buildImportFields(); refreshImport(); }, 200);
+  });
+}
+const importPicker = appRoot.querySelector('#importFilePicker');
+appRoot.querySelector('#importFile').addEventListener('click', () => importPicker.click());
+importPicker.addEventListener('change', async () => {
+  const file = importPicker.files[0]; importPicker.value = '';
+  if (!file) return;
+  if (/\.(?:bin|dat)$/i.test(file.name)) {
+    /* a binary file is the bytes themselves — there is nothing to parse */
+    importBytes = new Uint8Array(await file.arrayBuffer());
+    const best = exportApi().candidateSizes(importBytes.length, importValues, 1)[0];
+    if (best) { importValues.width = best.width; importValues.height = best.height; }
+    appRoot.querySelector('#importText').value = `/* ${file.name} — ${importBytes.length} bytes read straight from the file */`;
+  } else {
+    appRoot.querySelector('#importText').value = await file.text();
+    readImportText();
+  }
+  buildImportFields();
+  refreshImport();
+});
+appRoot.querySelector('#importOpen').addEventListener('click', () => finishImport(false));
+appRoot.querySelector('#importAsLayer').addEventListener('click', () => finishImport(true));
+
 function runCmd(cmd) {
   /* The menu already spells out what each command is called, so the history
      panel borrows that wording rather than keeping a second list of names.
@@ -7200,6 +8154,8 @@ function runCmd(cmd) {
     case 'open-site-layer': openWebsiteBrowser(true); break;
     case 'save': savePng(false); break;
     case 'saveas': savePng(true); break;
+    case 'export-array': openExportArray(); break;
+    case 'import-array': openImportArray(); break;
     case 'upload-site': openUploadDialog(); break;
     case 'set-background': setAsBackground(); break;
     case 'undo': undo(); break;

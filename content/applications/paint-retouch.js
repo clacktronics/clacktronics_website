@@ -16,6 +16,8 @@
  *     Irani, "Space-Time Completion of Video", PAMI 2007.
  *   - Bilateral filtering (the Surface Blur / skin-softening brush):
  *     Tomasi & Manduchi, ICCV 1998.
+ *   - Reconstruction filters (the resampler at the end, shared by Image Size
+ *     and the program-array exporter): Mitchell & Netravali, SIGGRAPH 1988.
  *
  * Everything here is pure: ImageData and typed arrays in, new pixels out. No
  * DOM, no canvas state, so the same routines serve a live brush stroke and a
@@ -906,11 +908,152 @@ function sampleWarp(grid, x, y, out) {
   return out;
 }
 
+/* ------------------------------------------------------------- resampling */
+
+/* Canvas can rescale a picture, but only its own way: one filter, chosen by
+ * the browser, in gamma space, with no say in the matter. Shrinking a photo to
+ * a 128-pixel display through it aliases — whole rows of pixels are simply not
+ * looked at — and enlarging pixel art through it smears. So the resizing here
+ * is done properly: a separable filter with a real support radius, widened
+ * when shrinking so that every source pixel lands in some destination pixel,
+ * run on premultiplied alpha so transparent edges cannot bleed their colour,
+ * and optionally in linear light, where a half-lit pixel really is half the
+ * light rather than half the number written in the file.
+ *
+ * Filter shapes are the standard ones: Mitchell & Netravali, "Reconstruction
+ * Filters in Computer Graphics", SIGGRAPH 1988, for the two cubics, and the
+ * windowed sinc for Lanczos. */
+
+const SRGB_TO_LIGHT = new Float32Array(256);
+for (let i = 0; i < 256; i++) {
+  const c = i / 255;
+  SRGB_TO_LIGHT[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+function lightToSrgb(value) {
+  const c = clamp(value, 0, 1);
+  return 255 * (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+}
+
+function cubic(t, b, c) {
+  const x = Math.abs(t);
+  if (x < 1) return ((12 - 9 * b - 6 * c) * x * x * x + (-18 + 12 * b + 6 * c) * x * x + (6 - 2 * b)) / 6;
+  if (x < 2) return ((-b - 6 * c) * x * x * x + (6 * b + 30 * c) * x * x + (-12 * b - 48 * c) * x + (8 * b + 24 * c)) / 6;
+  return 0;
+}
+function lanczos(t, lobes) {
+  const x = Math.abs(t);
+  if (x < 1e-6) return 1;
+  if (x >= lobes) return 0;
+  const pix = Math.PI * x;
+  return (lobes * Math.sin(pix) * Math.sin(pix / lobes)) / (pix * pix);
+}
+
+const RESAMPLE_FILTERS = {
+  nearest: { label: 'Nearest neighbour (hard pixel edges)', radius: 0.5, sharp: true, kernel: () => 1 },
+  box: { label: 'Box (area average)', radius: 0.5, kernel: t => (Math.abs(t) <= 0.5 ? 1 : 0) },
+  triangle: { label: 'Bilinear (smooth)', radius: 1, kernel: t => Math.max(0, 1 - Math.abs(t)) },
+  mitchell: { label: 'Mitchell (soft bicubic)', radius: 2, kernel: t => cubic(t, 1 / 3, 1 / 3) },
+  catrom: { label: 'Bicubic (Catmull–Rom)', radius: 2, kernel: t => cubic(t, 0, 0.5) },
+  lanczos3: { label: 'Lanczos 3 (sharpest)', radius: 3, kernel: t => lanczos(t, 3) }
+};
+
+/* One destination column (or row) at a time: which source samples feed it and
+   how much of each. Shrinking widens the support so nothing is skipped. */
+function resampleWeights(srcSize, dstSize, filter) {
+  const ratio = dstSize / srcSize;
+  /* nearest keeps its one-sample footprint however far the picture shrinks;
+     everything else spreads out to average what it is throwing away */
+  const scale = filter.sharp || ratio >= 1 ? 1 : ratio;
+  const support = filter.radius / scale;
+  const rows = [];
+  for (let i = 0; i < dstSize; i++) {
+    const centre = (i + 0.5) / ratio;
+    const first = Math.max(0, Math.floor(centre - support + 0.5));
+    const last = Math.min(srcSize - 1, Math.ceil(centre + support - 0.5));
+    const weights = new Float32Array(Math.max(1, last - first + 1));
+    let sum = 0;
+    for (let j = first; j <= last; j++) {
+      const weight = filter.kernel((j + 0.5 - centre) * scale);
+      weights[j - first] = weight;
+      sum += weight;
+    }
+    if (sum === 0) {
+      /* a footprint that fell between samples: take the nearest one whole */
+      const nearest = clamp(Math.round(centre - 0.5), 0, srcSize - 1);
+      rows.push({ first: nearest, weights: Float32Array.of(1) });
+      continue;
+    }
+    for (let k = 0; k < weights.length; k++) weights[k] /= sum;
+    rows.push({ first, weights });
+  }
+  return rows;
+}
+
+/* image → a new ImageData of dstW × dstH. options.filter names one of
+   RESAMPLE_FILTERS; options.linear resamples in linear light. */
+function resample(image, dstW, dstH, options = {}) {
+  const filter = RESAMPLE_FILTERS[options.filter] || RESAMPLE_FILTERS.lanczos3;
+  const linear = !!options.linear;
+  const srcW = image.width, srcH = image.height;
+  const out = new ImageData(dstW, dstH);
+  if (!srcW || !srcH) return out;
+  const src = image.data, dst = out.data;
+
+  /* horizontal pass, into premultiplied floats one source row tall */
+  const columns = resampleWeights(srcW, dstW, filter);
+  const rows = resampleWeights(srcH, dstH, filter);
+  const middle = new Float32Array(dstW * srcH * 4);
+  for (let y = 0; y < srcH; y++) {
+    const rowStart = y * srcW * 4, outStart = y * dstW * 4;
+    for (let x = 0; x < dstW; x++) {
+      const { first, weights } = columns[x];
+      let r = 0, g = 0, b = 0, a = 0;
+      for (let k = 0; k < weights.length; k++) {
+        const weight = weights[k];
+        if (!weight) continue;
+        const p = rowStart + (first + k) * 4;
+        const alpha = src[p + 3] / 255;
+        const wa = weight * alpha;
+        r += (linear ? SRGB_TO_LIGHT[src[p]] : src[p]) * wa;
+        g += (linear ? SRGB_TO_LIGHT[src[p + 1]] : src[p + 1]) * wa;
+        b += (linear ? SRGB_TO_LIGHT[src[p + 2]] : src[p + 2]) * wa;
+        a += weight * alpha;
+      }
+      const q = outStart + x * 4;
+      middle[q] = r; middle[q + 1] = g; middle[q + 2] = b; middle[q + 3] = a;
+    }
+  }
+
+  /* vertical pass, undoing the premultiply on the way out */
+  for (let y = 0; y < dstH; y++) {
+    const { first, weights } = rows[y];
+    for (let x = 0; x < dstW; x++) {
+      let r = 0, g = 0, b = 0, a = 0;
+      for (let k = 0; k < weights.length; k++) {
+        const weight = weights[k];
+        if (!weight) continue;
+        const p = ((first + k) * dstW + x) * 4;
+        r += middle[p] * weight; g += middle[p + 1] * weight;
+        b += middle[p + 2] * weight; a += middle[p + 3] * weight;
+      }
+      const q = (y * dstW + x) * 4;
+      if (a <= 1e-6) { dst[q] = dst[q + 1] = dst[q + 2] = dst[q + 3] = 0; continue; }
+      const inv = 1 / a;
+      dst[q] = clampByte(Math.round(linear ? lightToSrgb(r * inv) : r * inv));
+      dst[q + 1] = clampByte(Math.round(linear ? lightToSrgb(g * inv) : g * inv));
+      dst[q + 2] = clampByte(Math.round(linear ? lightToSrgb(b * inv) : b * inv));
+      dst[q + 3] = clampByte(Math.round(a * 255));
+    }
+  }
+  return out;
+}
+
 window.ClackRetouch = {
   makeMask, maskBounds, stampMask, dilateMask, erodeMask, featherMask,
   poissonBlend, stampSource, offsetImage, bestSourceOffset,
   inpaint, surfaceBlur, localContrast,
   magicWand, maskContours, removeRedEye,
-  makeWarpGrid, warpBrush, sampleWarp
+  makeWarpGrid, warpBrush, sampleWarp,
+  RESAMPLE_FILTERS, resample
 };
 })();
