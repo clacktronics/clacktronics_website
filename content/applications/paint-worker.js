@@ -38,7 +38,15 @@ const MODELS = {
 };
 
 let transformers = null;
-const segmenters = new Map();   /* method → loaded pipeline, kept for re-runs */
+/* One model at a time, and only one. Keeping every model that has been tried
+ * alive is tempting — swapping back would be instant — but each one holds its
+ * weights on the device it runs on, and these weights are hundreds of megabytes
+ * apiece. On WebGPU that is worse than slow: a second set of weights can take
+ * the adapter past what it will allocate, and what comes back is not a clean
+ * out-of-memory but a broken context, where the next model to run fails to
+ * build a shader for a node that would otherwise have been fine. So the model
+ * on the way out is disposed of before the model on the way in is asked for. */
+let loaded = null;              /* { method, segmenter } */
 let device = null;
 
 async function loadRuntime() {
@@ -76,10 +84,18 @@ function reportProgress(info) {
   }
 }
 
+async function release() {
+  if (!loaded) return;
+  const going = loaded;
+  loaded = null;
+  try { await going.segmenter.dispose(); } catch { /* already gone */ }
+}
+
 async function load(method) {
-  if (segmenters.has(method)) return segmenters.get(method);
+  if (loaded?.method === method) return loaded.segmenter;
   const model = MODELS[method];
   if (!model) throw new Error(`unknown model "${method}"`);
+  await release();
   const { pipeline } = await loadRuntime();
   if (device === null) device = await hasWebGPU() ? 'webgpu' : 'wasm';
   fileProgress = new Map();
@@ -92,7 +108,7 @@ async function load(method) {
     dtype: model[device],
     progress_callback: reportProgress
   });
-  segmenters.set(method, segmenter);
+  loaded = { method, segmenter };
   return segmenter;
 }
 
@@ -120,7 +136,9 @@ async function run(msg) {
     }
     postMessage({ type: 'result', token, method, data: matte, width, height }, [matte.buffer]);
   } catch (err) {
-    segmenters.delete(method);
+    /* a model that has failed mid-run may be holding a device that is now in a
+       bad way; let it go rather than hand it to the next run */
+    await release();
     postMessage({ type: 'error', token, message: String(err?.message || err) });
   }
 }

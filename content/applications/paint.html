@@ -5804,6 +5804,8 @@ function bgMarkDownloaded(method) {
 
 let bgWorker = null, bgRunToken = 0, bgRun = null, bgMatte = null, bgPreview = null;
 let bgShow = 'result', bgPreviewFrame = 0;
+/* what the worker is currently holding, and where it ran it */
+let bgWorkerModel = null, bgWorkerDevice = null;
 
 const showBgView = name => bgViews.forEach(view => { view.hidden = view.dataset.bgview !== name; });
 
@@ -5927,6 +5929,19 @@ function syncBgMethod() {
   bgStartBtn.textContent = bgMatte ? 'Run again' : spec.kind === 'model' ? 'Remove Background' : 'Work out the matte';
 }
 
+/* Throwing the worker away and starting another one is the only certain way to
+   get a clean GPU context back. Disposing the model inside the worker gives its
+   memory up, but a WebGPU device that has already been pushed too far stays
+   broken — the next model builds its shaders against it and fails on a node
+   that has nothing wrong with it. A new worker gets a new device, and costs
+   only the seconds it takes to build the session again from weights the browser
+   has already cached. */
+function recycleBgWorker() {
+  if (!bgWorker) return;
+  bgWorker.terminate();
+  bgWorker = null; bgWorkerModel = null; bgWorkerDevice = null;
+}
+
 function ensureBgWorker() {
   if (bgWorker) return bgWorker;
   bgWorker = new Worker(new URL('paint-worker.js', appUrl), { type: 'module' });
@@ -5944,7 +5959,14 @@ function ensureBgWorker() {
       }
       case 'ready': {
         const method = bgRun?.method || bgMethod();
-        if (bgIsModel(method)) bgMarkDownloaded(method);
+        /* only a model tells us anything about the device: a classic method
+           reports the processor whatever the machine has, and letting that
+           overwrite what we know would lose the very fact the swap guard
+           below is watching for */
+        if (bgIsModel(method)) {
+          bgMarkDownloaded(method);
+          bgWorkerModel = method; bgWorkerDevice = msg.device;
+        }
         bgProgressBar.style.width = '100%';
         setStatus(msg.device === 'webgpu' ? 'Removing background on your GPU…' : 'Removing background…');
         break;
@@ -6046,6 +6068,13 @@ function startBgRemoval() {
   if (method === 'growcut') {
     const seeds = bgGrowCutSeeds(source.width, source.height);
     if (seeds) { message.seeds = seeds.buffer; transfer.push(seeds.buffer); }
+  }
+
+  /* swapping models on the GPU is where this comes apart: the outgoing weights
+     are given up inside the worker, but the device they were given up by is not
+     to be trusted with the next model, so it is retired along with them */
+  if (bgIsModel(method) && bgWorkerModel && bgWorkerModel !== method && bgWorkerDevice === 'webgpu') {
+    recycleBgWorker();
   }
 
   bgRun = { width: source.width, height: source.height, layerId: activeLayer.id, canvas: source, method };
@@ -6423,6 +6452,10 @@ function applyBgTuning() {
 
 function finishBgError(message) {
   bgRunToken++; bgRun = null; bgMatte = null; bgPreview = null;
+  /* a failure on the GPU leaves the device suspect, and every run after it
+     would fail the same way until the page was reloaded; retire the worker so
+     the next attempt gets a device that has not been asked too much of */
+  if (bgWorkerDevice === 'webgpu') recycleBgWorker();
   showBgView('intro');
   bgStartBtn.hidden = false; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
   bgDetail.textContent = '';
