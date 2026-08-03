@@ -932,7 +932,10 @@ windows, and desktop actions.
   stamp, soft blur, line, rectangle (outline/filled), ellipse and rectangular
   selection tools; a full Effects menu (see below); the
   classic 28-colour box with left/right-click foreground/background
-  colours; arbitrary bitmap dimensions up to 8192 × 8192; undo/redo; local or
+  colours; arbitrary bitmap dimensions up to 8192 × 8192; undo/redo with a
+  Photoshop-style History panel under the layers (every state named after the
+  action that made it, click one to step back or forward, ⌫ clears the states
+  to release their memory, Layer → Minimise History Panel folds it away); local or
   website background opening; PNG saving and uploading straight to the web host
   (File → Upload to website…); image-size resampling, anchored
   canvas resizing, crop selection, flip, invert and clear. Transparent pixels
