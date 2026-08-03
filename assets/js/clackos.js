@@ -2334,6 +2334,12 @@ function handleAppMessage(data, source) {
     /* an app asking for the state it was restored with */
     const rec = windows.get(windowIdFor(source));
     if (rec) deliverAppState(rec, source);
+  } else if (data?.type === 'clackos-focus-window') {
+    /* an app asking for its window to come to the front — ClackPaint does this
+     * when a dialog opens or closes, since a dialog dragged out of the window
+     * sits on the desktop and must not be left behind another window */
+    const rec = windows.get(windowIdFor(source));
+    if (rec) focusWindow(rec.el);
   } else if (data?.type === 'clackos-close-window') {
     /* apps that can quit on their own (QBasic's File > Exit) close their window */
     const id = windowIdFor(source);
