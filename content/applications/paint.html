@@ -60,6 +60,11 @@
 .paint-bg-method input[type="color"] { width: 46px; height: 22px; padding: 0; border: 1px solid var(--ink); background: none; }
 .paint-bg-method .btn { min-height: 22px; padding: 2px 8px; font-size: 10px; white-space: nowrap; }
 .paint-bg-warn { color: var(--ink); }
+/* A preview that belongs to a method other than the one now chosen, or to a run
+   another is being worked out to replace, is dimmed rather than cleared away.
+   Blanking it loses the very thing being compared against, and a dialog that
+   empties itself the moment a method is picked reads as broken. */
+.paint-bg-preview.stale { opacity: .4; }
 .paint-bg-views { display: flex; gap: 6px; }
 .paint-bg-views .btn { flex: 1; min-height: 22px; padding: 2px 6px; font-size: 10px; }
 .paint-bg-views .btn[aria-pressed="true"] { background: var(--ink); color: var(--menu-text); }
@@ -793,6 +798,7 @@
       </div>
       <div class="paint-bg-tune" data-bgview="tune" hidden>
         <canvas class="paint-bg-preview" id="bgPreview" width="336" height="210" aria-label="Cut-out preview"></canvas>
+        <p class="paint-dream-note" id="bgPreviewNote" hidden></p>
         <div class="paint-bg-views" role="group" aria-label="Preview shows">
           <button type="button" class="btn" data-bgshow="result" aria-pressed="true">Result</button>
           <button type="button" class="btn" data-bgshow="matte" aria-pressed="false">Matte</button>
@@ -5631,6 +5637,7 @@ const bgStartBtn = appRoot.querySelector('#bgRemoveStart');
 const bgApplyBtn = appRoot.querySelector('#bgRemoveApply');
 const bgResetBtn = appRoot.querySelector('#bgRemoveReset');
 const bgPreviewCanvas = appRoot.querySelector('#bgPreview');
+const bgPreviewNote = appRoot.querySelector('#bgPreviewNote');
 const bgOutputSelect = appRoot.querySelector('#bgOutput');
 const bgOutputNote = appRoot.querySelector('#bgOutputNote');
 const bgTuneNote = appRoot.querySelector('#bgTuneNote');
@@ -5802,12 +5809,28 @@ function bgMarkDownloaded(method) {
   try { localStorage.setItem(BG_MODEL_KEY, JSON.stringify([...known])); } catch { /* private mode */ }
 }
 
-let bgWorker = null, bgRunToken = 0, bgRun = null, bgMatte = null, bgPreview = null;
+/* `bgRun` describes the run that produced the matte on screen; `bgPending` the
+   one being worked out to replace it. Keeping them apart is what lets the
+   preview stay up — and stay usable — while a model that takes a minute is
+   loading, and what lets a failed run fall back to the result it was going to
+   replace instead of emptying the dialog. */
+let bgWorker = null, bgRunToken = 0, bgRun = null, bgPending = null, bgMatte = null, bgPreview = null;
 let bgShow = 'result', bgPreviewFrame = 0;
 /* what the worker is currently holding, and where it ran it */
 let bgWorkerModel = null, bgWorkerDevice = null;
 
-const showBgView = name => bgViews.forEach(view => { view.hidden = view.dataset.bgview !== name; });
+/* more than one view can be up at once: a re-run shows its progress above the
+   preview it is replacing rather than in place of it */
+const showBgViews = (...names) => bgViews.forEach(view => { view.hidden = !names.includes(view.dataset.bgview); });
+const showBgView = name => showBgViews(name);
+
+/* Says whose matte is on screen when that is not the method now chosen — while
+   a replacement is being worked out, or after one failed to arrive. */
+function setBgPreviewNote(text) {
+  bgPreviewNote.textContent = text || '';
+  bgPreviewNote.hidden = !text;
+  bgPreviewCanvas.classList.toggle('stale', !!text);
+}
 
 /* The method's own controls are built rather than written out, because the two
    that need a colour also need it sampled from the picture, and the one that
@@ -6077,11 +6100,23 @@ function startBgRemoval() {
     recycleBgWorker();
   }
 
-  bgRun = { width: source.width, height: source.height, layerId: activeLayer.id, canvas: source, method };
-  bgMatte = null; bgPreview = null;
+  bgPending = { width: source.width, height: source.height, layerId: activeLayer.id, canvas: source, method };
   message.token = ++bgRunToken;
-  showBgView('loading');
-  bgStartBtn.hidden = true; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
+  /* A matte already on screen stays there while the next one is worked out.
+     Nothing about it has stopped being true, and on the CPU path a model can
+     take a minute — a minute of blank dialog, with the thing it is being
+     compared against thrown away, helps nobody. */
+  const replacing = !!(bgMatte && bgPreview && bgRun);
+  if (replacing) {
+    showBgViews('loading', 'tune');
+    bgStartBtn.hidden = false; bgApplyBtn.hidden = false; bgResetBtn.hidden = false;
+    bgStartBtn.disabled = true; bgApplyBtn.disabled = true;
+    setBgPreviewNote(`${BG_METHODS[bgRun.method]?.name || 'The last method'}’s result — ${spec.name} is working…`);
+  } else {
+    bgMatte = null; bgPreview = null; bgRun = null;
+    showBgView('loading');
+    bgStartBtn.hidden = true; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
+  }
   bgProgressBar.style.width = '0%';
   bgDetail.textContent = spec.kind === 'model' ? 'Starting…' : `Working out the matte with ${spec.name}…`;
   setStatus(spec.kind === 'model'
@@ -6330,12 +6365,14 @@ function syncBgFields() {
 function showBgTuning() {
   buildBgPreview();
   showBgView('tune');
+  setBgPreviewNote('');
   /* the method chooser stays live over the result: seeing one method's matte is
      what tells you to try another, and Run again is right there to do it */
   bgStartBtn.hidden = false;
   bgStartBtn.textContent = 'Run again';
   bgApplyBtn.hidden = false;
   bgResetBtn.hidden = false;
+  bgStartBtn.disabled = false; bgApplyBtn.disabled = false;
   const source = BG_METHODS[bgRun?.method || bgMethod()].name;
   bgTuneNote.textContent = selection
     ? `${source} has run. Nothing changes until Apply — and a selection is on, so only that part is affected.`
@@ -6345,12 +6382,13 @@ function showBgTuning() {
 }
 
 function applyBgResult(msg) {
-  if (!bgModal.classList.contains('open')) { bgRun = null; return; } /* walked away */
-  if (!bgRun || bgRun.layerId !== activeLayer.id || msg.width !== width() || msg.height !== height()) {
-    showBgView('intro'); bgStartBtn.hidden = false; bgRun = null;
-    setStatus('Canvas changed before the result arrived; background removal cancelled');
+  if (!bgModal.classList.contains('open')) { bgPending = null; return; } /* walked away */
+  if (!bgPending || bgPending.layerId !== activeLayer.id || msg.width !== width() || msg.height !== height()) {
+    bgPending = null;
+    revertToDisplayedMatte('Canvas changed before the result arrived; background removal cancelled');
     return;
   }
+  bgRun = bgPending; bgPending = null;
   bgMatte = { data: new Uint8ClampedArray(msg.data), width: msg.width, height: msg.height };
   showBgTuning();
   setStatus(`${BG_METHODS[bgRun.method]?.name || 'The matte'} is ready — shape the cut-out, then Apply`);
@@ -6362,8 +6400,10 @@ function applyBgTuning() {
   if (!bgMatte || !bgRun) return;
   if (bgRun.layerId !== activeLayer.id || bgMatte.width !== width() || bgMatte.height !== height()) {
     showBgView('intro'); bgStartBtn.hidden = false; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
-    bgMatte = null; bgPreview = null;
-    setStatus('The layer changed since the model ran — remove the background again');
+    bgMatte = null; bgPreview = null; bgRun = null;
+    setBgPreviewNote('');
+    syncBgMethod();
+    setStatus('The layer changed since the matte was worked out — run it again');
     return;
   }
   const mode = bgOutputSelect.value;
@@ -6450,29 +6490,52 @@ function applyBgTuning() {
   closeBgRemoval();
 }
 
+/* Whatever went wrong with the run that was on its way, the matte already on
+   screen is still good. Go back to it rather than emptying the dialog: the
+   settings are still worth having, and Apply still means something. Only when
+   there is nothing to go back to does the explainer return. */
+function revertToDisplayedMatte(message) {
+  bgDetail.textContent = '';
+  bgProgressBar.style.width = '0%';
+  bgStartBtn.disabled = false; bgApplyBtn.disabled = false;
+  if (bgMatte && bgPreview && bgRun) {
+    showBgView('tune');
+    const kept = BG_METHODS[bgRun.method]?.name || 'the last method';
+    const sameMethod = bgRun.method === bgMethod();
+    /* the caption under the preview already names whose result survived, so the
+       status line only says so when there is no caption to say it */
+    setBgPreviewNote(sameMethod ? '' : `Still showing ${kept}’s result.`);
+    bgStartBtn.hidden = false; bgApplyBtn.hidden = false; bgResetBtn.hidden = false;
+    setStatus(sameMethod ? `${message} — the earlier result is still here` : message);
+    return;
+  }
+  bgMatte = null; bgPreview = null; bgRun = null;
+  showBgView('intro');
+  bgStartBtn.hidden = false; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
+  syncBgMethod();
+  setStatus(message);
+}
+
 function finishBgError(message) {
-  bgRunToken++; bgRun = null; bgMatte = null; bgPreview = null;
+  bgRunToken++; bgPending = null;
   /* a failure on the GPU leaves the device suspect, and every run after it
      would fail the same way until the page was reloaded; retire the worker so
      the next attempt gets a device that has not been asked too much of */
   if (bgWorkerDevice === 'webgpu') recycleBgWorker();
-  showBgView('intro');
-  bgStartBtn.hidden = false; bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
-  bgDetail.textContent = '';
-  bgProgressBar.style.width = '0%';
-  syncBgMethod();
   /* a model that will not run on this machine is a dead end until another is
      chosen, and the classic methods always run, so say so rather than leaving
      the failure looking like the end of the road */
   const fallback = bgIsModel(bgMethod()) ? ' — try a classic method, or a smaller model' : '';
-  setStatus(`Background removal failed: ${message}${fallback}`);
+  revertToDisplayedMatte(`Background removal failed: ${message}${fallback}`);
 }
 
 /* Leaving the dialog abandons an in-flight run and lets the matte go: it is
    worth several megabytes and is only good for the layer it was made from. */
 function closeBgRemoval() {
   bgRunToken++;
-  bgRun = null; bgMatte = null; bgPreview = null;
+  bgRun = null; bgPending = null; bgMatte = null; bgPreview = null;
+  bgStartBtn.disabled = false; bgApplyBtn.disabled = false;
+  setBgPreviewNote('');
   cancelAnimationFrame(bgPreviewFrame); bgPreviewFrame = 0;
   hideModal('bgRemoveModal');
 }
@@ -6480,6 +6543,8 @@ function closeBgRemoval() {
 function openBgRemoval() {
   bgApplyBtn.hidden = true; bgResetBtn.hidden = true;
   bgStartBtn.hidden = false;
+  bgStartBtn.disabled = false; bgApplyBtn.disabled = false;
+  setBgPreviewNote('');
   bgDetail.textContent = '';
   bgProgressBar.style.width = '0%';
   showBgView('intro');
@@ -6510,9 +6575,24 @@ function openBgRemoval() {
 bgStartBtn.addEventListener('click', startBgRemoval);
 bgMethodSelect.addEventListener('change', () => {
   syncBgMethod();
-  /* the matte on screen belongs to the method that made it; switching method
-     leaves it in place until Run again, so the two can be compared */
-  setStatus(`${BG_METHODS[bgMethod()].name} chosen${bgMatte ? ' — Run again to try it' : ''}`);
+  const method = bgMethod(), spec = BG_METHODS[method];
+  /* Nothing on screen yet, or something already running: just say what is
+     armed. Otherwise the matte showing belongs to the method that made it, and
+     leaving it there silently is what makes the dialog look stuck — so either
+     work the new one out at once, which the classic methods can, or say plainly
+     whose result is still being shown. */
+  if (!bgMatte || !bgPreview) {
+    setStatus(`${spec.name} chosen`);
+    return;
+  }
+  if (bgPending) {
+    setBgPreviewNote(`${BG_METHODS[bgRun?.method]?.name || 'The last method'}’s result — another run is already working.`);
+    setStatus(`${spec.name} chosen — the run already going will finish first`);
+    return;
+  }
+  if (spec.kind === 'classic') { startBgRemoval(); return; }
+  setBgPreviewNote(`${BG_METHODS[bgRun?.method]?.name || 'The last method'}’s result. Run again to try ${spec.name}.`);
+  setStatus(`${spec.name} chosen — Run again to work it out`);
 });
 bgApplyBtn.addEventListener('click', applyBgTuning);
 bgResetBtn.addEventListener('click', () => {
