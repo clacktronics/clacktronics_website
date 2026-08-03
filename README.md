@@ -774,6 +774,25 @@ windows, and desktop actions.
   `circuit.html?circuit=<name>.txt` — the wrapper compresses it into the
   simulator's `ctz` parameter. `?ctz=` links exported from the simulator
   itself (File → Export as Link) pass straight through.
+- `applications/gamma-table.html` (Applications → Electronics → Gamma Table) —
+  builds the gamma-correction lookup table an LED needs to fade the way the eye
+  expects. Mono or RGB (a curve and a gamma per channel, linked by default), any
+  table length from 2 to 4096 steps, and an output range of 8, 10, 12 or 16 bits
+  or a maximum of your own. The gamma sets the shape and the handles on the
+  graph adjust it: drag one to bend the response, double-click the graph to add
+  another, shift-click or right-click one to take it away. A handle holds its
+  distance from the plain gamma curve rather than an absolute height, so the
+  shaping survives moving the gamma slider, and Reset handles puts every one of
+  them back on the curve. Between the handles the curve is a monotone cubic, so
+  it never overshoots into a dip the LED would show as a flicker. Underneath,
+  two strips preview the ramp — the corrected one against the same number of
+  uncorrected steps — with the linear duty cycle sRGB-encoded, since a screen
+  and an LED do not share a response. The table comes out as an Arduino/C header
+  (`uint8_t`/`uint16_t`/`uint32_t` to suit the range, optionally `PROGMEM`), a
+  MicroPython `array` module, or CSV, each ready to copy or download, and the
+  panel beside the graph counts the distinct levels, the steps stuck at zero and
+  the memory the table will take. Everything it holds is remembered by the
+  desktop through `assets/js/app-state.js`.
 - `applications/kicad.html` (Applications → KiCAD Viewer…) — views KiCAD
   schematics and boards using KiCanvas (vendored under `vendor/kicanvas/`,
   MIT — see LICENSE.md and PROVENANCE.md there). KiCanvas compiles its
@@ -1151,7 +1170,8 @@ to settings and documents rather than bitmaps or audio.
 Opening an app page directly, outside the desktop, is a no-op: there is nobody
 to report to and nothing to restore, so the standalone entry points behave
 exactly as before. Apps wired up so far are the PCB Heater Designer (its whole
-control panel) and the Text Editor (its document, name and caret); apps
+control panel), the Text Editor (its document, name and caret) and the Gamma
+Table (its settings and every curve handle, which are not form controls); apps
 launched with a query string — the Markdown Editor's `?open=`, for example —
 already come back with the right file because that query is part of the
 window's id.
