@@ -221,18 +221,33 @@
 .paint-effect-matrix input::-webkit-outer-spin-button, .paint-effect-matrix input::-webkit-inner-spin-button { appearance: none; margin: 0; }
 .paint-adjust-histogram { width: 100%; height: 118px; box-sizing: border-box; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); }
 .paint-adjust-stats { min-height: 1.4em; margin: -5px 0 0; padding: 0; font-size: 10px; color: var(--sage); font-variant-numeric: tabular-nums; }
-.paint-modal { pointer-events: none; align-items: flex-start; justify-content: flex-end; padding: 56px 18px 18px; background: transparent; }
-.paint-modal .paint-modal-box { pointer-events: auto; position: fixed; right: 18px; top: 56px; width: min(390px, calc(100vw - 24px)); max-height: calc(100vh - 72px); }
+/* The overlay covers the app and nothing else — the whole page when ClackPaint
+   is a page, the window body when it is mounted in ClackOS. A dialog opens in
+   the middle of it, over the app it belongs to, sized in percentages of it, and
+   above everything else the app draws: menus, panels and the canvas menu. */
+.paint-modal { pointer-events: none; align-items: center; justify-content: center; padding: 18px; background: transparent; z-index: 100; }
+.paint-modal .paint-modal-box { pointer-events: auto; position: relative; width: min(390px, 100%); max-height: 100%; }
+/* Dragged, it stops being centred and is placed by hand inside the overlay. */
+.paint-modal .paint-modal-box.dragged { position: absolute; }
 .paint-modal .paint-modal-box > header { cursor: grab; touch-action: none; user-select: none; }
 .paint-modal .paint-modal-box > header:active { cursor: grabbing; }
 .paint-modal .paint-dialog-body { overflow-y: auto; min-height: 0; }
+/* A dialog is only as wide as the app allows, so its controls give way rather
+   than push the body sideways: the fields shrink into what the label leaves. */
+.paint-modal .paint-dialog-body > label:not(.paint-check) { gap: 12px; min-width: 0; }
+.paint-modal .paint-dialog-body > label:not(.paint-check) > span { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.paint-modal .paint-dialog-body > label:not(.paint-check) select { flex: 1 1 auto; min-width: 0; }
+.paint-modal .paint-dialog-body > label:not(.paint-check) input[type="number"] { flex: 0 1 auto; min-width: 64px; }
 .paint-blur-readout { min-width: 54px; display: inline-block; text-align: right; font-variant-numeric: tabular-nums; color: var(--sage); }
 #gaussianBlurModal label > span { display: flex; align-items: center; gap: 8px; flex: 1; }
 #gaussianBlurModal input[type="range"] { flex: 1; min-width: 120px; }
+/* on a phone a dialog sits at the bottom, where the thumbs are */
 @media (max-width: 700px) {
-  .paint-modal { padding: 0; }
-  .paint-modal .paint-modal-box { left: 10px; right: 10px; top: auto; bottom: 10px; width: auto; max-height: 56vh; }
+  .paint-modal { padding: 10px; align-items: flex-end; }
+  .paint-modal .paint-modal-box { width: 100%; max-height: min(56vh, 100%); }
 }
+/* the menu bar while a dialog is up: shut, and out of reach (see the lock) */
+.paint-app .rm-bar[inert] { opacity: .45; }
 
 /* ---- File → Export / Import as Program Array ----
    Wider than the other dialogs because it is really two panels: the settings,
@@ -240,13 +255,17 @@
    by side, so they stack and the code box gives up most of its height. */
 /* The paint dialogs are pinned to the top right rather than centred, and drag
    from their headers; this one keeps that but needs room for two panels. */
-.paint-modal .paint-export-box { width: min(940px, calc(100vw - 36px)); max-height: calc(100vh - 72px); }
+.paint-modal .paint-export-box { width: min(940px, 100%); max-height: 100%; }
 .paint-export-body { flex: 1 1 auto; display: flex; gap: 14px; padding: 14px; min-height: 0; overflow: hidden; }
 .paint-export-controls {
   flex: 0 0 352px; display: flex; flex-direction: column; gap: 9px;
   overflow-y: auto; padding-right: 8px;
 }
-.paint-export-output { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+/* In a short window there is not enough height for a full-sized preview, the
+   memory budget and a readable slice of code at once. The preview gives up
+   what it can first — it letterboxes, so a shorter one still shows the whole
+   picture — and only then does the column scroll. */
+.paint-export-output { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 9px; overflow-y: auto; }
 .paint-export-group {
   display: flex; flex-direction: column; gap: 9px;
   padding-top: 9px; border-top: 1px solid var(--paper-line);
@@ -264,16 +283,23 @@
 .paint-export-group output { font-size: 10.5px; color: var(--sage); min-width: 30px; text-align: right; }
 .paint-export-group .paint-check { font-size: 11.5px; }
 .paint-export-pair { display: flex; gap: 8px; align-items: center; }
-.paint-export-preview-wrap { display: flex; flex-direction: column; gap: 7px; }
+/* The floor is the smallest preview plus the row of view buttons and the line
+   of detail under it; a specified minimum is what lets the panel shrink at all,
+   since the canvas would otherwise hold the column open at its drawn height. */
+.paint-export-preview-wrap { display: flex; flex-direction: column; gap: 7px; flex: 0 1 auto; min-height: 196px; }
 .paint-export-preview {
-  width: 100%; height: 232px; box-sizing: border-box; border: 1px solid var(--ink); border-radius: 6px;
+  width: 100%; flex: 0 1 232px; min-height: 132px; box-sizing: border-box; border: 1px solid var(--ink); border-radius: 6px;
   image-rendering: pixelated; background-color: #ffffff;
   background-image: linear-gradient(45deg, #c9c9c9 25%, transparent 25%), linear-gradient(-45deg, #c9c9c9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #c9c9c9 75%), linear-gradient(-45deg, transparent 75%, #c9c9c9 75%);
   background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0;
 }
 .paint-export-preview.zoomed { overflow: auto; }
+/* A generated array runs to thousands of lines. Its own height is set to zero
+   so that it never asks the dialog for the room to show all of it: it takes
+   what the settings column leaves and scrolls the rest, which is why the code
+   ends level with the last setting rather than pushing the dialog off-screen. */
 .paint-export-code {
-  flex: 1; min-height: 120px; overflow: auto; margin: 0; padding: 9px 11px;
+  flex: 1 1 auto; height: 0; min-height: 120px; overflow: auto; margin: 0; padding: 9px 11px;
   border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep);
   color: var(--control-text); font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
   line-height: 1.5; white-space: pre; tab-size: 2;
@@ -302,7 +328,7 @@
 /* the shared rule drops every dialog to the bottom of a narrow screen and caps
    it at 56vh; two stacked panels need more of the height than that */
 @media (max-width: 700px) {
-  .paint-modal .paint-export-box { width: auto; max-height: 78vh; }
+  .paint-modal .paint-export-box { width: 100%; max-height: min(78vh, 100%); }
 }
 .paint-context-menu { position: fixed; z-index: 90; display: none; min-width: 180px; padding: 5px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); box-shadow: 4px 4px 0 color-mix(in srgb,var(--shadow) var(--shadow-alpha),transparent); }
 .paint-context-menu.open { display: block; }
@@ -2045,6 +2071,7 @@ function closeToolMenus() {
   });
 }
 function openToolMenu(menu) {
+  if (anyModalOpen()) return;      /* a dialog holds the app; see lockBehindDialog */
   closeMenus(); closeToolMenus();
   const opener = menu.querySelector(':scope > .paint-tool-menu-btn');
   const panel = menu.querySelector(':scope > .paint-tool-dd');
@@ -3212,6 +3239,7 @@ function selectionToLayer(cut) {
 function closeContextMenu() { contextMenu.classList.remove('open'); }
 function openContextMenu(event) {
   event.preventDefault();
+  if (anyModalOpen()) { setStatus('Close the dialog before using canvas actions'); return; }
   if (adjustPreviewing || effectPreviewing) { setStatus('Apply or cancel the live preview before using canvas actions'); return; }
   if (freeTransform) { status.textContent = 'Apply or cancel the free transform before using canvas actions'; return; }
   if (contentTransform) { status.textContent = 'Apply or cancel Form-Detecting Scale before using canvas actions'; return; }
@@ -5205,6 +5233,7 @@ function closeAdjustment(cancel = true) {
   const wasPreview = adjustPreviewing;
   adjustPreviewing = false; histogramOnly = false; activeAdjustment = null; adjustmentOriginal = null;
   stack.classList.remove('adjust-busy'); appRoot.querySelector('#adjustModal').classList.remove('open');
+  lockBehindDialog();
   renderLayerPanel();
   if (cancel && wasPreview) setStatus('Adjustment cancelled');
 }
@@ -5353,12 +5382,37 @@ function setAsBackground() {
 }
 
 const modals = new Map([...appRoot.querySelectorAll('.paint-modal')].map(modal => [modal.id, modal]));
-const showModal = id => modals.get(id).classList.add('open');
+const anyModalOpen = () => [...modals.values()].some(modal => modal.classList.contains('open'));
+const showModal = id => {
+  const modal = modals.get(id);
+  /* A dialog opens in the middle of the app every time. Somewhere it was
+     dragged to during an earlier visit is not where it is wanted next. */
+  const dialogWindow = modal.querySelector('.paint-modal-box');
+  if (dialogWindow) {
+    dialogWindow.classList.remove('dragged');
+    dialogWindow.style.left = dialogWindow.style.top = dialogWindow.style.width = '';
+    dialogWindow.style.right = dialogWindow.style.bottom = '';
+  }
+  modal.classList.add('open');
+  lockBehindDialog();
+};
 const hideModal = id => {
   if (id === 'gaussianBlurModal') cancelGaussianPreview();
   if (id === 'effectModal') endEffectPreview(true);
   modals.get(id).classList.remove('open');
+  lockBehindDialog();
 };
+
+/* A dialog is the only thing to be getting on with while it is up: the menu
+ * bar goes out of reach, and the tool menus and the canvas menu are shut and
+ * stay shut, so nothing can be started behind it. The canvas itself is left
+ * alone — the live previews are watched on it while their dialog is open. */
+function lockBehindDialog() {
+  const locked = anyModalOpen();
+  appRoot.querySelector('.rm-bar').toggleAttribute('inert', locked);
+  if (!locked) return;
+  closeMenus(); closeToolMenus(); closeContextMenu();
+}
 modals.forEach(modal => {
   const dialogWindow = modal.querySelector('.paint-modal-box'), handle = dialogWindow?.querySelector(':scope > header');
   if (!dialogWindow || !handle) return;
@@ -5366,12 +5420,17 @@ modals.forEach(modal => {
     if (event.target.closest('button')) return;
     event.preventDefault();
     const rect = dialogWindow.getBoundingClientRect(), grabX = event.clientX - rect.left, grabY = event.clientY - rect.top;
+    /* Dialogs are placed inside the overlay, which is the app and no more, so
+     * a drag works in the overlay's coordinates and stops at its edges — the
+     * dialog cannot be dragged out of a ClackOS window and onto the desktop. */
+    const bounds = modal.getBoundingClientRect();
+    dialogWindow.classList.add('dragged');
     dialogWindow.style.width = rect.width + 'px'; dialogWindow.style.right = 'auto'; dialogWindow.style.bottom = 'auto';
-    dialogWindow.style.left = rect.left + 'px'; dialogWindow.style.top = rect.top + 'px';
+    dialogWindow.style.left = (rect.left - bounds.left) + 'px'; dialogWindow.style.top = (rect.top - bounds.top) + 'px';
     document.body.classList.add('win-drag');
     const move = moved => {
-      dialogWindow.style.left = Math.max(-rect.width + 70, Math.min(window.innerWidth - 70, moved.clientX - grabX)) + 'px';
-      dialogWindow.style.top = Math.max(0, Math.min(window.innerHeight - 34, moved.clientY - grabY)) + 'px';
+      dialogWindow.style.left = Math.max(-rect.width + 70, Math.min(bounds.width - 70, moved.clientX - grabX - bounds.left)) + 'px';
+      dialogWindow.style.top = Math.max(0, Math.min(bounds.height - 34, moved.clientY - grabY - bounds.top)) + 'px';
     };
     const up = () => {
       document.body.classList.remove('win-drag'); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
@@ -7833,6 +7892,19 @@ function openExportArray() {
   buildExportFields();
   showModal('exportArrayModal');
   recomputeExport();
+  fitExportPanels();
+}
+
+/* In a short window the preview, the memory budget and a readable slice of
+ * code do not all fit down the right-hand side at once. The budget is the part
+ * that folds away: it is a reference, whereas the code is what the dialog is
+ * for. It comes back the next time there is room for it. */
+function fitExportPanels() {
+  const output = appRoot.querySelector('#exportArrayModal .paint-export-output');
+  const budget = appRoot.querySelector('#exportBudget');
+  budget.open = true;
+  if (output.scrollHeight > output.clientHeight + 1) budget.open = false;
+  if (exportEncoded) drawExportPreview();     /* the preview box has changed size */
 }
 
 function saveExportSettings() {
@@ -7856,6 +7928,11 @@ appRoot.querySelector('#exportArrayModal').addEventListener('click', event => {
       button.setAttribute('aria-pressed', String(button === view)));
     if (exportEncoded) drawExportPreview();
   }
+});
+/* Folding the memory budget away gives the preview above it more room, so the
+ * picture is drawn again at whatever size it has ended up. */
+appRoot.querySelector('#exportBudget').addEventListener('toggle', () => {
+  if (exportEncoded) drawExportPreview();
 });
 appRoot.querySelector('#exportZoom').addEventListener('click', event => {
   exportZoomed = !exportZoomed;
