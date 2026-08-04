@@ -875,10 +875,17 @@ windows, and desktop actions.
   clock and active sensing start hidden because they bury everything else —
   the tempo is still read off the incoming clock and shown in beats per minute
   whether or not the messages are on show. A lane per channel lights as
-  traffic arrives and counts what is sounding, a three-octave keyboard both
-  plays and shows the notes held at the input, and the plotter draws every
+  traffic arrives and counts what is sounding, and the plotter draws every
   controller, bend, aftertouch and note velocity that comes in, one line per
   channel and controller.
+
+  Under the log sits the keyboard, the width of the window, with the channel,
+  velocity, octave, CC, program, bend and clock controls in a row above it. It
+  plays, and it shows the notes held at the input, so you can watch what a
+  controller is sending. How many octaves it spans follows the width — keys
+  keep their proportions rather than stretching into planks on a wide desktop
+  — every C is named, and keys a high bottom octave would push past note 127
+  grey out. View → Keyboard and controls puts the whole strip away.
 
   Sending covers notes, CC (with a slider that sends as it moves), program
   changes, pitch bend that springs back to centre, raw bytes in hex, panic and

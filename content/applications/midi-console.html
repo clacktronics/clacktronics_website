@@ -100,7 +100,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px
 .kinds .check { margin: 2px 0; font-size: 10.5px; }
 
 /* ---- keyboard ---- */
-.keys { position: relative; height: 74px; margin-top: 6px; user-select: none; touch-action: none; }
+.keys { position: relative; height: 88px; user-select: none; touch-action: none; }
+.keys .key-name {
+  position: absolute; left: 0; right: 0; bottom: 3px; text-align: center;
+  font-size: 8.5px; color: var(--sage); pointer-events: none;
+}
+.keys .wh.down .key-name, .keys .wh.held .key-name { color: var(--ink); }
+/* a high bottom octave runs the top of the keyboard past note 127 */
+.keys .oob { opacity: 0.3; pointer-events: none; }
 .keys .wh, .keys .bl {
   position: absolute; top: 0; border: 1px solid var(--ink); box-sizing: border-box; cursor: pointer;
 }
@@ -170,6 +177,29 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px
 .plot-head .legend i { width: 9px; height: 3px; display: block; }
 .plot-head .btn { padding: 3px 8px; font-size: 10px; }
 .midi-plot canvas { display: block; flex: 1; min-height: 0; width: 100%; }
+
+/* ---- play panel ---- */
+.play-panel {
+  flex: none; border-top: 1px solid var(--ink); background: var(--paper-deep);
+  padding: 7px 9px 9px;
+}
+.play-panel[hidden] { display: none; }
+.play-controls {
+  display: flex; align-items: center; gap: 5px 10px; flex-wrap: wrap;
+  margin-bottom: 7px; font-size: 10px; color: var(--sage);
+}
+.play-field { display: flex; align-items: center; gap: 5px; }
+.play-field label { white-space: nowrap; }
+.play-field select { width: auto; height: 26px; font-size: 10.5px; }
+.play-field input[type="number"] { width: 56px; height: 26px; font-size: 10.5px; }
+.play-field input[type="range"] { width: 116px; }
+.play-field output {
+  width: 34px; text-align: right; font-size: 10px; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.play-field .hint { font-size: 9.5px; }
+.play-panel .btn { padding: 5px 10px; font-size: 10px; }
+.play-sep { width: 1px; height: 20px; align-self: center; background: var(--paper-line); }
 
 /* ---- send bar ---- */
 .midi-send {
@@ -279,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" data-cmd="toggle" data-value="showRaw"><span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span>Raw bytes on every line<span class="mi-check"></span></button>
         <button type="button" data-cmd="toggle" data-value="showActivity"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Channel activity<span class="mi-check"></span></button>
         <button type="button" data-cmd="toggle" data-value="showPlot"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Controller plotter<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="showPlay"><span class="pixel-icon" data-icon="keyboard-music" aria-hidden="true"></span>Keyboard and controls<span class="mi-check"></span></button>
         <button type="button" data-cmd="toggle" data-value="showSide"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Side panel<span class="mi-check"></span></button>
         <div class="sep"></div>
         <button type="button" data-cmd="toggle" data-value="autoscroll"><span class="pixel-icon" data-icon="arrow-bar-right" aria-hidden="true"></span>Follow the tail<span class="mi-check"></span></button>
@@ -360,49 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
 
       <section class="card">
-        <h2>Play<span class="lamp" id="lamp-out"></span></h2>
-        <div class="field">
-          <label for="out-chan">Channel</label>
-          <select id="out-chan"></select>
-        </div>
-        <div class="field">
-          <label for="velocity">Velocity</label>
-          <input type="number" id="velocity" value="100" min="1" max="127" step="1">
-        </div>
-        <div class="field">
-          <label for="octave">Bottom octave</label>
-          <input type="number" id="octave" value="3" min="-1" max="8" step="1">
-        </div>
-        <div class="keys" id="keys" role="group" aria-label="MIDI keyboard"></div>
-        <p class="note">Click to play. Notes arriving at the input light up here too, so you can see what a controller is sending.</p>
-        <div class="field">
-          <label for="cc-number">CC number</label>
-          <input type="number" id="cc-number" value="1" min="0" max="127" step="1">
-        </div>
-        <div class="field">
-          <label for="cc-value">CC value</label>
-          <input type="range" id="cc-value" value="64" min="0" max="127" step="1">
-        </div>
-        <div class="field">
-          <label for="tempo-out">Clock tempo (bpm)</label>
-          <input type="number" id="tempo-out" value="120" min="20" max="300" step="1">
-        </div>
-        <div class="field">
-          <label for="program">Program</label>
-          <input type="number" id="program" value="0" min="0" max="127" step="1">
-        </div>
-        <div class="field">
-          <label for="bend">Pitch bend</label>
-          <input type="range" id="bend" value="0" min="-8192" max="8191" step="1">
-        </div>
-        <div class="btn-row">
-          <button type="button" class="btn ghost" id="send-cc">Send CC</button>
-          <button type="button" class="btn ghost" id="send-program">Send program</button>
-          <button type="button" class="btn ghost full" id="panic">All notes off</button>
-        </div>
-      </section>
-
-      <section class="card">
         <h2>SysEx<span class="lamp" id="lamp-sysex"></span></h2>
         <div class="field wide">
           <label for="sysex-hex">Bytes to send</label>
@@ -450,6 +438,24 @@ document.addEventListener('DOMContentLoaded', () => {
           <button type="button" class="btn ghost" id="plot-clear">Clear plot</button>
         </div>
         <canvas id="plot"></canvas>
+      </section>
+
+      <section class="play-panel" id="play" aria-label="Play">
+        <div class="play-controls">
+          <span class="play-field"><i class="lamp" id="lamp-out"></i><label for="out-chan">Channel</label><select id="out-chan"></select></span>
+          <span class="play-field"><label for="velocity">Velocity</label><input type="number" id="velocity" value="100" min="1" max="127" step="1"></span>
+          <span class="play-field"><label for="octave">Bottom octave</label><input type="number" id="octave" value="3" min="-1" max="8" step="1"></span>
+          <span class="play-sep"></span>
+          <span class="play-field"><label for="cc-number">CC</label><input type="number" id="cc-number" value="1" min="0" max="127" step="1"><input type="range" id="cc-value" value="64" min="0" max="127" step="1" aria-label="CC value"><output id="cc-readout">64</output><button type="button" class="btn ghost" id="send-cc">Send</button></span>
+          <span class="play-sep"></span>
+          <span class="play-field"><label for="program">Program</label><input type="number" id="program" value="0" min="0" max="127" step="1"><button type="button" class="btn ghost" id="send-program">Send</button></span>
+          <span class="play-sep"></span>
+          <span class="play-field"><label for="bend">Bend</label><input type="range" id="bend" value="0" min="-8192" max="8191" step="1"><output id="bend-readout">0</output></span>
+          <span class="play-sep"></span>
+          <span class="play-field"><label for="tempo-out">Clock</label><input type="number" id="tempo-out" value="120" min="20" max="300" step="1"><span class="hint">bpm</span></span>
+          <button type="button" class="btn ghost" id="panic">All notes off</button>
+        </div>
+        <div class="keys" id="keys" role="group" aria-label="MIDI keyboard"></div>
       </section>
 
       <div class="midi-send">
@@ -513,6 +519,7 @@ const state = {
   showRaw: false,
   showActivity: true,
   showPlot: false,
+  showPlay: true,
   showSide: true,
   autoscroll: true,
   paused: false,
@@ -971,12 +978,27 @@ const demoReceive = message => DEMOS[demo.kind]?.receive?.(message);
 
 const keyEls = [];
 
+/* The keyboard is as wide as the window, so the number of octaves follows the
+ * width rather than the other way round: keys stay near their real proportions
+ * instead of stretching into planks on a wide desktop. */
+let octaves = 3;
+
+function fitKeyboard() {
+  const width = $('keys').getBoundingClientRect().width;
+  if (!width) return;
+  const wanted = clamp(Math.round(width / (26 * 7)), 2, 8);
+  if (wanted === octaves) return;
+  octaves = wanted;
+  buildKeyboard();
+  paintKeyboard();
+}
+
 function buildKeyboard() {
   const keys = $('keys');
   keys.textContent = '';
   keyEls.length = 0;
   const pattern = [0, 2, 4, 5, 7, 9, 11];
-  const whites = 21;                                   /* three octaves */
+  const whites = octaves * 7 + 1;                      /* ending on the octave */
   const width = 100 / whites;
   const add = (className, left, wide, semitone) => {
     const key = document.createElement('div');
@@ -988,6 +1010,13 @@ function buildKeyboard() {
     keyEls.push(key);
   };
   for (let i = 0; i < whites; i++) add('wh', i * width, width, Math.floor(i / 7) * 12 + pattern[i % 7]);
+  /* C at the bottom of each octave gets its name, as on a real keyboard */
+  for (const key of keyEls) {
+    if (Number(key.dataset.semitone) % 12) continue;
+    const label = document.createElement('span');
+    label.className = 'key-name';
+    key.appendChild(label);
+  }
   for (let i = 0; i < whites - 1; i++) {
     if ([2, 6].includes(i % 7)) continue;              /* no black key at E–F or B–C */
     add('bl', (i + 1) * width - width * 0.3, width * 0.6, Math.floor(i / 7) * 12 + pattern[i % 7] + 1);
@@ -1005,7 +1034,8 @@ function buildKeyboard() {
     if (!key) return;
     event.preventDefault();
     release();
-    const note = clamp(baseNote() + Number(key.dataset.semitone), 0, 127);
+    const note = baseNote() + Number(key.dataset.semitone);
+    if (note > 127) return;
     down = { note, el: key };
     key.classList.add('down');
     sendBytes(ClackMIDI.build.noteOn(channelOut(), note, velocity()));
@@ -1016,9 +1046,20 @@ function buildKeyboard() {
 
 const baseNote = () => (clamp(Number($('octave').value) || 3, -1, 8) + 1) * 12;
 
+function nameKeys() {
+  const base = baseNote();
+  for (const key of keyEls) {
+    const note = base + Number(key.dataset.semitone);
+    key.classList.toggle('oob', note > 127);
+    const label = key.querySelector('.key-name');
+    if (label) label.textContent = note > 127 ? '' : ClackMIDI.noteName(note);
+  }
+}
+
 function paintKeyboard() {
   const notes = new Set([...held].map(key => Number(key.split(':')[1])));
   const base = baseNote();
+  nameKeys();
   for (const key of keyEls) key.classList.toggle('held', notes.has(base + Number(key.dataset.semitone)));
   $('pill-notes').textContent = `${held.size} held`;
 }
@@ -1237,6 +1278,7 @@ function syncChrome() {
   consoleEl.classList.toggle('hide-ts', state.stamp === 'none');
   $('activity').hidden = !state.showActivity;
   $('plot-panel').hidden = !state.showPlot;
+  $('play').hidden = !state.showPlay;
   $('side').hidden = !state.showSide;
   $('port-note').classList.toggle('warn', !midiSupported);
   if (!midiSupported) $('port-note').textContent = 'This browser has no Web MIDI — Chrome, Edge and Opera have it. The demo instrument below works anywhere.';
@@ -1355,10 +1397,18 @@ $('send-cc').addEventListener('click', () =>
   sendBytes(ClackMIDI.build.control(channelOut(), clamp(Number($('cc-number').value) || 0, 0, 127), clamp(Number($('cc-value').value) || 0, 0, 127))));
 /* the slider sends as it moves, the way a knob does */
 $('cc-value').addEventListener('input', () => {
+  $('cc-readout').textContent = $('cc-value').value;
   sendBytes(ClackMIDI.build.control(channelOut(), clamp(Number($('cc-number').value) || 0, 0, 127), clamp(Number($('cc-value').value) || 0, 0, 127)), { quiet: true });
 });
-$('bend').addEventListener('input', () => sendBytes(ClackMIDI.build.bend(channelOut(), Number($('bend').value) || 0), { quiet: true }));
-$('bend').addEventListener('change', () => { $('bend').value = 0; sendBytes(ClackMIDI.build.bend(channelOut(), 0), { quiet: true }); });
+$('bend').addEventListener('input', () => {
+  $('bend-readout').textContent = $('bend').value;
+  sendBytes(ClackMIDI.build.bend(channelOut(), Number($('bend').value) || 0), { quiet: true });
+});
+$('bend').addEventListener('change', () => {
+  $('bend').value = 0;
+  $('bend-readout').textContent = '0';
+  sendBytes(ClackMIDI.build.bend(channelOut(), 0), { quiet: true });
+});
 $('send-program').addEventListener('click', () => sendBytes(ClackMIDI.build.program(channelOut(), clamp(Number($('program').value) || 0, 0, 127))));
 $('panic').addEventListener('click', panic);
 
@@ -1438,6 +1488,7 @@ function toggle(key) {
   if (key === 'paused' && !state.paused) renderAll();
   if (key === 'showRaw') renderAll();
   if (key === 'showPlot') requestAnimationFrame(sizePlot);
+  if (key === 'showPlay' && state.showPlay) requestAnimationFrame(fitKeyboard);
   if (key === 'listenAll') { $('listen-all').checked = state.listenAll; bindInputs(); }
   if (key === 'autoscroll') scrollToTail();
   if ((key === 'bridgeOut' || key === 'bridgeIn') && state[key]) {
@@ -1475,7 +1526,7 @@ function resetAll() {
   Object.assign(counters, { in: 0, out: 0, since: 0, notes: 0, byKind: {} });
   Object.assign(state, {
     stamp: 'clock', showTx: true, showRaw: false, showActivity: true, showPlot: false,
-    showSide: true, autoscroll: true, paused: false, listenAll: false, thru: false,
+    showPlay: true, showSide: true, autoscroll: true, paused: false, listenAll: false, thru: false,
     bridgeOut: false, bridgeIn: false,
     kinds: Object.fromEntries(KINDS.map(([id]) => [id, id !== 'clock' && id !== 'sensing'])),
     channels: Array.from({ length: 16 }, () => true)
@@ -1489,6 +1540,7 @@ function resetAll() {
 }
 
 new ResizeObserver(sizePlot).observe($('plot-panel'));
+new ResizeObserver(fitKeyboard).observe($('play'));
 setInterval(syncStats, 250);
 window.addEventListener('pagehide', () => { stopClock?.(); demoStop(true); });
 
