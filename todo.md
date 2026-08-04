@@ -27,7 +27,7 @@
 * Midi controllable, downloadable, mono synth.
 * Waveacity
 * SSTV encoder and decoder
-* Decoders for ClackModem — it encodes fourteen modes, it should read them back
+* Decoders for ClackModem — it encodes fifteen modes, it should read them back
 * Falstad2KiCAD vise versa
 * Falstad2Spice vise versa
 

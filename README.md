@@ -663,11 +663,13 @@ windows, and desktop actions.
   (pitch shifts, like the original), Add Echo, Reverse. Multi-instance.
 - `applications/modem.html` (Applications → Multimedia → ClackModem) — a faux
   modem that turns typed text into real audio modulation, plays it and saves it
-  as a 16-bit mono `.wav`. Fourteen protocols in five families: DTMF and MF R1
+  as a 16-bit mono `.wav`. Fifteen protocols in five families: DTMF and MF R1
   signalling; Bell 202 AFSK (raw async or a genuine AX.25 UI frame, with bit
-  stuffing, NRZI and an X.25 frame check sequence), Bell 103, V.21, V.23, RTTY
-  and Morse; the Kansas City Standard, ZX Spectrum and Commodore 64 cassette
-  formats; SMPTE linear timecode; and PSK31 and Bell 212A/V.22 DQPSK. Every
+  stuffing, NRZI and an X.25 frame check sequence), Bell 103, V.21, V.23, RTTY,
+  Morse and multi-channel CW (a line per channel, each with its own tone, speed
+  and start time, keyed at once and summed); the Kansas City Standard, ZX
+  Spectrum and Commodore 64 cassette formats; SMPTE linear timecode; and PSK31
+  and Bell 212A/V.22 DQPSK. Every
   parameter that defines a mode — baud, mark and space frequencies, pulse
   lengths, callsigns — is editable, and the signal is redrawn as a spectrogram
   and waveform as it changes. Send a signal to Sound Recorder through the shared
@@ -678,7 +680,9 @@ windows, and desktop actions.
   Encoders were verified by writing demodulators for them: the tone modes
   through a Goertzel bank, the FSK modes through a matched-filter detector, the
   tape and timecode formats through edge timing, and the phase modes through a
-  differential slicer. Signals are capped at three minutes.
+  differential slicer; the multi-channel CW mix was read back one channel at a
+  time, each through a filter narrow enough to reject its neighbours. Signals
+  are capped at three minutes.
 - `applications/clacksweeper.html` (Applications → Games → Clacksweeper) — a
   classic minesweeper game with Beginner, Intermediate, Expert and
   custom boards; safe first reveal; flags and question marks; number chording;
