@@ -7,13 +7,13 @@
 <title>ClackTerm — ClackOS</title>
 <!-- crawler metadata — this app is a page in its own right, reachable from the
      plain mirror and linkable on its own, so it says what it is. -->
-<meta name="description" content="A serial and MIDI console in the browser. Connect to a USB serial port or a MIDI device, watch the traffic as text, hex or a decoded protocol — NMEA, Modbus RTU, MIDI, SLIP, COBS, AT commands or GRBL — send text, hex, files and MIDI messages, plot live telemetry, and bridge serial to MIDI.">
+<meta name="description" content="A serial console in the browser. Connect to a USB serial port over Web Serial, watch the traffic as text, hex or a decoded protocol — NMEA 0183, Modbus RTU, MIDI, SLIP, COBS, AT commands or GRBL — send text, hex, macros and files, plot live telemetry, and use it as a terminal for a REPL.">
 <link rel="canonical" href="https://clacktronics.co.uk/content/applications/serial-console.html">
 <meta property="og:site_name" content="Clacktronics">
 <meta property="og:type" content="website">
 <meta property="og:title" content="ClackTerm — ClackOS">
 <meta property="og:url" content="https://clacktronics.co.uk/content/applications/serial-console.html">
-<meta property="og:description" content="A serial and MIDI console in the browser. Connect to a USB serial port or a MIDI device, watch the traffic as text, hex or a decoded protocol, send text, hex, files and MIDI messages, plot live telemetry, and bridge serial to MIDI.">
+<meta property="og:description" content="A serial console in the browser. Connect to a USB serial port over Web Serial, watch the traffic as text, hex or a decoded protocol, send text, hex, macros and files, plot live telemetry, and use it as a terminal for a REPL.">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -94,16 +94,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px
 .macro input { height: 26px; font-size: 10.5px; }
 .macro .btn { padding: 5px 8px; font-size: 10px; }
 .macro select { height: 26px; font-size: 10px; }
-
-/* keyboard */
-.keys { position: relative; height: 62px; margin-top: 6px; user-select: none; touch-action: none; }
-.keys .wh, .keys .bl {
-  position: absolute; top: 0; border: 1px solid var(--ink); box-sizing: border-box; cursor: pointer;
-}
-.keys .wh { height: 100%; background: var(--paper); border-radius: 0 0 3px 3px; }
-.keys .bl { height: 62%; background: var(--ink); border-radius: 0 0 3px 3px; z-index: 2; }
-.keys .wh.down { background: var(--leaf); }
-.keys .bl.down { background: var(--leaf-deep); }
 
 /* ---- main ---- */
 .term-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
@@ -207,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <script src="../../assets/js/app-menu.js" defer></script>
+<script src="../../assets/js/midi-bytes.js"></script>
 <script src="../../assets/js/app-state.js"></script>
 </head>
 <body>
@@ -231,15 +222,15 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" data-cmd="serial-connect"><span class="pixel-icon" data-icon="cpu" aria-hidden="true"></span>Connect a serial port…</button>
         <button type="button" data-cmd="serial-disconnect"><span class="pixel-icon" data-icon="power" aria-hidden="true"></span>Close the serial port</button>
         <div class="sep"></div>
-        <button type="button" data-cmd="midi-connect"><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>Open MIDI</button>
-        <button type="button" data-cmd="midi-disconnect"><span class="pixel-icon" data-icon="power" aria-hidden="true"></span>Close MIDI</button>
-        <div class="sep"></div>
         <button type="button" data-cmd="demo-toggle"><span class="pixel-icon" data-icon="bug" aria-hidden="true"></span>Demo device<span class="mi-check"></span></button>
         <div class="sep"></div>
         <button type="button" data-cmd="dtr"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>DTR<span class="mi-check"></span></button>
         <button type="button" data-cmd="rts"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>RTS<span class="mi-check"></span></button>
         <button type="button" data-cmd="break"><span class="pixel-icon" data-icon="minus-box" aria-hidden="true"></span>Send a break</button>
         <button type="button" data-cmd="pulse-reset"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Pulse DTR (reset the board)</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="toggle" data-value="bridgeOut"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Send DIN MIDI to MIDIterm<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="bridgeIn"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Take MIDI from MIDIterm<span class="mi-check"></span></button>
       </div>
     </div>
     <div class="rm">
@@ -282,19 +273,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="sep"></div>
         <button type="button" data-cmd="ctrl" data-value="3"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>Ctrl-C (0x03)</button>
         <button type="button" data-cmd="ctrl" data-value="4"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>Ctrl-D (0x04)</button>
-      </div>
-    </div>
-    <div class="rm">
-      <button type="button">MIDI</button>
-      <div class="rm-dd">
-        <button type="button" data-cmd="midi-panic"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>All notes off (panic)</button>
-        <button type="button" data-cmd="midi-clock" data-value="start"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Send start + clock</button>
-        <button type="button" data-cmd="midi-clock" data-value="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Send stop</button>
-        <div class="sep"></div>
-        <button type="button" data-cmd="midi-id"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>Ask for identity (SysEx)</button>
-        <div class="sep"></div>
-        <button type="button" data-cmd="toggle" data-value="bridgeSerialToMidi"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Bridge serial → MIDI out<span class="mi-check"></span></button>
-        <button type="button" data-cmd="toggle" data-value="bridgeMidiToSerial"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Bridge MIDI in → serial<span class="mi-check"></span></button>
       </div>
     </div>
     <div class="rm">
@@ -357,24 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
 
       <section class="card">
-        <h2>MIDI<span class="lamp" id="lamp-midi"></span></h2>
-        <div class="field wide">
-          <label for="midi-in">Input</label>
-          <select id="midi-in"><option value="">— none —</option></select>
-        </div>
-        <div class="field wide">
-          <label for="midi-out">Output</label>
-          <select id="midi-out"><option value="">— none —</option></select>
-        </div>
-        <label class="check"><input type="checkbox" id="midi-sysex" checked>Ask for SysEx permission</label>
-        <div class="btn-row">
-          <button type="button" class="btn primary" id="midi-connect">Open MIDI</button>
-          <button type="button" class="btn ghost" id="midi-disconnect" disabled>Close</button>
-        </div>
-        <p class="note" id="midi-note">Web MIDI needs Chrome, Edge or Opera. Ports appear once access is granted.</p>
-      </section>
-
-      <section class="card">
         <h2>Demo device<span class="lamp" id="lamp-demo"></span></h2>
         <div class="field wide">
           <label for="demo-kind">Pretend to be</label>
@@ -388,34 +348,10 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
 
       <section class="card">
-        <h2>MIDI out<span class="lamp" id="lamp-midi-out"></span></h2>
-        <div class="field">
-          <label for="midi-chan">Channel</label>
-          <select id="midi-chan"></select>
-        </div>
-        <div class="field">
-          <label for="midi-vel">Velocity</label>
-          <input type="number" id="midi-vel" value="100" min="1" max="127" step="1">
-        </div>
-        <div class="field">
-          <label for="midi-octave">Keyboard octave</label>
-          <input type="number" id="midi-octave" value="4" min="-1" max="8" step="1">
-        </div>
-        <div class="keys" id="keys" role="group" aria-label="MIDI keyboard"></div>
-        <div class="field">
-          <label for="midi-cc">CC number</label>
-          <input type="number" id="midi-cc" value="1" min="0" max="127" step="1">
-        </div>
-        <div class="field">
-          <label for="midi-ccval">CC value</label>
-          <input type="number" id="midi-ccval" value="64" min="0" max="127" step="1">
-        </div>
-        <div class="btn-row">
-          <button type="button" class="btn ghost" id="send-cc">Send CC</button>
-          <button type="button" class="btn ghost" id="send-pc">Program change</button>
-          <button type="button" class="btn ghost full" id="midi-panic">All notes off</button>
-        </div>
-        <p class="note">Messages go to the MIDI output, and to the serial port too when serial is bridged to MIDI.</p>
+        <h2>MIDIterm bridge<span class="lamp" id="lamp-bridge"></span></h2>
+        <label class="check"><input type="checkbox" id="bridge-out">Send DIN MIDI to MIDIterm</label>
+        <label class="check"><input type="checkbox" id="bridge-in">Take MIDI from MIDIterm</label>
+        <p class="note">DIN MIDI on a UART is still MIDI once something puts it on a port, and MIDIterm is that something. Open it in another window and the bytes off this port play out of a real MIDI output — and what MIDIterm hears comes back down the wire. It never leaves the browser.</p>
       </section>
 
       <section class="card">
@@ -423,10 +359,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="field wide">
           <label for="decode-serial">Serial traffic</label>
           <select id="decode-serial"></select>
-        </div>
-        <div class="field wide">
-          <label for="decode-midi">MIDI traffic</label>
-          <select id="decode-midi"></select>
         </div>
         <div class="field" id="hexwidth-field">
           <label for="hexwidth">Bytes per hex row</label>
@@ -585,61 +517,6 @@ function parseBytes(text) {
 
 const EOL_BYTES = { none: [], lf: [10], cr: [13], crlf: [13, 10] };
 
-/* ---- MIDI vocabulary ------------------------------------------------- */
-
-const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const noteName = note => NOTE_NAMES[note % 12] + (Math.floor(note / 12) - 1);
-const CC_NAMES = {
-  0: 'bank select MSB', 1: 'modulation', 2: 'breath', 4: 'foot', 5: 'portamento time',
-  6: 'data entry MSB', 7: 'volume', 8: 'balance', 10: 'pan', 11: 'expression',
-  32: 'bank select LSB', 64: 'sustain', 65: 'portamento', 66: 'sostenuto', 67: 'soft',
-  71: 'resonance', 72: 'release', 73: 'attack', 74: 'cutoff', 91: 'reverb', 93: 'chorus',
-  120: 'all sound off', 121: 'reset controllers', 122: 'local control',
-  123: 'all notes off', 124: 'omni off', 125: 'omni on', 126: 'mono on', 127: 'poly on'
-};
-const REALTIME = {
-  0xf8: 'clock', 0xfa: 'start', 0xfb: 'continue', 0xfc: 'stop',
-  0xfe: 'active sensing', 0xff: 'system reset'
-};
-const MAKERS = {
-  '00': 'three-byte id', '01': 'Sequential', '3E': 'Waldorf', '40': 'Kawai', '41': 'Roland',
-  '42': 'Korg', '43': 'Yamaha', '44': 'Casio', '47': 'Akai', '7D': 'non-commercial',
-  '7E': 'universal non-realtime', '7F': 'universal realtime'
-};
-
-/* One complete MIDI message in words. */
-function describeMidi(bytes) {
-  const status = bytes[0];
-  if (status === undefined) return { text: '(empty)', cls: 'bad' };
-  if (status >= 0xf8) return { text: REALTIME[status] || `system 0x${hex2(status)}`, cls: 'note' };
-  if (status === 0xf0) {
-    const id = hex2(bytes[1] ?? 0);
-    const maker = MAKERS[id] || `manufacturer 0x${id}`;
-    return { text: `SysEx · ${maker} · ${bytes.length} bytes · ${hexOf(bytes.slice(0, 12))}${bytes.length > 12 ? ' …' : ''}`, cls: 'note' };
-  }
-  if (status === 0xf1) return { text: `MTC quarter frame ${bytes[1] ?? 0}`, cls: 'note' };
-  if (status === 0xf2) return { text: `song position ${(((bytes[2] ?? 0) << 7) | (bytes[1] ?? 0))} beats`, cls: 'note' };
-  if (status === 0xf3) return { text: `song select ${bytes[1] ?? 0}`, cls: 'note' };
-  if (status === 0xf6) return { text: 'tune request', cls: 'note' };
-  const type = status & 0xf0;
-  const channel = (status & 0x0f) + 1;
-  const a = bytes[1] ?? 0;
-  const b = bytes[2] ?? 0;
-  const on = `ch${String(channel).padStart(2, ' ')}`;
-  switch (type) {
-    case 0x80: return { text: `${on}  note off   ${noteName(a)} (${a})  vel ${b}` };
-    case 0x90: return b === 0
-      ? { text: `${on}  note off   ${noteName(a)} (${a})  vel 0` }
-      : { text: `${on}  note on    ${noteName(a)} (${a})  vel ${b}` };
-    case 0xa0: return { text: `${on}  aftertouch ${noteName(a)} (${a})  ${b}` };
-    case 0xb0: return { text: `${on}  control    ${a}${CC_NAMES[a] ? ' ' + CC_NAMES[a] : ''} = ${b}` };
-    case 0xc0: return { text: `${on}  program    ${a}` };
-    case 0xd0: return { text: `${on}  channel pressure ${a}` };
-    case 0xe0: return { text: `${on}  pitch bend ${((b << 7) | a) - 8192}` };
-    default: return { text: `0x${hex2(status)} ${hexOf(bytes.slice(1))}`, cls: 'bad' };
-  }
-}
-
 /* ---- state ----------------------------------------------------------- */
 
 const MAX_ROWS = 4000;
@@ -657,8 +534,8 @@ const state = {
   showSide: true,
   interactive: false,
   repeat: false,
-  bridgeSerialToMidi: false,
-  bridgeMidiToSerial: false
+  bridgeOut: false,
+  bridgeIn: false
 };
 
 const counters = { rx: 0, tx: 0, errors: 0, since: 0, window: [] };
@@ -771,14 +648,13 @@ function sys(text, cls) {
 
 /* Three ways to reach a device, all shaped the same so the console, the
  * sender, the decoders and the bridge never care which one they are talking
- * to: a real serial port, a MIDI port pair, and a simulated device. */
+ * to: a real serial port and a simulated device. */
 function makeLink(id, tag) {
   return { id, tag, open: false, dec: {}, decoder: null, idleTimer: 0, live: null, rxBytes: 0, txBytes: 0 };
 }
 
 const links = {
   serial: makeLink('serial', 'serial'),
-  midi: makeLink('midi', 'midi'),
   demo: makeLink('demo', 'demo')
 };
 
@@ -1023,44 +899,14 @@ const DECODERS = {
 
   midi: {
     label: 'MIDI bytes',
-    note: 'A running-status MIDI parser, for a MIDI port or for DIN MIDI arriving on a UART at 31250 baud.',
+    note: 'DIN MIDI arriving on a UART at 31250 baud, read by the parser MIDIterm uses — running status, SysEx and all. Bridge it to MIDIterm to put it on a real MIDI port.',
     feed(link, bytes) {
       const d = link.dec;
-      if (!d.msg) { d.msg = []; d.status = 0; d.sysex = null; }
-      for (const byte of bytes) {
-        if (byte >= 0xf8) { this.done(link, [byte]); continue; }      /* realtime cuts in anywhere */
-        if (d.sysex) {
-          d.sysex.push(byte);
-          if (byte === 0xf7) { this.done(link, d.sysex); d.sysex = null; }
-          else if (d.sysex.length > 4096) { d.sysex = null; counters.errors++; }
-          continue;
-        }
-        if (byte === 0xf0) { d.sysex = [byte]; continue; }
-        if (byte & 0x80) {
-          d.status = byte < 0xf0 ? byte : 0;                          /* system messages clear it */
-          d.msg = [byte];
-          if (this.wants(byte) === 0) { this.done(link, d.msg); d.msg = []; }
-          continue;
-        }
-        if (!d.msg.length) {
-          if (!d.status) continue;                                    /* data with nothing to belong to */
-          d.msg = [d.status];
-        }
-        d.msg.push(byte);
-        if (d.msg.length > this.wants(d.msg[0])) { this.done(link, d.msg); d.msg = []; }
+      if (!d.split) d.split = ClackMIDI.splitter();
+      for (const message of d.split(bytes)) {
+        const desc = ClackMIDI.describe(message);
+        emit(link, desc.text, { dir: 'rx', cls: desc.cls || '', raw: message });
       }
-    },
-    wants(status) {
-      if (status >= 0xf4) return 0;
-      if (status === 0xf1 || status === 0xf3) return 1;
-      if (status === 0xf2) return 2;
-      const type = status & 0xf0;
-      return type === 0xc0 || type === 0xd0 ? 1 : 2;
-    },
-    done(link, bytes) {
-      const array = Uint8Array.from(bytes);
-      const desc = describeMidi(array);
-      emit(link, desc.text, { dir: 'rx', cls: desc.cls || '', raw: array });
     },
     flush() {}
   },
@@ -1247,11 +1093,9 @@ function asciiBits(data) {
 }
 
 const SERIAL_DECODERS = ['text', 'hex', 'nmea', 'modbus', 'midi', 'slip', 'cobs', 'at', 'grbl', 'telemetry'];
-const MIDI_DECODERS = ['midi', 'hex', 'text'];
 
-function decoderFor(link) {
-  const id = link.id === 'midi' ? $('decode-midi').value : $('decode-serial').value;
-  return DECODERS[id] || DECODERS.text;
+function decoderFor() {
+  return DECODERS[$('decode-serial').value] || DECODERS.text;
 }
 
 function resetDecoder(link) {
@@ -1281,17 +1125,14 @@ function onRx(link, bytes) {
     try { decoder.flush(link); } catch { /* a half frame is not worth a row */ }
   }, clamp(Number($('idle').value) || 12, 1, 2000));
 
-  /* The bridge works on the bytes themselves rather than on whatever the
-   * decoder made of them, so it carries DIN MIDI between a UART and a MIDI
-   * port no matter which decoder is on show. */
-  if (link.id === 'serial' && state.bridgeSerialToMidi) sendTo('midi', bytes, { quiet: true });
-  if (link.id === 'midi' && state.bridgeMidiToSerial) sendTo('serial', bytes, { quiet: true });
+  /* the bridge carries the bytes themselves, whatever the decoder happens to
+   * be making of them on screen */
+  if (link.id !== 'midi') bridgeSend(bytes);
 }
 
 /* ---- transports ------------------------------------------------------ */
 
 const serialSupported = 'serial' in navigator;
-const midiSupported = typeof navigator.requestMIDIAccess === 'function';
 
 async function serialConnect() {
   if (!serialSupported) { sys('this browser has no Web Serial — try Chrome, Edge or Opera, or start the demo device', 'bad'); return; }
@@ -1408,61 +1249,27 @@ async function setSignals() {
   }
 }
 
-/* MIDI ------------------------------------------------------------------ */
+/* MIDIterm bridge -------------------------------------------------------- */
 
-let midiAccess = null;
+/* The two apps pass MIDI bytes over a BroadcastChannel, so a DIN adapter on a
+ * UART reaches a real MIDI port without either app taking on the other's job.
+ * Same browser, same origin, no server. */
+const bridge = 'BroadcastChannel' in window ? new BroadcastChannel('clackos-midi-bridge') : null;
+let bridgeSeen = 0;
 
-async function midiConnect() {
-  if (!midiSupported) { sys('this browser has no Web MIDI — try Chrome, Edge or Opera', 'bad'); return; }
-  try {
-    midiAccess = await navigator.requestMIDIAccess({ sysex: $('midi-sysex').checked });
-  } catch (error) {
-    sys(`MIDI access was refused: ${error.message}`, 'bad');
-    return;
-  }
-  midiAccess.onstatechange = event => {
-    fillMidiPorts();
-    if (event.port) sys(`MIDI ${event.port.type} "${event.port.name}" ${event.port.state}`, 'note');
-  };
-  fillMidiPorts();
-  bindMidiInput();
-  links.midi.open = true;
-  counters.since = counters.since || performance.now();
-  const ins = [...midiAccess.inputs.values()].length;
-  const outs = [...midiAccess.outputs.values()].length;
-  sys(`MIDI open — ${ins} input${ins === 1 ? '' : 's'}, ${outs} output${outs === 1 ? '' : 's'}${$('midi-sysex').checked ? ', SysEx allowed' : ''}`, 'note');
-  syncChrome();
-}
+if (bridge) bridge.onmessage = event => {
+  const message = event.data;
+  if (!message || message.from !== 'miditerm' || !Array.isArray(message.bytes)) return;
+  bridgeSeen = performance.now();
+  if (!state.bridgeIn) return;
+  /* out of whatever is open — the serial port normally, the demo device when
+   * that is what is standing in for one */
+  sendTo('all', Uint8Array.from(message.bytes), { quiet: true });
+};
 
-function fillMidiPorts() {
-  if (!midiAccess) return;
-  for (const [id, ports] of [['midi-in', midiAccess.inputs], ['midi-out', midiAccess.outputs]]) {
-    const select = $(id);
-    const chosen = select.value;
-    select.textContent = '';
-    select.appendChild(new Option('— none —', ''));
-    for (const port of ports.values()) select.appendChild(new Option(port.name || port.id, port.id));
-    if ([...select.options].some(option => option.value === chosen)) select.value = chosen;
-    else if (select.options.length > 1) select.selectedIndex = 1;
-  }
-  bindMidiInput();
-}
-
-function bindMidiInput() {
-  if (!midiAccess) return;
-  for (const input of midiAccess.inputs.values()) input.onmidimessage = null;
-  const input = midiAccess.inputs.get($('midi-in').value);
-  if (!input) return;
-  /* a MIDI port hands over whole messages; they go through the same path as
-   * serial bytes so the decoders, the counters and the bridge stay in one place */
-  input.onmidimessage = event => onRx(links.midi, event.data);
-}
-
-function midiDisconnect() {
-  if (midiAccess) for (const input of midiAccess.inputs.values()) input.onmidimessage = null;
-  links.midi.open = false;
-  sys('MIDI closed', 'note');
-  syncChrome();
+function bridgeSend(bytes) {
+  if (!bridge || !state.bridgeOut || !bytes.length) return;
+  bridge.postMessage({ from: 'clackterm', bytes: Array.from(bytes) });
 }
 
 /* Demo device ----------------------------------------------------------- */
@@ -1685,7 +1492,7 @@ function connectedTargets() {
 async function sendTo(target, bytes, options = {}) {
   const list = (target === 'all' ? connectedTargets() : [target]).filter(id => links[id]?.open);
   if (!list.length) {
-    if (!options.quiet) sys('nothing is connected — open a port, MIDI, or start the demo device', 'bad');
+    if (!options.quiet) sys('nothing is connected — open a serial port, or start the demo device', 'bad');
     return false;
   }
   /* the echo goes in before the bytes go out: a device that answers straight
@@ -1701,7 +1508,6 @@ async function sendTo(target, bytes, options = {}) {
     const link = links[id];
     try {
       if (id === 'serial') await link.writer.write(bytes);
-      else if (id === 'midi') sendMidiBytes(bytes);
       else demoReceive(bytes);
       sent = true;
       counters.tx += bytes.length;
@@ -1712,28 +1518,6 @@ async function sendTo(target, bytes, options = {}) {
     }
   }
   return sent;
-}
-
-/* The MIDI output takes messages, not a byte stream, so a run of bytes is cut
- * into messages before it goes out — that is what makes the serial → MIDI
- * bridge work with a DIN adapter on the other end. */
-const outgoingMidi = (() => {
-  /* one long-lived parser, so a message split across two writes — or running
-   * status carried between them — still comes out whole */
-  const splitLink = { dec: {} };
-  let caught = [];
-  const sink = { wants: DECODERS.midi.wants, done: (_link, message) => caught.push(Uint8Array.from(message)) };
-  return bytes => {
-    caught = [];
-    DECODERS.midi.feed.call(sink, splitLink, bytes);
-    return caught;
-  };
-})();
-
-function sendMidiBytes(bytes) {
-  const output = midiAccess?.outputs.get($('midi-out').value);
-  if (!output) throw new Error('no MIDI output is chosen');
-  for (const message of outgoingMidi(bytes)) output.send(message);
 }
 
 function sendCurrentLine() {
@@ -1806,70 +1590,6 @@ async function sendFile(file) {
     await new Promise(resolve => setTimeout(resolve, 4));
   }
   sys(`${file.name} sent`, 'note');
-}
-
-/* ---- MIDI out panel --------------------------------------------------- */
-
-const midiChannel = () => Number($('midi-chan').value) - 1;
-
-function midiOut(bytes) {
-  const array = Uint8Array.from(bytes);
-  const targets = links.midi.open ? ['midi'] : [];
-  if (state.bridgeSerialToMidi && links.serial.open) targets.push('serial');
-  if (!targets.length && links.demo.open) targets.push('demo');
-  if (!targets.length) { sys('no MIDI output — open MIDI, or bridge serial to MIDI', 'bad'); return; }
-  if (state.showTx) {
-    const desc = describeMidi(array);
-    emit(links.midi, desc.text, { dir: 'tx', raw: array, tag: '▶ ' + targets.join('+') });
-  }
-  for (const target of targets) sendTo(target, array, { quiet: true });
-}
-
-function buildKeyboard() {
-  const keys = $('keys');
-  keys.textContent = '';
-  const pattern = [0, 2, 4, 5, 7, 9, 11];
-  const whites = 15;                                   /* just over two octaves */
-  const width = 100 / whites;
-  for (let i = 0; i < whites; i++) {
-    const key = document.createElement('div');
-    key.className = 'wh';
-    key.style.left = (i * width) + '%';
-    key.style.width = width + '%';
-    key.dataset.semitone = String(Math.floor(i / 7) * 12 + pattern[i % 7]);
-    keys.appendChild(key);
-  }
-  for (let i = 0; i < whites - 1; i++) {
-    if ([2, 6].includes(i % 7)) continue;              /* no black key at E–F or B–C */
-    const key = document.createElement('div');
-    key.className = 'bl';
-    key.style.left = ((i + 1) * width - width * 0.3) + '%';
-    key.style.width = (width * 0.6) + '%';
-    key.dataset.semitone = String(Math.floor(i / 7) * 12 + pattern[i % 7] + 1);
-    keys.appendChild(key);
-  }
-  const noteOf = target => (clamp(Number($('midi-octave').value) || 4, -1, 8) + 1) * 12 + Number(target.dataset.semitone);
-  let held = null;
-  const release = () => {
-    if (!held) return;
-    midiOut([0x80 | midiChannel(), held.note, 0]);
-    held.el.classList.remove('down');
-    held = null;
-  };
-  keys.addEventListener('pointerdown', event => {
-    const key = event.target.closest('[data-semitone]');
-    if (!key) return;
-    event.preventDefault();
-    release();
-    const note = clamp(noteOf(key), 0, 127);
-    held = { note, el: key };
-    key.classList.add('down');
-    midiOut([0x90 | midiChannel(), note, clamp(Number($('midi-vel').value) || 100, 1, 127)]);
-    keys.setPointerCapture?.(event.pointerId);
-  });
-  keys.addEventListener('pointerup', release);
-  keys.addEventListener('pointercancel', release);
-  keys.addEventListener('pointerleave', release);
 }
 
 /* ---- plotter ---------------------------------------------------------- */
@@ -1997,17 +1717,14 @@ function drawPlot() {
 function syncChrome() {
   const anyOpen = connectedTargets();
   $('lamp-serial').className = 'lamp' + (links.serial.open ? ' on' : '');
-  $('lamp-midi').className = 'lamp' + (links.midi.open ? ' on' : '');
   $('lamp-demo').className = 'lamp' + (links.demo.open ? ' on' : '');
-  $('lamp-midi-out').className = 'lamp' + (midiAccess?.outputs.get($('midi-out').value) ? ' on' : '');
+  $('lamp-bridge').className = 'lamp' + (bridge && (state.bridgeOut || state.bridgeIn) ? ' on' : '');
   $('pill-lamp').className = 'lamp' + (anyOpen.length ? ' on' : '');
   $('pill-state').textContent = anyOpen.length
     ? anyOpen.map(id => id === 'serial' ? `serial ${baudRate()}` : id).join(' + ')
     : 'Not connected';
   $('serial-connect').disabled = links.serial.open || !serialSupported;
   $('serial-disconnect').disabled = !links.serial.open;
-  $('midi-connect').disabled = links.midi.open || !midiSupported;
-  $('midi-disconnect').disabled = !links.midi.open;
   $('demo-start').disabled = links.demo.open;
   $('demo-stop').disabled = !links.demo.open;
 
@@ -2016,7 +1733,7 @@ function syncChrome() {
   target.textContent = '';
   /* somewhere to send is always offered, even with nothing open, so the box
    * reads the same before and after connecting */
-  for (const [value, label] of [['serial', 'To serial'], ['midi', 'To MIDI'], ['demo', 'To demo']])
+  for (const [value, label] of [['serial', 'To serial'], ['demo', 'To demo']])
     if (links[value].open || (!anyOpen.length && value === 'serial')) target.appendChild(new Option(label, value));
   if (anyOpen.length > 1) target.appendChild(new Option('To all', 'all'));
   target.value = [...target.options].some(option => option.value === chosen) ? chosen : target.options[0].value;
@@ -2027,7 +1744,7 @@ function syncChrome() {
   $('plot-panel').hidden = !state.showPlot;
   $('side').hidden = !state.showSide;
   $('baud-custom-field').classList.toggle('hidden', $('baud').value !== 'custom');
-  $('hexwidth-field').classList.toggle('hidden', $('decode-serial').value !== 'hex' && $('decode-midi').value !== 'hex');
+  $('hexwidth-field').classList.toggle('hidden', $('decode-serial').value !== 'hex');
   $('idle-field').classList.toggle('hidden', !['hex', 'modbus'].includes($('decode-serial').value));
   $('decode-note').innerHTML = DECODERS[$('decode-serial').value]?.note || '';
   $('send-hint').textContent = $('send-mode').value === 'hex'
@@ -2037,8 +1754,6 @@ function syncChrome() {
   $('repeat').checked = state.repeat;
   $('serial-note').classList.toggle('warn', !serialSupported);
   if (!serialSupported) $('serial-note').textContent = 'This browser has no Web Serial. Chrome, Edge and Opera have it over HTTPS; meanwhile the demo device below drives everything else.';
-  $('midi-note').classList.toggle('warn', !midiSupported);
-  if (!midiSupported) $('midi-note').textContent = 'This browser has no Web MIDI. Chrome, Edge and Opera have it.';
 
   for (const item of document.querySelectorAll('[data-cmd] .mi-check')) {
     const button = item.closest('[data-cmd]');
@@ -2172,31 +1887,29 @@ function sendMacro(index) {
 
 function showHelp() {
   const lines = [
-    'ClackTerm — a serial and MIDI console.',
+    'ClackTerm — a serial console.',
     '',
-    'Links     A USB serial port (Web Serial), a MIDI in/out pair (Web MIDI), and a',
-    '          simulated device. All three can be open at once, and every row in the',
-    '          console says which one it came from.',
+    'Links     A USB serial port (Web Serial) and a simulated device, which can',
+    '          both be open at once; every row says which one it came from.',
     'Interpret Plain text, hex dump, NMEA 0183, Modbus RTU, MIDI bytes, SLIP, COBS,',
     '          AT commands, G-code/GRBL, and telemetry that feeds the plotter.',
     'Send      Text with the line ending of your choice, or bytes in hex — 1B 5B 41,',
     '          0x0D, "text\\r\\n" all read the same. Macros are down the side, files go',
     '          out through File → Send a file, and Send → keystrokes straight out',
     '          turns the console into a terminal for a REPL or a shell.',
-    'MIDI      The keyboard, CC and program change go to the MIDI output; with',
-    '          MIDI → bridge serial to MIDI they go out of the serial port as well,',
-    '          which is what a DIN adapter on a UART wants.',
-    'Files     The console, the raw received bytes and the plotted numbers all save.',
-    '',
-    'Serial lines: DTR and RTS are yours to set, CTS/DSR/DCD/RI are shown as they',
-    'arrive, and Link → Pulse DTR does the reset an Arduino expects.'
+    'Lines     DTR and RTS are yours to set, CTS/DSR/DCD/RI are shown as they',
+    '          arrive, and Link → Pulse DTR does the reset an Arduino expects.',
+    'Bridge    DIN MIDI on this port can be handed to MIDIterm in another window,',
+    '          which puts it on a real MIDI output — and brings MIDI back the',
+    '          other way. Interpret it as MIDI bytes to read it here as well.',
+    'Files     The console, the raw received bytes and the plotted numbers all save.'
   ];
   for (const line of lines) sys(line || ' ', 'sys');
 }
 
 function showSupport() {
-  sys(`Web Serial: ${serialSupported ? 'yes' : 'no'} · Web MIDI: ${midiSupported ? 'yes' : 'no'} · secure context: ${window.isSecureContext ? 'yes' : 'no'}`, 'note');
-  if (!serialSupported || !midiSupported) sys('Chrome, Edge and Opera have both. Firefox and Safari have neither — the demo device works everywhere.', 'note');
+  sys(`Web Serial: ${serialSupported ? 'yes' : 'no'} · secure context: ${window.isSecureContext ? 'yes' : 'no'} · MIDIterm bridge: ${bridge ? 'yes' : 'no'}`, 'note');
+  if (!serialSupported) sys('Chrome, Edge and Opera have Web Serial; Firefox and Safari do not — the demo device works everywhere.', 'note');
 }
 
 /* ---- wiring ----------------------------------------------------------- */
@@ -2207,28 +1920,20 @@ function fillSelect(select, ids) {
 }
 
 fillSelect($('decode-serial'), SERIAL_DECODERS);
-fillSelect($('decode-midi'), MIDI_DECODERS);
 $('menu-decode').innerHTML = SERIAL_DECODERS.map(id =>
   `<button type="button" data-cmd="decode" data-value="${id}"><span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span>${esc(DECODERS[id].label)}<span class="mi-check"></span></button>`).join('');
 for (const [id, device] of Object.entries(DEMOS)) $('demo-kind').appendChild(new Option(device.label, id));
-for (let channel = 1; channel <= 16; channel++) $('midi-chan').appendChild(new Option('Channel ' + channel, String(channel)));
-buildKeyboard();
 buildMacros();
 
 $('serial-connect').addEventListener('click', serialConnect);
 $('serial-disconnect').addEventListener('click', () => serialDisconnect());
-$('midi-connect').addEventListener('click', midiConnect);
-$('midi-disconnect').addEventListener('click', midiDisconnect);
 $('demo-start').addEventListener('click', demoStart);
 $('demo-stop').addEventListener('click', () => demoStop());
-$('midi-in').addEventListener('change', bindMidiInput);
-$('midi-out').addEventListener('change', syncChrome);
 $('dtr').addEventListener('change', () => { setSignals(); syncChrome(); });
 $('rts').addEventListener('change', () => { setSignals(); syncChrome(); });
 $('baud').addEventListener('change', syncChrome);
 
 $('decode-serial').addEventListener('change', () => { resetDecoder(links.serial); resetDecoder(links.demo); syncChrome(); });
-$('decode-midi').addEventListener('change', () => { resetDecoder(links.midi); syncChrome(); });
 
 $('send').addEventListener('click', sendCurrentLine);
 $('send-mode').addEventListener('change', syncChrome);
@@ -2247,11 +1952,11 @@ $('plot-legend').addEventListener('click', event => {
   drawLegend();
   drawPlot();
 });
-$('midi-panic').addEventListener('click', () => {
-  for (let channel = 0; channel < 16; channel++) midiOut([0xb0 | channel, 123, 0]);
+for (const id of ['bridge-out', 'bridge-in']) $(id).addEventListener('change', () => {
+  state.bridgeOut = $('bridge-out').checked;
+  state.bridgeIn = $('bridge-in').checked;
+  syncChrome();
 });
-$('send-cc').addEventListener('click', () => midiOut([0xb0 | midiChannel(), clamp(Number($('midi-cc').value) || 0, 0, 127), clamp(Number($('midi-ccval').value) || 0, 0, 127)]));
-$('send-pc').addEventListener('click', () => midiOut([0xc0 | midiChannel(), clamp(Number($('midi-cc').value) || 0, 0, 127)]));
 
 $('macros').addEventListener('click', event => {
   const button = event.target.closest('[data-macro]');
@@ -2318,8 +2023,6 @@ document.addEventListener('term-command', event => {
     case 'reset': resetAll(); break;
     case 'serial-connect': serialConnect(); break;
     case 'serial-disconnect': serialDisconnect(); break;
-    case 'midi-connect': midiConnect(); break;
-    case 'midi-disconnect': midiDisconnect(); break;
     case 'demo-toggle': links.demo.open ? demoStop() : demoStart(); break;
     case 'dtr': $('dtr').checked = !$('dtr').checked; setSignals(); break;
     case 'rts': $('rts').checked = !$('rts').checked; setSignals(); break;
@@ -2331,9 +2034,6 @@ document.addEventListener('term-command', event => {
     case 'send-mode': $('send-mode').value = value; break;
     case 'eol': $('eol').value = value; break;
     case 'ctrl': sendTo($('target').value, Uint8Array.from([Number(value)]), { hex: true }); break;
-    case 'midi-panic': for (let channel = 0; channel < 16; channel++) midiOut([0xb0 | channel, 123, 0]); break;
-    case 'midi-clock': midiClock(value); break;
-    case 'midi-id': midiOut([0xf0, 0x7e, 0x7f, 0x06, 0x01, 0xf7]); break;
     case 'help': showHelp(); break;
     case 'support': showSupport(); break;
   }
@@ -2348,18 +2048,13 @@ function toggle(key) {
   if (key === 'repeat') { $('repeat').checked = state.repeat; syncRepeat(); }
   if (key === 'showPlot') requestAnimationFrame(sizePlot);
   if (key === 'autoscroll') scrollToTail();
-  if ((key === 'bridgeSerialToMidi' || key === 'bridgeMidiToSerial') && state[key])
-    sys('bridging works on decoded MIDI messages — set the traffic being bridged to "MIDI bytes"', 'note');
+  if (key === 'bridgeOut' || key === 'bridgeIn') {
+    $('bridge-out').checked = state.bridgeOut;
+    $('bridge-in').checked = state.bridgeIn;
+    if (state[key] && !bridge) sys('this browser has no BroadcastChannel, so the MIDIterm bridge cannot run', 'bad');
+    else if (state[key]) sys('bridging with MIDIterm — open it from Applications → Multimedia and turn its side of the bridge on', 'note');
+  }
   syncChrome();
-}
-
-let clockTimer = 0;
-function midiClock(action) {
-  clearInterval(clockTimer);
-  if (action === 'stop') { midiOut([0xfc]); return; }
-  midiOut([0xfa]);
-  clockTimer = setInterval(() => midiOut([0xf8]), 20.833);      /* 120 bpm, 24 per beat */
-  sys('sending MIDI clock at 120 bpm — MIDI → Send stop ends it', 'note');
 }
 
 async function sendBreak() {
@@ -2391,7 +2086,6 @@ async function pulseReset() {
 function resetAll() {
   demoStop(true);
   serialDisconnect('quiet').catch(() => {});
-  midiDisconnect();
   log.length = 0;
   consoleEl.textContent = '';
   series.clear();
@@ -2403,10 +2097,9 @@ function resetAll() {
   Object.assign(state, {
     stamp: 'clock', showTx: true, showRaw: false, showTags: true, wrap: false,
     autoscroll: true, paused: false, showPlot: false, showSide: true,
-    interactive: false, repeat: false, bridgeSerialToMidi: false, bridgeMidiToSerial: false
+    interactive: false, repeat: false, bridgeOut: false, bridgeIn: false
   });
   $('decode-serial').value = 'text';
-  $('decode-midi').value = 'midi';
   $('line').value = '';
   $('find').value = '';
   filterRe = null;
@@ -2448,8 +2141,8 @@ ClackOSAppState.connect({
 
 syncChrome();
 syncStats();
-sys('ClackTerm ready. Connect a serial port or MIDI from the Link menu — or start the demo device to try it without hardware. Help → Quick reference explains the rest.', 'note');
-if (!serialSupported && !midiSupported) sys('this browser has neither Web Serial nor Web MIDI, so only the demo device will do anything', 'bad');
+sys('ClackTerm ready. Connect a serial port from the Link menu — or start the demo device to try it without hardware. Help → Quick reference explains the rest.', 'note');
+if (!serialSupported) sys('this browser has no Web Serial, so only the demo device will do anything here', 'bad');
 })();
 </script>
 </body>
