@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>MIDIterm — ClackOS</title>
+<!-- crawler metadata — this app is a page in its own right, reachable from the
+     plain mirror and linkable on its own, so it says what it is. -->
+<meta name="description" content="A MIDI monitor and console in the browser. Watch every message from a MIDI device decoded in plain words, filter by channel and message type, see held notes on a keyboard, plot controllers, read the incoming clock as a tempo, send notes, CC, program changes, pitch bend and SysEx, and save or load .syx dumps.">
+<link rel="canonical" href="https://clacktronics.co.uk/content/applications/midi-console.html">
+<meta property="og:site_name" content="Clacktronics">
+<meta property="og:type" content="website">
+<meta property="og:title" content="MIDIterm — ClackOS">
+<meta property="og:url" content="https://clacktronics.co.uk/content/applications/midi-console.html">
+<meta property="og:description" content="A MIDI monitor and console in the browser. Decode every message, filter by channel and type, plot controllers, read the clock as a tempo, send notes, CC, bend and SysEx, and save or load .syx dumps.">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+:root {
+  --rx: #14231a;
+  --tx: #276b47;
+  --sys: #66755a;
+  --bad: #a53628;
+  --note: #3f66ad;
+}
+html, body, .midi-app { height: 100%; min-height: 0; }
+body { overflow: hidden; }
+button, input, select, textarea { font: inherit; }
+.midi-app { display: flex; flex-direction: column; }
+.rm-dd .mi-check { margin-left: auto; padding-left: 18px; color: var(--leaf-deep); }
+.rm-dd button:hover .mi-check { color: var(--menu-text); }
+
+.midi-work { display: flex; flex: 1; min-height: 0; }
+
+/* ---- side panel ---- */
+.midi-side {
+  width: 296px; flex: none; min-height: 0; overflow-y: auto; padding: 9px;
+  border-right: 1px solid var(--ink); background: var(--paper-deep); scrollbar-width: thin;
+}
+.midi-side[hidden] { display: none; }
+.card {
+  border: 1px solid var(--paper-line); border-radius: 6px;
+  background: var(--paper); padding: 9px; margin-bottom: 8px;
+}
+.card > h2 {
+  display: flex; align-items: center; gap: 6px; margin: 0 0 8px;
+  color: var(--leaf-deep); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.card > h2 .lamp { margin-left: auto; }
+.lamp {
+  width: 9px; height: 9px; flex: none; border-radius: 50%;
+  border: 1px solid var(--ink); background: var(--paper-deep);
+}
+.lamp.on { background: var(--leaf); }
+.lamp.busy { background: #d8a33c; }
+.lamp.err { background: var(--bad); }
+
+.field { display: grid; grid-template-columns: minmax(0, 1fr) 132px; align-items: center; gap: 8px; margin: 6px 0; }
+.field > label { font-size: 11px; line-height: 1.25; }
+.field.wide { grid-template-columns: minmax(0, 1fr); }
+.field.hidden { display: none; }
+input[type="number"], input[type="text"], select, textarea {
+  width: 100%; min-width: 0; height: 28px; padding: 4px 7px;
+  border: 1px solid var(--ink); border-radius: 5px;
+  background: var(--paper-deep); color: var(--control-text); font-size: 11px;
+}
+textarea { height: auto; resize: vertical; line-height: 1.45; font-size: 10.5px; }
+input[type="range"] { height: auto; padding: 0; border: 0; background: none; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.check { display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; margin: 6px 0; }
+.check input { accent-color: var(--leaf-deep); width: auto; height: auto; }
+.note { font-size: 9.5px; color: var(--sage); line-height: 1.5; margin-top: 6px; }
+.note.warn { color: var(--bad); }
+
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.btn-row .btn { padding: 7px 6px; text-align: center; font-size: 10.5px; }
+.btn-row .btn.full { grid-column: 1 / -1; }
+.btn:disabled { color: var(--disabled-text); border-color: var(--paper-line); cursor: default; background: var(--paper-deep); }
+.btn.primary:disabled { background: var(--paper-deep); }
+
+.stat-list { display: grid; gap: 3px; font-size: 10.5px; }
+.stat { display: flex; justify-content: space-between; gap: 10px; }
+.stat span:last-child { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* channel grid, used by the filter and the activity strip */
+.chan-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+.chan-btn {
+  all: unset; box-sizing: border-box; cursor: pointer; text-align: center;
+  padding: 4px 0; border: 1px solid var(--ink); border-radius: 4px;
+  font-size: 10px; color: var(--control-text); font-variant-numeric: tabular-nums;
+}
+.chan-btn[aria-pressed="true"] { background: var(--ink); color: var(--button-text); }
+.chan-btn:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+
+.kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
+.kinds .check { margin: 2px 0; font-size: 10.5px; }
+
+/* ---- keyboard ---- */
+.keys { position: relative; height: 74px; margin-top: 6px; user-select: none; touch-action: none; }
+.keys .wh, .keys .bl {
+  position: absolute; top: 0; border: 1px solid var(--ink); box-sizing: border-box; cursor: pointer;
+}
+.keys .wh { height: 100%; background: var(--paper); border-radius: 0 0 3px 3px; }
+.keys .bl { height: 62%; background: var(--ink); border-radius: 0 0 3px 3px; z-index: 2; }
+.keys .wh.down { background: var(--leaf); }
+.keys .bl.down { background: var(--leaf-deep); }
+.keys .wh.held { background: var(--note); }
+.keys .bl.held { background: var(--note); }
+
+/* ---- main ---- */
+.midi-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.midi-bar {
+  flex: none; display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 5px 9px; border-bottom: 1px solid var(--paper-line); background: var(--paper-deep);
+  font-size: 10px; color: var(--sage);
+}
+.pill {
+  display: flex; align-items: center; gap: 5px; padding: 3px 7px;
+  border: 1px solid var(--paper-line); border-radius: 999px; background: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+.pill b { font-weight: 500; color: var(--ink); }
+.midi-bar .grow { flex: 1; min-width: 0; }
+.midi-bar input[type="text"] { height: 24px; width: 150px; font-size: 10.5px; }
+.midi-bar .btn { padding: 4px 9px; font-size: 10px; }
+
+/* activity: one lane per channel, lit by what arrives on it */
+.activity { flex: none; display: flex; gap: 2px; padding: 4px 9px; border-bottom: 1px solid var(--paper-line); background: var(--paper); }
+.activity[hidden] { display: none; }
+.lane {
+  flex: 1; min-width: 0; border: 1px solid var(--paper-line); border-radius: 3px;
+  padding: 2px 3px; font-size: 9px; color: var(--sage); text-align: center; line-height: 1.35;
+  background: var(--paper-deep); overflow: hidden; white-space: nowrap;
+}
+.lane b { display: block; color: var(--ink); font-weight: 500; }
+.lane.lit { background: var(--leaf); color: var(--ink); border-color: var(--ink); }
+.lane.lit b { color: var(--ink); }
+.lane.muted { opacity: 0.35; }
+
+.midi-console {
+  flex: 1; min-height: 0; overflow: auto; padding: 6px 0 10px;
+  background: var(--paper); font-size: 11.5px; line-height: 1.5;
+  font-variant-numeric: tabular-nums; scrollbar-width: thin;
+}
+.midi-console:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+.ln { display: flex; gap: 8px; padding: 0 10px; white-space: pre; color: var(--rx); }
+.ln:hover { background: var(--paper-deep); }
+.ln .ts { flex: none; color: var(--sage); font-size: 10px; padding-top: 1px; }
+.ln .tag { flex: none; width: 46px; color: var(--sage); font-size: 10px; padding-top: 1px; text-align: right; }
+.ln .body { min-width: 0; }
+.ln .body mark { background: var(--leaf); color: var(--ink); }
+.ln .raw { display: block; color: var(--sage); font-size: 10px; }
+.ln.tx { color: var(--tx); }
+.ln.sys { color: var(--sys); font-style: italic; }
+.ln.bad { color: var(--bad); }
+.ln.note { color: var(--note); }
+.ln.msg .body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.midi-console.hide-ts .ts { display: none; }
+
+/* ---- plotter ---- */
+.midi-plot { flex: none; height: 176px; border-top: 1px solid var(--ink); background: var(--paper-deep); display: flex; flex-direction: column; }
+.midi-plot[hidden] { display: none; }
+.plot-head { display: flex; align-items: center; gap: 8px; padding: 4px 9px; border-bottom: 1px solid var(--paper-line); font-size: 10px; color: var(--sage); }
+.plot-head .legend { display: flex; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
+.plot-head .legend span { display: flex; align-items: center; gap: 4px; }
+.plot-head .legend i { width: 9px; height: 3px; display: block; }
+.plot-head .btn { padding: 3px 8px; font-size: 10px; }
+.midi-plot canvas { display: block; flex: 1; min-height: 0; width: 100%; }
+
+/* ---- send bar ---- */
+.midi-send {
+  flex: none; border-top: 1px solid var(--ink); background: var(--paper-deep); padding: 7px 9px;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.midi-send select { width: auto; min-width: 92px; height: 28px; font-size: 10.5px; }
+.midi-send input[type="text"] { flex: 1; min-width: 120px; }
+.midi-send .btn { padding: 6px 12px; font-size: 10.5px; white-space: nowrap; }
+.midi-send .hint { font-size: 9.5px; color: var(--sage); }
+
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  .midi-app { height: auto; min-height: 100%; }
+  .midi-work { flex-direction: column; }
+  .midi-side { width: 100%; overflow: visible; border-right: 0; border-bottom: 1px solid var(--ink); }
+  .midi-console { height: 320px; flex: none; }
+  .activity { flex-wrap: wrap; }
+  .lane { min-width: 46px; }
+}
+</style>
+<script>
+/* The menus are wired before the app script runs, so they open whether or not
+   anything below throws. */
+document.addEventListener('DOMContentLoaded', () => {
+  const menus = document.querySelectorAll('.rm');
+  const closeMenus = () => menus.forEach(menu => menu.classList.remove('open'));
+  menus.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
+    event.stopPropagation();
+    const open = menu.classList.contains('open');
+    closeMenus();
+    if (!open) menu.classList.add('open');
+  }));
+  document.querySelector('.rm-bar').addEventListener('click', event => {
+    const item = event.target.closest('[data-cmd]');
+    if (!item) return;
+    closeMenus();
+    document.dispatchEvent(new CustomEvent('midi-command', {
+      detail: { command: item.dataset.cmd, value: item.dataset.value }
+    }));
+  });
+  document.addEventListener('click', closeMenus);
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenus(); });
+});
+</script>
+<script src="../../assets/js/app-menu.js" defer></script>
+<script src="../../assets/js/midi-bytes.js"></script>
+<script src="../../assets/js/app-state.js"></script>
+</head>
+<body>
+<div class="midi-app">
+  <nav class="rm-bar" aria-label="MIDIterm menu">
+    <div class="rm">
+      <button type="button">File</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="save-log"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save the log (.txt)</button>
+        <button type="button" data-cmd="save-csv"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save the log (.csv)</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="save-sysex"><span class="pixel-icon" data-icon="save" aria-hidden="true"></span>Save captured SysEx (.syx)</button>
+        <button type="button" data-cmd="load-sysex"><span class="pixel-icon" data-icon="open" aria-hidden="true"></span>Send a .syx file…</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear the log</button>
+        <button type="button" data-cmd="reset"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Reset everything</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Ports</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="connect"><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>Open MIDI</button>
+        <button type="button" data-cmd="disconnect"><span class="pixel-icon" data-icon="power" aria-hidden="true"></span>Close MIDI</button>
+        <button type="button" data-cmd="rescan"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Look for ports again</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="toggle" data-value="listenAll"><span class="pixel-icon" data-icon="list-box" aria-hidden="true"></span>Listen to every input<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="demo-toggle"><span class="pixel-icon" data-icon="bug" aria-hidden="true"></span>Demo instrument<span class="mi-check"></span></button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Filter</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="kind" data-value="note-on"><span class="pixel-icon" data-icon="keyboard-music" aria-hidden="true"></span>Note on<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="note-off"><span class="pixel-icon" data-icon="keyboard-music" aria-hidden="true"></span>Note off<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="cc"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Control change<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="program"><span class="pixel-icon" data-icon="list-box" aria-hidden="true"></span>Program change<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="bend"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span>Pitch bend<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="aftertouch"><span class="pixel-icon" data-icon="spray-can" aria-hidden="true"></span>Aftertouch<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="mode"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>Channel mode<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="sysex"><span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span>SysEx<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="common"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>System common<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="realtime"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Start / stop / continue<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="clock"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Clock<span class="mi-check"></span></button>
+        <button type="button" data-cmd="kind" data-value="sensing"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Active sensing<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="kinds-all"><span class="pixel-icon" data-icon="eye" aria-hidden="true"></span>Show everything</button>
+        <button type="button" data-cmd="kinds-notes"><span class="pixel-icon" data-icon="eye-off" aria-hidden="true"></span>Only the musical messages</button>
+        <button type="button" data-cmd="channels-all"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>All sixteen channels</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">View</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="stamp" data-value="none"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>No timestamps<span class="mi-check"></span></button>
+        <button type="button" data-cmd="stamp" data-value="clock"><span class="pixel-icon" data-icon="calendar" aria-hidden="true"></span>Time of day<span class="mi-check"></span></button>
+        <button type="button" data-cmd="stamp" data-value="delta"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span>Since the line before<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="toggle" data-value="showTx"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Echo what is sent<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="showRaw"><span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span>Raw bytes on every line<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="showActivity"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Channel activity<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="showPlot"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Controller plotter<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="showSide"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Side panel<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="toggle" data-value="autoscroll"><span class="pixel-icon" data-icon="arrow-bar-right" aria-hidden="true"></span>Follow the tail<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="paused"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Hold the display<span class="mi-check"></span></button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Send</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="panic"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>All notes off (panic)</button>
+        <button type="button" data-cmd="reset-controllers"><span class="pixel-icon" data-icon="undo" aria-hidden="true"></span>Reset the controllers</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="clock" data-value="start"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Start the clock</button>
+        <button type="button" data-cmd="clock" data-value="continue"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Continue</button>
+        <button type="button" data-cmd="clock" data-value="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop the clock</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="identity"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>Ask for identity (SysEx)</button>
+        <button type="button" data-cmd="gm-on"><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>General MIDI on</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Thru</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="toggle" data-value="thru"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Pass input to output<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="toggle" data-value="bridgeOut"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Send what arrives to ClackTerm<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="bridgeIn"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Play DIN MIDI from ClackTerm<span class="mi-check"></span></button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Help</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="help"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>Quick reference</button>
+        <button type="button" data-cmd="support"><span class="pixel-icon" data-icon="bug" aria-hidden="true"></span>What this browser supports</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="midi-work">
+    <aside class="midi-side" id="side" aria-label="Ports, filters and sending">
+
+      <section class="card">
+        <h2>Ports<span class="lamp" id="lamp-port"></span></h2>
+        <div class="field wide">
+          <label for="port-in">Input</label>
+          <select id="port-in"><option value="">— none —</option></select>
+        </div>
+        <div class="field wide">
+          <label for="port-out">Output</label>
+          <select id="port-out"><option value="">— none —</option></select>
+        </div>
+        <label class="check"><input type="checkbox" id="listen-all">Listen to every input at once</label>
+        <label class="check"><input type="checkbox" id="sysex-permission" checked>Ask for SysEx permission</label>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="connect">Open MIDI</button>
+          <button type="button" class="btn ghost" id="disconnect" disabled>Close</button>
+        </div>
+        <p class="note" id="port-note">Web MIDI needs Chrome, Edge or Opera. SysEx permission is asked for once, and is what a dump needs to get through.</p>
+      </section>
+
+      <section class="card">
+        <h2>Demo instrument<span class="lamp" id="lamp-demo"></span></h2>
+        <div class="field wide">
+          <label for="demo-kind">Pretend to be</label>
+          <select id="demo-kind"></select>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="demo-start">Start</button>
+          <button type="button" class="btn ghost" id="demo-stop" disabled>Stop</button>
+        </div>
+        <p class="note">A simulated instrument playing into the monitor, for trying the filters, the plotter and the keyboard without hardware — and in browsers with no Web MIDI at all.</p>
+      </section>
+
+      <section class="card">
+        <h2>Show</h2>
+        <div class="kinds" id="kinds"></div>
+        <p class="note" style="margin-bottom:6px">Channels</p>
+        <div class="chan-grid" id="chan-filter"></div>
+      </section>
+
+      <section class="card">
+        <h2>Play<span class="lamp" id="lamp-out"></span></h2>
+        <div class="field">
+          <label for="out-chan">Channel</label>
+          <select id="out-chan"></select>
+        </div>
+        <div class="field">
+          <label for="velocity">Velocity</label>
+          <input type="number" id="velocity" value="100" min="1" max="127" step="1">
+        </div>
+        <div class="field">
+          <label for="octave">Bottom octave</label>
+          <input type="number" id="octave" value="3" min="-1" max="8" step="1">
+        </div>
+        <div class="keys" id="keys" role="group" aria-label="MIDI keyboard"></div>
+        <p class="note">Click to play. Notes arriving at the input light up here too, so you can see what a controller is sending.</p>
+        <div class="field">
+          <label for="cc-number">CC number</label>
+          <input type="number" id="cc-number" value="1" min="0" max="127" step="1">
+        </div>
+        <div class="field">
+          <label for="cc-value">CC value</label>
+          <input type="range" id="cc-value" value="64" min="0" max="127" step="1">
+        </div>
+        <div class="field">
+          <label for="tempo-out">Clock tempo (bpm)</label>
+          <input type="number" id="tempo-out" value="120" min="20" max="300" step="1">
+        </div>
+        <div class="field">
+          <label for="program">Program</label>
+          <input type="number" id="program" value="0" min="0" max="127" step="1">
+        </div>
+        <div class="field">
+          <label for="bend">Pitch bend</label>
+          <input type="range" id="bend" value="0" min="-8192" max="8191" step="1">
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn ghost" id="send-cc">Send CC</button>
+          <button type="button" class="btn ghost" id="send-program">Send program</button>
+          <button type="button" class="btn ghost full" id="panic">All notes off</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>SysEx<span class="lamp" id="lamp-sysex"></span></h2>
+        <div class="field wide">
+          <label for="sysex-hex">Bytes to send</label>
+          <textarea id="sysex-hex" rows="3" spellcheck="false">F0 7E 7F 06 01 F7</textarea>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn ghost" id="send-sysex">Send</button>
+          <button type="button" class="btn ghost" id="load-sysex">Load .syx…</button>
+          <button type="button" class="btn ghost full" id="save-sysex" disabled>Save what has arrived (.syx)</button>
+        </div>
+        <div class="field">
+          <label for="sysex-gap">Gap between messages (ms)</label>
+          <input type="number" id="sysex-gap" value="60" min="0" max="2000" step="5">
+        </div>
+        <p class="note" id="sysex-note">Dumps from a synth are captured as they arrive. Old instruments need the gap when a file is sent back to them.</p>
+      </section>
+
+      <section class="card">
+        <h2>Traffic</h2>
+        <div class="stat-list" id="stats"></div>
+      </section>
+    </aside>
+
+    <main class="midi-main">
+      <div class="midi-bar">
+        <span class="pill"><i class="lamp" id="pill-lamp"></i><b id="pill-state">Not connected</b></span>
+        <span class="pill">in <b id="pill-in">0</b></span>
+        <span class="pill">out <b id="pill-out">0</b></span>
+        <span class="pill" id="pill-tempo">clock —</span>
+        <span class="pill" id="pill-notes">0 held</span>
+        <span class="grow"></span>
+        <input type="text" id="find" placeholder="filter — text or /regex/" aria-label="Filter the log">
+        <label class="check" style="margin:0"><input type="checkbox" id="find-only">only matches</label>
+        <button type="button" class="btn ghost" id="clear">Clear</button>
+      </div>
+
+      <div class="activity" id="activity" aria-label="Channel activity"></div>
+
+      <div class="midi-console" id="console" tabindex="0" role="log" aria-label="MIDI log"></div>
+
+      <section class="midi-plot" id="plot-panel" hidden aria-label="Controller plotter">
+        <div class="plot-head">
+          <div class="legend" id="plot-legend"><span>nothing plotted yet</span></div>
+          <label class="check" style="margin:0;margin-left:auto"><input type="checkbox" id="plot-fit">fit each line</label>
+          <button type="button" class="btn ghost" id="plot-clear">Clear plot</button>
+        </div>
+        <canvas id="plot"></canvas>
+      </section>
+
+      <div class="midi-send">
+        <select id="send-kind" aria-label="What to send">
+          <option value="note">Note</option>
+          <option value="cc">Control change</option>
+          <option value="program">Program change</option>
+          <option value="bend">Pitch bend</option>
+          <option value="raw">Raw bytes</option>
+        </select>
+        <input type="text" id="line" placeholder="60 100 — note number and velocity" spellcheck="false" autocomplete="off" aria-label="What to send">
+        <button type="button" class="btn primary" id="send">Send</button>
+        <span class="hint" id="send-hint"></span>
+      </div>
+    </main>
+  </div>
+</div>
+<input type="file" id="file-input" accept=".syx,.mid,application/octet-stream" hidden>
+
+<script>
+(() => {
+'use strict';
+
+const $ = id => document.getElementById(id);
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+const esc = text => String(text).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const hex2 = byte => byte.toString(16).toUpperCase().padStart(2, '0');
+const hexOf = bytes => Array.from(bytes, hex2).join(' ');
+const nowText = () => {
+  const d = new Date();
+  const pad = (n, w = 2) => String(n).padStart(w, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+};
+
+function parseBytes(text) {
+  const out = [];
+  for (const token of text.trim().split(/[\s,;]+/).filter(Boolean)) {
+    const body = token.replace(/^0[xX]/, '');
+    if (!/^[0-9a-fA-F]+$/.test(body)) throw new Error(`"${token}" is not a byte`);
+    const padded = body.length % 2 ? '0' + body : body;
+    for (let at = 0; at < padded.length; at += 2) out.push(parseInt(padded.substr(at, 2), 16));
+  }
+  return Uint8Array.from(out);
+}
+
+/* ---- state ----------------------------------------------------------- */
+
+const KINDS = [
+  ['note-on', 'note on'], ['note-off', 'note off'], ['cc', 'control change'],
+  ['program', 'program'], ['bend', 'pitch bend'], ['aftertouch', 'aftertouch'],
+  ['mode', 'channel mode'], ['sysex', 'SysEx'], ['common', 'system common'],
+  ['realtime', 'start/stop'], ['clock', 'clock'], ['sensing', 'active sensing'],
+  ['other', 'anything else']
+];
+const MUSICAL = ['note-on', 'note-off', 'cc', 'program', 'bend', 'aftertouch', 'mode', 'sysex', 'other'];
+const MAX_ROWS = 4000;
+
+const state = {
+  stamp: 'clock',
+  showTx: true,
+  showRaw: false,
+  showActivity: true,
+  showPlot: false,
+  showSide: true,
+  autoscroll: true,
+  paused: false,
+  listenAll: false,
+  thru: false,
+  bridgeOut: false,
+  bridgeIn: false,
+  /* clock and active sensing are the two that drown a log, so they start off */
+  kinds: Object.fromEntries(KINDS.map(([id]) => [id, id !== 'clock' && id !== 'sensing'])),
+  channels: Array.from({ length: 16 }, () => true)
+};
+
+const counters = { in: 0, out: 0, since: 0, notes: 0, byKind: {} };
+const log = [];
+const held = new Set();                         /* "channel:note" for everything sounding */
+const sysexCaptured = [];
+let sysexBytes = 0;
+
+/* ---- log ------------------------------------------------------------- */
+
+const consoleEl = $('console');
+let filterRe = null;
+let renderTimer = 0;
+let lastRowTime = 0;
+
+const passesFilters = row =>
+  (row.kind === undefined || state.kinds[row.kind] !== false) &&
+  (row.channel === undefined || state.channels[row.channel - 1] !== false);
+
+function rowMatches(row) {
+  if (!filterRe) return true;
+  filterRe.lastIndex = 0;
+  return filterRe.test(row.text);
+}
+
+function highlight(text) {
+  if (!filterRe) return esc(text);
+  const flags = filterRe.flags.includes('g') ? filterRe.flags : filterRe.flags + 'g';
+  return esc(text).replace(new RegExp(filterRe.source, flags), match => `<mark>${match}</mark>`);
+}
+
+function stampOf(row) {
+  if (state.stamp === 'none') return '';
+  if (state.stamp === 'clock') return row.clock;
+  return '+' + (row.delta / 1000).toFixed(3).padStart(7, ' ');
+}
+
+function paintRow(row) {
+  const node = row.el;
+  node.className = 'ln ' + (row.cls || '');
+  node.querySelector('.ts').textContent = stampOf(row);
+  node.querySelector('.tag').textContent = row.tag || '';
+  let html = highlight(row.text);
+  if (state.showRaw && row.raw) html += `<span class="raw">${esc(hexOf(row.raw))}</span>`;
+  node.querySelector('.body').innerHTML = html;
+  node.hidden = ($('find-only').checked && !rowMatches(row)) || !passesFilters(row);
+}
+
+function buildRow(row) {
+  const node = document.createElement('div');
+  node.innerHTML = '<span class="ts"></span><span class="tag"></span><span class="body"></span>';
+  row.el = node;
+  paintRow(row);
+  return node;
+}
+
+function scrollToTail() {
+  if (state.autoscroll) consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+function push(row) {
+  row.t = performance.now();
+  row.clock = nowText();
+  row.delta = lastRowTime ? row.t - lastRowTime : 0;
+  lastRowTime = row.t;
+  log.push(row);
+  if (log.length > MAX_ROWS) {
+    for (const old of log.splice(0, log.length - MAX_ROWS)) if (old.el?.parentNode) old.el.remove();
+  }
+  if (!state.paused) {
+    consoleEl.appendChild(buildRow(row));
+    scrollToTail();
+  }
+  return row;
+}
+
+function renderAll() {
+  consoleEl.textContent = '';
+  const frag = document.createDocumentFragment();
+  for (const row of log) frag.appendChild(buildRow(row));
+  consoleEl.appendChild(frag);
+  scrollToTail();
+}
+
+const scheduleRender = () => { clearTimeout(renderTimer); renderTimer = setTimeout(renderAll, 120); };
+const sys = (text, cls) => push({ text, cls: (cls || 'sys') + ' msg', tag: '' });
+
+/* ---- what arrives ---------------------------------------------------- */
+
+const laneEls = [];
+const laneLit = new Array(16).fill(0);
+
+function receive(bytes, source) {
+  const message = bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes);
+  if (!message.length) return;
+  counters.in++;
+  const desc = ClackMIDI.describe(message);
+  counters.byKind[desc.kind] = (counters.byKind[desc.kind] || 0) + 1;
+
+  if (desc.kind === 'clock') tempoTick();
+  if (desc.kind === 'sysex' && message[0] === 0xf0) {
+    sysexCaptured.push(message);
+    sysexBytes += message.length;
+    $('save-sysex').disabled = false;
+  }
+  if (desc.channel) {
+    laneLit[desc.channel - 1] = performance.now();
+    if (desc.kind === 'note-on') noteHeld(desc.channel, desc.note, true);
+    if (desc.kind === 'note-off') noteHeld(desc.channel, desc.note, false);
+    if (desc.kind === 'mode' && desc.controller >= 123) clearHeld(desc.channel);
+    plotFrom(desc);
+  }
+
+  push({
+    text: desc.text, cls: desc.cls || '', raw: message,
+    kind: desc.kind, channel: desc.channel,
+    tag: source === 'bridge' ? '◀ din' : source === 'demo' ? '◀ demo' : '◀ in'
+  });
+
+  /* thru and the bridge pass the bytes on untouched — a monitor that rewrote
+   * what it forwarded would not be a monitor */
+  if (state.thru && source !== 'bridge') sendBytes(message, { quiet: true, thru: true });
+  if (state.bridgeOut && source !== 'bridge') bridgeSend(message);
+}
+
+function noteHeld(channel, note, on) {
+  const key = channel + ':' + note;
+  if (on) held.add(key); else held.delete(key);
+  paintKeyboard();
+}
+
+function clearHeld(channel) {
+  for (const key of [...held]) if (key.startsWith(channel + ':')) held.delete(key);
+  paintKeyboard();
+}
+
+/* tempo out of the clock: 24 per quarter note, averaged over a beat */
+const clockTimes = [];
+let tempo = 0;
+function tempoTick() {
+  const now = performance.now();
+  clockTimes.push(now);
+  if (clockTimes.length > 25) clockTimes.shift();
+  if (clockTimes.length < 25) return;
+  const span = clockTimes[24] - clockTimes[0];
+  if (span > 0) tempo = 60000 / span;
+}
+
+/* ---- ports ----------------------------------------------------------- */
+
+const midiSupported = typeof navigator.requestMIDIAccess === 'function';
+let access = null;
+let open = false;
+
+async function connect() {
+  if (!midiSupported) { sys('this browser has no Web MIDI — try Chrome, Edge or Opera, or start the demo instrument', 'bad'); return; }
+  try {
+    access = await navigator.requestMIDIAccess({ sysex: $('sysex-permission').checked });
+  } catch (error) {
+    sys(`MIDI access was refused: ${error.message}`, 'bad');
+    return;
+  }
+  access.onstatechange = event => {
+    fillPorts();
+    if (event.port) sys(`${event.port.type} "${event.port.name}" ${event.port.state}`, 'note');
+  };
+  open = true;
+  counters.since = counters.since || performance.now();
+  fillPorts();
+  const ins = [...access.inputs.values()];
+  const outs = [...access.outputs.values()];
+  sys(`MIDI open — ${ins.length} input${ins.length === 1 ? '' : 's'}, ${outs.length} output${outs.length === 1 ? '' : 's'}${$('sysex-permission').checked ? ', SysEx allowed' : ', no SysEx'}`, 'note');
+  for (const port of [...ins, ...outs]) sys(`  ${port.type}: ${port.name}${port.manufacturer ? ' — ' + port.manufacturer : ''}`, 'sys');
+  syncChrome();
+}
+
+function fillPorts() {
+  if (!access) return;
+  for (const [id, ports] of [['port-in', access.inputs], ['port-out', access.outputs]]) {
+    const select = $(id);
+    const chosen = select.value;
+    select.textContent = '';
+    select.appendChild(new Option('— none —', ''));
+    for (const port of ports.values()) select.appendChild(new Option(port.name || port.id, port.id));
+    if ([...select.options].some(option => option.value === chosen)) select.value = chosen;
+    else if (select.options.length > 1) select.selectedIndex = 1;
+  }
+  bindInputs();
+  syncChrome();
+}
+
+function bindInputs() {
+  if (!access) return;
+  for (const input of access.inputs.values()) input.onmidimessage = null;
+  const wanted = state.listenAll
+    ? [...access.inputs.values()]
+    : [access.inputs.get($('port-in').value)].filter(Boolean);
+  for (const input of wanted) input.onmidimessage = event => receive(event.data, 'port');
+}
+
+function disconnect() {
+  if (access) for (const input of access.inputs.values()) input.onmidimessage = null;
+  open = false;
+  sys('MIDI closed', 'note');
+  syncChrome();
+}
+
+const output = () => access?.outputs.get($('port-out').value) || null;
+
+/* ---- sending --------------------------------------------------------- */
+
+function sendBytes(bytes, options = {}) {
+  const message = bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes);
+  const port = output();
+  let went = false;
+  if (port) {
+    try {
+      /* a stream of bytes is cut into messages first: SysEx and running status
+       * both arrive that way over the bridge */
+      for (const one of outgoing(message)) port.send(one);
+      went = true;
+    } catch (error) {
+      sys(`the output refused that: ${error.message}`, 'bad');
+    }
+  }
+  if (demo.running) { demoReceive(message); went = true; }
+  if (!went && !options.quiet) { sys('no MIDI output is open — choose one, or start the demo instrument', 'bad'); return false; }
+  counters.out++;
+  const desc = ClackMIDI.describe(message);
+  if (desc.channel) {
+    if (desc.kind === 'note-on') noteHeld(desc.channel, desc.note, true);
+    if (desc.kind === 'note-off') noteHeld(desc.channel, desc.note, false);
+  }
+  if (state.showTx && !options.quiet) {
+    push({ text: desc.text, cls: 'tx', raw: message, kind: desc.kind, channel: desc.channel, tag: options.thru ? '▶ thru' : '▶ out' });
+  }
+  return true;
+}
+
+const outgoing = (() => {
+  const split = ClackMIDI.splitter();
+  return bytes => {
+    const messages = split(bytes);
+    return messages.length ? messages : [];
+  };
+})();
+
+const channelOut = () => Number($('out-chan').value) - 1;
+const velocity = () => clamp(Number($('velocity').value) || 100, 1, 127);
+
+function sendFromBar() {
+  const kind = $('send-kind').value;
+  const text = $('line').value.trim();
+  const numbers = text.split(/[\s,]+/).filter(Boolean).map(Number);
+  try {
+    if (kind === 'raw') { sendBytes(parseBytes(text)); return; }
+    if (kind === 'note') {
+      const note = clamp(numbers[0] ?? 60, 0, 127);
+      const vel = clamp(numbers[1] ?? velocity(), 1, 127);
+      sendBytes(ClackMIDI.build.noteOn(channelOut(), note, vel));
+      setTimeout(() => sendBytes(ClackMIDI.build.noteOff(channelOut(), note)), 300);
+      return;
+    }
+    if (kind === 'cc') sendBytes(ClackMIDI.build.control(channelOut(), clamp(numbers[0] ?? 1, 0, 127), clamp(numbers[1] ?? 0, 0, 127)));
+    else if (kind === 'program') sendBytes(ClackMIDI.build.program(channelOut(), clamp(numbers[0] ?? 0, 0, 127)));
+    else if (kind === 'bend') sendBytes(ClackMIDI.build.bend(channelOut(), clamp(numbers[0] ?? 0, -8192, 8191)));
+  } catch (error) {
+    sys(error.message, 'bad');
+  }
+}
+
+function panic() {
+  for (let channel = 0; channel < 16; channel++) {
+    sendBytes(ClackMIDI.build.control(channel, 123, 0), { quiet: true });
+    sendBytes(ClackMIDI.build.control(channel, 120, 0), { quiet: true });
+  }
+  held.clear();
+  paintKeyboard();
+  sys('all notes off, on all sixteen channels', 'note');
+}
+
+/* SysEx files ----------------------------------------------------------- */
+
+async function sendSysexFile(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const messages = [];
+  let at = 0;
+  while (at < bytes.length) {
+    const start = bytes.indexOf(0xf0, at);
+    if (start < 0) break;
+    let end = start + 1;
+    while (end < bytes.length && bytes[end] !== 0xf7) end++;
+    if (end >= bytes.length) break;
+    messages.push(bytes.subarray(start, end + 1));
+    at = end + 1;
+  }
+  if (!messages.length) { sys(`${file.name} holds no SysEx messages`, 'bad'); return; }
+  sys(`sending ${file.name} — ${messages.length} message${messages.length === 1 ? '' : 's'}, ${bytes.length} bytes`, 'note');
+  const gap = clamp(Number($('sysex-gap').value) || 0, 0, 2000);
+  for (const message of messages) {
+    if (!sendBytes(message)) return;
+    if (gap) await new Promise(resolve => setTimeout(resolve, gap));
+  }
+  sys(`${file.name} sent`, 'note');
+}
+
+function saveSysex() {
+  if (!sysexCaptured.length) { sys('no SysEx has arrived yet', 'bad'); return; }
+  download(`miditerm-${stampName()}.syx`, new Blob(sysexCaptured, { type: 'application/octet-stream' }));
+}
+
+/* ---- the bridge with ClackTerm ---------------------------------------- */
+
+const bridge = 'BroadcastChannel' in window ? new BroadcastChannel('clackos-midi-bridge') : null;
+
+if (bridge) bridge.onmessage = event => {
+  const message = event.data;
+  if (!message || message.from !== 'clackterm' || !Array.isArray(message.bytes)) return;
+  if (!state.bridgeIn) return;
+  /* DIN MIDI arrives as a byte stream, so it is split before it is anything */
+  for (const one of bridgeSplit(Uint8Array.from(message.bytes))) receive(one, 'bridge');
+};
+const bridgeSplit = ClackMIDI.splitter();
+
+function bridgeSend(bytes) {
+  if (!bridge || !state.bridgeOut) return;
+  bridge.postMessage({ from: 'miditerm', bytes: Array.from(bytes) });
+}
+
+/* ---- demo instrument -------------------------------------------------- */
+
+const DEMOS = {
+  arp: {
+    label: 'Arpeggiating synth',
+    start(demo) {
+      const scale = [48, 55, 60, 63, 67, 70, 72, 75];
+      let step = 0;
+      demo.timer = setInterval(() => {
+        const note = scale[step % scale.length];
+        step++;
+        receive(ClackMIDI.build.noteOn(0, note, 70 + Math.floor(Math.random() * 40)), 'demo');
+        setTimeout(() => receive(ClackMIDI.build.noteOff(0, note), 'demo'), 180);
+        if (step % 4 === 0) receive(ClackMIDI.build.control(0, 74, 40 + Math.round(40 * Math.sin(step / 6))), 'demo');
+      }, 250);
+    }
+  },
+  controller: {
+    label: 'Controller — knobs and wheels',
+    start(demo) {
+      let at = 0;
+      demo.timer = setInterval(() => {
+        at++;
+        receive(ClackMIDI.build.control(0, 1, Math.round(64 + 63 * Math.sin(at / 20))), 'demo');
+        receive(ClackMIDI.build.control(0, 74, Math.round(64 + 63 * Math.sin(at / 9))), 'demo');
+        if (at % 3 === 0) receive(ClackMIDI.build.bend(0, Math.round(6000 * Math.sin(at / 14))), 'demo');
+        if (at % 40 === 0) receive(ClackMIDI.build.control(0, 64, at % 80 === 0 ? 127 : 0), 'demo');
+      }, 60);
+    }
+  },
+  sequencer: {
+    label: 'Sequencer — clock and notes on four channels',
+    start(demo) {
+      let pulse = 0;
+      receive(Uint8Array.of(0xfa), 'demo');
+      demo.cancel = ticker(60000 / 120 / 24, () => {
+        receive(Uint8Array.of(0xf8), 'demo');                        /* 24 per quarter note */
+        pulse++;
+        if (pulse % 6 === 0) {                                       /* a sixteenth */
+          const channel = (pulse / 6) % 4;
+          const note = [36, 42, 48, 60][channel] + ((pulse / 6) % 3 === 0 ? 0 : 2);
+          receive(ClackMIDI.build.noteOn(channel, note, 90), 'demo');
+          setTimeout(() => receive(ClackMIDI.build.noteOff(channel, note), 'demo'), 90);
+        }
+      });
+    },
+    stop() { receive(Uint8Array.of(0xfc), 'demo'); }
+  },
+  synth: {
+    label: 'Synth that answers — SysEx and thru',
+    start() {},
+    receive(message) {
+      /* an identity request gets an identity reply, as a real instrument would */
+      if (message[0] === 0xf0 && message[1] === 0x7e && message[3] === 0x06 && message[4] === 0x01) {
+        setTimeout(() => receive(Uint8Array.of(0xf0, 0x7e, 0x00, 0x06, 0x02, 0x42, 0x11, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0xf7), 'demo'), 80);
+        return;
+      }
+      if (message[0] === 0xf0) {
+        setTimeout(() => receive(Uint8Array.of(0xf0, 0x7e, 0x00, 0x7f, 0xf7), 'demo'), 60);   /* ACK */
+        return;
+      }
+      const desc = ClackMIDI.describe(message);
+      if (desc.kind === 'note-on') setTimeout(() => receive(ClackMIDI.build.control(0, 1, desc.value), 'demo'), 40);
+    }
+  }
+};
+
+/* MIDI clock is 24 pulses a beat — 20.833 ms at 120 bpm, which setInterval
+ * rounds down to 20 and turns into 125 bpm. This aims at absolute times
+ * instead, so the tempo comes out as asked. */
+function ticker(period, tick) {
+  let next = performance.now() + period;
+  let handle = 0;
+  const run = () => {
+    tick();
+    next += period;
+    handle = setTimeout(run, Math.max(0, next - performance.now()));
+  };
+  handle = setTimeout(run, period);
+  return () => clearTimeout(handle);
+}
+
+const demo = { running: false, kind: null, timer: 0 };
+
+function demoStart() {
+  demoStop(true);
+  const kind = $('demo-kind').value;
+  const device = DEMOS[kind];
+  if (!device) return;
+  demo.kind = kind;
+  demo.running = true;
+  counters.since = counters.since || performance.now();
+  sys(`demo instrument started — ${device.label}`, 'note');
+  device.start?.(demo);
+  syncChrome();
+}
+
+function demoStop(silent) {
+  clearInterval(demo.timer);
+  demo.cancel?.();
+  demo.cancel = null;
+  demo.timer = 0;
+  if (demo.running) {
+    DEMOS[demo.kind]?.stop?.(demo);
+    if (!silent) sys('demo instrument stopped', 'note');
+  }
+  demo.running = false;
+  demo.kind = null;
+  clockTimes.length = 0;
+  tempo = 0;
+  syncChrome();
+}
+
+const demoReceive = message => DEMOS[demo.kind]?.receive?.(message);
+
+/* ---- keyboard --------------------------------------------------------- */
+
+const keyEls = [];
+
+function buildKeyboard() {
+  const keys = $('keys');
+  keys.textContent = '';
+  keyEls.length = 0;
+  const pattern = [0, 2, 4, 5, 7, 9, 11];
+  const whites = 21;                                   /* three octaves */
+  const width = 100 / whites;
+  const add = (className, left, wide, semitone) => {
+    const key = document.createElement('div');
+    key.className = className;
+    key.style.left = left + '%';
+    key.style.width = wide + '%';
+    key.dataset.semitone = String(semitone);
+    keys.appendChild(key);
+    keyEls.push(key);
+  };
+  for (let i = 0; i < whites; i++) add('wh', i * width, width, Math.floor(i / 7) * 12 + pattern[i % 7]);
+  for (let i = 0; i < whites - 1; i++) {
+    if ([2, 6].includes(i % 7)) continue;              /* no black key at E–F or B–C */
+    add('bl', (i + 1) * width - width * 0.3, width * 0.6, Math.floor(i / 7) * 12 + pattern[i % 7] + 1);
+  }
+
+  let down = null;
+  const release = () => {
+    if (!down) return;
+    sendBytes(ClackMIDI.build.noteOff(channelOut(), down.note));
+    down.el.classList.remove('down');
+    down = null;
+  };
+  keys.addEventListener('pointerdown', event => {
+    const key = event.target.closest('[data-semitone]');
+    if (!key) return;
+    event.preventDefault();
+    release();
+    const note = clamp(baseNote() + Number(key.dataset.semitone), 0, 127);
+    down = { note, el: key };
+    key.classList.add('down');
+    sendBytes(ClackMIDI.build.noteOn(channelOut(), note, velocity()));
+    keys.setPointerCapture?.(event.pointerId);
+  });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) keys.addEventListener(type, release);
+}
+
+const baseNote = () => (clamp(Number($('octave').value) || 3, -1, 8) + 1) * 12;
+
+function paintKeyboard() {
+  const notes = new Set([...held].map(key => Number(key.split(':')[1])));
+  const base = baseNote();
+  for (const key of keyEls) key.classList.toggle('held', notes.has(base + Number(key.dataset.semitone)));
+  $('pill-notes').textContent = `${held.size} held`;
+}
+
+/* ---- channel activity -------------------------------------------------- */
+
+function buildActivity() {
+  const box = $('activity');
+  box.textContent = '';
+  laneEls.length = 0;
+  for (let channel = 1; channel <= 16; channel++) {
+    const lane = document.createElement('div');
+    lane.className = 'lane';
+    lane.innerHTML = `<b>${channel}</b><span>·</span>`;
+    box.appendChild(lane);
+    laneEls.push(lane);
+  }
+}
+
+function paintActivity() {
+  const now = performance.now();
+  for (let i = 0; i < 16; i++) {
+    const lane = laneEls[i];
+    if (!lane) continue;
+    lane.classList.toggle('lit', now - laneLit[i] < 160);
+    lane.classList.toggle('muted', !state.channels[i]);
+    const notes = [...held].filter(key => key.startsWith(i + 1 + ':')).length;
+    lane.lastElementChild.textContent = notes ? notes + ' on' : '·';
+  }
+}
+
+/* ---- plotter ----------------------------------------------------------- */
+
+const PLOT_COLOURS = ['#276b47', '#c0453a', '#3f66ad', '#a3762a', '#6d3f8f', '#2f8b8b', '#8b5a2b', '#4f7a1f'];
+const PLOT_POINTS = 600;
+const series = new Map();
+const plotCanvas = $('plot');
+let plotDirty = false;
+
+function plotPush(name, value) {
+  if (!Number.isFinite(value)) return;
+  let line = series.get(name);
+  if (!line) {
+    if (series.size >= 8) return;
+    line = { colour: PLOT_COLOURS[series.size % PLOT_COLOURS.length], data: [] };
+    series.set(name, line);
+    drawLegend();
+  }
+  line.data.push(value);
+  if (line.data.length > PLOT_POINTS) line.data.shift();
+  plotDirty = true;
+}
+
+/* what is worth a line on the graph: controllers, bend, aftertouch, velocity */
+function plotFrom(desc) {
+  if (!state.channels[desc.channel - 1]) return;
+  const at = `ch${desc.channel} `;
+  if (desc.kind === 'cc') plotPush(at + 'cc' + desc.controller, desc.value);
+  else if (desc.kind === 'bend') plotPush(at + 'bend', desc.value);
+  else if (desc.kind === 'aftertouch') plotPush(at + 'touch', desc.value);
+  else if (desc.kind === 'note-on') plotPush(at + 'velocity', desc.value);
+}
+
+function drawLegend() {
+  const legend = $('plot-legend');
+  if (!series.size) { legend.innerHTML = '<span>nothing plotted yet</span>'; return; }
+  legend.innerHTML = [...series.entries()].map(([name, line]) =>
+    `<span data-series="${esc(name)}" style="cursor:pointer;opacity:${line.hidden ? 0.4 : 1}" title="click to hide or show this line">` +
+    `<i style="background:${line.colour}"></i>${esc(name)} <b>${esc(line.data.length ? line.data[line.data.length - 1] : '')}</b></span>`).join('');
+}
+
+function sizePlot() {
+  const ratio = window.devicePixelRatio || 1;
+  const box = plotCanvas.getBoundingClientRect();
+  plotCanvas.width = Math.max(1, Math.round(box.width * ratio));
+  plotCanvas.height = Math.max(1, Math.round(box.height * ratio));
+  drawPlot();
+}
+
+function drawPlot() {
+  const ctx = plotCanvas.getContext('2d');
+  const ratio = window.devicePixelRatio || 1;
+  const w = plotCanvas.width / ratio;
+  const h = plotCanvas.height / ratio;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--paper') || '#f8f2dd';
+  ctx.fillRect(0, 0, w, h);
+
+  const shown = [...series.values()].filter(line => !line.hidden && line.data.length);
+  const fitEach = $('plot-fit').checked;
+  const spanOf = lines => {
+    let low = Infinity;
+    let high = -Infinity;
+    for (const line of lines) for (const value of line.data) {
+      if (value < low) low = value;
+      if (value > high) high = value;
+    }
+    if (!Number.isFinite(low)) { low = 0; high = 127; }
+    if (high - low < 1e-9) { high = low + 1; low -= 1; }
+    const pad = (high - low) * 0.08;
+    return [low - pad, high + pad];
+  };
+  const [low, high] = spanOf(shown);
+
+  const left = 44;
+  const top = 8;
+  const bottom = h - 12;
+  const plotW = w - left - 8;
+  const plotH = bottom - top;
+
+  ctx.strokeStyle = 'rgba(9,20,13,0.13)';
+  ctx.fillStyle = 'rgba(9,20,13,0.55)';
+  ctx.lineWidth = 1;
+  ctx.font = '10px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const value = low + ((high - low) * i) / 4;
+    const at = Math.round(bottom - ((value - low) / (high - low)) * plotH) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(left, at);
+    ctx.lineTo(left + plotW, at);
+    ctx.stroke();
+    if (!fitEach) ctx.fillText(value.toFixed(Math.abs(value) >= 100 ? 0 : 1), left - 6, at);
+  }
+  if (fitEach) {
+    ctx.textAlign = 'left';
+    ctx.font = '9px "IBM Plex Mono", monospace';
+    ctx.fillText('fitted', 6, bottom - 5);
+  }
+
+  const longest = Math.max(1, ...shown.map(line => line.data.length));
+  for (const line of shown) {
+    if (line.data.length < 2) continue;
+    const [lineLow, lineHigh] = fitEach ? spanOf([line]) : [low, high];
+    const step = plotW / Math.max(1, longest - 1);
+    const offset = left + plotW - (line.data.length - 1) * step;
+    ctx.strokeStyle = line.colour;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    line.data.forEach((value, index) => {
+      const px = offset + index * step;
+      const py = bottom - ((value - lineLow) / (lineHigh - lineLow)) * plotH;
+      if (index === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(9,20,13,0.4)';
+  ctx.strokeRect(left + 0.5, top + 0.5, plotW - 1, plotH - 1);
+}
+
+/* ---- files ------------------------------------------------------------- */
+
+function download(name, blob) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = name;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+const stampName = () => new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+function saveLog() {
+  const text = log.map(row => `${row.clock} ${(row.tag || '').padEnd(7)} ${row.text}`).join('\n') + '\n';
+  download(`miditerm-${stampName()}.txt`, new Blob([text], { type: 'text/plain' }));
+}
+
+function saveCsv() {
+  const rows = ['time,direction,kind,channel,message,bytes'];
+  for (const row of log) {
+    if (row.kind === undefined) continue;
+    rows.push([
+      row.clock, (row.tag || '').replace(/[◀▶]\s*/, ''), row.kind, row.channel ?? '',
+      '"' + row.text.replace(/\s+/g, ' ').trim().replace(/"/g, '""') + '"',
+      '"' + (row.raw ? hexOf(row.raw) : '') + '"'
+    ].join(','));
+  }
+  download(`miditerm-${stampName()}.csv`, new Blob([rows.join('\n') + '\n'], { type: 'text/csv' }));
+}
+
+/* ---- chrome ------------------------------------------------------------ */
+
+function buildFilters() {
+  $('kinds').innerHTML = KINDS.map(([id, label]) =>
+    `<label class="check"><input type="checkbox" data-kind="${id}"${state.kinds[id] ? ' checked' : ''}>${esc(label)}</label>`).join('');
+  $('chan-filter').innerHTML = Array.from({ length: 16 }, (_, i) =>
+    `<button type="button" class="chan-btn" data-channel="${i}" aria-pressed="${state.channels[i]}">${i + 1}</button>`).join('');
+}
+
+function syncFilters() {
+  for (const box of $('kinds').querySelectorAll('[data-kind]')) box.checked = !!state.kinds[box.dataset.kind];
+  for (const button of $('chan-filter').querySelectorAll('[data-channel]'))
+    button.setAttribute('aria-pressed', String(state.channels[Number(button.dataset.channel)]));
+}
+
+function syncChrome() {
+  const anyOut = !!output() || demo.running;
+  $('lamp-port').className = 'lamp' + (open ? ' on' : '');
+  $('lamp-demo').className = 'lamp' + (demo.running ? ' on' : '');
+  $('lamp-out').className = 'lamp' + (anyOut ? ' on' : '');
+  $('lamp-sysex').className = 'lamp' + (sysexCaptured.length ? ' on' : '');
+  $('pill-lamp').className = 'lamp' + (open || demo.running ? ' on' : '');
+  $('pill-state').textContent = open
+    ? (state.listenAll ? 'all inputs' : ($('port-in').selectedOptions[0]?.textContent || 'no input'))
+    : demo.running ? 'demo instrument' : 'Not connected';
+  $('connect').disabled = open || !midiSupported;
+  $('disconnect').disabled = !open;
+  $('demo-start').disabled = demo.running;
+  $('demo-stop').disabled = !demo.running;
+  $('listen-all').checked = state.listenAll;
+  $('save-sysex').disabled = !sysexCaptured.length;
+
+  consoleEl.classList.toggle('hide-ts', state.stamp === 'none');
+  $('activity').hidden = !state.showActivity;
+  $('plot-panel').hidden = !state.showPlot;
+  $('side').hidden = !state.showSide;
+  $('port-note').classList.toggle('warn', !midiSupported);
+  if (!midiSupported) $('port-note').textContent = 'This browser has no Web MIDI — Chrome, Edge and Opera have it. The demo instrument below works anywhere.';
+  $('sysex-note').textContent = sysexCaptured.length
+    ? `${sysexCaptured.length} message${sysexCaptured.length === 1 ? '' : 's'} captured, ${sysexBytes} bytes. Save them as a .syx file, or send one back.`
+    : 'Dumps from a synth are captured as they arrive. Old instruments need the gap when a file is sent back to them.';
+  const hints = {
+    note: 'note number then velocity — 60 100',
+    cc: 'controller then value — 74 40',
+    program: 'program number — 0…127',
+    bend: '-8192 … 8191, 0 is centre',
+    raw: 'bytes in hex — 90 3C 64, F0 7E 7F 06 01 F7'
+  };
+  $('send-hint').textContent = hints[$('send-kind').value] || '';
+
+  for (const item of document.querySelectorAll('[data-cmd] .mi-check')) {
+    const { cmd, value } = item.closest('[data-cmd]').dataset;
+    let on = false;
+    if (cmd === 'toggle') on = !!state[value];
+    else if (cmd === 'stamp') on = state.stamp === value;
+    else if (cmd === 'kind') on = !!state.kinds[value];
+    else if (cmd === 'demo-toggle') on = demo.running;
+    item.textContent = on ? '✓' : '';
+  }
+  drawLegend();
+}
+
+function syncStats() {
+  $('pill-in').textContent = counters.in;
+  $('pill-out').textContent = counters.out;
+  $('pill-tempo').textContent = tempo ? `clock ${tempo.toFixed(1)} bpm` : 'clock —';
+  const uptime = counters.since ? (performance.now() - counters.since) / 1000 : 0;
+  const top = Object.entries(counters.byKind).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  $('stats').innerHTML = [
+    ['Messages in', String(counters.in)],
+    ['Messages out', String(counters.out)],
+    ['Notes sounding', String(held.size)],
+    ['Clock', tempo ? tempo.toFixed(1) + ' bpm' : '—'],
+    ['SysEx captured', sysexCaptured.length ? `${sysexCaptured.length} · ${sysexBytes} B` : 'none'],
+    ['Open for', uptime > 60 ? (uptime / 60).toFixed(1) + ' min' : uptime.toFixed(0) + ' s'],
+    ...top.map(([kind, count]) => [kind, String(count)])
+  ].map(([key, value]) => `<div class="stat"><span>${esc(key)}</span><span>${esc(value)}</span></div>`).join('');
+  paintActivity();
+  if (plotDirty && state.showPlot) { plotDirty = false; drawPlot(); drawLegend(); }
+}
+
+/* ---- help -------------------------------------------------------------- */
+
+function showHelp() {
+  const lines = [
+    'MIDIterm — a MIDI monitor and console.',
+    '',
+    'Ports    Open MIDI, then pick an input and an output — or listen to every',
+    '         input at once, which is how you find out which cable is which.',
+    'Filter   Message types and channels, separately. Clock and active sensing',
+    '         start hidden because they bury everything else; turn them on when',
+    '         you want to see the tempo or prove a cable is alive.',
+    'Play     The keyboard sends notes and shows the ones arriving. CC, program',
+    '         change and pitch bend are beside it, and the plotter draws every',
+    '         controller, bend, aftertouch and velocity that comes in.',
+    'SysEx    Dumps are captured as they arrive and save as a .syx file; a .syx',
+    '         file sends back, one message at a time, with a gap for old gear.',
+    'Thru     Pass the input to the output untouched, and bridge either way with',
+    '         ClackTerm, which is what puts DIN MIDI on a UART onto a real port.',
+    'Files    The log saves as text or as CSV, one row per message.'
+  ];
+  for (const line of lines) sys(line || ' ', 'sys');
+}
+
+function showSupport() {
+  sys(`Web MIDI: ${midiSupported ? 'yes' : 'no'} · SysEx: ${access ? ($('sysex-permission').checked ? 'asked for' : 'not asked for') : 'not open yet'} · ClackTerm bridge: ${bridge ? 'yes' : 'no'}`, 'note');
+  if (!midiSupported) sys('Chrome, Edge and Opera have Web MIDI; Firefox and Safari do not — the demo instrument works everywhere.', 'note');
+}
+
+/* ---- wiring ------------------------------------------------------------ */
+
+for (const [id, device] of Object.entries(DEMOS)) $('demo-kind').appendChild(new Option(device.label, id));
+for (let channel = 1; channel <= 16; channel++) $('out-chan').appendChild(new Option('Channel ' + channel, String(channel)));
+buildFilters();
+buildKeyboard();
+buildActivity();
+
+$('connect').addEventListener('click', connect);
+$('disconnect').addEventListener('click', disconnect);
+$('demo-start').addEventListener('click', demoStart);
+$('demo-stop').addEventListener('click', () => demoStop());
+$('port-in').addEventListener('change', () => { bindInputs(); syncChrome(); });
+$('port-out').addEventListener('change', syncChrome);
+$('listen-all').addEventListener('change', () => { state.listenAll = $('listen-all').checked; bindInputs(); syncChrome(); });
+$('octave').addEventListener('change', paintKeyboard);
+
+$('kinds').addEventListener('change', event => {
+  const box = event.target.closest('[data-kind]');
+  if (!box) return;
+  state.kinds[box.dataset.kind] = box.checked;
+  scheduleRender();
+  syncChrome();
+});
+$('chan-filter').addEventListener('click', event => {
+  const button = event.target.closest('[data-channel]');
+  if (!button) return;
+  const index = Number(button.dataset.channel);
+  state.channels[index] = !state.channels[index];
+  button.setAttribute('aria-pressed', String(state.channels[index]));
+  scheduleRender();
+});
+
+$('send').addEventListener('click', sendFromBar);
+$('send-kind').addEventListener('change', syncChrome);
+$('line').addEventListener('keydown', event => {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  sendFromBar();
+});
+$('send-cc').addEventListener('click', () =>
+  sendBytes(ClackMIDI.build.control(channelOut(), clamp(Number($('cc-number').value) || 0, 0, 127), clamp(Number($('cc-value').value) || 0, 0, 127))));
+/* the slider sends as it moves, the way a knob does */
+$('cc-value').addEventListener('input', () => {
+  sendBytes(ClackMIDI.build.control(channelOut(), clamp(Number($('cc-number').value) || 0, 0, 127), clamp(Number($('cc-value').value) || 0, 0, 127)), { quiet: true });
+});
+$('bend').addEventListener('input', () => sendBytes(ClackMIDI.build.bend(channelOut(), Number($('bend').value) || 0), { quiet: true }));
+$('bend').addEventListener('change', () => { $('bend').value = 0; sendBytes(ClackMIDI.build.bend(channelOut(), 0), { quiet: true }); });
+$('send-program').addEventListener('click', () => sendBytes(ClackMIDI.build.program(channelOut(), clamp(Number($('program').value) || 0, 0, 127))));
+$('panic').addEventListener('click', panic);
+
+$('send-sysex').addEventListener('click', () => {
+  try {
+    sendBytes(parseBytes($('sysex-hex').value));
+  } catch (error) {
+    sys(error.message, 'bad');
+  }
+});
+$('load-sysex').addEventListener('click', () => $('file-input').click());
+$('save-sysex').addEventListener('click', saveSysex);
+$('file-input').addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (file) sendSysexFile(file);
+  event.target.value = '';
+});
+
+$('clear').addEventListener('click', () => { log.length = 0; consoleEl.textContent = ''; });
+$('plot-clear').addEventListener('click', () => { series.clear(); drawLegend(); drawPlot(); });
+$('plot-fit').addEventListener('change', drawPlot);
+$('plot-legend').addEventListener('click', event => {
+  const item = event.target.closest('[data-series]');
+  const line = item && series.get(item.dataset.series);
+  if (!line) return;
+  line.hidden = !line.hidden;
+  drawLegend();
+  drawPlot();
+});
+consoleEl.addEventListener('scroll', () => { if (!state.paused) state.autoscroll = consoleEl.scrollHeight - consoleEl.scrollTop - consoleEl.clientHeight < 24; });
+
+const applyFilter = () => {
+  const text = $('find').value.trim();
+  const asRegex = text.match(/^\/(.*)\/([gimsuy]*)$/);
+  try {
+    filterRe = !text ? null : asRegex ? new RegExp(asRegex[1], asRegex[2] || 'i') : new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  } catch {
+    filterRe = null;
+  }
+  scheduleRender();
+};
+$('find').addEventListener('input', applyFilter);
+$('find-only').addEventListener('change', applyFilter);
+
+document.addEventListener('midi-command', event => {
+  const { command, value } = event.detail;
+  switch (command) {
+    case 'save-log': saveLog(); break;
+    case 'save-csv': saveCsv(); break;
+    case 'save-sysex': saveSysex(); break;
+    case 'load-sysex': $('file-input').click(); break;
+    case 'clear': log.length = 0; consoleEl.textContent = ''; break;
+    case 'reset': resetAll(); break;
+    case 'connect': connect(); break;
+    case 'disconnect': disconnect(); break;
+    case 'rescan': fillPorts(); sys('port list refreshed', 'note'); break;
+    case 'demo-toggle': demo.running ? demoStop() : demoStart(); break;
+    case 'kind': state.kinds[value] = !state.kinds[value]; syncFilters(); scheduleRender(); break;
+    case 'kinds-all': for (const [id] of KINDS) state.kinds[id] = true; syncFilters(); scheduleRender(); break;
+    case 'kinds-notes': for (const [id] of KINDS) state.kinds[id] = MUSICAL.includes(id); syncFilters(); scheduleRender(); break;
+    case 'channels-all': state.channels.fill(true); syncFilters(); scheduleRender(); break;
+    case 'stamp': state.stamp = value; renderAll(); break;
+    case 'toggle': toggle(value); break;
+    case 'panic': panic(); break;
+    case 'reset-controllers': for (let channel = 0; channel < 16; channel++) sendBytes(ClackMIDI.build.control(channel, 121, 0), { quiet: true }); sys('controllers reset on all channels', 'note'); break;
+    case 'clock': sendClock(value); break;
+    case 'identity': sendBytes(ClackMIDI.build.identityRequest()); break;
+    case 'gm-on': sendBytes(Uint8Array.of(0xf0, 0x7e, 0x7f, 0x09, 0x01, 0xf7)); break;
+    case 'help': showHelp(); break;
+    case 'support': showSupport(); break;
+  }
+  syncChrome();
+});
+
+function toggle(key) {
+  state[key] = !state[key];
+  if (key === 'paused' && !state.paused) renderAll();
+  if (key === 'showRaw') renderAll();
+  if (key === 'showPlot') requestAnimationFrame(sizePlot);
+  if (key === 'listenAll') { $('listen-all').checked = state.listenAll; bindInputs(); }
+  if (key === 'autoscroll') scrollToTail();
+  if ((key === 'bridgeOut' || key === 'bridgeIn') && state[key]) {
+    if (!bridge) sys('this browser has no BroadcastChannel, so the ClackTerm bridge cannot run', 'bad');
+    else sys('bridging with ClackTerm — open it from Applications → Electronics and turn its side of the bridge on', 'note');
+  }
+  syncChrome();
+}
+
+/* the transport messages, sent as a sequencer would */
+let stopClock = null;
+function sendClock(action) {
+  stopClock?.();
+  stopClock = null;
+  if (action === 'stop') { sendBytes(Uint8Array.of(0xfc)); return; }
+  sendBytes(Uint8Array.of(action === 'continue' ? 0xfb : 0xfa));
+  const bpm = clamp(Number($('tempo-out').value) || 120, 20, 300);
+  stopClock = ticker(60000 / bpm / 24, () => sendBytes(Uint8Array.of(0xf8), { quiet: true }));
+  sys(`sending clock at ${bpm} bpm — Send → Stop the clock ends it`, 'note');
+}
+
+function resetAll() {
+  stopClock?.();
+  stopClock = null;
+  demoStop(true);
+  disconnect();
+  log.length = 0;
+  consoleEl.textContent = '';
+  series.clear();
+  held.clear();
+  sysexCaptured.length = 0;
+  sysexBytes = 0;
+  clockTimes.length = 0;
+  tempo = 0;
+  Object.assign(counters, { in: 0, out: 0, since: 0, notes: 0, byKind: {} });
+  Object.assign(state, {
+    stamp: 'clock', showTx: true, showRaw: false, showActivity: true, showPlot: false,
+    showSide: true, autoscroll: true, paused: false, listenAll: false, thru: false,
+    bridgeOut: false, bridgeIn: false,
+    kinds: Object.fromEntries(KINDS.map(([id]) => [id, id !== 'clock' && id !== 'sensing'])),
+    channels: Array.from({ length: 16 }, () => true)
+  });
+  $('find').value = '';
+  filterRe = null;
+  syncFilters();
+  paintKeyboard();
+  drawLegend();
+  syncChrome();
+}
+
+new ResizeObserver(sizePlot).observe($('plot-panel'));
+setInterval(syncStats, 250);
+window.addEventListener('pagehide', () => { stopClock?.(); demoStop(true); });
+
+/* ---- remembered by the desktop ----------------------------------------- */
+
+ClackOSAppState.connect({
+  controls: true,
+  save: () => ({ view: { ...state } }),
+  restore: saved => {
+    if (!saved?.view) return;
+    for (const key of Object.keys(state)) if (key in saved.view) state[key] = saved.view[key];
+    state.paused = false;
+    state.thru = false;
+    syncFilters();
+    syncChrome();
+    if (state.showPlot) requestAnimationFrame(sizePlot);
+  }
+});
+
+/* ---- go ---------------------------------------------------------------- */
+
+syncChrome();
+syncStats();
+paintKeyboard();
+sys('MIDIterm ready. Ports → Open MIDI to see what is connected, or start the demo instrument to try it without hardware. Clock and active sensing are hidden until you ask for them, under Filter.', 'note');
+if (!midiSupported) sys('this browser has no Web MIDI, so only the demo instrument and the ClackTerm bridge will do anything here', 'bad');
+})();
+</script>
+</body>
+</html>

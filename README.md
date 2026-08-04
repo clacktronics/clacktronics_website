@@ -18,6 +18,7 @@ assets/
   js/model-scene.js         ← three.js viewer core (app + inline @[model])
   js/app-state.js           ← opt-in state persistence for application pages
   js/events.js              ← shared events reader (Calendar app + menu-bar pull-down)
+  js/midi-bytes.js          ← MIDI messages in words (ClackTerm + MIDIterm)
 content/
   site.json                 ← menu order + which windows open at boot
   file/                     ← FILE menu
@@ -608,8 +609,9 @@ loadable. `plain: false` keeps an entry out of the [plain HTML
 mirror](#plain-html-mirror)'s Applications menu — for apps that only mean
 anything inside the desktop, like the wallpaper and palette editors.
 `allow` is handed to the app's iframe as its permission policy, so an app that
-talks to hardware asks for what it needs by name — `"allow": "serial; midi;
-usb"` for ClackTerm — and every other app is loaded without it.
+talks to hardware asks for what it needs by name — `"allow": "serial; usb"` for
+ClackTerm, `"allow": "midi"` for MIDIterm — and every other app is loaded
+without it.
 
 An app that knows its own natural size can make the window wrap around it
 instead of taking the `width`/`height` from `menu.json` as final: dispatch a
@@ -815,45 +817,76 @@ windows, and desktop actions.
   the memory the table will take. Everything it holds is remembered by the
   desktop through `assets/js/app-state.js`.
 - `applications/serial-console.html` (Applications → Electronics → ClackTerm) —
-  a serial and MIDI console. It talks to three kinds of device through one
-  console, and all three can be open at once: a USB serial port over **Web
-  Serial** (baud rate including a custom one, 7 or 8 data bits, parity, stop
-  bits, RTS/CTS, DTR and RTS as outputs, CTS/DSR/DCD/RI shown as they arrive,
-  a break, and a DTR pulse for the reset an Arduino expects), a **Web MIDI**
-  input and output pair, and a **demo device** that pretends to be a GPS
-  receiver, an Arduino printing telemetry, a Modbus slave, a modem, a GRBL
-  controller, a DIN MIDI keyboard or an echo — which is what makes the app
-  worth opening in Firefox and Safari, where neither device API exists.
+  a serial console. It talks to a USB serial port over **Web Serial** — baud
+  rate including a custom one, 7 or 8 data bits, parity, stop bits, RTS/CTS,
+  DTR and RTS as outputs, CTS/DSR/DCD/RI shown as they arrive, a break, and a
+  DTR pulse for the reset an Arduino expects — and to a **demo device** that
+  pretends to be a GPS receiver, an Arduino printing telemetry, a Modbus slave,
+  a modem, a GRBL controller, a DIN MIDI keyboard or an echo, which is what
+  makes the app worth opening in Firefox and Safari, where Web Serial does not
+  exist. Both can be open at once and every row says which it came from.
 
   What arrives is put through one of ten interpreters: plain text (carriage
   returns, backspaces and ANSI escapes behave as a terminal's would, so a
   MicroPython REPL reads properly), a hex dump, NMEA 0183 with the checksum
   verified and the fix, position, speed and satellites named, Modbus RTU cut
   into frames on the idle gap with the CRC checked and the function and any
-  exception in words, MIDI bytes with running status and SysEx — the same
-  parser for a MIDI port and for DIN MIDI on a UART at 31250 baud, SLIP
-  (RFC 1055) and COBS framing, AT commands with the final result codes
-  classified and signal strength converted to dBm, GRBL replies with the error
-  and alarm numbers spelled out and the `?` status report split up, and
-  telemetry — `temp:23.4,rh:41` or plain comma-separated numbers — which feeds
-  a strip-chart plotter that autoscales, fits each line to its own range on
-  request and hides a line when its legend entry is clicked.
+  exception in words, MIDI bytes with running status and SysEx (DIN MIDI on a
+  UART at 31250 baud), SLIP (RFC 1055) and COBS framing, AT commands with the
+  final result codes classified and signal strength converted to dBm, GRBL
+  replies with the error and alarm numbers spelled out and the `?` status
+  report split up, and telemetry — `temp:23.4,rh:41` or plain comma-separated
+  numbers — which feeds a strip-chart plotter that autoscales, fits each line
+  to its own range on request and hides a line when its legend entry is
+  clicked.
 
   Sending is by typed text with the line ending of your choice, by bytes in hex
   (`1B 5B 41`, `0x0D` and `"text\r\n"` all read the same), by six editable
   macros, by file, or by repeating what is in the box on an interval. Send →
   keystrokes straight out turns the console into a real terminal — control
-  keys, arrows as ANSI sequences, no local echo — and the MIDI panel has a
-  two-octave keyboard, CC, program change, panic, a clock and an identity
-  request. Bridging carries bytes between the serial port and the MIDI output
-  in either direction, splitting the stream into messages on the way, which is
-  what a DIN adapter on a UART wants. The console filters on text or a regex,
-  timestamps by clock, by delta or since connecting, holds still while you
-  read, and saves as text, as the raw received bytes, or as the plotted numbers
-  in CSV. Everything but the connections themselves is remembered by the
-  desktop through `assets/js/app-state.js`. The menu entry carries
-  `"allow": "serial; midi; usb"`, which is how ClackOS knows to delegate device
-  access to that app's frame and no other.
+  keys, arrows as ANSI sequences, no local echo, so what you see typed is the
+  device echoing it back. The console filters on text or a regex, timestamps by
+  clock, by delta or since connecting, holds still while you read, and saves as
+  text, as the raw received bytes, or as the plotted numbers in CSV. Everything
+  but the connection itself is remembered by the desktop through
+  `assets/js/app-state.js`.
+
+  Link → the two bridge entries hand DIN MIDI to **MIDIterm** in another
+  window, and take MIDI back the other way, over a `BroadcastChannel` named
+  `clackos-midi-bridge` — a serial port with a MIDI adapter on it therefore
+  reaches a real MIDI output without either app taking on the other's job. The
+  menu entry carries `"allow": "serial; usb"`, which is how ClackOS knows to
+  delegate device access to that app's frame and no other.
+- `applications/midi-console.html` (Applications → Multimedia → MIDIterm) — a
+  MIDI monitor and console over **Web MIDI**. Every message is decoded in
+  words by `assets/js/midi-bytes.js`, the parser ClackTerm uses for DIN MIDI —
+  notes with their names, controllers with theirs, program changes, pitch bend
+  as a signed number, aftertouch, channel mode messages, system common, the
+  realtime bytes, and SysEx named by manufacturer, with the universal messages
+  (identity request and reply, GM on) called what they are.
+
+  It can listen to one input or to every input at once, which is how you find
+  out which cable is which. Message types and channels filter separately, and
+  clock and active sensing start hidden because they bury everything else —
+  the tempo is still read off the incoming clock and shown in beats per minute
+  whether or not the messages are on show. A lane per channel lights as
+  traffic arrives and counts what is sounding, a three-octave keyboard both
+  plays and shows the notes held at the input, and the plotter draws every
+  controller, bend, aftertouch and note velocity that comes in, one line per
+  channel and controller.
+
+  Sending covers notes, CC (with a slider that sends as it moves), program
+  changes, pitch bend that springs back to centre, raw bytes in hex, panic and
+  reset-controllers on all sixteen channels, and a clock at a tempo you set —
+  aimed at absolute times rather than `setInterval`, which rounds 20.833 ms
+  down to 20 and turns 120 bpm into 125. SysEx gets a librarian: dumps are
+  captured as they arrive and save as a `.syx` file, and a `.syx` file sends
+  back a message at a time with a gap old instruments need. Thru passes the
+  input to the output untouched, and the same `clackos-midi-bridge` channel
+  carries messages to and from ClackTerm. The log saves as text or as CSV, one
+  row per message. A demo instrument — an arpeggiating synth, a controller, a
+  clocked sequencer, or a synth that answers an identity request — drives the
+  whole app without hardware. The menu entry carries `"allow": "midi"`.
 - `applications/kicad.html` (Applications → KiCAD Viewer…) — views KiCAD
   schematics and boards using KiCanvas (vendored under `vendor/kicanvas/`,
   MIT — see LICENSE.md and PROVENANCE.md there). KiCanvas compiles its
