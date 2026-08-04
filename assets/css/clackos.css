@@ -33,6 +33,16 @@
   --accent-hover: #6fcf9a;
   --button-text: #f2ecd6;
   --disabled-text: #b3ab8d;
+  /* Media treatment is deliberately separate from the interface palette.
+     It affects photographs, video, canvases and the desktop wallpaper without
+     shifting text or control colours. */
+  --media-grayscale: 0%;
+  --media-sepia: 0%;
+  --media-saturate: 100%;
+  --media-hue: 0deg;
+  --media-brightness: 100%;
+  --media-contrast: 100%;
+  --media-filter: none;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; overflow: hidden; }
@@ -216,6 +226,16 @@ body {
 #desktop {
   position: fixed; top: 34px; left: 0; right: 0; bottom: 44px;
   background-color: var(--desktop); overflow: hidden;
+}
+#desktop::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image: var(--desktop-wallpaper-image, none);
+  filter: var(--media-filter);
+}
+/* New media inherits these variables, so images and canvases introduced after
+   a theme is applied receive the treatment without JavaScript bookkeeping. */
+:where(img, video, canvas):not([data-media-treatment="none"]) {
+  filter: var(--media-filter);
 }
 .desktop-icon {
   all: unset; box-sizing: border-box; position: absolute; top: 18px; left: 18px;

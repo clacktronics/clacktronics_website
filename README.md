@@ -79,7 +79,12 @@ and the list shown in the editor are configured in `content/site.json`:
 ```
 
 Open **Applications → Theme Editor…** to change the palette with colour
-pickers and preview it live across the website. Its Template file dropdown is
+pickers and preview it live across the website. The Media treatment section
+can leave media untouched, make it black and white, add a warm cast, create an
+orange monochrome treatment, or tune the grayscale, warmth, hue, saturation,
+brightness and contrast manually. The treatment follows photos, video,
+canvas-rendered tools and the desktop wallpaper while leaving interface text
+and controls on their explicit theme colours. Its Template file dropdown is
 populated from the CSS themes registered in `content/site.json`, while the
 separate Theme file field keeps Save As and new-theme workflows available.
 The File menu can open a theme

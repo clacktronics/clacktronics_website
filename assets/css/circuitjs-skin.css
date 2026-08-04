@@ -18,7 +18,10 @@ body {
 body div:has(> canvas) { background: var(--paper) !important; }
 body div > canvas { mix-blend-mode: multiply; }
 :root[data-theme-tone="dark"] body div > canvas {
-  filter: invert(1) hue-rotate(180deg);
+  filter: invert(1) hue-rotate(180deg)
+    grayscale(var(--media-grayscale)) sepia(var(--media-sepia))
+    saturate(var(--media-saturate)) hue-rotate(var(--media-hue))
+    brightness(var(--media-brightness)) contrast(var(--media-contrast));
   mix-blend-mode: screen;
 }
 
@@ -150,7 +153,12 @@ body div > canvas { mix-blend-mode: multiply; }
 input[type="range"] { accent-color: var(--leaf-deep); }
 /* the sidebar sliders are canvas-drawn with a hardcoded red fill;
  * rotate that red to ClackOS green (greys and black are unaffected) */
-.verticalPanel canvas { filter: hue-rotate(130deg) saturate(0.55) brightness(0.85) !important; }
+.verticalPanel canvas {
+  filter: hue-rotate(130deg) saturate(0.55) brightness(0.85)
+    grayscale(var(--media-grayscale)) sepia(var(--media-sepia))
+    saturate(var(--media-saturate)) hue-rotate(var(--media-hue))
+    brightness(var(--media-brightness)) contrast(var(--media-contrast)) !important;
+}
 
 /* ---- dialogs ---- */
 .gwt-DialogBox {

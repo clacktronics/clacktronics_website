@@ -31,6 +31,13 @@
   --accent-hover: #6fcf9a;
   --button-text: #f2ecd6;
   --disabled-text: #b3ab8d;
+  --media-grayscale: 0%;
+  --media-sepia: 0%;
+  --media-saturate: 100%;
+  --media-hue: 0deg;
+  --media-brightness: 100%;
+  --media-contrast: 100%;
+  --media-filter: none;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; }
@@ -39,6 +46,9 @@ body {
   font-size: 12.5px;
   color: var(--ink-soft);
   background: var(--paper);
+}
+:where(img, video, canvas):not([data-media-treatment="none"]) {
+  filter: var(--media-filter);
 }
 .app { display: flex; flex-direction: column; min-height: 100%; }
 .app-main { padding: 20px 26px; display: flex; flex-direction: column; gap: 16px; flex: 1; }

@@ -26,8 +26,20 @@ const THEME_VARS = [
   '--title-text', '--title-text-inactive', '--accent-hover', '--button-text',
   '--disabled-text'
 ];
-/* Colours are hex; the two drop-shadow controls are a length and a percentage. */
-const THEME_UNIT_VARS = { '--shadow-distance': /^\d{1,2}(\.\d+)?px$/, '--shadow-alpha': /^\d{1,3}(\.\d+)?%$/ };
+/* Non-colour controls are validated before an editor preview can put them into
+ * another document's inline style. */
+const THEME_UNIT_VARS = {
+  '--shadow-distance': /^\d{1,2}(\.\d+)?px$/,
+  '--shadow-alpha': /^\d{1,3}(\.\d+)?%$/,
+  '--media-grayscale': /^\d{1,3}(\.\d+)?%$/,
+  '--media-sepia': /^\d{1,3}(\.\d+)?%$/,
+  '--media-saturate': /^\d{1,3}(\.\d+)?%$/,
+  '--media-hue': /^-?\d{1,3}(\.\d+)?deg$/,
+  '--media-brightness': /^\d{1,3}(\.\d+)?%$/,
+  '--media-contrast': /^\d{1,3}(\.\d+)?%$/
+};
+const THEME_FILTER_VAR = '--media-filter';
+const THEME_FILTER_PATTERN = /^(?:none|grayscale\(\d{1,3}(?:\.\d+)?%\) sepia\(\d{1,3}(?:\.\d+)?%\) saturate\(\d{1,3}(?:\.\d+)?%\) hue-rotate\(-?\d{1,3}(?:\.\d+)?deg\) brightness\(\d{1,3}(?:\.\d+)?%\) contrast\(\d{1,3}(?:\.\d+)?%\))$/;
 let activeTheme = 'clackos.css';
 let themePreview = null;
 let availableThemes = new Set(['clackos.css']);
@@ -67,6 +79,10 @@ function setPreviewOnDocument(doc, variables) {
     else
       doc.documentElement.style.removeProperty(name);
   }
+  if (variables && THEME_FILTER_PATTERN.test(String(variables[THEME_FILTER_VAR] || '').trim()))
+    doc.documentElement.style.setProperty(THEME_FILTER_VAR, String(variables[THEME_FILTER_VAR]).trim());
+  else
+    doc.documentElement.style.removeProperty(THEME_FILTER_VAR);
 }
 
 function revealThemedFrame(frame, link) {
@@ -80,7 +96,7 @@ function revealThemedFrame(frame, link) {
 
 function themeVariablesForDocument(doc) {
   const styles = doc.defaultView.getComputedStyle(doc.documentElement);
-  return Object.fromEntries([...THEME_VARS, ...Object.keys(THEME_UNIT_VARS)]
+  return Object.fromEntries([...THEME_VARS, ...Object.keys(THEME_UNIT_VARS), THEME_FILTER_VAR]
     .map(name => [name, styles.getPropertyValue(name).trim()]));
 }
 
@@ -372,7 +388,8 @@ function applyWallpaper(name) {
    * transparent pattern layer, otherwise this inline colour would override
    * --desktop and make Theme Editor changes appear not to work. */
   desktop.style.removeProperty('background-color');
-  desktop.style.backgroundImage = wp.image;
+  desktop.style.removeProperty('background-image');
+  desktop.style.setProperty('--desktop-wallpaper-image', wp.image);
   wallpaperDropdowns.forEach(buildWallpaperMenu);
 }
 
