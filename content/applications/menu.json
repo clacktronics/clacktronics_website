@@ -30,7 +30,8 @@
       { "type": "app", "page": "eurorack-panel.html", "label": "Eurorack Panel Generator", "title": "Eurorack Panel Generator", "icon": "circuit-board", "width": 1180, "height": 760, "multi": true, "integrated": true },
       { "type": "app", "page": "pcb-heater.html", "label": "PCB Heater Designer", "title": "PCB Heater Designer", "icon": "circuit-board", "width": 1180, "height": 760, "multi": true },
       { "type": "app", "page": "resistor.html", "label": "Resistor Calculator", "title": "Resistor Calculator", "icon": "calculator", "width": 760, "height": 620 },
-      { "type": "app", "page": "gamma-table.html", "label": "Gamma Table", "title": "Gamma Table", "icon": "zap", "width": 1120, "height": 760, "multi": true }
+      { "type": "app", "page": "gamma-table.html", "label": "Gamma Table", "title": "Gamma Table", "icon": "zap", "width": 1120, "height": 760, "multi": true },
+      { "type": "app", "page": "serial-console.html", "label": "ClackTerm Serial & MIDI Console", "title": "ClackTerm", "icon": "terminal", "width": 1180, "height": 780, "multi": true, "allow": "serial; midi; usb" }
     ] },
     { "type": "submenu", "label": "Internet", "icon": "file-text", "items": [
       { "type": "app", "page": "browser.html", "label": "Web Browser", "title": "Web Browser", "icon": "link", "width": 1100, "height": 760, "multi": true, "plain": false },

@@ -607,6 +607,9 @@ reserved for in-desktop system utilities; all other app entries remain iframe
 loadable. `plain: false` keeps an entry out of the [plain HTML
 mirror](#plain-html-mirror)'s Applications menu — for apps that only mean
 anything inside the desktop, like the wallpaper and palette editors.
+`allow` is handed to the app's iframe as its permission policy, so an app that
+talks to hardware asks for what it needs by name — `"allow": "serial; midi;
+usb"` for ClackTerm — and every other app is loaded without it.
 
 An app that knows its own natural size can make the window wrap around it
 instead of taking the `width`/`height` from `menu.json` as final: dispatch a
@@ -793,6 +796,46 @@ windows, and desktop actions.
   panel beside the graph counts the distinct levels, the steps stuck at zero and
   the memory the table will take. Everything it holds is remembered by the
   desktop through `assets/js/app-state.js`.
+- `applications/serial-console.html` (Applications → Electronics → ClackTerm) —
+  a serial and MIDI console. It talks to three kinds of device through one
+  console, and all three can be open at once: a USB serial port over **Web
+  Serial** (baud rate including a custom one, 7 or 8 data bits, parity, stop
+  bits, RTS/CTS, DTR and RTS as outputs, CTS/DSR/DCD/RI shown as they arrive,
+  a break, and a DTR pulse for the reset an Arduino expects), a **Web MIDI**
+  input and output pair, and a **demo device** that pretends to be a GPS
+  receiver, an Arduino printing telemetry, a Modbus slave, a modem, a GRBL
+  controller, a DIN MIDI keyboard or an echo — which is what makes the app
+  worth opening in Firefox and Safari, where neither device API exists.
+
+  What arrives is put through one of ten interpreters: plain text (carriage
+  returns, backspaces and ANSI escapes behave as a terminal's would, so a
+  MicroPython REPL reads properly), a hex dump, NMEA 0183 with the checksum
+  verified and the fix, position, speed and satellites named, Modbus RTU cut
+  into frames on the idle gap with the CRC checked and the function and any
+  exception in words, MIDI bytes with running status and SysEx — the same
+  parser for a MIDI port and for DIN MIDI on a UART at 31250 baud, SLIP
+  (RFC 1055) and COBS framing, AT commands with the final result codes
+  classified and signal strength converted to dBm, GRBL replies with the error
+  and alarm numbers spelled out and the `?` status report split up, and
+  telemetry — `temp:23.4,rh:41` or plain comma-separated numbers — which feeds
+  a strip-chart plotter that autoscales, fits each line to its own range on
+  request and hides a line when its legend entry is clicked.
+
+  Sending is by typed text with the line ending of your choice, by bytes in hex
+  (`1B 5B 41`, `0x0D` and `"text\r\n"` all read the same), by six editable
+  macros, by file, or by repeating what is in the box on an interval. Send →
+  keystrokes straight out turns the console into a real terminal — control
+  keys, arrows as ANSI sequences, no local echo — and the MIDI panel has a
+  two-octave keyboard, CC, program change, panic, a clock and an identity
+  request. Bridging carries bytes between the serial port and the MIDI output
+  in either direction, splitting the stream into messages on the way, which is
+  what a DIN adapter on a UART wants. The console filters on text or a regex,
+  timestamps by clock, by delta or since connecting, holds still while you
+  read, and saves as text, as the raw received bytes, or as the plotted numbers
+  in CSV. Everything but the connections themselves is remembered by the
+  desktop through `assets/js/app-state.js`. The menu entry carries
+  `"allow": "serial; midi; usb"`, which is how ClackOS knows to delegate device
+  access to that app's frame and no other.
 - `applications/kicad.html` (Applications → KiCAD Viewer…) — views KiCAD
   schematics and boards using KiCanvas (vendored under `vendor/kicanvas/`,
   MIT — see LICENSE.md and PROVENANCE.md there). KiCanvas compiles its

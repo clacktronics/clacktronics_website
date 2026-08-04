@@ -1,0 +1,2456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>ClackTerm — ClackOS</title>
+<!-- crawler metadata — this app is a page in its own right, reachable from the
+     plain mirror and linkable on its own, so it says what it is. -->
+<meta name="description" content="A serial and MIDI console in the browser. Connect to a USB serial port or a MIDI device, watch the traffic as text, hex or a decoded protocol — NMEA, Modbus RTU, MIDI, SLIP, COBS, AT commands or GRBL — send text, hex, files and MIDI messages, plot live telemetry, and bridge serial to MIDI.">
+<link rel="canonical" href="https://clacktronics.co.uk/content/applications/serial-console.html">
+<meta property="og:site_name" content="Clacktronics">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ClackTerm — ClackOS">
+<meta property="og:url" content="https://clacktronics.co.uk/content/applications/serial-console.html">
+<meta property="og:description" content="A serial and MIDI console in the browser. Connect to a USB serial port or a MIDI device, watch the traffic as text, hex or a decoded protocol, send text, hex, files and MIDI messages, plot live telemetry, and bridge serial to MIDI.">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+:root {
+  --rx: #14231a;
+  --tx: #276b47;
+  --sys: #66755a;
+  --bad: #a53628;
+  --note: #3f66ad;
+}
+html, body, .term-app { height: 100%; min-height: 0; }
+body { overflow: hidden; }
+button, input, select, textarea { font: inherit; }
+.term-app { display: flex; flex-direction: column; }
+.rm-dd .mi-check { margin-left: auto; padding-left: 18px; color: var(--leaf-deep); }
+.rm-dd button:hover .mi-check { color: var(--menu-text); }
+
+.term-work { display: flex; flex: 1; min-height: 0; }
+
+/* ---- side panel ---- */
+.term-side {
+  width: 292px; flex: none; min-height: 0; overflow-y: auto; padding: 9px;
+  border-right: 1px solid var(--ink); background: var(--paper-deep); scrollbar-width: thin;
+}
+.term-side[hidden] { display: none; }
+.card {
+  border: 1px solid var(--paper-line); border-radius: 6px;
+  background: var(--paper); padding: 9px; margin-bottom: 8px;
+}
+.card > h2 {
+  display: flex; align-items: center; gap: 6px; margin: 0 0 8px;
+  color: var(--leaf-deep); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.card > h2 .lamp { margin-left: auto; }
+.lamp {
+  width: 9px; height: 9px; flex: none; border-radius: 50%;
+  border: 1px solid var(--ink); background: var(--paper-deep);
+}
+.lamp.on { background: var(--leaf); }
+.lamp.busy { background: #d8a33c; }
+.lamp.err { background: var(--bad); }
+
+.field { display: grid; grid-template-columns: minmax(0, 1fr) 132px; align-items: center; gap: 8px; margin: 6px 0; }
+.field > label { font-size: 11px; line-height: 1.25; }
+.field.wide { grid-template-columns: minmax(0, 1fr); }
+.field.hidden { display: none; }
+input[type="number"], input[type="text"], select, textarea {
+  width: 100%; min-width: 0; height: 28px; padding: 4px 7px;
+  border: 1px solid var(--ink); border-radius: 5px;
+  background: var(--paper-deep); color: var(--control-text); font-size: 11px;
+}
+textarea { height: auto; resize: vertical; line-height: 1.45; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.check { display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; margin: 6px 0; }
+.check input { accent-color: var(--leaf-deep); width: auto; height: auto; }
+.note { font-size: 9.5px; color: var(--sage); line-height: 1.5; margin-top: 6px; }
+.note.warn { color: var(--bad); }
+
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.btn-row .btn { padding: 7px 6px; text-align: center; font-size: 10.5px; }
+.btn-row .btn.full { grid-column: 1 / -1; }
+.btn:disabled { color: var(--disabled-text); border-color: var(--paper-line); cursor: default; background: var(--paper-deep); }
+.btn.primary:disabled { background: var(--paper-deep); }
+
+.signals { display: flex; flex-wrap: wrap; gap: 4px 9px; margin-top: 7px; font-size: 9.5px; color: var(--sage); }
+.signals span { display: flex; align-items: center; gap: 4px; }
+.signals .lamp { width: 7px; height: 7px; }
+
+.stat-list { display: grid; gap: 3px; font-size: 10.5px; }
+.stat { display: flex; justify-content: space-between; gap: 10px; }
+.stat span:last-child { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* macros */
+.macro { display: grid; grid-template-columns: 58px 58px minmax(0, 1fr) auto; gap: 5px; align-items: center; margin: 5px 0; }
+.macro input { height: 26px; font-size: 10.5px; }
+.macro .btn { padding: 5px 8px; font-size: 10px; }
+.macro select { height: 26px; font-size: 10px; }
+
+/* keyboard */
+.keys { position: relative; height: 62px; margin-top: 6px; user-select: none; touch-action: none; }
+.keys .wh, .keys .bl {
+  position: absolute; top: 0; border: 1px solid var(--ink); box-sizing: border-box; cursor: pointer;
+}
+.keys .wh { height: 100%; background: var(--paper); border-radius: 0 0 3px 3px; }
+.keys .bl { height: 62%; background: var(--ink); border-radius: 0 0 3px 3px; z-index: 2; }
+.keys .wh.down { background: var(--leaf); }
+.keys .bl.down { background: var(--leaf-deep); }
+
+/* ---- main ---- */
+.term-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.term-bar {
+  flex: none; display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 5px 9px; border-bottom: 1px solid var(--paper-line); background: var(--paper-deep);
+  font-size: 10px; color: var(--sage);
+}
+.pill {
+  display: flex; align-items: center; gap: 5px; padding: 3px 7px;
+  border: 1px solid var(--paper-line); border-radius: 999px; background: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+.pill b { font-weight: 500; color: var(--ink); }
+.term-bar .grow { flex: 1; min-width: 0; }
+.term-bar input[type="text"] { height: 24px; width: 150px; font-size: 10.5px; }
+.term-bar .btn { padding: 4px 9px; font-size: 10px; }
+
+.term-console {
+  flex: 1; min-height: 0; overflow: auto; padding: 6px 0 10px;
+  background: var(--paper); font-size: 11.5px; line-height: 1.5;
+  font-variant-numeric: tabular-nums; scrollbar-width: thin;
+}
+.term-console:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+.term-console.wrap .ln { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ln {
+  display: flex; gap: 8px; padding: 0 10px; white-space: pre;
+  color: var(--rx);
+}
+.ln:hover { background: var(--paper-deep); }
+.ln .ts { flex: none; color: var(--sage); font-size: 10px; padding-top: 1px; }
+.ln .tag { flex: none; width: 52px; color: var(--sage); font-size: 10px; padding-top: 1px; text-align: right; }
+.ln .body { min-width: 0; }
+.ln .body .k { color: var(--sage); }
+.ln .body .v { color: var(--tx); }
+.ln .body em { font-style: normal; color: var(--bad); }
+.ln .body mark { background: var(--leaf); color: var(--ink); }
+.ln.tx { color: var(--tx); }
+.ln.sys { color: var(--sys); font-style: italic; }
+/* the app's own messages wrap; received data keeps its columns */
+.ln.msg .body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ln.bad { color: var(--bad); }
+.ln.note { color: var(--note); }
+.ln .raw { display: block; color: var(--sage); font-size: 10px; }
+.term-console.hide-ts .ts, .term-console.hide-tag .tag { display: none; }
+
+/* ---- plotter ---- */
+.term-plot { flex: none; height: 186px; border-top: 1px solid var(--ink); background: var(--paper-deep); display: flex; flex-direction: column; }
+.term-plot[hidden] { display: none; }
+.plot-head { display: flex; align-items: center; gap: 8px; padding: 4px 9px; border-bottom: 1px solid var(--paper-line); font-size: 10px; color: var(--sage); }
+.plot-head .legend { display: flex; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
+.plot-head .legend span { display: flex; align-items: center; gap: 4px; }
+.plot-head .legend i { width: 9px; height: 3px; display: block; }
+.plot-head .btn { padding: 3px 8px; font-size: 10px; margin-left: auto; }
+.term-plot canvas { display: block; flex: 1; min-height: 0; width: 100%; }
+
+/* ---- send ---- */
+.term-send {
+  flex: none; border-top: 1px solid var(--ink); background: var(--paper-deep); padding: 7px 9px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.send-row { display: flex; align-items: center; gap: 6px; }
+.send-row select { width: auto; min-width: 84px; height: 28px; font-size: 10.5px; }
+.send-row input[type="text"] { flex: 1; min-width: 0; }
+.send-row .btn { padding: 6px 12px; font-size: 10.5px; white-space: nowrap; }
+.send-row .hint { font-size: 9.5px; color: var(--sage); }
+.send-row.opts { flex-wrap: wrap; gap: 5px 12px; font-size: 10px; color: var(--sage); }
+.send-row.opts .check { margin: 0; font-size: 10px; }
+.send-row.opts input[type="number"] { width: 64px; height: 24px; font-size: 10px; }
+
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  .term-app { height: auto; min-height: 100%; }
+  .term-work { flex-direction: column; }
+  .term-side { width: 100%; overflow: visible; border-right: 0; border-bottom: 1px solid var(--ink); }
+  .term-console { height: 340px; flex: none; }
+}
+</style>
+<script>
+/* The menus are wired before the app script runs, so they open whether or not
+   anything below throws. */
+document.addEventListener('DOMContentLoaded', () => {
+  const menus = document.querySelectorAll('.rm');
+  const closeMenus = () => menus.forEach(menu => menu.classList.remove('open'));
+  menus.forEach(menu => menu.querySelector(':scope > button').addEventListener('click', event => {
+    event.stopPropagation();
+    const open = menu.classList.contains('open');
+    closeMenus();
+    if (!open) menu.classList.add('open');
+  }));
+  document.querySelector('.rm-bar').addEventListener('click', event => {
+    const item = event.target.closest('[data-cmd]');
+    if (!item) return;
+    closeMenus();
+    document.dispatchEvent(new CustomEvent('term-command', {
+      detail: { command: item.dataset.cmd, value: item.dataset.value }
+    }));
+  });
+  document.addEventListener('click', closeMenus);
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenus(); });
+});
+</script>
+<script src="../../assets/js/app-menu.js" defer></script>
+<script src="../../assets/js/app-state.js"></script>
+</head>
+<body>
+<div class="term-app">
+  <nav class="rm-bar" aria-label="ClackTerm menu">
+    <div class="rm">
+      <button type="button">File</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="save-log"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save console (.txt)</button>
+        <button type="button" data-cmd="save-raw"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save received bytes (.bin)</button>
+        <button type="button" data-cmd="save-plot"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save plotted data (.csv)</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="send-file"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Send a file…</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear console</button>
+        <button type="button" data-cmd="reset"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Reset everything</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Link</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="serial-connect"><span class="pixel-icon" data-icon="cpu" aria-hidden="true"></span>Connect a serial port…</button>
+        <button type="button" data-cmd="serial-disconnect"><span class="pixel-icon" data-icon="power" aria-hidden="true"></span>Close the serial port</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="midi-connect"><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>Open MIDI</button>
+        <button type="button" data-cmd="midi-disconnect"><span class="pixel-icon" data-icon="power" aria-hidden="true"></span>Close MIDI</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="demo-toggle"><span class="pixel-icon" data-icon="bug" aria-hidden="true"></span>Demo device<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="dtr"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>DTR<span class="mi-check"></span></button>
+        <button type="button" data-cmd="rts"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>RTS<span class="mi-check"></span></button>
+        <button type="button" data-cmd="break"><span class="pixel-icon" data-icon="minus-box" aria-hidden="true"></span>Send a break</button>
+        <button type="button" data-cmd="pulse-reset"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Pulse DTR (reset the board)</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Interpret</button>
+      <div class="rm-dd" id="menu-decode"></div>
+    </div>
+    <div class="rm">
+      <button type="button">View</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="stamp" data-value="none"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>No timestamps<span class="mi-check"></span></button>
+        <button type="button" data-cmd="stamp" data-value="clock"><span class="pixel-icon" data-icon="calendar" aria-hidden="true"></span>Time of day<span class="mi-check"></span></button>
+        <button type="button" data-cmd="stamp" data-value="delta"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span>Since the line before<span class="mi-check"></span></button>
+        <button type="button" data-cmd="stamp" data-value="run"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Since connecting<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="toggle" data-value="showTx"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Echo what is sent<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="showRaw"><span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span>Raw bytes under decoded lines<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="showTags"><span class="pixel-icon" data-icon="list-box" aria-hidden="true"></span>Source column<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="wrap"><span class="pixel-icon" data-icon="article" aria-hidden="true"></span>Wrap long lines<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="toggle" data-value="autoscroll"><span class="pixel-icon" data-icon="arrow-bar-right" aria-hidden="true"></span>Follow the tail<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="paused"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Hold the display<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="toggle" data-value="showPlot"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Plotter<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="showSide"><span class="pixel-icon" data-icon="app-windows" aria-hidden="true"></span>Side panel<span class="mi-check"></span></button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Send</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="send-mode" data-value="text"><span class="pixel-icon" data-icon="file-text" aria-hidden="true"></span>Type text<span class="mi-check"></span></button>
+        <button type="button" data-cmd="send-mode" data-value="hex"><span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span>Type bytes in hex<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="eol" data-value="none"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>No line ending<span class="mi-check"></span></button>
+        <button type="button" data-cmd="eol" data-value="lf"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Newline (LF)<span class="mi-check"></span></button>
+        <button type="button" data-cmd="eol" data-value="cr"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Carriage return (CR)<span class="mi-check"></span></button>
+        <button type="button" data-cmd="eol" data-value="crlf"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Both (CRLF)<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="toggle" data-value="interactive"><span class="pixel-icon" data-icon="terminal" aria-hidden="true"></span>Keystrokes go straight out<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="repeat"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Repeat what is in the box<span class="mi-check"></span></button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="ctrl" data-value="3"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>Ctrl-C (0x03)</button>
+        <button type="button" data-cmd="ctrl" data-value="4"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>Ctrl-D (0x04)</button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">MIDI</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="midi-panic"><span class="pixel-icon" data-icon="volume" aria-hidden="true"></span>All notes off (panic)</button>
+        <button type="button" data-cmd="midi-clock" data-value="start"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Send start + clock</button>
+        <button type="button" data-cmd="midi-clock" data-value="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Send stop</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="midi-id"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>Ask for identity (SysEx)</button>
+        <div class="sep"></div>
+        <button type="button" data-cmd="toggle" data-value="bridgeSerialToMidi"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Bridge serial → MIDI out<span class="mi-check"></span></button>
+        <button type="button" data-cmd="toggle" data-value="bridgeMidiToSerial"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Bridge MIDI in → serial<span class="mi-check"></span></button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Help</button>
+      <div class="rm-dd">
+        <button type="button" data-cmd="help"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>Quick reference</button>
+        <button type="button" data-cmd="support"><span class="pixel-icon" data-icon="bug" aria-hidden="true"></span>What this browser supports</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="term-work">
+    <aside class="term-side" id="side" aria-label="Links and settings">
+
+      <section class="card">
+        <h2>Serial port<span class="lamp" id="lamp-serial"></span></h2>
+        <div class="field">
+          <label for="baud">Baud</label>
+          <select id="baud">
+            <option>300</option><option>1200</option><option>2400</option><option>4800</option>
+            <option>9600</option><option>19200</option><option>31250</option><option>38400</option>
+            <option>57600</option><option selected>115200</option><option>230400</option>
+            <option>460800</option><option>921600</option><option>1000000</option><option>2000000</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="field hidden" id="baud-custom-field">
+          <label for="baud-custom">Custom baud</label>
+          <input type="number" id="baud-custom" value="115200" min="1" max="20000000" step="1">
+        </div>
+        <div class="field">
+          <label for="databits">Data bits</label>
+          <select id="databits"><option>7</option><option selected>8</option></select>
+        </div>
+        <div class="field">
+          <label for="parity">Parity</label>
+          <select id="parity"><option value="none" selected>None</option><option value="even">Even</option><option value="odd">Odd</option></select>
+        </div>
+        <div class="field">
+          <label for="stopbits">Stop bits</label>
+          <select id="stopbits"><option selected>1</option><option>2</option></select>
+        </div>
+        <div class="field">
+          <label for="flow">Flow control</label>
+          <select id="flow"><option value="none" selected>None</option><option value="hardware">RTS/CTS</option></select>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="serial-connect">Connect…</button>
+          <button type="button" class="btn ghost" id="serial-disconnect" disabled>Close</button>
+        </div>
+        <div class="signals">
+          <span><i class="lamp" id="sig-cts"></i>CTS</span>
+          <span><i class="lamp" id="sig-dsr"></i>DSR</span>
+          <span><i class="lamp" id="sig-dcd"></i>DCD</span>
+          <span><i class="lamp" id="sig-ri"></i>RI</span>
+        </div>
+        <label class="check"><input type="checkbox" id="dtr" checked>DTR out</label>
+        <label class="check"><input type="checkbox" id="rts" checked>RTS out</label>
+        <p class="note" id="serial-note">Web Serial needs Chrome, Edge or Opera over HTTPS. The port is chosen by you, per session.</p>
+      </section>
+
+      <section class="card">
+        <h2>MIDI<span class="lamp" id="lamp-midi"></span></h2>
+        <div class="field wide">
+          <label for="midi-in">Input</label>
+          <select id="midi-in"><option value="">— none —</option></select>
+        </div>
+        <div class="field wide">
+          <label for="midi-out">Output</label>
+          <select id="midi-out"><option value="">— none —</option></select>
+        </div>
+        <label class="check"><input type="checkbox" id="midi-sysex" checked>Ask for SysEx permission</label>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="midi-connect">Open MIDI</button>
+          <button type="button" class="btn ghost" id="midi-disconnect" disabled>Close</button>
+        </div>
+        <p class="note" id="midi-note">Web MIDI needs Chrome, Edge or Opera. Ports appear once access is granted.</p>
+      </section>
+
+      <section class="card">
+        <h2>Demo device<span class="lamp" id="lamp-demo"></span></h2>
+        <div class="field wide">
+          <label for="demo-kind">Pretend to be</label>
+          <select id="demo-kind"></select>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="demo-start">Start</button>
+          <button type="button" class="btn ghost" id="demo-stop" disabled>Stop</button>
+        </div>
+        <p class="note">A simulated device on the other end of the console, for trying the decoders and the sender out without hardware — and for browsers with no Web Serial at all.</p>
+      </section>
+
+      <section class="card">
+        <h2>MIDI out<span class="lamp" id="lamp-midi-out"></span></h2>
+        <div class="field">
+          <label for="midi-chan">Channel</label>
+          <select id="midi-chan"></select>
+        </div>
+        <div class="field">
+          <label for="midi-vel">Velocity</label>
+          <input type="number" id="midi-vel" value="100" min="1" max="127" step="1">
+        </div>
+        <div class="field">
+          <label for="midi-octave">Keyboard octave</label>
+          <input type="number" id="midi-octave" value="4" min="-1" max="8" step="1">
+        </div>
+        <div class="keys" id="keys" role="group" aria-label="MIDI keyboard"></div>
+        <div class="field">
+          <label for="midi-cc">CC number</label>
+          <input type="number" id="midi-cc" value="1" min="0" max="127" step="1">
+        </div>
+        <div class="field">
+          <label for="midi-ccval">CC value</label>
+          <input type="number" id="midi-ccval" value="64" min="0" max="127" step="1">
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn ghost" id="send-cc">Send CC</button>
+          <button type="button" class="btn ghost" id="send-pc">Program change</button>
+          <button type="button" class="btn ghost full" id="midi-panic">All notes off</button>
+        </div>
+        <p class="note">Messages go to the MIDI output, and to the serial port too when serial is bridged to MIDI.</p>
+      </section>
+
+      <section class="card">
+        <h2>Decoding</h2>
+        <div class="field wide">
+          <label for="decode-serial">Serial traffic</label>
+          <select id="decode-serial"></select>
+        </div>
+        <div class="field wide">
+          <label for="decode-midi">MIDI traffic</label>
+          <select id="decode-midi"></select>
+        </div>
+        <div class="field" id="hexwidth-field">
+          <label for="hexwidth">Bytes per hex row</label>
+          <select id="hexwidth"><option>8</option><option selected>16</option><option>32</option></select>
+        </div>
+        <div class="field" id="idle-field">
+          <label for="idle">Frame gap (ms)</label>
+          <input type="number" id="idle" value="12" min="1" max="2000" step="1">
+        </div>
+        <label class="check"><input type="checkbox" id="strip-ansi" checked>Handle ANSI/VT escapes</label>
+        <label class="check"><input type="checkbox" id="show-ctrl">Mark control characters</label>
+        <p class="note" id="decode-note"></p>
+      </section>
+
+      <section class="card">
+        <h2>Macros</h2>
+        <div id="macros"></div>
+        <p class="note">Each macro sends in its own mode. Hex accepts <code>0x41 42</code> and <code>"text"</code>, and the send line ending is added to text macros.</p>
+      </section>
+
+      <section class="card">
+        <h2>Traffic</h2>
+        <div class="stat-list" id="stats"></div>
+      </section>
+    </aside>
+
+    <main class="term-main">
+      <div class="term-bar">
+        <span class="pill"><i class="lamp" id="pill-lamp"></i><b id="pill-state">Not connected</b></span>
+        <span class="pill">RX <b id="pill-rx">0</b></span>
+        <span class="pill">TX <b id="pill-tx">0</b></span>
+        <span class="pill" id="pill-rate">0 B/s</span>
+        <span class="grow"></span>
+        <input type="text" id="find" placeholder="filter — text or /regex/" aria-label="Filter the console">
+        <label class="check" style="margin:0"><input type="checkbox" id="find-only">only matches</label>
+        <button type="button" class="btn ghost" id="clear">Clear</button>
+      </div>
+
+      <div class="term-console" id="console" tabindex="0" role="log" aria-label="Console"></div>
+
+      <section class="term-plot" id="plot-panel" hidden aria-label="Plotter">
+        <div class="plot-head">
+          <div class="legend" id="plot-legend"><span>no numbers seen yet</span></div>
+          <label class="check" style="margin:0;margin-left:auto"><input type="checkbox" id="plot-fit">fit each line</label>
+          <button type="button" class="btn ghost" id="plot-clear">Clear plot</button>
+        </div>
+        <canvas id="plot"></canvas>
+      </section>
+
+      <div class="term-send">
+        <div class="send-row">
+          <select id="target" aria-label="Where to send"></select>
+          <select id="send-mode" aria-label="How to read what you type">
+            <option value="text">Text</option>
+            <option value="hex">Hex</option>
+          </select>
+          <input type="text" id="line" placeholder="type and press Enter" spellcheck="false" autocomplete="off" aria-label="What to send">
+          <select id="eol" aria-label="Line ending">
+            <option value="none">no ending</option>
+            <option value="lf" selected>LF</option>
+            <option value="cr">CR</option>
+            <option value="crlf">CRLF</option>
+          </select>
+          <button type="button" class="btn primary" id="send">Send</button>
+        </div>
+        <div class="send-row opts">
+          <label class="check"><input type="checkbox" id="interactive">keystrokes straight out</label>
+          <label class="check"><input type="checkbox" id="repeat">repeat every</label>
+          <input type="number" id="repeat-ms" value="1000" min="20" max="600000" step="10" aria-label="Repeat interval in milliseconds">
+          <span class="hint">ms</span>
+          <span class="hint" id="send-hint"></span>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<input type="file" id="file-input" hidden>
+
+<script>
+(() => {
+'use strict';
+
+const $ = id => document.getElementById(id);
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+const esc = text => String(text).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const hex2 = byte => byte.toString(16).toUpperCase().padStart(2, '0');
+const hexOf = bytes => Array.from(bytes, hex2).join(' ');
+const printable = byte => (byte >= 0x20 && byte < 0x7f ? String.fromCharCode(byte) : '.');
+const asciiOf = bytes => Array.from(bytes, printable).join('');
+const nowText = () => {
+  const d = new Date();
+  const pad = (n, w = 2) => String(n).padStart(w, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+};
+const bytesText = n => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' kB' : (n / 1048576).toFixed(2) + ' MB');
+
+/* Modbus RTU's CRC — little-endian on the wire, which is why the check below
+ * compares against the last two bytes swapped. */
+function crc16(bytes, length) {
+  let crc = 0xffff;
+  for (let i = 0; i < length; i++) {
+    crc ^= bytes[i];
+    for (let bit = 0; bit < 8; bit++) crc = crc & 1 ? (crc >> 1) ^ 0xa001 : crc >> 1;
+  }
+  return crc;
+}
+
+/* NMEA's checksum is an XOR of everything between the '$' and the '*'. */
+function nmeaSum(body) {
+  let sum = 0;
+  for (let i = 0; i < body.length; i++) sum ^= body.charCodeAt(i) & 0xff;
+  return sum;
+}
+
+const encoder = new TextEncoder();
+
+/* What someone types into the hex box: 0x-prefixed bytes, bare pairs, runs of
+ * pairs, decimal with a trailing '.', and quoted text with the usual escapes,
+ * so a framed command can be written the way it reads in a datasheet. */
+function parseBytes(text) {
+  const out = [];
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (/[\s,;]/.test(ch)) { i++; continue; }
+    if (ch === '"' || ch === "'") {
+      const quote = ch;
+      i++;
+      let literal = '';
+      while (i < text.length && text[i] !== quote) {
+        if (text[i] === '\\' && i + 1 < text.length) {
+          const code = text[++i];
+          i++;
+          if (code === 'n') literal += '\n';
+          else if (code === 'r') literal += '\r';
+          else if (code === 't') literal += '\t';
+          else if (code === '0') literal += '\0';
+          else if (code === 'x') { literal += String.fromCharCode(parseInt(text.substr(i, 2), 16) || 0); i += 2; }
+          else literal += code;
+        } else literal += text[i++];
+      }
+      i++;                                     /* closing quote, if it is there */
+      for (const byte of encoder.encode(literal)) out.push(byte);
+      continue;
+    }
+    let token = '';
+    while (i < text.length && !/[\s,;]/.test(text[i])) token += text[i++];
+    if (/^\d+\.$/.test(token)) { out.push(Number(token.slice(0, -1)) & 0xff); continue; }
+    const body = token.replace(/^0[xX]/, '');
+    if (!/^[0-9a-fA-F]+$/.test(body)) throw new Error(`"${token}" is not a byte`);
+    const padded = body.length % 2 ? '0' + body : body;
+    for (let p = 0; p < padded.length; p += 2) out.push(parseInt(padded.substr(p, 2), 16));
+  }
+  return new Uint8Array(out);
+}
+
+const EOL_BYTES = { none: [], lf: [10], cr: [13], crlf: [13, 10] };
+
+/* ---- MIDI vocabulary ------------------------------------------------- */
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const noteName = note => NOTE_NAMES[note % 12] + (Math.floor(note / 12) - 1);
+const CC_NAMES = {
+  0: 'bank select MSB', 1: 'modulation', 2: 'breath', 4: 'foot', 5: 'portamento time',
+  6: 'data entry MSB', 7: 'volume', 8: 'balance', 10: 'pan', 11: 'expression',
+  32: 'bank select LSB', 64: 'sustain', 65: 'portamento', 66: 'sostenuto', 67: 'soft',
+  71: 'resonance', 72: 'release', 73: 'attack', 74: 'cutoff', 91: 'reverb', 93: 'chorus',
+  120: 'all sound off', 121: 'reset controllers', 122: 'local control',
+  123: 'all notes off', 124: 'omni off', 125: 'omni on', 126: 'mono on', 127: 'poly on'
+};
+const REALTIME = {
+  0xf8: 'clock', 0xfa: 'start', 0xfb: 'continue', 0xfc: 'stop',
+  0xfe: 'active sensing', 0xff: 'system reset'
+};
+const MAKERS = {
+  '00': 'three-byte id', '01': 'Sequential', '3E': 'Waldorf', '40': 'Kawai', '41': 'Roland',
+  '42': 'Korg', '43': 'Yamaha', '44': 'Casio', '47': 'Akai', '7D': 'non-commercial',
+  '7E': 'universal non-realtime', '7F': 'universal realtime'
+};
+
+/* One complete MIDI message in words. */
+function describeMidi(bytes) {
+  const status = bytes[0];
+  if (status === undefined) return { text: '(empty)', cls: 'bad' };
+  if (status >= 0xf8) return { text: REALTIME[status] || `system 0x${hex2(status)}`, cls: 'note' };
+  if (status === 0xf0) {
+    const id = hex2(bytes[1] ?? 0);
+    const maker = MAKERS[id] || `manufacturer 0x${id}`;
+    return { text: `SysEx · ${maker} · ${bytes.length} bytes · ${hexOf(bytes.slice(0, 12))}${bytes.length > 12 ? ' …' : ''}`, cls: 'note' };
+  }
+  if (status === 0xf1) return { text: `MTC quarter frame ${bytes[1] ?? 0}`, cls: 'note' };
+  if (status === 0xf2) return { text: `song position ${(((bytes[2] ?? 0) << 7) | (bytes[1] ?? 0))} beats`, cls: 'note' };
+  if (status === 0xf3) return { text: `song select ${bytes[1] ?? 0}`, cls: 'note' };
+  if (status === 0xf6) return { text: 'tune request', cls: 'note' };
+  const type = status & 0xf0;
+  const channel = (status & 0x0f) + 1;
+  const a = bytes[1] ?? 0;
+  const b = bytes[2] ?? 0;
+  const on = `ch${String(channel).padStart(2, ' ')}`;
+  switch (type) {
+    case 0x80: return { text: `${on}  note off   ${noteName(a)} (${a})  vel ${b}` };
+    case 0x90: return b === 0
+      ? { text: `${on}  note off   ${noteName(a)} (${a})  vel 0` }
+      : { text: `${on}  note on    ${noteName(a)} (${a})  vel ${b}` };
+    case 0xa0: return { text: `${on}  aftertouch ${noteName(a)} (${a})  ${b}` };
+    case 0xb0: return { text: `${on}  control    ${a}${CC_NAMES[a] ? ' ' + CC_NAMES[a] : ''} = ${b}` };
+    case 0xc0: return { text: `${on}  program    ${a}` };
+    case 0xd0: return { text: `${on}  channel pressure ${a}` };
+    case 0xe0: return { text: `${on}  pitch bend ${((b << 7) | a) - 8192}` };
+    default: return { text: `0x${hex2(status)} ${hexOf(bytes.slice(1))}`, cls: 'bad' };
+  }
+}
+
+/* ---- state ----------------------------------------------------------- */
+
+const MAX_ROWS = 4000;
+const MAX_RAW = 4 << 20;
+
+const state = {
+  stamp: 'clock',
+  showTx: true,
+  showRaw: false,
+  showTags: true,
+  wrap: false,
+  autoscroll: true,
+  paused: false,
+  showPlot: false,
+  showSide: true,
+  interactive: false,
+  repeat: false,
+  bridgeSerialToMidi: false,
+  bridgeMidiToSerial: false
+};
+
+const counters = { rx: 0, tx: 0, errors: 0, since: 0, window: [] };
+const log = [];
+const rawRx = [];
+let rawRxLength = 0;
+
+/* ---- console --------------------------------------------------------- */
+
+const consoleEl = $('console');
+let filterRe = null;
+let renderTimer = 0;
+
+function rowMatches(row) {
+  if (!filterRe) return true;
+  filterRe.lastIndex = 0;
+  return filterRe.test(row.text);
+}
+
+function highlight(text) {
+  if (!filterRe) return esc(text);
+  filterRe.lastIndex = 0;
+  return esc(text).replace(new RegExp(filterRe.source, filterRe.flags.includes('g') ? filterRe.flags : filterRe.flags + 'g'),
+    match => `<mark>${match}</mark>`);
+}
+
+function stampOf(row) {
+  if (state.stamp === 'none') return '';
+  if (state.stamp === 'clock') return row.clock;
+  if (state.stamp === 'run') return ((row.t - (counters.since || row.t)) / 1000).toFixed(3).padStart(9, ' ');
+  return '+' + (row.delta / 1000).toFixed(3).padStart(7, ' ');
+}
+
+function paintRow(row) {
+  const node = row.el;
+  node.className = 'ln ' + (row.cls || '');
+  node.querySelector('.ts').textContent = stampOf(row);
+  node.querySelector('.tag').textContent = row.tag || '';
+  const body = node.querySelector('.body');
+  let html = row.html || highlight(row.text);
+  if (state.showRaw && row.raw) html += `<span class="raw">${esc(hexOf(row.raw))}</span>`;
+  body.innerHTML = html;
+  node.hidden = $('find-only').checked && !rowMatches(row);
+}
+
+function buildRow(row) {
+  const node = document.createElement('div');
+  node.innerHTML = '<span class="ts"></span><span class="tag"></span><span class="body"></span>';
+  row.el = node;
+  paintRow(row);
+  return node;
+}
+
+function atBottom() {
+  return consoleEl.scrollHeight - consoleEl.scrollTop - consoleEl.clientHeight < 24;
+}
+
+function scrollToTail() {
+  if (state.autoscroll) consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+let lastRowTime = 0;
+
+function push(row) {
+  row.t = performance.now();
+  row.clock = nowText();
+  row.delta = lastRowTime ? row.t - lastRowTime : 0;
+  lastRowTime = row.t;
+  log.push(row);
+  if (log.length > MAX_ROWS) {
+    const gone = log.splice(0, log.length - MAX_ROWS);
+    for (const old of gone) if (old.el && old.el.parentNode) old.el.remove();
+  }
+  if (!state.paused) {
+    consoleEl.appendChild(buildRow(row));
+    scrollToTail();
+  }
+  return row;
+}
+
+/* A row that is still being written to — a line of text with no newline yet,
+ * so a prompt or a progress bar shows as it arrives rather than after it. */
+function extend(row, text) {
+  row.text = text;
+  row.html = null;
+  if (state.paused) return;
+  if (row.el) paintRow(row);
+  else consoleEl.appendChild(buildRow(row));
+  scrollToTail();
+}
+
+function renderAll() {
+  consoleEl.textContent = '';
+  const frag = document.createDocumentFragment();
+  for (const row of log) frag.appendChild(buildRow(row));
+  consoleEl.appendChild(frag);
+  scrollToTail();
+}
+
+function scheduleRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(renderAll, 120);
+}
+
+function sys(text, cls) {
+  return push({ text, cls: (cls || 'sys') + ' msg', tag: '' });
+}
+
+/* ---- links ----------------------------------------------------------- */
+
+/* Three ways to reach a device, all shaped the same so the console, the
+ * sender, the decoders and the bridge never care which one they are talking
+ * to: a real serial port, a MIDI port pair, and a simulated device. */
+function makeLink(id, tag) {
+  return { id, tag, open: false, dec: {}, decoder: null, idleTimer: 0, live: null, rxBytes: 0, txBytes: 0 };
+}
+
+const links = {
+  serial: makeLink('serial', 'serial'),
+  midi: makeLink('midi', 'midi'),
+  demo: makeLink('demo', 'demo')
+};
+
+function emit(link, text, opts = {}) {
+  return push({
+    text,
+    html: opts.html || null,
+    raw: opts.raw || null,
+    cls: opts.cls || (opts.dir === 'tx' ? 'tx' : ''),
+    tag: opts.tag || (opts.dir === 'tx' ? '▶ ' + link.tag : '◀ ' + link.tag)
+  });
+}
+
+/* ---- decoders -------------------------------------------------------- */
+
+/* Every decoder takes the bytes as they arrive and turns them into console
+ * rows. They keep their working state on the link (link.dec), which is wiped
+ * whenever the decoder or the connection changes, and any half-finished frame
+ * is flushed once the line has been quiet for the frame gap. */
+
+const utf8 = () => new TextDecoder('utf-8', { fatal: false });
+
+/* text, ANSI and all: CR returns to the start of the line, backspace steps
+ * back, tabs go to the next stop, and CSI/OSC sequences are swallowed (or
+ * shown, when the escapes are not being handled) so a MicroPython or Linux
+ * prompt reads as it would in a terminal. */
+function textFeed(link, bytes, emitLine) {
+  const d = link.dec;
+  if (!d.decoder) { d.decoder = utf8(); d.chars = []; d.col = 0; d.escape = ''; }
+  const text = d.decoder.decode(bytes, { stream: true });
+  const stripAnsi = $('strip-ansi').checked;
+  const showCtrl = $('show-ctrl').checked;
+  const put = ch => {
+    if (d.col < d.chars.length) d.chars[d.col] = ch; else d.chars.push(ch);
+    d.col++;
+  };
+  for (const ch of text) {
+    const code = ch.codePointAt(0);
+    if (d.escape) {
+      d.escape += ch;
+      const csi = d.escape[1] === '[';
+      const osc = d.escape[1] === ']';
+      const done = csi ? /[@-~]$/.test(d.escape) && d.escape.length > 2
+        : osc ? (code === 7 || d.escape.endsWith('\\'))
+        : d.escape.length >= 2;
+      if (done) {
+        if (/\[[0-9;]*K$/.test(d.escape)) d.chars.length = d.col;      /* erase to end of line */
+        else if (/\[2K$/.test(d.escape)) { d.chars.length = 0; d.col = 0; }
+        else if (!stripAnsi) for (const c of d.escape) put(showCtrl ? ctlText(c.codePointAt(0)) : c);
+        d.escape = '';
+      }
+      continue;
+    }
+    if (code === 0x1b) { d.escape = ch; continue; }
+    if (ch === '\n') { emitLine(d.chars.join('')); d.chars = []; d.col = 0; continue; }
+    if (ch === '\r') { d.col = 0; continue; }
+    if (ch === '\b') { d.col = Math.max(0, d.col - 1); continue; }
+    if (ch === '\t') { do put(' '); while (d.col % 8); continue; }
+    if (code < 0x20 || code === 0x7f) { if (showCtrl) put(ctlText(code)); continue; }
+    put(ch);
+  }
+  return d.chars.join('');
+}
+
+const CTL_NAMES = { 0: '␀', 3: '␃', 4: '␄', 7: '␇', 12: '␌', 27: '␛', 127: '␡' };
+const ctlText = code => CTL_NAMES[code] || `‹${hex2(code)}›`;
+
+/* Whole lines, for the protocols that speak in them. */
+function lineFeed(link, bytes, onLine) {
+  const d = link.dec;
+  if (!d.decoder) { d.decoder = utf8(); d.partial = ''; }
+  d.partial += d.decoder.decode(bytes, { stream: true });
+  let index;
+  while ((index = d.partial.indexOf('\n')) >= 0) {
+    const line = d.partial.slice(0, index).replace(/\r$/, '');
+    d.partial = d.partial.slice(index + 1);
+    if (line.length) onLine(line);
+  }
+  if (d.partial.length > 4096) d.partial = '';        /* a line that long is not a line */
+}
+
+const DECODERS = {
+  text: {
+    label: 'Plain text',
+    note: 'Bytes as text, split into lines. Carriage returns, backspaces and ANSI escapes behave the way a terminal would.',
+    feed(link, bytes) {
+      const rest = textFeed(link, bytes, line => {
+        if (link.live) { extend(link.live, line); link.live = null; }
+        else emit(link, line, { dir: 'rx' });
+      });
+      if (rest) {
+        if (!link.live) link.live = emit(link, rest, { dir: 'rx' });
+        else extend(link.live, rest);
+      } else link.live = null;
+    },
+    flush(link) { link.live = null; }
+  },
+
+  hex: {
+    label: 'Hex dump',
+    note: 'Offset, bytes and their printable characters. Anything left over when the line goes quiet is shown as a short row.',
+    feed(link, bytes) {
+      const d = link.dec;
+      if (!d.buf) { d.buf = []; d.offset = 0; }
+      for (const byte of bytes) d.buf.push(byte);
+      const width = Number($('hexwidth').value) || 16;
+      while (d.buf.length >= width) this.row(link, d.buf.splice(0, width));
+    },
+    row(link, chunk) {
+      const d = link.dec;
+      const width = Number($('hexwidth').value) || 16;
+      const offset = d.offset;
+      d.offset += chunk.length;
+      const hexPart = hexOf(chunk).padEnd(width * 3 - 1, ' ');
+      emit(link, `${offset.toString(16).padStart(8, '0')}  ${hexPart}  |${asciiOf(chunk)}|`, { dir: 'rx' });
+    },
+    flush(link) {
+      const d = link.dec;
+      if (d.buf && d.buf.length) this.row(link, d.buf.splice(0, d.buf.length));
+    }
+  },
+
+  nmea: {
+    label: 'NMEA 0183 (GPS)',
+    note: 'GPS and marine sentences, checksummed. Position, fix quality, speed and satellite counts are named, and the numbers go to the plotter.',
+    feed(link, bytes) {
+      lineFeed(link, bytes, line => this.line(link, line.trim()));
+    },
+    line(link, line) {
+      if (!line) return;
+      if (!/^[$!]/.test(line)) { emit(link, line, { dir: 'rx', cls: 'sys' }); return; }
+      const star = line.lastIndexOf('*');
+      const body = star > 0 ? line.slice(1, star) : line.slice(1);
+      const given = star > 0 ? line.slice(star + 1).trim() : null;
+      const want = hex2(nmeaSum(body));
+      const ok = given === null || given.toUpperCase() === want;
+      if (!ok) counters.errors++;
+      const fields = body.split(',');
+      const talker = fields[0].slice(0, 2);
+      const type = fields[0].slice(2);
+      const detail = this.detail(type, fields);
+      const badge = ok ? '' : ` <em>checksum ${given} ≠ ${want}</em>`;
+      emit(link, line, {
+        dir: 'rx', cls: ok ? '' : 'bad',
+        html: `<span class="k">${esc(talker)}</span> <b>${esc(type)}</b> ${esc(detail)}${badge}`
+      });
+    },
+    detail(type, f) {
+      const coord = (value, hemi) => {
+        if (!value) return '—';
+        const dot = value.indexOf('.');
+        const deg = Number(value.slice(0, dot - 2) || 0);
+        const min = Number(value.slice(dot - 2) || 0);
+        const sign = hemi === 'S' || hemi === 'W' ? -1 : 1;
+        return (sign * (deg + min / 60)).toFixed(6) + '°';
+      };
+      switch (type) {
+        case 'GGA': {
+          const quality = ['no fix', 'GPS', 'DGPS', 'PPS', 'RTK fixed', 'RTK float', 'estimated'][Number(f[6])] || f[6];
+          plotPush('satellites', Number(f[7]));
+          plotPush('altitude', Number(f[9]));
+          plotPush('hdop', Number(f[8]));
+          return `fix ${quality} · ${coord(f[2], f[3])}, ${coord(f[4], f[5])} · ${f[7]} sats · HDOP ${f[8]} · alt ${f[9]}${f[10] || ''} · ${f[1] || ''} UTC`;
+        }
+        case 'RMC': {
+          const knots = Number(f[7]);
+          if (Number.isFinite(knots)) plotPush('speed_kn', knots);
+          return `${f[2] === 'A' ? 'valid' : 'void'} · ${coord(f[3], f[4])}, ${coord(f[5], f[6])} · ${f[7] || '0'} kn · course ${f[8] || '—'}° · ${f[9] || ''}`;
+        }
+        case 'GLL': return `${coord(f[1], f[2])}, ${coord(f[3], f[4])} · ${f[6] === 'A' ? 'valid' : 'void'}`;
+        case 'VTG': return `course ${f[1] || '—'}° true · ${f[5] || '—'} kn · ${f[7] || '—'} km/h`;
+        case 'GSA': return `mode ${f[1]}${f[2]} · PDOP ${f[15] || '—'} HDOP ${f[16] || '—'} VDOP ${f[17] || '—'}`;
+        case 'GSV': return `satellites in view ${f[3] || '—'} (message ${f[2]} of ${f[1]})`;
+        case 'TXT': return f.slice(4).join(',');
+        default: return f.slice(1).join(' · ');
+      }
+    }
+  },
+
+  modbus: {
+    label: 'Modbus RTU',
+    note: 'Frames are cut where the line goes quiet, as the standard asks, then the CRC is checked and the function decoded. Set the frame gap above to suit the baud rate.',
+    feed(link, bytes) {
+      const d = link.dec;
+      if (!d.buf) d.buf = [];
+      for (const byte of bytes) d.buf.push(byte);
+      if (d.buf.length > 256) this.flush(link);
+    },
+    flush(link) {
+      const d = link.dec;
+      if (!d.buf || !d.buf.length) return;
+      const frame = Uint8Array.from(d.buf.splice(0, d.buf.length));
+      if (frame.length < 4) {
+        counters.errors++;
+        emit(link, hexOf(frame), { dir: 'rx', cls: 'bad', html: `<em>runt frame</em> ${esc(hexOf(frame))}` });
+        return;
+      }
+      const want = crc16(frame, frame.length - 2);
+      const given = frame[frame.length - 2] | (frame[frame.length - 1] << 8);
+      const ok = want === given;
+      if (!ok) counters.errors++;
+      const body = frame.subarray(0, frame.length - 2);
+      const detail = this.detail(body);
+      emit(link, hexOf(frame), {
+        dir: 'rx', cls: ok ? '' : 'bad', raw: frame,
+        html: `<span class="k">unit ${body[0]}</span> <b>fn ${hex2(body[1])}</b> ${esc(detail)}` +
+          (ok ? ' <span class="k">CRC ok</span>' : ` <em>CRC ${hex2(given & 0xff)}${hex2(given >> 8)} ≠ ${hex2(want & 0xff)}${hex2(want >> 8)}</em>`)
+      });
+    },
+    detail(body) {
+      const FN = {
+        1: 'read coils', 2: 'read discrete inputs', 3: 'read holding registers',
+        4: 'read input registers', 5: 'write single coil', 6: 'write single register',
+        15: 'write multiple coils', 16: 'write multiple registers', 17: 'report server id'
+      };
+      const EXC = {
+        1: 'illegal function', 2: 'illegal data address', 3: 'illegal data value',
+        4: 'server failure', 5: 'acknowledge', 6: 'server busy', 8: 'memory parity error',
+        10: 'gateway path unavailable', 11: 'gateway target failed to respond'
+      };
+      const fn = body[1];
+      if (fn & 0x80) return `exception on ${FN[fn & 0x7f] || 'fn ' + (fn & 0x7f)} — ${EXC[body[2]] || 'code ' + body[2]}`;
+      const name = FN[fn] || 'unknown function';
+      const word = at => (body[at] << 8) | body[at + 1];
+      /* A request carries an address and a count; a response to a read carries
+       * a byte count that matches what is left. That is the only thing on the
+       * wire that tells them apart. */
+      if ((fn <= 4) && body[2] === body.length - 3) {
+        const data = body.subarray(3);
+        const regs = fn <= 2 ? asciiBits(data) : Array.from({ length: data.length >> 1 }, (_, i) => '0x' + hex2(data[i * 2]) + hex2(data[i * 2 + 1])).join(' ');
+        return `${name} · reply, ${body[2]} bytes · ${regs}`;
+      }
+      if (fn <= 4) return `${name} · from ${word(2)} (0x${hex2(body[2])}${hex2(body[3])}) · ${word(4)} of them`;
+      if (fn === 5) return `${name} · coil ${word(2)} ${word(4) === 0xff00 ? 'on' : 'off'}`;
+      if (fn === 6) return `${name} · register ${word(2)} = ${word(4)} (0x${hex2(body[4])}${hex2(body[5])})`;
+      if (fn === 15 || fn === 16) return body.length > 6
+        ? `${name} · from ${word(2)} · ${word(4)} of them · ${body[6]} bytes`
+        : `${name} · from ${word(2)} · ${word(4)} written`;
+      return `${name} · ${hexOf(body.subarray(2))}`;
+    }
+  },
+
+  midi: {
+    label: 'MIDI bytes',
+    note: 'A running-status MIDI parser, for a MIDI port or for DIN MIDI arriving on a UART at 31250 baud.',
+    feed(link, bytes) {
+      const d = link.dec;
+      if (!d.msg) { d.msg = []; d.status = 0; d.sysex = null; }
+      for (const byte of bytes) {
+        if (byte >= 0xf8) { this.done(link, [byte]); continue; }      /* realtime cuts in anywhere */
+        if (d.sysex) {
+          d.sysex.push(byte);
+          if (byte === 0xf7) { this.done(link, d.sysex); d.sysex = null; }
+          else if (d.sysex.length > 4096) { d.sysex = null; counters.errors++; }
+          continue;
+        }
+        if (byte === 0xf0) { d.sysex = [byte]; continue; }
+        if (byte & 0x80) {
+          d.status = byte < 0xf0 ? byte : 0;                          /* system messages clear it */
+          d.msg = [byte];
+          if (this.wants(byte) === 0) { this.done(link, d.msg); d.msg = []; }
+          continue;
+        }
+        if (!d.msg.length) {
+          if (!d.status) continue;                                    /* data with nothing to belong to */
+          d.msg = [d.status];
+        }
+        d.msg.push(byte);
+        if (d.msg.length > this.wants(d.msg[0])) { this.done(link, d.msg); d.msg = []; }
+      }
+    },
+    wants(status) {
+      if (status >= 0xf4) return 0;
+      if (status === 0xf1 || status === 0xf3) return 1;
+      if (status === 0xf2) return 2;
+      const type = status & 0xf0;
+      return type === 0xc0 || type === 0xd0 ? 1 : 2;
+    },
+    done(link, bytes) {
+      const array = Uint8Array.from(bytes);
+      const desc = describeMidi(array);
+      emit(link, desc.text, { dir: 'rx', cls: desc.cls || '', raw: array });
+    },
+    flush() {}
+  },
+
+  slip: {
+    label: 'SLIP frames (RFC 1055)',
+    note: 'Packets delimited by 0xC0 with 0xDB escapes, the framing under serial IP and a good deal of hobby telemetry.',
+    feed(link, bytes) {
+      const d = link.dec;
+      if (!d.buf) { d.buf = []; d.escaped = false; }
+      for (const byte of bytes) {
+        if (byte === 0xc0) {
+          if (d.buf.length) this.packet(link, Uint8Array.from(d.buf));
+          d.buf = []; d.escaped = false;
+          continue;
+        }
+        if (d.escaped) {
+          d.buf.push(byte === 0xdc ? 0xc0 : byte === 0xdd ? 0xdb : byte);
+          d.escaped = false;
+          continue;
+        }
+        if (byte === 0xdb) { d.escaped = true; continue; }
+        d.buf.push(byte);
+      }
+    },
+    packet(link, frame) {
+      emit(link, `[${frame.length}] ${hexOf(frame)}  |${asciiOf(frame)}|`, {
+        dir: 'rx',
+        html: `<span class="k">packet ${frame.length} bytes</span> ${esc(hexOf(frame))}  <span class="k">|${esc(asciiOf(frame))}|</span>`,
+        raw: frame
+      });
+    },
+    flush() {}
+  },
+
+  cobs: {
+    label: 'COBS frames',
+    note: 'Consistent Overhead Byte Stuffing: packets end at a zero byte and carry no zero of their own, so a lost byte costs one packet and no more.',
+    feed(link, bytes) {
+      const d = link.dec;
+      if (!d.buf) d.buf = [];
+      for (const byte of bytes) {
+        if (byte === 0) {
+          if (d.buf.length) this.packet(link, d.buf);
+          d.buf = [];
+          continue;
+        }
+        d.buf.push(byte);
+      }
+    },
+    packet(link, encoded) {
+      const out = [];
+      let index = 0;
+      let bad = false;
+      while (index < encoded.length) {
+        const code = encoded[index++];
+        for (let i = 1; i < code; i++) {
+          if (index >= encoded.length) { bad = true; break; }
+          out.push(encoded[index++]);
+        }
+        if (bad) break;
+        if (code < 0xff && index < encoded.length) out.push(0);
+      }
+      const frame = Uint8Array.from(out);
+      if (bad) counters.errors++;
+      emit(link, `[${frame.length}] ${hexOf(frame)}`, {
+        dir: 'rx', cls: bad ? 'bad' : '', raw: frame,
+        html: bad ? `<em>truncated COBS frame</em> ${esc(hexOf(Uint8Array.from(encoded)))}`
+          : `<span class="k">packet ${frame.length} bytes</span> ${esc(hexOf(frame))}  <span class="k">|${esc(asciiOf(frame))}|</span>`
+      });
+    },
+    flush() {}
+  },
+
+  at: {
+    label: 'AT commands (modem)',
+    note: 'Hayes and 3GPP: the echoed command, the final OK or ERROR, and unsolicited results. Signal strength is converted to dBm.',
+    feed(link, bytes) { lineFeed(link, bytes, line => this.line(link, line.trim())); },
+    line(link, line) {
+      if (!line) return;
+      if (/^AT/i.test(line)) { emit(link, line, { dir: 'rx', cls: 'note', html: `<span class="k">echo</span> ${esc(line)}` }); return; }
+      if (/^(OK|CONNECT|RING|NO CARRIER|BUSY|NO ANSWER)\b/.test(line)) {
+        emit(link, line, { dir: 'rx', cls: line === 'OK' || line.startsWith('CONNECT') ? 'tx' : 'note' });
+        return;
+      }
+      if (/^(ERROR|\+CME ERROR|\+CMS ERROR|NO DIALTONE)/.test(line)) {
+        counters.errors++;
+        emit(link, line, { dir: 'rx', cls: 'bad' });
+        return;
+      }
+      const csq = line.match(/^\+CSQ:\s*(\d+),\s*(\d+)/);
+      if (csq) {
+        const rssi = Number(csq[1]);
+        const dbm = rssi === 99 ? null : -113 + 2 * rssi;
+        if (dbm !== null) plotPush('rssi_dBm', dbm);
+        emit(link, line, { dir: 'rx', html: `<span class="k">signal</span> ${esc(line)} <span class="v">${dbm === null ? 'unknown' : dbm + ' dBm'}</span>` });
+        return;
+      }
+      const urc = line.match(/^\+([A-Z]+):\s*(.*)$/);
+      if (urc) {
+        emit(link, line, { dir: 'rx', html: `<span class="k">${esc(urc[1])}</span> ${esc(urc[2])}` });
+        return;
+      }
+      emit(link, line, { dir: 'rx' });
+    },
+    flush() {}
+  },
+
+  grbl: {
+    label: 'G-code / GRBL',
+    note: 'The replies a GRBL controller sends: ok, error and alarm codes in words, and the ? status report split into its fields, with the machine position plotted.',
+    feed(link, bytes) { lineFeed(link, bytes, line => this.line(link, line.trim())); },
+    line(link, line) {
+      if (!line) return;
+      const ERRORS = {
+        1: 'unrecognised command letter', 2: 'bad number format', 3: 'invalid $ command',
+        8: '$ command needs idle', 9: 'locked out during alarm or jog', 20: 'unsupported command',
+        21: 'modal groups conflict', 22: 'no feed rate set', 24: 'two commands want the axis words',
+        25: 'repeated word', 33: 'invalid target', 34: 'arc radius error'
+      };
+      const ALARMS = {
+        1: 'hard limit — position lost', 2: 'soft limit — move out of range', 3: 'reset while moving',
+        4: 'probe failed — already triggered', 5: 'probe failed — no contact',
+        6: 'homing failed — reset', 8: 'homing failed — no limit switch found', 9: 'homing failed — limit still on'
+      };
+      if (line === 'ok') { emit(link, line, { dir: 'rx', cls: 'tx' }); return; }
+      let m = line.match(/^error:(\d+)/);
+      if (m) { counters.errors++; emit(link, line, { dir: 'rx', cls: 'bad', html: `<em>error ${m[1]}</em> ${esc(ERRORS[+m[1]] || 'see the GRBL error table')}` }); return; }
+      m = line.match(/^ALARM:(\d+)/);
+      if (m) { counters.errors++; emit(link, line, { dir: 'rx', cls: 'bad', html: `<em>alarm ${m[1]}</em> ${esc(ALARMS[+m[1]] || 'see the GRBL alarm table')}` }); return; }
+      if (line.startsWith('<') && line.endsWith('>')) {
+        const parts = line.slice(1, -1).split('|');
+        const bits = [`<b>${esc(parts[0])}</b>`];
+        for (const part of parts.slice(1)) {
+          const [key, value = ''] = part.split(':');
+          if (key === 'MPos' || key === 'WPos') {
+            const axes = value.split(',').map(Number);
+            ['x', 'y', 'z'].forEach((axis, i) => { if (Number.isFinite(axes[i])) plotPush(axis, axes[i]); });
+          }
+          if (key === 'FS') {
+            const [feed, spindle] = value.split(',').map(Number);
+            if (Number.isFinite(feed)) plotPush('feed', feed);
+            if (Number.isFinite(spindle)) plotPush('spindle', spindle);
+          }
+          bits.push(`<span class="k">${esc(key)}</span> ${esc(value)}`);
+        }
+        emit(link, line, { dir: 'rx', html: bits.join(' · ') });
+        return;
+      }
+      if (line.startsWith('[') || /^Grbl /.test(line)) { emit(link, line, { dir: 'rx', cls: 'note' }); return; }
+      emit(link, line, { dir: 'rx' });
+    },
+    flush() {}
+  },
+
+  telemetry: {
+    label: 'Telemetry & plotter',
+    note: 'Reads the lines an Arduino sketch usually prints — <code>temp:23.4,rh:41</code> or plain comma-separated numbers — and draws them. Turn the plotter on under View.',
+    feed(link, bytes) { lineFeed(link, bytes, line => this.line(link, line.trim())); },
+    line(link, line) {
+      if (!line) return;
+      const parts = line.split(/[,;\t]|\s{2,}/).map(part => part.trim()).filter(Boolean);
+      const found = [];
+      parts.forEach((part, index) => {
+        const pair = part.match(/^([A-Za-z_][\w .%°/-]*)\s*[:=]\s*(-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)/);
+        if (pair) { found.push([pair[1].trim(), Number(pair[2])]); return; }
+        if (/^-?\d+(\.\d+)?([eE][-+]?\d+)?$/.test(part)) found.push(['ch' + (index + 1), Number(part)]);
+      });
+      if (!found.length) { emit(link, line, { dir: 'rx' }); return; }
+      for (const [name, value] of found) plotPush(name, value);
+      emit(link, line, {
+        dir: 'rx',
+        html: found.map(([name, value]) => `<span class="k">${esc(name)}</span> <span class="v">${esc(value)}</span>`).join('  ')
+      });
+    },
+    flush() {}
+  }
+};
+
+function asciiBits(data) {
+  const bits = [];
+  for (const byte of data) for (let i = 0; i < 8; i++) bits.push((byte >> i) & 1);
+  return bits.join('');
+}
+
+const SERIAL_DECODERS = ['text', 'hex', 'nmea', 'modbus', 'midi', 'slip', 'cobs', 'at', 'grbl', 'telemetry'];
+const MIDI_DECODERS = ['midi', 'hex', 'text'];
+
+function decoderFor(link) {
+  const id = link.id === 'midi' ? $('decode-midi').value : $('decode-serial').value;
+  return DECODERS[id] || DECODERS.text;
+}
+
+function resetDecoder(link) {
+  link.dec = {};
+  link.live = null;
+}
+
+/* ---- receiving ------------------------------------------------------- */
+
+function onRx(link, bytes) {
+  if (!bytes || !bytes.length) return;
+  counters.rx += bytes.length;
+  link.rxBytes += bytes.length;
+  counters.window.push([performance.now(), bytes.length]);
+  if (rawRxLength < MAX_RAW) { rawRx.push(bytes.slice()); rawRxLength += bytes.length; }
+  const decoder = decoderFor(link);
+  try {
+    decoder.feed(link, bytes);
+  } catch (error) {
+    counters.errors++;
+    sys(`the ${decoder.label} decoder gave up on that: ${error.message}`, 'bad');
+    resetDecoder(link);
+  }
+  /* whatever is half-decoded is shown once the line has been quiet a while */
+  clearTimeout(link.idleTimer);
+  link.idleTimer = setTimeout(() => {
+    try { decoder.flush(link); } catch { /* a half frame is not worth a row */ }
+  }, clamp(Number($('idle').value) || 12, 1, 2000));
+
+  /* The bridge works on the bytes themselves rather than on whatever the
+   * decoder made of them, so it carries DIN MIDI between a UART and a MIDI
+   * port no matter which decoder is on show. */
+  if (link.id === 'serial' && state.bridgeSerialToMidi) sendTo('midi', bytes, { quiet: true });
+  if (link.id === 'midi' && state.bridgeMidiToSerial) sendTo('serial', bytes, { quiet: true });
+}
+
+/* ---- transports ------------------------------------------------------ */
+
+const serialSupported = 'serial' in navigator;
+const midiSupported = typeof navigator.requestMIDIAccess === 'function';
+
+async function serialConnect() {
+  if (!serialSupported) { sys('this browser has no Web Serial — try Chrome, Edge or Opera, or start the demo device', 'bad'); return; }
+  const link = links.serial;
+  if (link.open) return;
+  let port;
+  try {
+    port = await navigator.serial.requestPort();
+  } catch {
+    sys('no port was picked');
+    return;
+  }
+  const options = {
+    baudRate: baudRate(),
+    dataBits: Number($('databits').value),
+    stopBits: Number($('stopbits').value),
+    parity: $('parity').value,
+    flowControl: $('flow').value,
+    bufferSize: 8192
+  };
+  try {
+    await port.open(options);
+  } catch (error) {
+    sys(`the port would not open: ${error.message}`, 'bad');
+    return;
+  }
+  link.port = port;
+  link.open = true;
+  resetDecoder(link);
+  counters.since = counters.since || performance.now();
+  const info = port.getInfo ? port.getInfo() : {};
+  const ids = info.usbVendorId !== undefined
+    ? ` · USB ${info.usbVendorId.toString(16).padStart(4, '0')}:${(info.usbProductId || 0).toString(16).padStart(4, '0')}`
+    : '';
+  sys(`serial port open — ${options.baudRate} baud ${options.dataBits}${options.parity[0].toUpperCase()}${options.stopBits}${options.flowControl === 'hardware' ? ' RTS/CTS' : ''}${ids}`, 'note');
+  try { await port.setSignals({ dataTerminalReady: $('dtr').checked, requestToSend: $('rts').checked }); } catch {}
+  link.writer = port.writable.getWriter();
+  readLoop(link, port);
+  pollSignals();
+  syncChrome();
+}
+
+function baudRate() {
+  const chosen = $('baud').value;
+  return chosen === 'custom' ? clamp(Number($('baud-custom').value) || 9600, 1, 20000000) : Number(chosen);
+}
+
+async function readLoop(link, port) {
+  /* the loop is doubled up because a framing or parity error ends the current
+   * reader without closing the port: report it and pick the stream back up */
+  while (link.open && port.readable) {
+    const reader = port.readable.getReader();
+    link.reader = reader;
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        onRx(link, value);
+      }
+    } catch (error) {
+      if (link.open) {
+        counters.errors++;
+        sys(`serial read error: ${error.message}`, 'bad');
+      }
+    } finally {
+      try { reader.releaseLock(); } catch {}
+      link.reader = null;
+    }
+  }
+  if (link.open) await serialDisconnect('lost');
+}
+
+/* mode: undefined for "you closed it", 'lost' when the port went away under us,
+ * 'quiet' when the app is being reset or the page is going. */
+async function serialDisconnect(mode) {
+  const link = links.serial;
+  if (!link.open) return;
+  link.open = false;
+  try { await link.reader?.cancel(); } catch {}
+  try { link.writer?.releaseLock(); } catch {}
+  link.writer = null;
+  try { await link.port?.close(); } catch {}
+  link.port = null;
+  decoderFor(link).flush?.(link);
+  resetDecoder(link);
+  if (mode === 'lost') sys('the serial port went away', 'bad');
+  else if (mode !== 'quiet') sys('serial port closed', 'note');
+  syncChrome();
+}
+
+let signalTimer = 0;
+function pollSignals() {
+  clearInterval(signalTimer);
+  signalTimer = setInterval(async () => {
+    const link = links.serial;
+    if (!link.open || !link.port) { clearInterval(signalTimer); setSignalLamps(null); return; }
+    try {
+      const signals = await link.port.getSignals();
+      setSignalLamps(signals);
+    } catch { setSignalLamps(null); }
+  }, 300);
+}
+
+function setSignalLamps(signals) {
+  const map = { 'sig-cts': 'clearToSend', 'sig-dsr': 'dataSetReady', 'sig-dcd': 'dataCarrierDetect', 'sig-ri': 'ringIndicator' };
+  for (const [id, key] of Object.entries(map)) $(id).classList.toggle('on', !!(signals && signals[key]));
+}
+
+async function setSignals() {
+  const link = links.serial;
+  if (!link.open) return;
+  try { await link.port.setSignals({ dataTerminalReady: $('dtr').checked, requestToSend: $('rts').checked }); } catch (error) {
+    sys(`could not set the control lines: ${error.message}`, 'bad');
+  }
+}
+
+/* MIDI ------------------------------------------------------------------ */
+
+let midiAccess = null;
+
+async function midiConnect() {
+  if (!midiSupported) { sys('this browser has no Web MIDI — try Chrome, Edge or Opera', 'bad'); return; }
+  try {
+    midiAccess = await navigator.requestMIDIAccess({ sysex: $('midi-sysex').checked });
+  } catch (error) {
+    sys(`MIDI access was refused: ${error.message}`, 'bad');
+    return;
+  }
+  midiAccess.onstatechange = event => {
+    fillMidiPorts();
+    if (event.port) sys(`MIDI ${event.port.type} "${event.port.name}" ${event.port.state}`, 'note');
+  };
+  fillMidiPorts();
+  bindMidiInput();
+  links.midi.open = true;
+  counters.since = counters.since || performance.now();
+  const ins = [...midiAccess.inputs.values()].length;
+  const outs = [...midiAccess.outputs.values()].length;
+  sys(`MIDI open — ${ins} input${ins === 1 ? '' : 's'}, ${outs} output${outs === 1 ? '' : 's'}${$('midi-sysex').checked ? ', SysEx allowed' : ''}`, 'note');
+  syncChrome();
+}
+
+function fillMidiPorts() {
+  if (!midiAccess) return;
+  for (const [id, ports] of [['midi-in', midiAccess.inputs], ['midi-out', midiAccess.outputs]]) {
+    const select = $(id);
+    const chosen = select.value;
+    select.textContent = '';
+    select.appendChild(new Option('— none —', ''));
+    for (const port of ports.values()) select.appendChild(new Option(port.name || port.id, port.id));
+    if ([...select.options].some(option => option.value === chosen)) select.value = chosen;
+    else if (select.options.length > 1) select.selectedIndex = 1;
+  }
+  bindMidiInput();
+}
+
+function bindMidiInput() {
+  if (!midiAccess) return;
+  for (const input of midiAccess.inputs.values()) input.onmidimessage = null;
+  const input = midiAccess.inputs.get($('midi-in').value);
+  if (!input) return;
+  /* a MIDI port hands over whole messages; they go through the same path as
+   * serial bytes so the decoders, the counters and the bridge stay in one place */
+  input.onmidimessage = event => onRx(links.midi, event.data);
+}
+
+function midiDisconnect() {
+  if (midiAccess) for (const input of midiAccess.inputs.values()) input.onmidimessage = null;
+  links.midi.open = false;
+  sys('MIDI closed', 'note');
+  syncChrome();
+}
+
+/* Demo device ----------------------------------------------------------- */
+
+const DEMOS = {
+  gps: {
+    label: 'GPS receiver — NMEA 0183',
+    hint: 'Set the serial decoder to NMEA 0183.',
+    start(demo) {
+      demo.lat = 51.5074; demo.lon = -0.1278; demo.n = 0;
+      demo.timer = setInterval(() => this.tick(demo), 1000);
+      this.tick(demo);
+    },
+    tick(demo) {
+      demo.n++;
+      demo.lat += (Math.random() - 0.5) * 0.0004;
+      demo.lon += (Math.random() - 0.5) * 0.0004;
+      const d = new Date();
+      const pad = (n, w = 2) => String(n).padStart(w, '0');
+      const utc = `${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}.00`;
+      const date = `${pad(d.getUTCDate())}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCFullYear() % 100)}`;
+      const dm = (value, positive, negative, width) => {
+        const hemi = value >= 0 ? positive : negative;
+        const abs = Math.abs(value);
+        const deg = Math.floor(abs);
+        const min = (abs - deg) * 60;
+        return `${String(deg).padStart(width, '0')}${min.toFixed(4).padStart(7, '0')},${hemi}`;
+      };
+      const sats = 7 + (demo.n % 4);
+      const alt = (24 + Math.sin(demo.n / 9) * 3).toFixed(1);
+      const speed = (2 + Math.sin(demo.n / 5) * 1.5).toFixed(2);
+      demo.send(nmea(`GPGGA,${utc},${dm(demo.lat, 'N', 'S', 2)},${dm(demo.lon, 'E', 'W', 3)},1,${pad(sats)},0.9,${alt},M,45.9,M,,`));
+      demo.send(nmea(`GPRMC,${utc},A,${dm(demo.lat, 'N', 'S', 2)},${dm(demo.lon, 'E', 'W', 3)},${speed},${(90 + demo.n % 20).toFixed(1)},${date},,,A`));
+      if (demo.n % 5 === 0) demo.send(nmea(`GPGSV,2,1,0${sats},01,40,083,42,02,17,308,39,03,07,344,33,04,22,228,41`));
+    }
+  },
+  telemetry: {
+    label: 'Arduino sketch — telemetry',
+    hint: 'Set the serial decoder to Telemetry and turn the plotter on.',
+    start(demo) {
+      demo.n = 0;
+      demo.timer = setInterval(() => {
+        demo.n++;
+        const temp = (22 + Math.sin(demo.n / 30) * 3 + Math.random() * 0.2).toFixed(2);
+        const rh = (44 + Math.cos(demo.n / 41) * 6 + Math.random() * 0.4).toFixed(1);
+        const lux = Math.round(600 + Math.sin(demo.n / 17) * 350 + Math.random() * 30);
+        demo.send(`temp:${temp},rh:${rh},lux:${lux}\r\n`);
+      }, 100);
+    }
+  },
+  modbus: {
+    label: 'Modbus RTU sensor — unit 1',
+    hint: 'Set the serial decoder to Modbus RTU and send, in hex: 01 03 00 00 00 04 44 09',
+    start(demo) {
+      demo.regs = Array.from({ length: 32 }, (_, i) => (i * 111 + 7) & 0xffff);
+      demo.hint('a Modbus slave at unit 1, registers 0…31. Try sending 01 03 00 00 00 04 44 09 in hex.');
+    },
+    receive(demo, bytes) {
+      const frame = Uint8Array.from(bytes);
+      if (frame.length < 4) return;
+      if (crc16(frame, frame.length - 2) !== (frame[frame.length - 2] | (frame[frame.length - 1] << 8))) return;
+      if (frame[0] !== 1 && frame[0] !== 0) return;
+      const fn = frame[1];
+      const start = (frame[2] << 8) | frame[3];
+      const count = (frame[4] << 8) | frame[5];
+      const reply = body => {
+        const out = new Uint8Array(body.length + 2);
+        out.set(body);
+        const crc = crc16(body, body.length);
+        out[body.length] = crc & 0xff;
+        out[body.length + 1] = crc >> 8;
+        demo.sendBytes(out);
+      };
+      if (fn === 3 || fn === 4) {
+        if (start + count > demo.regs.length || count === 0 || count > 125) { reply(Uint8Array.from([1, fn | 0x80, 2])); return; }
+        const body = [1, fn, count * 2];
+        for (let i = 0; i < count; i++) {
+          const value = (demo.regs[start + i] + Math.floor(Math.random() * 3)) & 0xffff;
+          body.push(value >> 8, value & 0xff);
+        }
+        reply(Uint8Array.from(body));
+        return;
+      }
+      if (fn === 6) { demo.regs[start] = count; reply(frame.subarray(0, 6)); return; }
+      reply(Uint8Array.from([1, fn | 0x80, 1]));
+    }
+  },
+  at: {
+    label: 'Modem — AT commands',
+    hint: 'Set the serial decoder to AT commands and send AT, ATI or AT+CSQ.',
+    start(demo) { demo.hint('a modem. Send AT, ATI, AT+CSQ, AT+CGMI or ATD to see it answer.'); },
+    line(demo, line) {
+      const command = line.trim();
+      if (!command) return;
+      demo.send(command + '\r\n');
+      const reply = text => demo.send(text + '\r\n');
+      if (/^ATI/i.test(command)) { reply('ClackModem 2400'); reply('OK'); return; }
+      if (/^AT\+CGMI/i.test(command)) { reply('Clacktronics'); reply('OK'); return; }
+      if (/^AT\+CSQ/i.test(command)) { reply(`+CSQ: ${10 + Math.floor(Math.random() * 20)},99`); reply('OK'); return; }
+      if (/^AT\+CREG/i.test(command)) { reply('+CREG: 0,1'); reply('OK'); return; }
+      if (/^ATD/i.test(command)) { setTimeout(() => reply('NO CARRIER'), 1200); return; }
+      if (/^AT$/i.test(command) || /^ATE\d?$/i.test(command) || /^ATZ$/i.test(command)) { reply('OK'); return; }
+      reply('+CME ERROR: 4');
+    }
+  },
+  grbl: {
+    label: 'GRBL controller',
+    hint: 'Set the serial decoder to G-code / GRBL, then send G-code lines or ? for a status report.',
+    start(demo) {
+      demo.pos = [0, 0, 0];
+      demo.send('\r\nGrbl 1.1f [\'$\' for help]\r\n');
+    },
+    receive(demo, bytes) {
+      /* ? is a realtime command: it arrives outside the line protocol */
+      for (const byte of bytes) if (byte === 0x3f) {
+        const [x, y, z] = demo.pos;
+        demo.send(`<Idle|MPos:${x.toFixed(3)},${y.toFixed(3)},${z.toFixed(3)}|FS:0,0|WCO:0.000,0.000,0.000>\r\n`);
+        return true;
+      }
+      return false;
+    },
+    line(demo, line) {
+      const command = line.trim();
+      if (!command) return;
+      if (command.startsWith('$')) {
+        if (command === '$$') { demo.send('$0=10\r\n$1=25\r\n$100=250.000\r\n$110=500.000\r\nok\r\n'); return; }
+        demo.send('ok\r\n');
+        return;
+      }
+      const axes = { X: 0, Y: 1, Z: 2 };
+      let moved = false;
+      for (const match of command.toUpperCase().matchAll(/([XYZ])(-?\d+(?:\.\d+)?)/g)) {
+        demo.pos[axes[match[1]]] = Number(match[2]);
+        moved = true;
+      }
+      if (/G0*[01]\b/i.test(command) && !moved) { demo.send('error:22\r\n'); return; }
+      demo.send('ok\r\n');
+    }
+  },
+  midi: {
+    label: 'DIN MIDI keyboard at 31250 baud',
+    hint: 'Set the serial decoder to MIDI bytes.',
+    start(demo) {
+      const scale = [60, 62, 64, 67, 69, 72, 74, 76];
+      demo.step = 0;
+      demo.timer = setInterval(() => {
+        const note = scale[demo.step % scale.length];
+        demo.step++;
+        demo.sendBytes(Uint8Array.from([0x90, note, 64 + Math.floor(Math.random() * 40)]));
+        setTimeout(() => demo.sendBytes(Uint8Array.from([0x80, note, 0])), 220);
+        if (demo.step % 8 === 0) demo.sendBytes(Uint8Array.from([0xb0, 1, demo.step % 128]));
+      }, 300);
+    }
+  },
+  echo: {
+    label: 'Echo — sends back what it gets',
+    hint: 'Whatever you send comes straight back, one line at a time.',
+    start(demo) { demo.hint('an echo. Anything sent comes back as it went.'); },
+    receive(demo, bytes) { demo.sendBytes(Uint8Array.from(bytes)); return true; }
+  }
+};
+
+function nmea(body) {
+  return `$${body}*${hex2(nmeaSum(body))}\r\n`;
+}
+
+const demo = {
+  kind: null,
+  timer: 0,
+  buffer: '',
+  send(text) { this.sendBytes(encoder.encode(text)); },
+  sendBytes(bytes) { onRx(links.demo, bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes)); },
+  hint(text) { sys(`the demo device is ${text}`, 'note'); }
+};
+
+function demoStart() {
+  demoStop(true);
+  const kind = $('demo-kind').value;
+  const device = DEMOS[kind];
+  if (!device) return;
+  demo.kind = kind;
+  demo.buffer = '';
+  links.demo.open = true;
+  counters.since = counters.since || performance.now();
+  resetDecoder(links.demo);
+  sys(`demo device started — ${device.label}. ${device.hint || ''}`, 'note');
+  device.start?.(demo);
+  syncChrome();
+}
+
+function demoStop(silent) {
+  clearInterval(demo.timer);
+  demo.timer = 0;
+  if (links.demo.open && !silent) sys('demo device stopped', 'note');
+  links.demo.open = false;
+  demo.kind = null;
+  syncChrome();
+}
+
+function demoReceive(bytes) {
+  const device = DEMOS[demo.kind];
+  if (!device) return;
+  if (device.receive?.(demo, bytes)) return;
+  if (!device.line) return;
+  demo.buffer += new TextDecoder().decode(bytes);
+  let index;
+  while ((index = demo.buffer.search(/[\r\n]/)) >= 0) {
+    const line = demo.buffer.slice(0, index);
+    demo.buffer = demo.buffer.slice(index + 1).replace(/^\n/, '');
+    device.line(demo, line);
+  }
+}
+
+/* ---- sending --------------------------------------------------------- */
+
+function connectedTargets() {
+  return Object.values(links).filter(link => link.open).map(link => link.id);
+}
+
+async function sendTo(target, bytes, options = {}) {
+  const list = (target === 'all' ? connectedTargets() : [target]).filter(id => links[id]?.open);
+  if (!list.length) {
+    if (!options.quiet) sys('nothing is connected — open a port, MIDI, or start the demo device', 'bad');
+    return false;
+  }
+  /* the echo goes in before the bytes go out: a device that answers straight
+   * away (the demo does) would otherwise reply above the line that asked */
+  if (state.showTx && !options.quiet) {
+    const label = $('send-mode').value === 'hex' || options.hex
+      ? hexOf(bytes)
+      : new TextDecoder().decode(bytes).replace(/\r/g, '␍').replace(/\n/g, '␊');
+    emit(links[list[0]], label, { dir: 'tx', raw: bytes, tag: '▶ ' + (list.length > 1 ? 'all' : list[0]) });
+  }
+  let sent = false;
+  for (const id of list) {
+    const link = links[id];
+    try {
+      if (id === 'serial') await link.writer.write(bytes);
+      else if (id === 'midi') sendMidiBytes(bytes);
+      else demoReceive(bytes);
+      sent = true;
+      counters.tx += bytes.length;
+      link.txBytes += bytes.length;
+    } catch (error) {
+      counters.errors++;
+      sys(`could not send on ${id}: ${error.message}`, 'bad');
+    }
+  }
+  return sent;
+}
+
+/* The MIDI output takes messages, not a byte stream, so a run of bytes is cut
+ * into messages before it goes out — that is what makes the serial → MIDI
+ * bridge work with a DIN adapter on the other end. */
+const outgoingMidi = (() => {
+  /* one long-lived parser, so a message split across two writes — or running
+   * status carried between them — still comes out whole */
+  const splitLink = { dec: {} };
+  let caught = [];
+  const sink = { wants: DECODERS.midi.wants, done: (_link, message) => caught.push(Uint8Array.from(message)) };
+  return bytes => {
+    caught = [];
+    DECODERS.midi.feed.call(sink, splitLink, bytes);
+    return caught;
+  };
+})();
+
+function sendMidiBytes(bytes) {
+  const output = midiAccess?.outputs.get($('midi-out').value);
+  if (!output) throw new Error('no MIDI output is chosen');
+  for (const message of outgoingMidi(bytes)) output.send(message);
+}
+
+function sendCurrentLine() {
+  const text = $('line').value;
+  if (!text.length) return;
+  let bytes;
+  try {
+    bytes = $('send-mode').value === 'hex'
+      ? parseBytes(text)
+      : new Uint8Array([...encoder.encode(text), ...EOL_BYTES[$('eol').value]]);
+  } catch (error) {
+    sys(error.message, 'bad');
+    return;
+  }
+  sendTo($('target').value, bytes);
+  history.unshift(text);
+  historyAt = -1;
+  if (history.length > 60) history.pop();
+}
+
+const history = [];
+let historyAt = -1;
+
+/* Keystrokes straight down the wire, for a REPL or a shell on the other end. */
+function keyBytes(event) {
+  const { key, ctrlKey } = event;
+  if (ctrlKey && key.length === 1) {
+    const upper = key.toUpperCase();
+    if (upper >= 'A' && upper <= 'Z') return [upper.charCodeAt(0) - 64];
+    if (key === '[') return [27];
+    if (key === ']') return [29];
+    if (key === '\\') return [28];
+    return null;
+  }
+  if (key.length === 1) return [...encoder.encode(key)];
+  switch (key) {
+    case 'Enter': return EOL_BYTES[$('eol').value].length ? EOL_BYTES[$('eol').value] : [13];
+    case 'Backspace': return [8];
+    case 'Delete': return [27, 91, 51, 126];
+    case 'Tab': return [9];
+    case 'Escape': return [27];
+    case 'ArrowUp': return [27, 91, 65];
+    case 'ArrowDown': return [27, 91, 66];
+    case 'ArrowRight': return [27, 91, 67];
+    case 'ArrowLeft': return [27, 91, 68];
+    case 'Home': return [27, 91, 72];
+    case 'End': return [27, 91, 70];
+    case 'PageUp': return [27, 91, 53, 126];
+    case 'PageDown': return [27, 91, 54, 126];
+    default: return null;
+  }
+}
+
+let repeatTimer = 0;
+function syncRepeat() {
+  clearInterval(repeatTimer);
+  if (!state.repeat) return;
+  const period = clamp(Number($('repeat-ms').value) || 1000, 20, 600000);
+  repeatTimer = setInterval(sendCurrentLine, period);
+}
+
+async function sendFile(file) {
+  const buffer = new Uint8Array(await file.arrayBuffer());
+  sys(`sending ${file.name} — ${bytesText(buffer.length)}`, 'note');
+  const chunk = 512;
+  for (let at = 0; at < buffer.length; at += chunk) {
+    const slice = buffer.subarray(at, Math.min(at + chunk, buffer.length));
+    const ok = await sendTo($('target').value, slice, { quiet: true });
+    if (!ok) { sys('the file stopped: nothing is connected', 'bad'); return; }
+    await new Promise(resolve => setTimeout(resolve, 4));
+  }
+  sys(`${file.name} sent`, 'note');
+}
+
+/* ---- MIDI out panel --------------------------------------------------- */
+
+const midiChannel = () => Number($('midi-chan').value) - 1;
+
+function midiOut(bytes) {
+  const array = Uint8Array.from(bytes);
+  const targets = links.midi.open ? ['midi'] : [];
+  if (state.bridgeSerialToMidi && links.serial.open) targets.push('serial');
+  if (!targets.length && links.demo.open) targets.push('demo');
+  if (!targets.length) { sys('no MIDI output — open MIDI, or bridge serial to MIDI', 'bad'); return; }
+  if (state.showTx) {
+    const desc = describeMidi(array);
+    emit(links.midi, desc.text, { dir: 'tx', raw: array, tag: '▶ ' + targets.join('+') });
+  }
+  for (const target of targets) sendTo(target, array, { quiet: true });
+}
+
+function buildKeyboard() {
+  const keys = $('keys');
+  keys.textContent = '';
+  const pattern = [0, 2, 4, 5, 7, 9, 11];
+  const whites = 15;                                   /* just over two octaves */
+  const width = 100 / whites;
+  for (let i = 0; i < whites; i++) {
+    const key = document.createElement('div');
+    key.className = 'wh';
+    key.style.left = (i * width) + '%';
+    key.style.width = width + '%';
+    key.dataset.semitone = String(Math.floor(i / 7) * 12 + pattern[i % 7]);
+    keys.appendChild(key);
+  }
+  for (let i = 0; i < whites - 1; i++) {
+    if ([2, 6].includes(i % 7)) continue;              /* no black key at E–F or B–C */
+    const key = document.createElement('div');
+    key.className = 'bl';
+    key.style.left = ((i + 1) * width - width * 0.3) + '%';
+    key.style.width = (width * 0.6) + '%';
+    key.dataset.semitone = String(Math.floor(i / 7) * 12 + pattern[i % 7] + 1);
+    keys.appendChild(key);
+  }
+  const noteOf = target => (clamp(Number($('midi-octave').value) || 4, -1, 8) + 1) * 12 + Number(target.dataset.semitone);
+  let held = null;
+  const release = () => {
+    if (!held) return;
+    midiOut([0x80 | midiChannel(), held.note, 0]);
+    held.el.classList.remove('down');
+    held = null;
+  };
+  keys.addEventListener('pointerdown', event => {
+    const key = event.target.closest('[data-semitone]');
+    if (!key) return;
+    event.preventDefault();
+    release();
+    const note = clamp(noteOf(key), 0, 127);
+    held = { note, el: key };
+    key.classList.add('down');
+    midiOut([0x90 | midiChannel(), note, clamp(Number($('midi-vel').value) || 100, 1, 127)]);
+    keys.setPointerCapture?.(event.pointerId);
+  });
+  keys.addEventListener('pointerup', release);
+  keys.addEventListener('pointercancel', release);
+  keys.addEventListener('pointerleave', release);
+}
+
+/* ---- plotter ---------------------------------------------------------- */
+
+const PLOT_COLOURS = ['#276b47', '#c0453a', '#3f66ad', '#a3762a', '#6d3f8f', '#2f8b8b', '#8b5a2b', '#4f7a1f'];
+const PLOT_POINTS = 900;
+const series = new Map();
+const plotCanvas = $('plot');
+let plotDirty = false;
+
+function plotPush(name, value) {
+  if (!Number.isFinite(value)) return;
+  let line = series.get(name);
+  if (!line) {
+    if (series.size >= 8) return;
+    line = { colour: PLOT_COLOURS[series.size % PLOT_COLOURS.length], data: [] };
+    series.set(name, line);
+    drawLegend();
+  }
+  line.data.push(value);
+  if (line.data.length > PLOT_POINTS) line.data.shift();
+  plotDirty = true;
+}
+
+function drawLegend() {
+  const legend = $('plot-legend');
+  if (!series.size) { legend.innerHTML = '<span>no numbers seen yet</span>'; return; }
+  legend.innerHTML = [...series.entries()].map(([name, line]) =>
+    `<span data-series="${esc(name)}" style="cursor:pointer;opacity:${line.hidden ? 0.4 : 1}" title="click to hide or show this line">` +
+    `<i style="background:${line.colour}"></i>${esc(name)} <b>${esc(line.data.length ? line.data[line.data.length - 1] : '')}</b></span>`).join('');
+}
+
+function sizePlot() {
+  const ratio = window.devicePixelRatio || 1;
+  const box = plotCanvas.getBoundingClientRect();
+  plotCanvas.width = Math.max(1, Math.round(box.width * ratio));
+  plotCanvas.height = Math.max(1, Math.round(box.height * ratio));
+  drawPlot();
+}
+
+function drawPlot() {
+  const ctx = plotCanvas.getContext('2d');
+  const ratio = window.devicePixelRatio || 1;
+  const w = plotCanvas.width / ratio;
+  const h = plotCanvas.height / ratio;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const paper = getComputedStyle(document.body).getPropertyValue('--paper') || '#f8f2dd';
+  ctx.fillStyle = paper;
+  ctx.fillRect(0, 0, w, h);
+
+  const shown = [...series.values()].filter(line => !line.hidden && line.data.length);
+  const fitEach = $('plot-fit').checked;
+
+  /* the span a line is drawn against: everything together on one axis, or each
+   * line to its own, which is the only way °C and lux share a window */
+  const spanOf = lines => {
+    let low = Infinity;
+    let high = -Infinity;
+    for (const line of lines) for (const value of line.data) {
+      if (value < low) low = value;
+      if (value > high) high = value;
+    }
+    if (!Number.isFinite(low)) { low = 0; high = 1; }
+    if (high - low < 1e-9) { high = low + 1; low -= 1; }
+    const pad = (high - low) * 0.08;
+    return [low - pad, high + pad];
+  };
+  const [low, high] = spanOf(shown);
+
+  const left = 46;
+  const bottom = h - 14;
+  const top = 8;
+  const plotW = w - left - 8;
+  const plotH = bottom - top;
+  const y = value => bottom - ((value - low) / (high - low)) * plotH;
+
+  ctx.strokeStyle = 'rgba(9,20,13,0.13)';
+  ctx.fillStyle = 'rgba(9,20,13,0.55)';
+  ctx.lineWidth = 1;
+  ctx.font = '10px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const value = low + ((high - low) * i) / 4;
+    const at = Math.round(y(value)) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(left, at);
+    ctx.lineTo(left + plotW, at);
+    ctx.stroke();
+    ctx.fillText(fitEach ? '' : Math.abs(value) >= 1000 ? value.toFixed(0)
+      : value.toPrecision(4).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, ''), left - 6, at);
+  }
+  if (fitEach) {
+    ctx.textAlign = 'left';
+    ctx.font = '9px "IBM Plex Mono", monospace';
+    ctx.fillText('fitted', 6, bottom - 5);
+  }
+
+  /* the newest sample is always at the right edge, and the window stretches to
+   * however much has been captured so far */
+  const longest = Math.max(1, ...shown.map(line => line.data.length));
+  for (const line of shown) {
+    if (line.data.length < 2) continue;
+    const [lineLow, lineHigh] = fitEach ? spanOf([line]) : [low, high];
+    const at = value => bottom - ((value - lineLow) / (lineHigh - lineLow)) * plotH;
+    const step = plotW / Math.max(1, longest - 1);
+    const offset = left + plotW - (line.data.length - 1) * step;
+    ctx.strokeStyle = line.colour;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    line.data.forEach((value, index) => {
+      const px = offset + index * step;
+      const py = at(value);
+      if (index === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(9,20,13,0.4)';
+  ctx.strokeRect(left + 0.5, top + 0.5, plotW - 1, plotH - 1);
+}
+
+/* ---- chrome ----------------------------------------------------------- */
+
+function syncChrome() {
+  const anyOpen = connectedTargets();
+  $('lamp-serial').className = 'lamp' + (links.serial.open ? ' on' : '');
+  $('lamp-midi').className = 'lamp' + (links.midi.open ? ' on' : '');
+  $('lamp-demo').className = 'lamp' + (links.demo.open ? ' on' : '');
+  $('lamp-midi-out').className = 'lamp' + (midiAccess?.outputs.get($('midi-out').value) ? ' on' : '');
+  $('pill-lamp').className = 'lamp' + (anyOpen.length ? ' on' : '');
+  $('pill-state').textContent = anyOpen.length
+    ? anyOpen.map(id => id === 'serial' ? `serial ${baudRate()}` : id).join(' + ')
+    : 'Not connected';
+  $('serial-connect').disabled = links.serial.open || !serialSupported;
+  $('serial-disconnect').disabled = !links.serial.open;
+  $('midi-connect').disabled = links.midi.open || !midiSupported;
+  $('midi-disconnect').disabled = !links.midi.open;
+  $('demo-start').disabled = links.demo.open;
+  $('demo-stop').disabled = !links.demo.open;
+
+  const target = $('target');
+  const chosen = target.value;
+  target.textContent = '';
+  /* somewhere to send is always offered, even with nothing open, so the box
+   * reads the same before and after connecting */
+  for (const [value, label] of [['serial', 'To serial'], ['midi', 'To MIDI'], ['demo', 'To demo']])
+    if (links[value].open || (!anyOpen.length && value === 'serial')) target.appendChild(new Option(label, value));
+  if (anyOpen.length > 1) target.appendChild(new Option('To all', 'all'));
+  target.value = [...target.options].some(option => option.value === chosen) ? chosen : target.options[0].value;
+
+  consoleEl.classList.toggle('wrap', state.wrap);
+  consoleEl.classList.toggle('hide-ts', state.stamp === 'none');
+  consoleEl.classList.toggle('hide-tag', !state.showTags);
+  $('plot-panel').hidden = !state.showPlot;
+  $('side').hidden = !state.showSide;
+  $('baud-custom-field').classList.toggle('hidden', $('baud').value !== 'custom');
+  $('hexwidth-field').classList.toggle('hidden', $('decode-serial').value !== 'hex' && $('decode-midi').value !== 'hex');
+  $('idle-field').classList.toggle('hidden', !['hex', 'modbus'].includes($('decode-serial').value));
+  $('decode-note').innerHTML = DECODERS[$('decode-serial').value]?.note || '';
+  $('send-hint').textContent = $('send-mode').value === 'hex'
+    ? 'hex: 1B 5B 41, 0x0D, "text\\r\\n"'
+    : 'Enter sends · ↑ ↓ walk back through what was sent';
+  $('interactive').checked = state.interactive;
+  $('repeat').checked = state.repeat;
+  $('serial-note').classList.toggle('warn', !serialSupported);
+  if (!serialSupported) $('serial-note').textContent = 'This browser has no Web Serial. Chrome, Edge and Opera have it over HTTPS; meanwhile the demo device below drives everything else.';
+  $('midi-note').classList.toggle('warn', !midiSupported);
+  if (!midiSupported) $('midi-note').textContent = 'This browser has no Web MIDI. Chrome, Edge and Opera have it.';
+
+  for (const item of document.querySelectorAll('[data-cmd] .mi-check')) {
+    const button = item.closest('[data-cmd]');
+    const { cmd, value } = button.dataset;
+    let on = false;
+    if (cmd === 'toggle') on = !!state[value];
+    else if (cmd === 'stamp') on = state.stamp === value;
+    else if (cmd === 'eol') on = $('eol').value === value;
+    else if (cmd === 'send-mode') on = $('send-mode').value === value;
+    else if (cmd === 'decode') on = $('decode-serial').value === value;
+    else if (cmd === 'demo-toggle') on = links.demo.open;
+    else if (cmd === 'dtr') on = $('dtr').checked;
+    else if (cmd === 'rts') on = $('rts').checked;
+    item.textContent = on ? '✓' : '';
+  }
+  drawLegend();
+}
+
+function syncStats() {
+  const now = performance.now();
+  while (counters.window.length && now - counters.window[0][0] > 1000) counters.window.shift();
+  const rate = counters.window.reduce((sum, [, n]) => sum + n, 0);
+  $('pill-rx').textContent = bytesText(counters.rx);
+  $('pill-tx').textContent = bytesText(counters.tx);
+  $('pill-rate').textContent = bytesText(rate) + '/s';
+  const uptime = counters.since ? ((now - counters.since) / 1000) : 0;
+  $('stats').innerHTML = [
+    ['Received', bytesText(counters.rx)],
+    ['Sent', bytesText(counters.tx)],
+    ['Rate', bytesText(rate) + '/s'],
+    ['Console rows', String(log.length)],
+    ['Bad frames', String(counters.errors)],
+    ['Open for', uptime > 3600 ? (uptime / 3600).toFixed(2) + ' h' : uptime > 60 ? (uptime / 60).toFixed(1) + ' min' : uptime.toFixed(0) + ' s'],
+    ['Kept for saving', bytesText(rawRxLength)]
+  ].map(([key, value]) => `<div class="stat"><span>${key}</span><span>${esc(value)}</span></div>`).join('');
+  if (plotDirty && state.showPlot) { plotDirty = false; drawPlot(); drawLegend(); }
+}
+
+/* ---- files ------------------------------------------------------------ */
+
+function download(name, blob) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = name;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+const stampName = () => new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+function saveLog() {
+  const text = log.map(row => `${row.clock} ${(row.tag || '').padEnd(9)} ${row.text}`).join('\n') + '\n';
+  download(`clackterm-${stampName()}.txt`, new Blob([text], { type: 'text/plain' }));
+}
+
+function saveRaw() {
+  download(`clackterm-${stampName()}.bin`, new Blob(rawRx, { type: 'application/octet-stream' }));
+}
+
+function savePlot() {
+  if (!series.size) { sys('nothing has been plotted yet', 'bad'); return; }
+  const names = [...series.keys()];
+  const rows = Math.max(...[...series.values()].map(line => line.data.length));
+  const lines = ['sample,' + names.join(',')];
+  for (let i = 0; i < rows; i++) {
+    lines.push([i, ...names.map(name => {
+      const data = series.get(name).data;
+      const at = i - (rows - data.length);
+      return at >= 0 && at < data.length ? data[at] : '';
+    })].join(','));
+  }
+  download(`clackterm-plot-${stampName()}.csv`, new Blob([lines.join('\n') + '\n'], { type: 'text/csv' }));
+}
+
+/* ---- macros ----------------------------------------------------------- */
+
+const DEFAULT_MACROS = [
+  { name: 'ping', mode: 'text', payload: 'AT' },
+  { name: 'status', mode: 'text', payload: '?' },
+  { name: 'read regs', mode: 'hex', payload: '01 03 00 00 00 04 44 09' },
+  { name: 'note on', mode: 'hex', payload: '90 3C 64' },
+  { name: 'note off', mode: 'hex', payload: '80 3C 00' },
+  { name: 'reset', mode: 'hex', payload: '18' }
+];
+let macros = DEFAULT_MACROS.map(macro => ({ ...macro }));
+
+function buildMacros() {
+  const box = $('macros');
+  box.textContent = '';
+  macros.forEach((macro, index) => {
+    const row = document.createElement('div');
+    row.className = 'macro';
+    row.innerHTML =
+      `<input type="text" id="macro-name-${index}" value="${esc(macro.name)}" aria-label="Macro ${index + 1} name">` +
+      `<select id="macro-mode-${index}" aria-label="Macro ${index + 1} mode">` +
+        `<option value="text"${macro.mode === 'text' ? ' selected' : ''}>text</option>` +
+        `<option value="hex"${macro.mode === 'hex' ? ' selected' : ''}>hex</option>` +
+      '</select>' +
+      `<input type="text" id="macro-payload-${index}" value="${esc(macro.payload)}" spellcheck="false" aria-label="Macro ${index + 1} payload">` +
+      `<button type="button" class="btn ghost" data-macro="${index}">Send</button>`;
+    box.appendChild(row);
+  });
+}
+
+function readMacros() {
+  macros = macros.map((macro, index) => ({
+    name: $(`macro-name-${index}`)?.value ?? macro.name,
+    mode: $(`macro-mode-${index}`)?.value ?? macro.mode,
+    payload: $(`macro-payload-${index}`)?.value ?? macro.payload
+  }));
+}
+
+function sendMacro(index) {
+  readMacros();
+  const macro = macros[index];
+  if (!macro || !macro.payload) return;
+  let bytes;
+  try {
+    bytes = macro.mode === 'hex'
+      ? parseBytes(macro.payload)
+      : new Uint8Array([...encoder.encode(macro.payload), ...EOL_BYTES[$('eol').value]]);
+  } catch (error) {
+    sys(`macro "${macro.name}": ${error.message}`, 'bad');
+    return;
+  }
+  sendTo($('target').value, bytes, { hex: macro.mode === 'hex' });
+}
+
+/* ---- help ------------------------------------------------------------- */
+
+function showHelp() {
+  const lines = [
+    'ClackTerm — a serial and MIDI console.',
+    '',
+    'Links     A USB serial port (Web Serial), a MIDI in/out pair (Web MIDI), and a',
+    '          simulated device. All three can be open at once, and every row in the',
+    '          console says which one it came from.',
+    'Interpret Plain text, hex dump, NMEA 0183, Modbus RTU, MIDI bytes, SLIP, COBS,',
+    '          AT commands, G-code/GRBL, and telemetry that feeds the plotter.',
+    'Send      Text with the line ending of your choice, or bytes in hex — 1B 5B 41,',
+    '          0x0D, "text\\r\\n" all read the same. Macros are down the side, files go',
+    '          out through File → Send a file, and Send → keystrokes straight out',
+    '          turns the console into a terminal for a REPL or a shell.',
+    'MIDI      The keyboard, CC and program change go to the MIDI output; with',
+    '          MIDI → bridge serial to MIDI they go out of the serial port as well,',
+    '          which is what a DIN adapter on a UART wants.',
+    'Files     The console, the raw received bytes and the plotted numbers all save.',
+    '',
+    'Serial lines: DTR and RTS are yours to set, CTS/DSR/DCD/RI are shown as they',
+    'arrive, and Link → Pulse DTR does the reset an Arduino expects.'
+  ];
+  for (const line of lines) sys(line || ' ', 'sys');
+}
+
+function showSupport() {
+  sys(`Web Serial: ${serialSupported ? 'yes' : 'no'} · Web MIDI: ${midiSupported ? 'yes' : 'no'} · secure context: ${window.isSecureContext ? 'yes' : 'no'}`, 'note');
+  if (!serialSupported || !midiSupported) sys('Chrome, Edge and Opera have both. Firefox and Safari have neither — the demo device works everywhere.', 'note');
+}
+
+/* ---- wiring ----------------------------------------------------------- */
+
+function fillSelect(select, ids) {
+  select.textContent = '';
+  for (const id of ids) select.appendChild(new Option(DECODERS[id].label, id));
+}
+
+fillSelect($('decode-serial'), SERIAL_DECODERS);
+fillSelect($('decode-midi'), MIDI_DECODERS);
+$('menu-decode').innerHTML = SERIAL_DECODERS.map(id =>
+  `<button type="button" data-cmd="decode" data-value="${id}"><span class="pixel-icon" data-icon="brackets" aria-hidden="true"></span>${esc(DECODERS[id].label)}<span class="mi-check"></span></button>`).join('');
+for (const [id, device] of Object.entries(DEMOS)) $('demo-kind').appendChild(new Option(device.label, id));
+for (let channel = 1; channel <= 16; channel++) $('midi-chan').appendChild(new Option('Channel ' + channel, String(channel)));
+buildKeyboard();
+buildMacros();
+
+$('serial-connect').addEventListener('click', serialConnect);
+$('serial-disconnect').addEventListener('click', () => serialDisconnect());
+$('midi-connect').addEventListener('click', midiConnect);
+$('midi-disconnect').addEventListener('click', midiDisconnect);
+$('demo-start').addEventListener('click', demoStart);
+$('demo-stop').addEventListener('click', () => demoStop());
+$('midi-in').addEventListener('change', bindMidiInput);
+$('midi-out').addEventListener('change', syncChrome);
+$('dtr').addEventListener('change', () => { setSignals(); syncChrome(); });
+$('rts').addEventListener('change', () => { setSignals(); syncChrome(); });
+$('baud').addEventListener('change', syncChrome);
+
+$('decode-serial').addEventListener('change', () => { resetDecoder(links.serial); resetDecoder(links.demo); syncChrome(); });
+$('decode-midi').addEventListener('change', () => { resetDecoder(links.midi); syncChrome(); });
+
+$('send').addEventListener('click', sendCurrentLine);
+$('send-mode').addEventListener('change', syncChrome);
+$('eol').addEventListener('change', syncChrome);
+$('interactive').addEventListener('change', () => { state.interactive = $('interactive').checked; syncChrome(); });
+$('repeat').addEventListener('change', () => { state.repeat = $('repeat').checked; syncRepeat(); syncChrome(); });
+$('repeat-ms').addEventListener('change', syncRepeat);
+$('clear').addEventListener('click', () => { log.length = 0; consoleEl.textContent = ''; });
+$('plot-clear').addEventListener('click', () => { series.clear(); drawLegend(); drawPlot(); });
+$('plot-fit').addEventListener('change', drawPlot);
+$('plot-legend').addEventListener('click', event => {
+  const item = event.target.closest('[data-series]');
+  const line = item && series.get(item.dataset.series);
+  if (!line) return;
+  line.hidden = !line.hidden;
+  drawLegend();
+  drawPlot();
+});
+$('midi-panic').addEventListener('click', () => {
+  for (let channel = 0; channel < 16; channel++) midiOut([0xb0 | channel, 123, 0]);
+});
+$('send-cc').addEventListener('click', () => midiOut([0xb0 | midiChannel(), clamp(Number($('midi-cc').value) || 0, 0, 127), clamp(Number($('midi-ccval').value) || 0, 0, 127)]));
+$('send-pc').addEventListener('click', () => midiOut([0xc0 | midiChannel(), clamp(Number($('midi-cc').value) || 0, 0, 127)]));
+
+$('macros').addEventListener('click', event => {
+  const button = event.target.closest('[data-macro]');
+  if (button) sendMacro(Number(button.dataset.macro));
+});
+$('macros').addEventListener('change', readMacros);
+$('macros').addEventListener('input', readMacros);
+
+$('line').addEventListener('keydown', event => {
+  if (event.key === 'Enter') { event.preventDefault(); sendCurrentLine(); $('line').select(); return; }
+  if (event.key === 'ArrowUp' && history.length) {
+    event.preventDefault();
+    historyAt = Math.min(historyAt + 1, history.length - 1);
+    $('line').value = history[historyAt];
+  }
+  if (event.key === 'ArrowDown' && history.length) {
+    event.preventDefault();
+    historyAt = Math.max(historyAt - 1, -1);
+    $('line').value = historyAt < 0 ? '' : history[historyAt];
+  }
+});
+
+consoleEl.addEventListener('keydown', event => {
+  if (!state.interactive) return;
+  if (event.ctrlKey && ['c', 'v', 'x'].includes(event.key.toLowerCase()) && window.getSelection().toString()) return;
+  const bytes = keyBytes(event);
+  if (!bytes) return;
+  event.preventDefault();
+  /* no local echo, the way a terminal works: what you see typed is the device
+   * echoing it back, so a REPL and a shell behave as they do anywhere else */
+  sendTo($('target').value, Uint8Array.from(bytes), { quiet: true });
+});
+consoleEl.addEventListener('scroll', () => {
+  if (!state.paused) state.autoscroll = atBottom();
+});
+
+const applyFilter = () => {
+  const text = $('find').value.trim();
+  const asRegex = text.match(/^\/(.*)\/([gimsuy]*)$/);
+  try {
+    filterRe = !text ? null : asRegex ? new RegExp(asRegex[1], asRegex[2] || 'i') : new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  } catch {
+    filterRe = null;
+  }
+  scheduleRender();
+};
+$('find').addEventListener('input', applyFilter);
+$('find-only').addEventListener('change', applyFilter);
+
+$('file-input').addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (file) sendFile(file);
+  event.target.value = '';
+});
+
+document.addEventListener('term-command', event => {
+  const { command, value } = event.detail;
+  switch (command) {
+    case 'save-log': saveLog(); break;
+    case 'save-raw': saveRaw(); break;
+    case 'save-plot': savePlot(); break;
+    case 'send-file': $('file-input').click(); break;
+    case 'clear': log.length = 0; consoleEl.textContent = ''; break;
+    case 'reset': resetAll(); break;
+    case 'serial-connect': serialConnect(); break;
+    case 'serial-disconnect': serialDisconnect(); break;
+    case 'midi-connect': midiConnect(); break;
+    case 'midi-disconnect': midiDisconnect(); break;
+    case 'demo-toggle': links.demo.open ? demoStop() : demoStart(); break;
+    case 'dtr': $('dtr').checked = !$('dtr').checked; setSignals(); break;
+    case 'rts': $('rts').checked = !$('rts').checked; setSignals(); break;
+    case 'break': sendBreak(); break;
+    case 'pulse-reset': pulseReset(); break;
+    case 'decode': $('decode-serial').value = value; resetDecoder(links.serial); resetDecoder(links.demo); break;
+    case 'stamp': state.stamp = value; renderAll(); break;
+    case 'toggle': toggle(value); break;
+    case 'send-mode': $('send-mode').value = value; break;
+    case 'eol': $('eol').value = value; break;
+    case 'ctrl': sendTo($('target').value, Uint8Array.from([Number(value)]), { hex: true }); break;
+    case 'midi-panic': for (let channel = 0; channel < 16; channel++) midiOut([0xb0 | channel, 123, 0]); break;
+    case 'midi-clock': midiClock(value); break;
+    case 'midi-id': midiOut([0xf0, 0x7e, 0x7f, 0x06, 0x01, 0xf7]); break;
+    case 'help': showHelp(); break;
+    case 'support': showSupport(); break;
+  }
+  syncChrome();
+});
+
+function toggle(key) {
+  state[key] = !state[key];
+  if (key === 'paused' && !state.paused) renderAll();
+  if (key === 'showTags' || key === 'showRaw') renderAll();
+  if (key === 'interactive') { $('interactive').checked = state.interactive; if (state.interactive) consoleEl.focus(); }
+  if (key === 'repeat') { $('repeat').checked = state.repeat; syncRepeat(); }
+  if (key === 'showPlot') requestAnimationFrame(sizePlot);
+  if (key === 'autoscroll') scrollToTail();
+  if ((key === 'bridgeSerialToMidi' || key === 'bridgeMidiToSerial') && state[key])
+    sys('bridging works on decoded MIDI messages — set the traffic being bridged to "MIDI bytes"', 'note');
+  syncChrome();
+}
+
+let clockTimer = 0;
+function midiClock(action) {
+  clearInterval(clockTimer);
+  if (action === 'stop') { midiOut([0xfc]); return; }
+  midiOut([0xfa]);
+  clockTimer = setInterval(() => midiOut([0xf8]), 20.833);      /* 120 bpm, 24 per beat */
+  sys('sending MIDI clock at 120 bpm — MIDI → Send stop ends it', 'note');
+}
+
+async function sendBreak() {
+  const link = links.serial;
+  if (!link.open) { sys('the serial port is not open', 'bad'); return; }
+  try {
+    await link.port.setSignals({ break: true });
+    await new Promise(resolve => setTimeout(resolve, 120));
+    await link.port.setSignals({ break: false });
+    sys('break sent', 'note');
+  } catch (error) {
+    sys(`could not send a break: ${error.message}`, 'bad');
+  }
+}
+
+async function pulseReset() {
+  const link = links.serial;
+  if (!link.open) { sys('the serial port is not open', 'bad'); return; }
+  try {
+    await link.port.setSignals({ dataTerminalReady: false, requestToSend: false });
+    await new Promise(resolve => setTimeout(resolve, 60));
+    await link.port.setSignals({ dataTerminalReady: $('dtr').checked, requestToSend: $('rts').checked });
+    sys('DTR pulsed', 'note');
+  } catch (error) {
+    sys(`could not pulse DTR: ${error.message}`, 'bad');
+  }
+}
+
+function resetAll() {
+  demoStop(true);
+  serialDisconnect('quiet').catch(() => {});
+  midiDisconnect();
+  log.length = 0;
+  consoleEl.textContent = '';
+  series.clear();
+  rawRx.length = 0;
+  rawRxLength = 0;
+  Object.assign(counters, { rx: 0, tx: 0, errors: 0, since: 0, window: [] });
+  macros = DEFAULT_MACROS.map(macro => ({ ...macro }));
+  buildMacros();
+  Object.assign(state, {
+    stamp: 'clock', showTx: true, showRaw: false, showTags: true, wrap: false,
+    autoscroll: true, paused: false, showPlot: false, showSide: true,
+    interactive: false, repeat: false, bridgeSerialToMidi: false, bridgeMidiToSerial: false
+  });
+  $('decode-serial').value = 'text';
+  $('decode-midi').value = 'midi';
+  $('line').value = '';
+  $('find').value = '';
+  filterRe = null;
+  syncRepeat();
+  syncChrome();
+  drawLegend();
+}
+
+if (serialSupported) navigator.serial.addEventListener('disconnect', event => {
+  if (links.serial.open && event.target === links.serial.port) serialDisconnect('lost');
+});
+
+new ResizeObserver(sizePlot).observe($('plot-panel'));
+setInterval(syncStats, 400);
+window.addEventListener('pagehide', () => { demoStop(true); serialDisconnect('quiet').catch(() => {}); });
+
+/* ---- remembered by the desktop ---------------------------------------- */
+
+ClackOSAppState.connect({
+  controls: true,
+  save: () => ({ view: { ...state }, macros }),
+  restore: saved => {
+    if (!saved) return;
+    if (saved.view) for (const key of Object.keys(state)) if (key in saved.view) state[key] = saved.view[key];
+    if (Array.isArray(saved.macros) && saved.macros.length) {
+      macros = saved.macros.map(macro => ({
+        name: String(macro.name || ''), mode: macro.mode === 'hex' ? 'hex' : 'text', payload: String(macro.payload || '')
+      }));
+      buildMacros();
+    }
+    state.paused = false;
+    syncRepeat();
+    syncChrome();
+    if (state.showPlot) requestAnimationFrame(sizePlot);
+  }
+});
+
+/* ---- go --------------------------------------------------------------- */
+
+syncChrome();
+syncStats();
+sys('ClackTerm ready. Connect a serial port or MIDI from the Link menu — or start the demo device to try it without hardware. Help → Quick reference explains the rest.', 'note');
+if (!serialSupported && !midiSupported) sys('this browser has neither Web Serial nor Web MIDI, so only the demo device will do anything', 'bad');
+})();
+</script>
+</body>
+</html>
