@@ -7,13 +7,13 @@
 <title>ClackModem — audio modulation encoder</title>
 <!-- crawler metadata — a tool in its own right, linked from the plain mirror
      and worth finding on its own, so it says what it is and is indexed. -->
-<meta name="description" content="Encode text as real audio modulation — DTMF, Bell 202 AFSK and AX.25, Bell 103, V.21, V.23, RTTY, Morse, Kansas City Standard, ZX Spectrum and C64 tape, SMPTE timecode, PSK31 and V.22 DQPSK — and play or save it as a WAV.">
+<meta name="description" content="Encode text as real audio modulation — DTMF, Bell 202 AFSK and AX.25, Bell 103, V.21, V.23, RTTY, Morse, multi-channel CW, Kansas City Standard, ZX Spectrum and C64 tape, SMPTE timecode, PSK31 and V.22 DQPSK — and play or save it as a WAV.">
 <link rel="canonical" href="https://clacktronics.co.uk/content/applications/modem.html">
 <meta property="og:site_name" content="Clacktronics">
 <meta property="og:type" content="website">
 <meta property="og:title" content="ClackModem — audio modulation encoder">
 <meta property="og:url" content="https://clacktronics.co.uk/content/applications/modem.html">
-<meta property="og:description" content="Encode text as real audio modulation — touch tones, packet radio, dial-up, teletype, cassette tape formats, timecode and phase shift keying — and play or save it as a WAV.">
+<meta property="og:description" content="Encode text as real audio modulation — touch tones, packet radio, dial-up, teletype, Morse on one tone or several at once, cassette tape formats, timecode and phase shift keying — and play or save it as a WAV.">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -175,7 +175,7 @@
 
     <div class="app-panel mdm-ref">
       <h4>What this is</h4>
-      <p>Fourteen ways of carrying data as sound, each one generating a real signal rather than an
+      <p>Fifteen ways of carrying data as sound, each one generating a real signal rather than an
         impression of one — the tones, timings and framing are as specified, so the output decodes
         in software written for the actual protocol.</p>
       <h4>Accuracy notes</h4>
@@ -190,6 +190,10 @@
         modem chip would transmit.</p>
       <p><b>Morse</b> and <b>PSK31</b> are shaped so they do not click or splatter; everything else
         is phase-continuous by construction.</p>
+      <p><b>Multi-channel CW</b> is the sum of its channels and nothing else — each one is the
+        same keying the single-tone mode writes, so a filter narrow enough to sit on one tone
+        reads that channel back on its own. The mix is scaled by a single number afterwards so
+        that channels keyed at the same instant cannot clip.</p>
       <h4>Limits</h4>
       <p>Encoding only, for now. Signals are capped at three minutes — a long message at 45 baud is
         a very long file.</p>

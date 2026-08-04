@@ -3,7 +3,7 @@
  * Every protocol here is a way of putting bits (or a picture of bits) into
  * something a loudspeaker can carry, and they all come apart into the same
  * three pieces: a bit source, a framing rule, and a modulator. That is why
- * this file has one Writer and fourteen small encoders rather than fourteen
+ * this file has one Writer and fifteen small encoders rather than fifteen
  * signal generators — the Writer owns sample timing and phase, so an encoder
  * only has to say "mark for one bit time" and the audio comes out clean.
  *
@@ -394,7 +394,8 @@ function encodeRtty(text, p, w, notes) {
 }
 
 /* ------------------------------------------------------------------ *
- * 8. Morse — on-off keying of a single tone, timed against PARIS.
+ * 8. Morse — on-off keying of a single tone, timed against PARIS, and the
+ *    same keying multiplexed across several tones at once.
  * ------------------------------------------------------------------ */
 const MORSE = {
   A: '.-', B: '-...', C: '-.-.', D: '-..', E: '.', F: '..-.', G: '--.', H: '....',
@@ -409,18 +410,17 @@ const MORSE = {
   '"': '.-..-.', $: '...-..-', '@': '.--.-.'
 };
 
-function encodeMorse(text, p, w, notes) {
-  const wpm = Math.max(3, num(p, 'wpm', 18));
-  const eff = Math.max(3, Math.min(wpm, num(p, 'farnsworth', 0) || wpm));
-  const freq = num(p, 'tone', 700), amp = num(p, 'level', 0.6);
-  const dit = 1.2 / wpm;
+/* One message keyed into a writer at one speed and one tone. Kept apart from
+ * the encoder below because the multi-channel mode runs it once per channel,
+ * into a writer of its own, and mixes what comes out. */
+function keyMorse(w, text, opt) {
+  const dit = 1.2 / opt.wpm;
   /* Farnsworth stretches the gaps between characters and words while the
    * characters themselves stay at full speed — the standard way of learning
    * the rhythm of fast code without being outrun by it. */
-  const gap = 1.2 / eff;
+  const gap = 1.2 / opt.eff;
   const rise = Math.min(0.006, dit / 3);
 
-  w.silence(0.15);
   let skipped = 0, letters = 0;
   const words = text.toUpperCase().split(/\s+/).filter(Boolean);
   words.forEach((word, wi) => {
@@ -431,18 +431,139 @@ function encodeMorse(text, p, w, notes) {
       if (ci) w.silence(gap * 3);
       [...code].forEach((sym, si) => {
         if (si) w.silence(dit);
-        w.keyed(freq, sym === '-' ? dit * 3 : dit, rise, amp);
+        w.keyed(opt.freq, sym === '-' ? dit * 3 : dit, rise, opt.amp);
       });
       letters++;
     });
   });
+  return { letters: letters, skipped: skipped, dit: dit, gap: gap };
+}
+
+/* The effective speed characters are spaced at: Farnsworth is only meaningful
+ * when it is slower than the character speed, and 0 means no stretching. */
+function farnsworthSpeed(wpm, farns) {
+  return Math.max(3, Math.min(wpm, farns || wpm));
+}
+
+function encodeMorse(text, p, w, notes) {
+  const wpm = Math.max(3, num(p, 'wpm', 18));
+  const eff = farnsworthSpeed(wpm, num(p, 'farnsworth', 0));
+  const freq = num(p, 'tone', 700), amp = num(p, 'level', 0.6);
+
+  w.silence(0.15);
+  const r = keyMorse(w, text, { wpm: wpm, eff: eff, freq: freq, amp: amp });
   w.silence(0.15);
 
+  if (r.skipped) notes.push(r.skipped + ' character' + (r.skipped === 1 ? '' : 's') +
+    ' have no Morse code and were skipped.');
+  notes.push('Dit length ' + (r.dit * 1000).toFixed(1) + ' ms' +
+    (eff < wpm ? ', Farnsworth gaps at ' + eff + ' wpm' : '') + '.');
+  return { letters: r.letters };
+}
+
+/* --- Multi-channel CW ---
+ *
+ * Frequency-division multiplexed telegraphy: several messages keyed at the
+ * same time, each on its own tone, summed into one signal. This is the
+ * harmonic telegraph of the 1870s — Gray and Bell both chasing more than one
+ * message down a single wire by giving each one a pitch of its own — and it
+ * is also what a crowded CW band sounds like through one receiver.
+ *
+ * Nothing here is a new modulation: every channel is the same on-off keying
+ * `encodeMorse` writes, so each one on its own still decodes as Morse, and a
+ * filter narrow enough to sit on one tone recovers just that channel.
+ *
+ * A line reads `freq/wpm@delay: message`, and every part of the header is
+ * optional — what is left out is filled in from the parameters, spacing the
+ * channels out in frequency and staggering their starts so they overlap
+ * rather than march in step. */
+const CW_HEADER = /^[ \t]*(\d+(?:\.\d+)?)?[ \t]*(?:\/[ \t]*(\d+(?:\.\d+)?))?[ \t]*(?:@[ \t]*(\d+(?:\.\d+)?))?[ \t]*:[ \t]?/;
+const CW_MAX_CHANNELS = 12;
+
+function encodeCwMulti(text, p, w, notes) {
+  const baseWpm = Math.max(3, num(p, 'wpm', 18));
+  const farns = num(p, 'farnsworth', 0);
+  const tone = num(p, 'tone', 600);
+  const spacing = num(p, 'spacing', 250);
+  const stagger = num(p, 'stagger', 0.4);
+  const repeat = Math.max(1, Math.min(20, Math.round(num(p, 'repeat', 1))));
+  const amp = num(p, 'level', 0.6);
+
+  /* --- one channel per non-empty line --- */
+  const chans = [];
+  let over = 0;
+  for (const line of text.split(/\r\n?|\n/)) {
+    if (!line.trim()) continue;
+    if (chans.length >= CW_MAX_CHANNELS) { over++; continue; }
+    const i = chans.length;
+    const m = CW_HEADER.exec(line);
+    /* a bare colon is not a header — a message may well contain one, and only
+     * a line that states a frequency, a speed or a delay is treated as having
+     * one, so `RST 599 : QSL` stays a message */
+    const head = m && (m[1] || m[2] || m[3]) ? m : null;
+    /* a header states its own numbers, so it is not held to the ranges the
+     * parameter fields enforce — clamp them here instead of letting a typo
+     * write a channel at DC or key one faster than it is Morse */
+    const wpm = head && head[2] ? Math.min(120, Math.max(3, parseFloat(head[2]))) : baseWpm;
+    chans.push({
+      msg: head ? line.slice(head[0].length) : line,
+      freq: head && head[1]
+        ? Math.min(w.rate / 2 - 1, Math.max(20, parseFloat(head[1])))
+        : tone + spacing * i,
+      wpm: wpm,
+      eff: farnsworthSpeed(wpm, farns),
+      delay: head && head[3] ? parseFloat(head[3]) : stagger * i
+    });
+  }
+
+  if (!chans.length) {
+    notes.push('Nothing to send — one message per line, each its own channel.');
+    return { channels: 0, letters: 0 };
+  }
+
+  /* --- render each channel on its own, summing as we go ---
+   * A channel is written through a Writer of its own so it keeps its own
+   * phase and its own timing cursor, and is dropped as soon as it has been
+   * added in: holding twelve full-length signals at once is what would make
+   * this expensive, and none of them are needed twice. */
+  const mix = [];
+  let letters = 0, skipped = 0, truncated = false;
+  for (const c of chans) {
+    const cw = new Writer(w.rate);
+    cw.silence(0.15 + Math.max(0, c.delay));
+    for (let r = 0; r < repeat; r++) {
+      if (r) cw.silence((1.2 / c.eff) * 7);      /* a word space between sendings */
+      const res = keyMorse(cw, c.msg, { wpm: c.wpm, eff: c.eff, freq: c.freq, amp: amp });
+      if (!r) { letters += res.letters; skipped += res.skipped; }
+    }
+    if (cw.truncated) truncated = true;
+    const d = cw.data;
+    for (let i = 0; i < d.length; i++) mix[i] = (i < mix.length ? mix[i] : 0) + d[i];
+  }
+  for (let i = 0, n = Math.round(0.15 * w.rate); i < n; i++) mix.push(0);
+
+  /* --- level ---
+   * Summed channels overshoot: two dits keyed at the same instant are twice
+   * the amplitude of one. The whole mix is scaled by a single number so its
+   * peak lands on the requested level, which clips nothing and leaves the
+   * channels in the ratio they were keyed at. */
+  let peak = 0;
+  for (let i = 0; i < mix.length; i++) { const v = Math.abs(mix[i]); if (v > peak) peak = v; }
+  const g = peak > 0 ? amp / peak : 1;
+  for (let i = 0; i < mix.length; i++) w.data.push(mix[i] * g);
+  w.cursor = w.data.length;
+  if (truncated) w.truncated = true;
+
+  notes.push(chans.length + ' channel' + (chans.length === 1 ? '' : 's') + ' at ' +
+    chans.map(c => Math.round(c.freq) + ' Hz/' + c.wpm + ' wpm').join(', ') +
+    (repeat > 1 ? ', sent ' + repeat + ' times' : '') + '.');
+  if (g < 0.999) notes.push('Mix scaled to ' + (g).toFixed(2) +
+    ' of each channel so the overlaps do not clip.');
   if (skipped) notes.push(skipped + ' character' + (skipped === 1 ? '' : 's') +
     ' have no Morse code and were skipped.');
-  notes.push('Dit length ' + (dit * 1000).toFixed(1) + ' ms' +
-    (eff < wpm ? ', Farnsworth gaps at ' + eff + ' wpm' : '') + '.');
-  return { letters: letters };
+  if (over) notes.push(over + ' line' + (over === 1 ? '' : 's') + ' past the ' +
+    CW_MAX_CHANNELS + ' channel limit ' + (over === 1 ? 'was' : 'were') + ' ignored.');
+  return { channels: chans.length, letters: letters };
 }
 
 /* ------------------------------------------------------------------ *
@@ -943,6 +1064,26 @@ const PROTOCOLS = [
       LEVEL
     ],
     encode: encodeMorse
+  },
+  {
+    id: 'cwmulti', name: 'Multi-channel CW', group: 'Frequency shift keying',
+    year: '1874', input: 'Channels',
+    hint: 'One channel per line, "freq/wpm@delay: message" — every part of that optional.',
+    sample: 'CQ CQ DE M0ABC M0ABC K\n/28: TEST DE G3XYZ K\n1450/12@2.5: QRZ? DE 2E0QQQ K',
+    blurb: 'Several messages keyed at once, each on its own tone — the harmonic telegraph\'s ' +
+      'trick of putting more than one message on a wire by giving each a pitch.',
+    params: [
+      { id: 'tone', label: 'Base tone', type: 'number', def: 600, min: 200, max: 3000, step: 10, unit: 'Hz' },
+      /* wide enough that neighbouring channels land in different bins of the
+         512-point spectrogram, so the waterfall shows them apart */
+      { id: 'spacing', label: 'Spacing', type: 'number', def: 250, min: 0, max: 1000, step: 10, unit: 'Hz' },
+      { id: 'wpm', label: 'Speed', type: 'number', def: 18, min: 3, max: 60, step: 1, unit: 'wpm' },
+      { id: 'farnsworth', label: 'Farnsworth', type: 'number', def: 0, min: 0, max: 60, step: 1, unit: 'wpm' },
+      { id: 'stagger', label: 'Stagger', type: 'number', def: 0.4, min: 0, max: 20, step: 0.1, unit: 's' },
+      { id: 'repeat', label: 'Repeat', type: 'number', def: 1, min: 1, max: 20, step: 1, unit: '×' },
+      LEVEL
+    ],
+    encode: encodeCwMulti
   },
   {
     id: 'kcs', name: 'Kansas City Standard', group: 'Cassette tape',
