@@ -748,7 +748,11 @@ async function openWindow(id, restore = null) {
       f.className = 'appframe theme-loading';
       f.src = 'content/' + launchPage;
       f.title = meta.title;
-      if (page === 'applications/clackbase.html') f.allow = 'midi';
+      /* device access is delegated to the frame only where a menu entry asks
+       * for it: an app that talks to hardware (MIDI, serial) names the
+       * permissions it needs in menu.json rather than having them assumed */
+      if (def.allow) f.allow = def.allow;
+      else if (page === 'applications/clackbase.html') f.allow = 'midi';
       /* clicks inside the app should still raise its window */
       f.addEventListener('load', () => {
         try {
