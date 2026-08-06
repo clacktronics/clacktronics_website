@@ -62,6 +62,13 @@ gives a bar to the full-window apps that have none. Apps marked
 itself — so they get no such link, the same ones the plain mirror leaves out
 of its Applications menu.
 
+An app opened on its own offers the way back the other way: **ClackOS**, the
+first item in its menu bar, linking to the desktop (`assets/js/app-home.js`,
+loaded by every app page). It appears only when the app *is* the page — inside
+a ClackOS window the desktop is already there — and full-window apps with no
+bar are given one for it. Both links build their bar with
+`assets/js/app-bar.js`.
+
 There is **no build step**: the browser fetches `site.json`, each folder's
 `menu.json`, and the markdown files at runtime. Edit a `.md` file, refresh,
 done. Hosted on GitHub Pages (or any static host).
