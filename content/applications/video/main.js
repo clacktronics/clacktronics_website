@@ -1,4 +1,4 @@
-import { BrowserFFmpegEngine } from './ffmpeg-engine.js';
+import { BrowserFFmpegEngine, POPCORN } from './ffmpeg-engine.js';
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
@@ -16,6 +16,10 @@ const state = {
   reverse: false,
   speed: 1,
   loop: false,
+  bounce: false,
+  /* the direction a bounce set off in, so a there-and-back can tell when it is
+     back where it started and, without loop, stop there */
+  bounceOrigin: false,
   markerA: null,
   markerB: null,
   audioLayer: null,
@@ -136,6 +140,7 @@ function clearProject({ announce = true } = {}) {
   clearAudio();
   renderTimeline();
   updateUi();
+  updateExportPanel();
   if (announce) setStatus('New empty project. Open or drop a video.');
 }
 
@@ -190,6 +195,7 @@ async function openVideo(file, mode = 'open') {
     }
     renderTimeline();
     updateUi();
+    updateExportPanel();
     await loadAt(state.currentTime, false);
     setStatus(`${asset.name} ready${asset.normalized ? ' — compatibility preview created in browser.' : '.'}`);
   } catch (error) {
@@ -238,14 +244,17 @@ function updateUi() {
   $('#duration').textContent = formatTime(total);
   $('#project-duration').textContent = total ? formatTime(total, true) : '—';
   $('#project-size').textContent = state.segments.length ? `${state.canvasWidth} × ${state.canvasHeight}` : '—';
-  $('#project-direction').textContent = state.reverse ? 'Reverse' : 'Forward';
+  $('#project-direction').textContent = state.bounce
+    ? `Bounce · ${state.reverse ? 'back' : 'forward'}`
+    : state.reverse ? 'Reverse' : 'Forward';
   $('#seek').disabled = !state.segments.length;
   $('#seek').value = total ? state.currentTime / total * 1000 : 0;
   $('#empty-state').hidden = !!state.segments.length;
   $('#viewer-badge').hidden = !state.segments.length;
   $('#reverse-btn').setAttribute('aria-pressed', String(state.reverse));
   $('#reverse-btn').textContent = state.reverse ? 'REV ON' : 'REV';
-  $('#loop').checked = state.loop;
+  $('#loop-btn').setAttribute('aria-pressed', String(state.loop));
+  $('#bounce-btn').setAttribute('aria-pressed', String(state.bounce));
   $('#a-readout').textContent = state.markerA === null ? 'A —' : `A ${formatTime(state.markerA, true)}`;
   $('#b-readout').textContent = state.markerB === null ? 'B —' : `B ${formatTime(state.markerB, true)}`;
   updateMarker($('#marker-a'), state.markerA, total);
@@ -325,6 +334,7 @@ async function startPlayback() {
   const bounds = loopBounds();
   if (!state.reverse && state.currentTime >= bounds.end - 0.01) state.currentTime = bounds.start;
   if (state.reverse && state.currentTime <= bounds.start + 0.01) state.currentTime = bounds.end;
+  state.bounceOrigin = state.reverse;
   state.playing = true;
   $('#play-symbol').innerHTML = '<span class="pause-bars" aria-hidden="true"></span>';
   if (state.reverse) {
@@ -347,6 +357,37 @@ function togglePlayback() {
   } else startPlayback();
 }
 
+/* A bounce turns round at each end of the loop range. The turn is refused once
+   the run is back in the direction it began in and loop is off — that is one
+   complete there-and-back, which is what bounce on its own means. */
+function bounceTurnAllowed() {
+  if (!state.bounce || !state.segments.length) return false;
+  const bounds = loopBounds();
+  if (bounds.end - bounds.start < 0.05) return false;
+  const nextReverse = !state.reverse;
+  return state.loop || nextReverse !== state.bounceOrigin;
+}
+
+/* Turn round mid-run without stopping: the transport stays "playing" and only
+   the direction, and therefore which clock drives it, changes. */
+function flipDirection() {
+  state.reverse = !state.reverse;
+  cancelAnimationFrame(state.reverseFrame);
+  state.reverseFrame = 0;
+  player.muted = state.reverse || state.audioLayer?.mode === 'replace';
+  updateUi();
+  if (state.reverse) {
+    player.pause();
+    audioPreview.pause();
+    player.muted = true;
+    state.reverseLast = 0;
+    state.reverseFrame = requestAnimationFrame(reverseTick);
+  } else {
+    loadAt(state.currentTime, true);
+  }
+  setStatus(`Bouncing ${state.reverse ? 'back' : 'forward'} at ${state.speed}×.`);
+}
+
 function reverseTick(now) {
   if (!state.playing || !state.reverse) return;
   if (!state.reverseLast) state.reverseLast = now;
@@ -355,12 +396,17 @@ function reverseTick(now) {
   const bounds = loopBounds();
   let target = state.currentTime - elapsed * state.speed;
   if (target <= bounds.start) {
+    if (bounceTurnAllowed()) {
+      state.currentTime = bounds.start;
+      flipDirection();
+      return;
+    }
     if (state.loop) target = bounds.end;
     else {
       state.currentTime = bounds.start;
       loadAt(state.currentTime, false);
       pausePlayback();
-      setStatus('Reached the start.');
+      setStatus(state.bounce ? 'Bounce complete.' : 'Reached the start.');
       return;
     }
   }
@@ -414,17 +460,22 @@ function advanceForward() {
   if (!state.playing || state.reverse) return;
   const found = locate(state.currentTime);
   const bounds = loopBounds();
-  if (state.loop && state.currentTime >= bounds.end - 0.035) {
+  const atEnd = state.currentTime >= bounds.end - 0.035;
+  if (atEnd && bounceTurnAllowed()) {
+    /* stop a hair short of the end so the reverse leg has somewhere to go */
+    state.currentTime = Math.max(bounds.start, bounds.end - 0.001);
+    flipDirection();
+  } else if (atEnd && state.loop) {
     loadAt(bounds.start, true);
-  } else if (found && found.index < state.segments.length - 1) {
+  } else if (!atEnd && found && found.index < state.segments.length - 1) {
     loadAt(segmentOffset(found.index + 1), true);
   } else if (state.loop) {
     loadAt(bounds.start, true);
   } else {
-    state.currentTime = projectDuration();
+    state.currentTime = bounds.end;
     pausePlayback();
     updateUi();
-    setStatus('Playback complete.');
+    setStatus(state.bounce ? 'Bounce complete.' : 'Playback complete.');
   }
 }
 
@@ -478,6 +529,7 @@ function cutBefore() {
   trimMarkers();
   renderTimeline();
   updateUi();
+  updateExportPanel();
   loadAt(0, false);
   setStatus('Cut everything before the playhead.');
 }
@@ -492,6 +544,7 @@ function cutAfter() {
   trimMarkers();
   renderTimeline();
   updateUi();
+  updateExportPanel();
   loadAt(state.currentTime, false);
   setStatus('Cut everything after the playhead.');
 }
@@ -540,39 +593,152 @@ function clearAudio() {
   $('#audio-drop').classList.remove('has-audio');
 }
 
+const humanBytes = bytes => {
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} kB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+};
+
+/* An image sequence and a raw dump both grow with the length of the project,
+   and a tab that runs out of memory does it after several minutes of work. So
+   the panel says up front how big the render will be, and refuses outright
+   past the point where it is not going to finish. */
+const IMAGE_FRAME_LIMIT = 1200;
+const RAW_BYTE_LIMIT = 700 * 1024 * 1024;
+
+function exportSettings() {
+  const bake = $('#bake-playback').checked;
+  return {
+    target: $('#export-target').value,
+    bake,
+    speed: bake ? state.speed : 1,
+    reverse: bake ? state.reverse : false,
+    bounce: bake ? state.bounce : false,
+    format: $('#format').value,
+    extension: $('#custom-extension').value.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin',
+    framing: $('#raw-framing').value,
+    streams: $('#raw-streams').value,
+    imageFormat: $('#image-format').value,
+    fps: Number($('#image-fps').value),
+    maxWidth: Number($('#image-width').value),
+    baseName: ($('#export-name').value.trim() || 'clack-video').replace(/[<>:"/\\|?*]+/g, '-')
+  };
+}
+
+/* How long the rendered result runs, which is not the timeline length once
+   speed and bounce are in play. */
+function renderedDuration(settings) {
+  const speed = Math.abs(settings.speed) > 0.0001 ? Math.abs(settings.speed) : 1;
+  return (projectDuration() / speed) * (settings.bounce ? 2 : 1);
+}
+
+function exportEstimate(settings) {
+  if (!state.segments.length) return { text: 'Open a video to size the export.', heavy: false };
+  const seconds = renderedDuration(settings);
+  if (settings.target === 'raw') {
+    const videoBytes = settings.streams === 'audio' ? 0 : seconds * POPCORN.videoBytesPerSecond;
+    const audioBytes = settings.streams === 'video' ? 0 : seconds * POPCORN.audioBytesPerSecond;
+    const total = videoBytes + audioBytes;
+    const parts = [];
+    if (videoBytes) parts.push(`${humanBytes(videoBytes)} of .rgb`);
+    if (audioBytes) parts.push(`${humanBytes(audioBytes)} of .pcm`);
+    return {
+      text: `${formatTime(seconds, true)} at ${POPCORN.width}×${POPCORN.height}/${POPCORN.fps} → ${parts.join(' + ')}. ` +
+        (total > RAW_BYTE_LIMIT ? 'Too big for one browser tab — cut the project shorter.' : 'Uncompressed, so it grows fast.'),
+      heavy: total > RAW_BYTE_LIMIT
+    };
+  }
+  if (settings.target === 'images') {
+    const frames = Math.max(1, Math.ceil(seconds * settings.fps));
+    const edge = settings.maxWidth || state.canvasWidth;
+    /* rough: a PNG of this width lands near a third of a byte per pixel, JPEG
+       nearer a tenth — enough to tell a sane export from a hopeless one */
+    const perFrame = edge * (edge * 9 / 16) * (settings.imageFormat === 'jpg' ? 0.1 : 0.35);
+    return {
+      text: `${frames} frame${frames === 1 ? '' : 's'} at ${settings.fps} fps → roughly ${humanBytes(frames * perFrame)} zipped. ` +
+        (frames > IMAGE_FRAME_LIMIT ? `Over the ${IMAGE_FRAME_LIMIT}-frame ceiling — drop the frame rate or cut the project shorter.` : 'Each frame is read out and dropped as it is written.'),
+      heavy: frames > IMAGE_FRAME_LIMIT
+    };
+  }
+  return { text: `${formatTime(seconds, true)} of ${settings.format === 'custom' ? settings.extension.toUpperCase() : settings.format.toUpperCase()} rendered in this tab.`, heavy: false };
+}
+
+function updateExportPanel() {
+  const settings = exportSettings();
+  $('#video-options').hidden = settings.target !== 'video';
+  $('#raw-options').hidden = settings.target !== 'raw';
+  $('#image-options').hidden = settings.target !== 'images';
+  $('#custom-extension-field').hidden = settings.target !== 'video' || settings.format !== 'custom';
+  const estimate = exportEstimate(settings);
+  $('#export-estimate').textContent = estimate.text;
+  $('#export-estimate').classList.toggle('heavy', estimate.heavy);
+  $('#export-note').textContent = settings.target === 'raw'
+    ? `Popcorn's converter wants ${POPCORN.width}×${POPCORN.height} ${POPCORN.fps}fps rgb24 and ${POPCORN.sampleRate / 1000} kHz stereo s16le, which is what these two files are. Feed them to it as: converter movie.rgb movie.pcm movie.pl2`
+    : 'The version-pinned FFmpeg core is about 31 MB and loads on first use. It runs in a browser worker; nothing is uploaded.';
+}
+
+function download(blob, name) {
+  const anchor = document.createElement('a');
+  anchor.href = URL.createObjectURL(blob);
+  anchor.download = name;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(anchor.href), 30000);
+  return name;
+}
+
 async function exportProject() {
   if (!state.segments.length || state.exporting) {
     if (!state.segments.length) setStatus('Open a video before exporting.', 'error');
     return;
   }
-  const format = $('#format').value;
-  const customExtension = $('#custom-extension').value.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
-  const bake = $('#bake-playback').checked;
+  const settings = exportSettings();
+  const estimate = exportEstimate(settings);
+  if (estimate.heavy) {
+    setStatus(estimate.text, 'error');
+    return;
+  }
+  const project = {
+    segments: state.segments,
+    assets: state.assets,
+    audioLayer: state.audioLayer,
+    width: state.canvasWidth,
+    height: state.canvasHeight,
+    speed: settings.speed,
+    reverse: settings.reverse,
+    bounce: settings.bounce
+  };
   state.exporting = true;
   $('.export-btn').disabled = true;
   $('#cancel-export').hidden = false;
   setProgress(0, 'Loading local FFmpeg engine…');
   setStatus('Preparing browser-only export. This can take a while for long files.', 'busy');
   try {
-    const result = await engine.exportProject({
-      segments: state.segments,
-      assets: state.assets,
-      audioLayer: state.audioLayer,
-      width: state.canvasWidth,
-      height: state.canvasHeight,
-      speed: bake ? state.speed : 1,
-      reverse: bake ? state.reverse : false,
-      format,
-      extension: customExtension
-    });
-    setProgress(1, 'Export complete.');
-    const baseName = ($('#export-name').value.trim() || 'clack-video').replace(/[<>:"/\\|?*]+/g, '-');
-    const anchor = document.createElement('a');
-    anchor.href = URL.createObjectURL(result.blob);
-    anchor.download = `${baseName}.${result.extension}`;
-    anchor.click();
-    setTimeout(() => URL.revokeObjectURL(anchor.href), 10000);
-    setStatus(`Exported ${anchor.download} entirely in this browser.`);
+    if (settings.target === 'raw') {
+      const { files } = await engine.exportRaw({ ...project, framing: settings.framing, streams: settings.streams });
+      setProgress(1, 'Export complete.');
+      const written = files.map(file => download(file.blob, `${settings.baseName}.${file.name.split('.').pop()}`));
+      setStatus(settings.streams === 'both'
+        ? `Wrote ${written.join(' and ')}. Run: converter ${written[0]} ${written[1]} movie.pl2`
+        : `Wrote ${written[0]}. Popcorn's converter needs the other half too — export it with Write set to ${settings.streams === 'video' ? 'audio' : 'video'} only.`);
+    } else if (settings.target === 'images') {
+      const result = await engine.exportImages({
+        ...project,
+        fps: settings.fps,
+        imageFormat: settings.imageFormat,
+        maxWidth: settings.maxWidth,
+        maxFrames: IMAGE_FRAME_LIMIT,
+        baseName: settings.baseName
+      });
+      setProgress(1, 'Export complete.');
+      const name = download(result.blob, `${settings.baseName}-frames.zip`);
+      setStatus(`Zipped ${result.frames} ${result.extension.toUpperCase()} frame${result.frames === 1 ? '' : 's'} into ${name}.`);
+    } else {
+      const result = await engine.exportProject({ ...project, format: settings.format, extension: settings.extension });
+      setProgress(1, 'Export complete.');
+      const name = download(result.blob, `${settings.baseName}.${result.extension}`);
+      setStatus(`Exported ${name} entirely in this browser.`);
+    }
   } catch (error) {
     console.error('Video Lab export failed:', error);
     engine.cancel();
@@ -585,6 +751,19 @@ async function exportProject() {
     $('.export-btn').disabled = false;
     $('#cancel-export').hidden = true;
   }
+}
+
+/* File → Export → … picks the target and then hands over to the panel, which
+   is where the settings for it live. */
+function chooseExportTarget(target) {
+  $('#export-target').value = target;
+  updateExportPanel();
+  $('#export-panel').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  $('#export-target').focus({ preventScroll: true });
+  setStatus(target === 'raw'
+    ? 'Raw Popcorn export selected. Check the framing, then export.'
+    : target === 'images' ? 'Image sequence selected. Check the frame rate and size, then export.'
+      : 'Video export selected. Pick a format, then export.');
 }
 
 function cancelExport() {
@@ -605,6 +784,7 @@ function showDialog(kind) {
     content.innerHTML = `<ul>
       <li><code>Space</code> play / pause</li><li><code>J</code> reverse playback</li>
       <li><code>K</code> pause</li><li><code>L</code> forward playback</li>
+      <li><code>B</code> bounce on / off</li>
       <li><code>I</code> set A marker</li><li><code>O</code> set B marker</li>
       <li><code>,</code> / <code>.</code> step one frame</li>
       <li><code>Ctrl+O</code> open video</li><li><code>Ctrl+E</code> export</li>
@@ -612,8 +792,10 @@ function showDialog(kind) {
   } else {
     title.textContent = '// Formats & browser limits';
     content.innerHTML = `<p>Native MP4, WebM, Ogg and browser-supported MOV files preview immediately. MKV, AVI, MPEG, MTS, VOB, FLV, WMV and other FFmpeg-readable files are converted to a temporary MP4 preview on this device.</p>
-      <p>Exports include MP4, WebM, MOV, MKV, AVI, GIF, MP3, WAV, Ogg and a custom container option. Proprietary codecs omitted from the FFmpeg WebAssembly build and DRM-protected media cannot be decoded.</p>
-      <p>Files are never uploaded. The practical limit is browser memory: short and medium projects work best; multi-gigabyte or long reverse renders can exceed the tab's memory allowance.</p>`;
+      <p>Exports include MP4, WebM, MOV, MKV, AVI, GIF, MP3, WAV, Ogg and a custom container option.
+      <b>File → Export → Raw</b> writes the pair Popcorn's converter wants for the RP2040: ${POPCORN.width}&nbsp;×&nbsp;${POPCORN.height} ${POPCORN.fps}fps 24-bit RGB as <code>.rgb</code>, and ${POPCORN.sampleRate / 1000}&nbsp;kHz stereo signed 16-bit little-endian PCM as <code>.pcm</code>. Neither is compressed, so a second of video is ${humanBytes(POPCORN.videoBytesPerSecond)} — the panel estimates the total before you start.
+      <b>File → Export → Images</b> zips one still per frame at a frame rate and size you pick.</p>
+      <p>Proprietary codecs omitted from the FFmpeg WebAssembly build and DRM-protected media cannot be decoded. Files are never uploaded. The practical limit is browser memory: short and medium projects work best; multi-gigabyte, long reverse and bounce renders can exceed the tab's memory allowance.</p>`;
   }
   $('#info-dialog').showModal();
 }
@@ -622,6 +804,9 @@ const actions = {
   open: () => $('#video-picker').click(),
   new: () => clearProject(),
   export: exportProject,
+  'export-video': () => chooseExportTarget('video'),
+  'export-raw': () => chooseExportTarget('raw'),
+  'export-images': () => chooseExportTarget('images'),
   'cancel-export': cancelExport,
   'insert-before': () => chooseInsert('before'),
   'insert-after': () => chooseInsert('after'),
@@ -634,7 +819,24 @@ const actions = {
   'frame-back': () => { pausePlayback(); loadAt(state.currentTime - 1 / 30, false); },
   'frame-forward': () => { pausePlayback(); loadAt(state.currentTime + 1 / 30, false); },
   'toggle-reverse': () => setReverse(!state.reverse),
-  'toggle-loop': () => { state.loop = !state.loop; updateUi(); setStatus(`Loop ${state.loop ? 'enabled' : 'disabled'}.`); },
+  'toggle-loop': () => {
+    state.loop = !state.loop;
+    updateUi();
+    updateExportPanel();
+    const range = state.markerA !== null && state.markerB !== null ? ' between A and B' : '';
+    setStatus(state.loop
+      ? `Loop enabled${range}${state.bounce ? ' — bouncing back and forth for ever.' : '.'}`
+      : `Loop disabled${state.bounce ? ' — bounce now runs there and back once.' : '.'}`);
+  },
+  'toggle-bounce': () => {
+    state.bounce = !state.bounce;
+    state.bounceOrigin = state.reverse;
+    updateUi();
+    updateExportPanel();
+    setStatus(state.bounce
+      ? `Bounce enabled — plays to the end, then back to the start${state.loop ? ', for ever while loop is on.' : '. Turn loop on to keep it going.'}`
+      : 'Bounce disabled.');
+  },
   'marker-a': () => setMarker('a'),
   'marker-b': () => setMarker('b'),
   'clear-markers': clearMarkers,
@@ -645,12 +847,43 @@ const actions = {
   shortcuts: () => showDialog('shortcuts')
 };
 
+function closeSubMenus() {
+  $$('.rm-sub').forEach(sub => {
+    sub.classList.remove('open');
+    sub.querySelector(':scope > .rm-sub-open').setAttribute('aria-expanded', 'false');
+  });
+}
+
+function closeMenus() {
+  closeSubMenus();
+  $$('.rm').forEach(menu => {
+    menu.classList.remove('open');
+    menu.querySelector(':scope > .rm-dd').style.transform = '';
+  });
+}
+
+/* A menu is anchored to its own button, which on a phone puts the right-hand
+   ones off the edge of the screen. Nothing about the layout can prevent that,
+   so an opened menu is measured and slid back until it fits. */
+function positionMenu(panel) {
+  panel.style.transform = '';
+  const margin = 6;
+  const rect = panel.getBoundingClientRect();
+  const overflowRight = rect.right - (window.innerWidth - margin);
+  const shift = overflowRight > 0 ? -Math.min(overflowRight, Math.max(0, rect.left - margin)) : 0;
+  if (shift) panel.style.transform = `translateX(${Math.round(shift)}px)`;
+}
+
 document.addEventListener('click', event => {
   const actionButton = event.target.closest('[data-action]');
   if (actionButton) {
     const action = actions[actionButton.dataset.action];
     if (action && !actionButton.disabled) action();
-    $$('.rm').forEach(menu => menu.classList.remove('open'));
+    closeMenus();
+  } else if (!event.target.closest('.rm')) {
+    /* the shared bar script closes .rm on a click away; the fly-out inside one
+       is this app's own, so it is closed here */
+    closeMenus();
   }
 });
 
@@ -658,9 +891,39 @@ $$('.rm').forEach(menu => {
   menu.querySelector(':scope > button').addEventListener('click', event => {
     event.stopPropagation();
     const wasOpen = menu.classList.contains('open');
-    $$('.rm').forEach(item => item.classList.remove('open'));
-    if (!wasOpen) menu.classList.add('open');
+    closeMenus();
+    if (!wasOpen) {
+      menu.classList.add('open');
+      positionMenu(menu.querySelector(':scope > .rm-dd'));
+    }
   });
+});
+
+/* The Export fly-out opens on hover like a desktop menu and on tap for touch,
+   where there is no hover to open it with. */
+$$('.rm-sub').forEach(sub => {
+  const opener = sub.querySelector(':scope > .rm-sub-open');
+  const panel = sub.querySelector(':scope > .rm-sub-dd');
+  const openSub = () => {
+    closeSubMenus();
+    sub.classList.add('open');
+    opener.setAttribute('aria-expanded', 'true');
+    if (getComputedStyle(panel).position !== 'static') positionMenu(panel);
+  };
+  opener.addEventListener('click', event => {
+    event.stopPropagation();
+    if (sub.classList.contains('open')) closeSubMenus();
+    else openSub();
+  });
+  sub.addEventListener('pointerenter', event => { if (event.pointerType !== 'touch') openSub(); });
+  /* leaving the whole dropdown, not just the item, so the pointer can travel
+     across the gap into the fly-out */
+  sub.parentElement.addEventListener('pointerleave', event => { if (event.pointerType !== 'touch') closeSubMenus(); });
+});
+
+window.addEventListener('resize', () => {
+  const open = document.querySelector('.rm.open > .rm-dd');
+  if (open) positionMenu(open);
 });
 
 $('#video-picker').addEventListener('change', event => {
@@ -686,12 +949,10 @@ $('#speed').addEventListener('change', event => {
   state.speed = Number(event.target.value);
   player.playbackRate = state.speed;
   audioPreview.playbackRate = state.speed;
+  updateExportPanel();
   setStatus(`Playback speed set to ${state.speed}×.`);
 });
-$('#loop').addEventListener('change', event => {
-  state.loop = event.target.checked;
-  setStatus(`Loop ${state.loop ? 'enabled' : 'disabled'}${state.markerA !== null && state.markerB !== null ? ' between A and B' : ''}.`);
-});
+$('#bake-playback').addEventListener('change', updateExportPanel);
 $('#audio-gain').addEventListener('input', event => {
   const gain = Number(event.target.value) / 100;
   $('#audio-gain-value').textContent = `${event.target.value}%`;
@@ -707,9 +968,8 @@ $$('input[name="audio-mode"]').forEach(radio => radio.addEventListener('change',
     setStatus(`Extra audio mode changed to ${event.target.value}.`);
   }
 }));
-$('#format').addEventListener('change', event => {
-  $('#custom-extension-field').hidden = event.target.value !== 'custom';
-});
+['#export-target', '#format', '#custom-extension', '#raw-framing', '#raw-streams', '#image-format', '#image-fps', '#image-width']
+  .forEach(selector => $(selector).addEventListener('change', updateExportPanel));
 
 function installDropTarget(element, handler) {
   ['dragenter', 'dragover'].forEach(type => element.addEventListener(type, event => {
@@ -753,11 +1013,13 @@ document.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'e') {
     event.preventDefault(); exportProject(); return;
   }
+  if (event.key === 'Escape') { closeMenus(); return; }
   const keyActions = {
     ' ': () => togglePlayback(),
     j: () => setReverse(true, true),
     k: () => pausePlayback(),
     l: () => { setReverse(false); startPlayback(); },
+    b: () => actions['toggle-bounce'](),
     i: () => setMarker('a'),
     o: () => setMarker('b'),
     ',': () => actions['frame-back'](),
@@ -774,5 +1036,6 @@ window.addEventListener('beforeunload', () => {
 
 renderTimeline();
 updateUi();
+updateExportPanel();
 const linkedSource = new URLSearchParams(location.search).get('src');
 if (linkedSource) openLinkedVideo(linkedSource).catch(error => setStatus(error.message, 'error'));

@@ -53,7 +53,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   display: none; padding: 6px 2px;
   box-shadow: 6px 6px 0 color-mix(in srgb, var(--shadow) 20%, transparent);
 }
-.rm.open .rm-dd { display: block; }
+/* a child selector, so the Export fly-out is not dragged open with the File
+   menu that contains it */
+.rm.open > .rm-dd { display: block; }
 .rm-dd button {
   all: unset; box-sizing: border-box; display: flex; justify-content: space-between; gap: 18px;
   width: 100%; cursor: pointer; padding: 7px 14px; font: inherit; font-size: 12px;
@@ -62,6 +64,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .rm-dd button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
 .rm-dd .pixel-icon { width: 16px; height: 16px; }
 .rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
+
+/* File → Export fly-out. It sits beside its parent on a desktop and drops
+   underneath the item on a phone, where there is no room to the side. */
+.rm-sub { position: relative; }
+.rm-sub-arrow { margin-left: auto; font-size: 10px; }
+.rm-sub-dd { top: -6px; left: 100%; min-width: 220px; border-radius: 0 8px 8px 8px; }
+.rm-sub.open > .rm-sub-dd { display: block; }
+.rm-sub.open > .rm-sub-open { background: var(--ink); color: var(--menu-text); }
 kbd { font: inherit; color: var(--sage); }
 .rm-dd button:hover kbd { color: var(--leaf); }
 .engine-state {
@@ -179,6 +189,8 @@ input[type="text"], select {
   background: var(--paper); color: var(--ink); font-size: 11.5px;
 }
 .export-check { margin: 2px 0 11px; color: var(--ink); font-size: 10.5px; }
+.estimate { margin: 0 0 10px; color: var(--sage); font-size: 10.5px; line-height: 1.6; }
+.estimate.heavy { color: var(--danger); }
 .export-btn { width: 100%; text-align: center; }
 .cancel-btn { width: 100%; margin-top: 8px; text-align: center; color: var(--danger) !important; }
 .progress-wrap { display: flex; flex-direction: column; gap: 6px; margin-top: 11px; color: var(--sage); font-size: 10px; }
@@ -223,9 +235,17 @@ dialog::backdrop { background: rgba(9, 20, 13, .55); }
 }
 @media (max-width: 600px) {
   .app-main { padding: 10px; }
-  .rm-bar { overflow-x: auto; }
+  /* The bar used to scroll sideways, which made it a clipping box: every
+     dropdown was cut off at the 33px bar and none of the items could be
+     tapped. It wraps to a second row instead, so the menus hang free. */
+  .rm-bar { flex-wrap: wrap; padding-inline: 4px; }
   .rm > button { padding-inline: 9px; }
   .engine-state { display: none; }
+  /* Left-anchored 260px menus ran off the right edge of a phone. They are
+     free to size themselves and are nudged back on screen by positionMenu(). */
+  .rm-dd { min-width: 200px; max-width: calc(100vw - 12px); }
+  .rm-dd button { white-space: normal; gap: 10px; }
+  .rm-sub-dd { position: static; margin: 2px 0 2px 12px; max-width: none; border-radius: 6px; }
   .control-column { display: flex; }
   .viewer { min-height: 220px; }
   .time-row { grid-template-columns: 1fr 1fr; }
@@ -233,8 +253,26 @@ dialog::backdrop { background: rgba(9, 20, 13, .55); }
   .time-row .timecode:last-child { text-align: right; }
   .transport-buttons { width: 100%; justify-content: space-between; margin-right: 0; }
   .icon-btn { flex: 1; }
+  .transport-row .toggle-btn { flex: 1 1 0; }
+  .compact-field { width: 100%; }
+  .compact-field select { flex: 1; }
   .edit-row .spacer { display: none; }
   .edit-row .btn { flex: 1 1 40%; text-align: center; }
+}
+
+/* Touch targets. A 13px checkbox and a 16px slider are fine under a mouse and
+   nearly unhittable under a thumb, so anything tapped grows on a touchscreen. */
+@media (pointer: coarse) {
+  .rm > button { padding-block: 11px; }
+  .rm-dd button { padding: 12px 14px; }
+  .rm-dd .sep { margin: 4px 0; }
+  .icon-btn, .toggle-btn, .btn { min-height: 40px; }
+  .btn { padding-block: 10px; }
+  .text-btn { padding: 6px 0; }
+  input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; }
+  input[type="range"] { height: 30px; }
+  .seek-stack input { height: 34px; }
+  select, input[type="text"] { min-height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
