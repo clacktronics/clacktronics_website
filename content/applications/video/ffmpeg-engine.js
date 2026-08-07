@@ -1,4 +1,5 @@
 import { FFmpeg } from './vendor/ffmpeg/index.js';
+import { StoredZip } from './zip.js';
 
 const CORE_BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
 
@@ -12,6 +13,16 @@ const MIME_TYPES = {
   mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', mkv: 'video/x-matroska',
   avi: 'video/x-msvideo', gif: 'image/gif', mp3: 'audio/mpeg', wav: 'audio/wav',
   ogg: 'audio/ogg'
+};
+
+/* Popcorn — the movie player in raspberrypi/pico-playground — reads two raw
+   files and its converter crashes on anything else, so these are constants
+   rather than settings: 320 × 240 30fps 24-bit RGB, and 44.1 kHz stereo
+   signed 16-bit little-endian PCM. */
+export const POPCORN = {
+  width: 320, height: 240, fps: 30, sampleRate: 44100, channels: 2,
+  get videoBytesPerSecond() { return this.width * this.height * 3 * this.fps; },
+  get audioBytesPerSecond() { return this.sampleRate * this.channels * 2; }
 };
 
 const OUTPUT_ARGS = {
@@ -51,6 +62,9 @@ export class BrowserFFmpegEngine {
     this.logs = [];
     this.collectLogs = false;
     this.coreObjectURLs = [];
+    /* A multi-pass export reports one bar, so each pass claims a slice of it
+       instead of running 0–100% twice. */
+    this.progressWindow = null;
     this.createInstance();
   }
 
@@ -61,7 +75,10 @@ export class BrowserFFmpegEngine {
       this.callbacks.onLog?.(message);
     });
     this.ffmpeg.on('progress', ({ progress }) => {
-      if (Number.isFinite(progress)) this.callbacks.onProgress?.(Math.max(0, Math.min(1, progress)));
+      if (!Number.isFinite(progress)) return;
+      const clamped = Math.max(0, Math.min(1, progress));
+      const window = this.progressWindow;
+      this.callbacks.onProgress?.(window ? window.base + clamped * window.span : clamped);
     });
   }
 
@@ -120,7 +137,12 @@ export class BrowserFFmpegEngine {
     return new Blob([data.buffer], { type: 'video/mp4' });
   }
 
-  async exportProject({ segments, assets, audioLayer, width, height, speed, reverse, format, extension }) {
+  /* Every export — a container, Popcorn's raw pair, a sheet of stills — is the
+     same timeline: trim each clip, scale it onto the canvas, concatenate,
+     layer the extra audio, then apply reverse, speed and bounce. Only the
+     final filters and the output arguments differ, so the graph is built once
+     here and the callers bolt their ending onto the labels it returns. */
+  async buildGraph({ segments, assets, audioLayer, width, height, speed, reverse, bounce, includeVideo, includeAudio, pixelFormat = 'yuv420p' }) {
     await this.load();
     const uniqueAssets = [...new Set(segments.map(segment => segment.assetId))].map(id => assets.get(id));
     const assetInputIndex = new Map();
@@ -133,10 +155,6 @@ export class BrowserFFmpegEngine {
       args.push('-i', path);
     }
 
-    const audioOnly = ['mp3', 'wav', 'ogg'].includes(format);
-    const videoOnly = format === 'gif';
-    const includeVideo = !audioOnly;
-    const includeAudio = !videoOnly;
     const filters = [];
     const videoLabels = [];
     const audioLabels = [];
@@ -149,7 +167,7 @@ export class BrowserFFmpegEngine {
         filters.push(
           `[${inputIndex}:v:0]trim=start=${number(segment.start)}:end=${number(segment.end)},` +
           `setpts=PTS-STARTPTS,scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
-          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p[v${index}]`
+          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=${pixelFormat}[v${index}]`
         );
         videoLabels.push(`[v${index}]`);
       }
@@ -228,6 +246,43 @@ export class BrowserFFmpegEngine {
       }
     }
 
+    /* Bounce is a palindrome: the render so far, then the same render played
+       backwards. Both halves are buffered whole, so it costs twice the frames
+       of a straight export as well as twice the duration. */
+    if (bounce) {
+      if (includeVideo) {
+        filters.push(
+          `[${videoLabel}]split[bounce-va][bounce-vb]`,
+          '[bounce-vb]reverse[bounce-vr]',
+          '[bounce-va][bounce-vr]concat=n=2:v=1:a=0[vbounce]'
+        );
+        videoLabel = 'vbounce';
+      }
+      if (includeAudio) {
+        filters.push(
+          `[${audioLabel}]asplit[bounce-aa][bounce-ab]`,
+          '[bounce-ab]areverse[bounce-ar]',
+          '[bounce-aa][bounce-ar]concat=n=2:v=0:a=1[abounce]'
+        );
+        audioLabel = 'abounce';
+      }
+    }
+
+    const renderedDuration = (timelineDuration / (Math.abs(speed) > 0.0001 ? speed : 1)) * (bounce ? 2 : 1);
+    return { args, filters, videoLabel, audioLabel, timelineDuration, renderedDuration };
+  }
+
+  async exportProject({ segments, assets, audioLayer, width, height, speed, reverse, bounce, format, extension }) {
+    const audioOnly = ['mp3', 'wav', 'ogg'].includes(format);
+    const videoOnly = format === 'gif';
+    const includeVideo = !audioOnly;
+    const includeAudio = !videoOnly;
+    const graph = await this.buildGraph({
+      segments, assets, audioLayer, width, height, speed, reverse, bounce, includeVideo, includeAudio
+    });
+    const { args, filters } = graph;
+    let { videoLabel, audioLabel } = graph;
+
     if (format === 'gif') {
       filters.push(
         `[${videoLabel}]fps=12,scale=w='min(960,iw)':h=-2:flags=lanczos,split[gif-a][gif-b]`,
@@ -257,6 +312,116 @@ export class BrowserFFmpegEngine {
        with clean memory instead of eventually trapping out-of-bounds. */
     this.cancel();
     return result;
+  }
+
+  /* Popcorn's converter takes the two raw files described in POPCORN and
+     nothing else, so this writes exactly those. They are rendered in separate
+     passes: a second of raw video is 6.9 MB and a second of PCM 176 kB, and
+     holding both in the WebAssembly heap at once halves how long a clip can
+     be before the tab gives up. */
+  async exportRaw({ segments, assets, audioLayer, width, height, speed, reverse, bounce, framing = 'fill', streams = 'both' }) {
+    const wantVideo = streams !== 'audio';
+    const wantAudio = streams !== 'video';
+    const files = [];
+
+    if (wantVideo) {
+      this.progressWindow = wantAudio ? { base: 0, span: 0.85 } : { base: 0, span: 1 };
+      const graph = await this.buildGraph({
+        segments, assets, audioLayer, width, height, speed, reverse, bounce,
+        includeVideo: true, includeAudio: false, pixelFormat: 'rgb24'
+      });
+      const target = `${POPCORN.width}:${POPCORN.height}`;
+      /* Fill scales past the frame and trims the overhang; fit keeps the whole
+         picture and pads the gap. Either way the converter gets 320 × 240. */
+      const framed = framing === 'fit'
+        ? `scale=${target}:force_original_aspect_ratio=decrease,pad=${target}:(ow-iw)/2:(oh-ih)/2`
+        : `scale=${target}:force_original_aspect_ratio=increase,crop=${target}`;
+      graph.filters.push(`[${graph.videoLabel}]${framed},setsar=1,fps=${POPCORN.fps},format=rgb24[raw]`);
+      files.push(await this.runToFile({
+        args: graph.args,
+        filters: graph.filters,
+        output: 'popcorn.rgb',
+        outputArgs: ['-map', '[raw]', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-r', String(POPCORN.fps)],
+        mimeType: 'application/octet-stream'
+      }));
+      this.cancel();
+    }
+
+    if (wantAudio) {
+      this.progressWindow = wantVideo ? { base: 0.85, span: 0.15 } : { base: 0, span: 1 };
+      const graph = await this.buildGraph({
+        segments, assets, audioLayer, width, height, speed, reverse, bounce,
+        includeVideo: false, includeAudio: true
+      });
+      files.push(await this.runToFile({
+        args: graph.args,
+        filters: graph.filters,
+        output: 'popcorn.pcm',
+        outputArgs: [
+          '-map', `[${graph.audioLabel}]`, '-f', 's16le', '-c:a', 'pcm_s16le',
+          '-ar', String(POPCORN.sampleRate), '-ac', String(POPCORN.channels)
+        ],
+        mimeType: 'application/octet-stream'
+      }));
+      this.cancel();
+    }
+
+    this.progressWindow = null;
+    return { files };
+  }
+
+  /* One still per frame, collected into a ZIP. Each frame is read out of the
+     FFmpeg filesystem and deleted again before the next is read, so the
+     WebAssembly heap holds the sheet only once rather than alongside the copy
+     the archive is being built from. */
+  async exportImages({ segments, assets, audioLayer, width, height, speed, reverse, bounce, fps = 10, imageFormat = 'png', maxWidth = 0, maxFrames = 1200, baseName = 'frames' }) {
+    const graph = await this.buildGraph({
+      segments, assets, audioLayer, width, height, speed, reverse, bounce,
+      includeVideo: true, includeAudio: false
+    });
+    const extension = imageFormat === 'jpg' ? 'jpg' : 'png';
+    const resize = maxWidth > 0 ? `,scale=w='min(${maxWidth},iw)':h=-2:flags=lanczos` : '';
+    graph.filters.push(`[${graph.videoLabel}]fps=${number(fps)}${resize},format=rgb24[stills]`);
+
+    const pattern = `still-%05d.${extension}`;
+    const args = [
+      ...graph.args, '-filter_complex', graph.filters.join(';'), '-map', '[stills]',
+      '-frames:v', String(Math.max(1, Math.round(maxFrames))),
+      ...(extension === 'jpg' ? ['-c:v', 'mjpeg', '-q:v', '3'] : ['-c:v', 'png']),
+      '-f', 'image2', pattern
+    ];
+    const code = await this.ffmpeg.exec(args);
+    if (code !== 0) throw new Error(`FFmpeg stopped with exit code ${code} while rendering stills.`);
+
+    const written = (await this.ffmpeg.listDir('/'))
+      .map(entry => entry.name)
+      .filter(name => name.startsWith('still-') && name.endsWith(`.${extension}`))
+      .sort();
+    if (!written.length) throw new Error('FFmpeg produced no frames for this range.');
+
+    const zip = new StoredZip();
+    for (let index = 0; index < written.length; index += 1) {
+      const data = await this.ffmpeg.readFile(written[index]);
+      zip.add(`${baseName}/${written[index]}`, new Uint8Array(data.buffer));
+      await this.ffmpeg.deleteFile(written[index]);
+      this.callbacks.onProgress?.((index + 1) / written.length);
+    }
+    const result = { blob: zip.close(), frames: written.length, extension };
+    this.cancel();
+    return result;
+  }
+
+  /* Shared tail for the raw passes: run one graph, read its single output back
+     as a Blob, then drop the file so the heap does not carry it into the next
+     pass. */
+  async runToFile({ args, filters, output, outputArgs, mimeType }) {
+    try { await this.ffmpeg.deleteFile(output); } catch { /* nothing written yet */ }
+    const code = await this.ffmpeg.exec([...args, '-filter_complex', filters.join(';'), ...outputArgs, output]);
+    if (code !== 0) throw new Error(`FFmpeg stopped with exit code ${code} while writing ${output}.`);
+    const data = await this.ffmpeg.readFile(output);
+    const blob = new Blob([data.buffer], { type: mimeType });
+    try { await this.ffmpeg.deleteFile(output); } catch { /* already gone */ }
+    return { name: output, blob, bytes: blob.size };
   }
 
   cancel() {

@@ -34,7 +34,14 @@
         <button type="button" data-action="open"><span class="menu-item-label"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open video…</span><kbd>Ctrl+O</kbd></button>
         <button type="button" data-action="new"><span class="menu-item-label"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New project</span></button>
         <div class="sep"></div>
-        <button type="button" data-action="export"><span class="menu-item-label"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Export…</span><kbd>Ctrl+E</kbd></button>
+        <div class="rm-sub">
+          <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="menu-item-label"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Export</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+          <div class="rm-dd rm-sub-dd">
+            <button type="button" data-action="export-video"><span class="menu-item-label"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Video…</span><kbd>Ctrl+E</kbd></button>
+            <button type="button" data-action="export-raw"><span class="menu-item-label"><span class="pixel-icon" data-icon="cpu" aria-hidden="true"></span>Raw…</span></button>
+            <button type="button" data-action="export-images"><span class="menu-item-label"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>Images…</span></button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="rm">
@@ -55,6 +62,7 @@
         <button type="button" data-action="clear-markers"><span class="menu-item-label"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear A/B markers</span></button>
         <div class="sep"></div>
         <button type="button" data-action="toggle-loop"><span class="menu-item-label"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Toggle loop</span></button>
+        <button type="button" data-action="toggle-bounce"><span class="menu-item-label"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Toggle bounce</span><kbd>B</kbd></button>
         <button type="button" data-action="toggle-reverse"><span class="menu-item-label"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Toggle reverse</span><kbd>J</kbd></button>
       </div>
     </div>
@@ -127,7 +135,8 @@
               </select>
             </label>
             <button class="toggle-btn" type="button" data-action="toggle-reverse" id="reverse-btn" aria-pressed="false">REV</button>
-            <label class="check-field"><input id="loop" type="checkbox"> LOOP</label>
+            <button class="toggle-btn" type="button" data-action="toggle-loop" id="loop-btn" aria-pressed="false">LOOP</button>
+            <button class="toggle-btn" type="button" data-action="toggle-bounce" id="bounce-btn" aria-pressed="false" title="Play to the end, then back to the start">BOUNCE</button>
           </div>
         </div>
 
@@ -175,34 +184,96 @@
             <span class="app-lbl" id="export-title">// Export</span>
             <span class="local-badge">LOCAL ONLY</span>
           </div>
-          <label class="field">Format
-            <select id="format">
-              <option value="mp4">MP4 · H.264 / AAC</option>
-              <option value="webm">WebM · VP8 / Vorbis</option>
-              <option value="mov">MOV · H.264 / AAC</option>
-              <option value="mkv">Matroska · H.264 / AAC</option>
-              <option value="avi">AVI · MPEG-4 / MP3</option>
-              <option value="gif">Animated GIF</option>
-              <option value="mp3">Audio only · MP3</option>
-              <option value="wav">Audio only · WAV</option>
-              <option value="ogg">Audio only · Ogg Vorbis</option>
-              <option value="custom">Custom container</option>
+          <label class="field">Target
+            <select id="export-target">
+              <option value="video">Video or audio file</option>
+              <option value="raw">Raw · Popcorn for RP2040</option>
+              <option value="images">Image sequence · ZIP</option>
             </select>
           </label>
-          <label class="field" id="custom-extension-field" hidden>File extension
-            <input id="custom-extension" type="text" value="mpg" maxlength="12" spellcheck="false">
-          </label>
+
+          <div id="video-options">
+            <label class="field">Format
+              <select id="format">
+                <option value="mp4">MP4 · H.264 / AAC</option>
+                <option value="webm">WebM · VP8 / Vorbis</option>
+                <option value="mov">MOV · H.264 / AAC</option>
+                <option value="mkv">Matroska · H.264 / AAC</option>
+                <option value="avi">AVI · MPEG-4 / MP3</option>
+                <option value="gif">Animated GIF</option>
+                <option value="mp3">Audio only · MP3</option>
+                <option value="wav">Audio only · WAV</option>
+                <option value="ogg">Audio only · Ogg Vorbis</option>
+                <option value="custom">Custom container</option>
+              </select>
+            </label>
+            <label class="field" id="custom-extension-field" hidden>File extension
+              <input id="custom-extension" type="text" value="mpg" maxlength="12" spellcheck="false">
+            </label>
+          </div>
+
+          <!-- Popcorn (pico-playground) reads 320×240 30fps rgb24 and 44.1 kHz
+               stereo s16le, so those are fixed; only the framing and which of
+               the two files to write are worth a control. -->
+          <div id="raw-options" hidden>
+            <label class="field">Framing
+              <select id="raw-framing">
+                <option value="fill">Fill 320 × 240 · crop the overhang</option>
+                <option value="fit">Fit 320 × 240 · letterbox</option>
+              </select>
+            </label>
+            <label class="field">Write
+              <select id="raw-streams">
+                <option value="both">Both · .rgb + .pcm</option>
+                <option value="video">Video only · .rgb</option>
+                <option value="audio">Audio only · .pcm</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="image-options" hidden>
+            <label class="field">Still format
+              <select id="image-format">
+                <option value="png">PNG · lossless</option>
+                <option value="jpg">JPEG · smaller</option>
+              </select>
+            </label>
+            <label class="field">Frames per second
+              <select id="image-fps">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="12">12</option>
+                <option value="24">24</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+              </select>
+            </label>
+            <label class="field">Widest edge
+              <select id="image-width">
+                <option value="0">Project size</option>
+                <option value="320">320 px</option>
+                <option value="640">640 px</option>
+                <option value="960" selected>960 px</option>
+                <option value="1280">1280 px</option>
+                <option value="1920">1920 px</option>
+              </select>
+            </label>
+          </div>
+
           <label class="field">File name
             <input id="export-name" type="text" value="clack-video" spellcheck="false">
           </label>
-          <label class="check-field export-check"><input id="bake-playback" type="checkbox" checked> Bake speed &amp; reverse into export</label>
+          <label class="check-field export-check"><input id="bake-playback" type="checkbox" checked> Bake speed, reverse &amp; bounce into export</label>
+          <p class="estimate" id="export-estimate">Open a video to size the export.</p>
           <button class="btn primary export-btn" type="button" data-action="export"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span> Export in browser</button>
           <button class="btn ghost cancel-btn" id="cancel-export" type="button" data-action="cancel-export" hidden><span class="pixel-icon" data-icon="close" aria-hidden="true"></span> Cancel</button>
           <div class="progress-wrap" id="progress-wrap" hidden>
             <div class="progress-track"><span id="progress-bar"></span></div>
             <span id="progress-label">Preparing engine…</span>
           </div>
-          <p class="note">The version-pinned FFmpeg core is about 31 MB and loads on first use. It runs in a browser worker; nothing is uploaded.</p>
+          <p class="note" id="export-note">The version-pinned FFmpeg core is about 31 MB and loads on first use. It runs in a browser worker; nothing is uploaded.</p>
         </section>
 
         <section class="control-section details-section" aria-labelledby="project-title">
