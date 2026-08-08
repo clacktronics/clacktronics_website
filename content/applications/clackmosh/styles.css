@@ -172,6 +172,31 @@ button .pixel-icon { width: 15px; height: 15px; }
 }
 
 .controls { display: flex; flex-direction: column; gap: 7px; }
+
+/* The adjustment sliders are folded away by default. Eight ranges stacked
+   under the picture are eight things to catch with a thumb while scrolling
+   the page on a phone, and every one of them is a change to the frame. */
+.adjustments {
+  border: 1px solid var(--paper-line); border-radius: 6px;
+  background: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+.adjustments > summary {
+  display: flex; align-items: center; gap: 7px; cursor: pointer;
+  padding: 7px 9px; font-size: 11.5px; color: var(--sage); list-style: none;
+}
+.adjustments > summary::-webkit-details-marker { display: none; }
+.adjustments > summary::after { content: '▸'; }
+.adjustments[open] > summary::after { content: '▾'; }
+.adjustments > summary:hover { color: var(--ink); }
+.adjustments > summary .pixel-icon { width: 15px; height: 15px; }
+.adjust-body { display: flex; flex-direction: column; gap: 7px; padding: 2px 9px 10px; }
+
+/* Says so when there are uncommitted changes hidden inside a closed fold. */
+.touched-flag {
+  margin-left: auto; padding: 1px 6px; border-radius: 3px;
+  font-size: 10px; background: var(--leaf); color: var(--ink); visibility: hidden;
+}
+.adjustments.touched .touched-flag { visibility: visible; }
 .control-row { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
 .control-row.actions { margin-top: 3px; }
 .slider {
