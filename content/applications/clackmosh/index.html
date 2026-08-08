@@ -67,6 +67,7 @@
         <button type="button" data-action="render"><span class="menu-item-label"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Render whole video</span><kbd>Ctrl+R</kbd></button>
         <div class="sep"></div>
         <button type="button" data-action="bloom-all"><span class="menu-item-label"><span class="pixel-icon" data-icon="spray-can" aria-hidden="true"></span>Delete every anchor but the first</span></button>
+        <button type="button" data-action="strip-motion"><span class="menu-item-label"><span class="pixel-icon" data-icon="minus-box" aria-hidden="true"></span>Delete every P-frame after this anchor</span></button>
       </div>
     </div>
     <div class="rm">
@@ -82,9 +83,6 @@
       <div class="toolbar-row">
         <button type="button" class="primary" data-action="open">
           <span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open video…
-        </button>
-        <button type="button" data-action="add-end" disabled>
-          <span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Add clip…
         </button>
         <button type="button" data-action="reimport" disabled>
           <span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Re-import
@@ -147,6 +145,13 @@
             <button type="button" data-action="revert-source"><span class="pixel-icon" data-icon="undo" aria-hidden="true"></span>Original</button>
           </div>
 
+          <details class="adjustments" id="adjustments">
+            <summary>
+              <span class="pixel-icon" data-icon="colors-swatch" aria-hidden="true"></span>
+              Adjustments — size, position, colour
+              <span class="touched-flag">changed</span>
+            </summary>
+            <div class="adjust-body">
           <label class="slider">Scale <output id="out-scale">100%</output>
             <input type="range" id="ed-scale" min="10" max="300" value="100" step="1">
           </label>
@@ -177,6 +182,8 @@
             <label class="check"><input type="checkbox" id="ed-flip-v"> Flip down</label>
             <label class="check"><input type="checkbox" id="ed-invert"> Invert</label>
           </div>
+            </div>
+          </details>
 
           <div class="control-row actions">
             <button type="button" class="primary" data-action="apply" id="apply-button">
