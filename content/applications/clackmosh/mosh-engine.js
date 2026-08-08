@@ -20,6 +20,26 @@ const CORE_BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
    decoder, not the output. */
 export const TOLERANT_DECODE = ['-err_detect', 'ignore_err', '-ec', 'favor_inter'];
 
+/* The encoder settings every frame in a project shares.
+
+   Only options that demonstrably change the bitstream are here. `-me_method`
+   is the notable omission: the mpeg4 encoder ignores it outright — every
+   value from `zero` to `full` produces a byte-identical file — so offering it
+   would be a control that does nothing. `-me_range` is the one that really
+   bites, because a short search means the encoder cannot follow fast movement
+   and gives up into large, messy residuals, which is exactly the ugly the
+   effect feeds on. */
+export function encoderArgs({ gop, quality, meRange = 0, mv4 = false, qpel = false }) {
+  const args = [
+    '-c:v', 'mpeg4', '-bf', '0', '-g', String(gop),
+    '-sc_threshold', '0', '-q:v', String(quality)
+  ];
+  if (meRange > 0) args.push('-me_range', String(meRange));
+  const flags = `${mv4 ? '+mv4' : ''}${qpel ? '+qpel' : ''}`;
+  if (flags) args.push('-flags', flags);
+  return args;
+}
+
 async function toBlobURL(url, mimeType) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not load the FFmpeg core (${response.status}).`);
@@ -80,12 +100,27 @@ export class MoshEngine {
   /* Every import lands here first. The settings chosen on this one pass decide
      what the whole session can do: `-g` is how many anchors you get to edit,
      and `-bf 0` guarantees every frame is either an anchor or motion, with no
-     B-frames to reason about. */
-  async normalise(file, { width = 480, fps = 25, gop = 25, quality = 5, maxSeconds = 30 } = {}) {
+     B-frames to reason about.
+
+     `height` is what makes moshing two videos together possible. The first
+     clip takes its height from its own shape; every clip added afterwards is
+     given the project's exact frame instead, letterboxed rather than
+     stretched. Pixel dimensions and sample aspect both end up in the VOL
+     header, so `setsar=1` is not cosmetic — without it a clip of a different
+     shape would encode a header that disagrees, and its frames would not be
+     interchangeable with the ones already in the project. */
+  async normalise(file, { width = 480, height = null, fps = 25, gop = 25,
+                          quality = 5, meRange = 0, mv4 = false, qpel = false,
+                          maxSeconds = 30 } = {}) {
     await this.load();
     const input = `in-${Date.now()}.src`;
     const output = 'mosh-source.avi';
     await this.ffmpeg.writeFile(input, new Uint8Array(await file.arrayBuffer()));
+
+    const scale = height
+      ? `scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
+        `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`
+      : `scale=${width}:-2:flags=bicubic`;
 
     this.logs = [];
     this.collectLogs = true;
@@ -93,9 +128,8 @@ export class MoshEngine {
       await this.run([
         '-hide_banner', '-y', '-t', String(maxSeconds), '-i', input,
         '-an', '-sn', '-map', '0:v:0',
-        '-vf', `scale=${width}:-2:flags=bicubic,fps=${fps}`,
-        '-c:v', 'mpeg4', '-bf', '0', '-g', String(gop),
-        '-sc_threshold', '0', '-q:v', String(quality),
+        '-vf', `${scale},setsar=1,fps=${fps}`,
+        ...encoderArgs({ gop, quality, meRange, mv4, qpel }),
         '-f', 'avi', output
       ]);
     } finally {
@@ -141,16 +175,15 @@ export class MoshEngine {
   /* Encode one edited picture as a lone I-frame, matching the stream's own
      encoder settings so the VOL header it produces agrees with the file it is
      about to be spliced into. Only the VOP is kept — see spliceVop. */
-  async encodeStill(pngBytes, { width, height, gop, quality }) {
+  async encodeStill(pngBytes, { width, height, ...encode }) {
     await this.load();
     const input = 'still.png';
     const output = 'still.avi';
     await this.writeCopy(input, pngBytes);
     await this.run([
       '-hide_banner', '-y', '-i', input, '-frames:v', '1',
-      '-vf', `scale=${width}:${height}`,
-      '-c:v', 'mpeg4', '-bf', '0', '-g', String(gop),
-      '-sc_threshold', '0', '-q:v', String(quality),
+      '-vf', `scale=${width}:${height},setsar=1`,
+      ...encoderArgs(encode),
       '-f', 'avi', output
     ]);
     const data = await this.ffmpeg.readFile(output);
