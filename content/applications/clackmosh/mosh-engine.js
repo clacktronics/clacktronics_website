@@ -29,13 +29,13 @@ export const TOLERANT_DECODE = ['-err_detect', 'ignore_err', '-ec', 'favor_inter
    bites, because a short search means the encoder cannot follow fast movement
    and gives up into large, messy residuals, which is exactly the ugly the
    effect feeds on. */
-export function encoderArgs({ gop, quality, meRange = 0, mv4 = false, qpel = false }) {
+export function encoderArgs({ gop, quality, meRange = 0, mv4 = false, qpel = false, gray = false }) {
   const args = [
     '-c:v', 'mpeg4', '-bf', '0', '-g', String(gop),
     '-sc_threshold', '0', '-q:v', String(quality)
   ];
   if (meRange > 0) args.push('-me_range', String(meRange));
-  const flags = `${mv4 ? '+mv4' : ''}${qpel ? '+qpel' : ''}`;
+  const flags = `${mv4 ? '+mv4' : ''}${qpel ? '+qpel' : ''}${gray ? '+gray' : ''}`;
   if (flags) args.push('-flags', flags);
   return args;
 }

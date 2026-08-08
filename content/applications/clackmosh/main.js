@@ -26,22 +26,55 @@ const video = $('#preview-video');
    feeling like an edit and starts risking the tab. */
 const MAX_FRAMES = 3000;
 
+/* Each frame carries its own thumbnail rather than the strip keeping a
+   parallel array of them. Half the operations below reorder, duplicate or
+   splice the frame list, and a picture that travels with its frame cannot
+   fall out of step with it. */
 const project = {
   file: null,
   sourcePath: null,
   bytes: null,
   frames: [],
   anchors: [],
-  anchorImages: [],
   clips: [],
-  settings: { width: 480, height: 360, fps: 25, gop: 25, quality: 5, meRange: 0, mv4: false, qpel: false },
+  settings: { width: 480, height: 360, fps: 25, gop: 25, quality: 5, meRange: 0, mv4: false, qpel: false, gray: false },
   hasAudio: false
 };
+
+/* Most of the Mosh menu is destructive in ways "reset" cannot reach — it puts
+   payloads back, but it cannot un-duplicate or un-reverse a frame list. So
+   every bulk operation takes a snapshot first. Frame records are copied
+   shallowly; payloads and stills are shared, so a step costs a few hundred
+   small objects rather than the video again. */
+const UNDO_DEPTH = 12;
+const undoStack = [];
+
+function pushUndo(label) {
+  undoStack.push({ label, frames: project.frames.map(frame => ({ ...frame })) });
+  if (undoStack.length > UNDO_DEPTH) undoStack.shift();
+}
+
+function undo() {
+  const step = undoStack.pop();
+  if (!step) { setStatus('Nothing left to undo.', 'READY'); return; }
+  project.frames = step.frames;
+  reindex();
+  buildFilmstrip();
+  selectFrame(Math.min(edit.frameIndex ?? 0, project.frames.length - 1));
+  setStatus(`Undone: ${step.label}.`, 'READY');
+}
+
+/* Anchor positions change whenever the list does, so everything that touches
+   it ends here. */
+function reindex() {
+  project.anchors = keyframeIndices(project.frames);
+}
 
 /* Slider state is a scratch pad for the selected anchor, not part of the
    project: an edit only exists once it has been encoded and spliced in. */
 const edit = {
   frameIndex: null,
+  anchorIndex: null,
   image: null,
   sourceLabel: 'original',
   scale: 100, x: 0, y: 0, rotate: 0,
@@ -108,7 +141,8 @@ function importSettings() {
     quality: Math.min(31, Math.max(1, Number($('#opt-quality').value) || 5)),
     meRange: Math.max(0, Number($('#opt-merange').value) || 0),
     mv4: $('#opt-mv4').checked,
-    qpel: $('#opt-qpel').checked
+    qpel: $('#opt-qpel').checked,
+    gray: $('#opt-gray').checked
   };
 }
 
@@ -116,8 +150,8 @@ function importSettings() {
    this project — everything that lands in the VOL header, plus the ones that
    simply ought to match so an added clip looks like it belongs. */
 function projectEncode() {
-  const { gop, quality, meRange, mv4, qpel } = project.settings;
-  return { gop, quality, meRange, mv4, qpel };
+  const { gop, quality, meRange, mv4, qpel, gray } = project.settings;
+  return { gop, quality, meRange, mv4, qpel, gray };
 }
 
 function makeFrames(parsed) {
@@ -146,19 +180,22 @@ async function openVideo(file) {
     project.settings = {
       width: parsed.width, height: parsed.height, fps: parsed.fps,
       gop: settings.gop, quality: settings.quality,
-      meRange: settings.meRange, mv4: settings.mv4, qpel: settings.qpel
+      meRange: settings.meRange, mv4: settings.mv4, qpel: settings.qpel,
+      gray: settings.gray
     };
     project.frames = makeFrames(parsed);
     project.clips = [{ name: file.name, frames: parsed.frames.length }];
-    project.anchors = keyframeIndices(parsed.frames);
+    undoStack.length = 0;
+    reindex();
 
     canvas.width = parsed.width;
     canvas.height = parsed.height;
 
     setStatus(`Pulling out ${project.anchors.length} anchor frames…`);
-    project.anchorImages = await engine.keyframeThumbnails(
+    const stills = await engine.keyframeThumbnails(
       result.bytes, project.anchors.length, parsed.width
     );
+    project.anchors.forEach((index, n) => { project.frames[index].still = stills[n]; });
 
     $('#audio-toggle-wrap').hidden = !project.hasAudio;
     $('#editor-empty').hidden = true;
@@ -211,17 +248,17 @@ async function addClip(file, where) {
 
     const at = where === 'front' ? 0
       : where === 'end' ? project.frames.length
-      : (edit.frameIndex ?? 0);
+      : (edit.anchorIndex ?? 0);
 
     /* Thumbnails are held one per anchor in order, so the incoming clip's
        stills go in at the same ordinal the frames themselves do. */
-    const ordinal = project.frames.slice(0, at).filter(frame => frame.type === 'I').length;
     const stills = await engine.keyframeThumbnails(
       result.bytes, keyframeIndices(parsed.frames).length, project.settings.width
     );
+    keyframeIndices(incoming).forEach((index, n) => { incoming[index].still = stills[n]; });
 
+    pushUndo(`adding “${file.name}”`);
     project.frames.splice(at, 0, ...incoming);
-    project.anchorImages.splice(ordinal, 0, ...stills);
 
     /* A join is an anchor that has another clip's picture in front of it —
        delete it and that picture is what the motion carries on from. Dropping
@@ -233,7 +270,7 @@ async function addClip(file, where) {
     if (after < project.frames.length) project.frames[after].join = true;
     const joinAt = at > 0 ? at : after;
 
-    project.anchors = keyframeIndices(project.frames);
+    reindex();
     project.clips.push({ name: file.name, frames: incoming.length });
 
     // Only the first clip's audio is kept, so this one's source is not needed.
@@ -252,6 +289,7 @@ async function addClip(file, where) {
 function moshJoins() {
   const joins = project.frames.filter(frame => frame.join && !frame.deleted);
   if (!joins.length) { setStatus('No clip joins left to mosh.', 'READY'); return; }
+  pushUndo('moshing the clip joins');
   joins.forEach(frame => { frame.deleted = true; });
   refreshStripState();
   syncControls();
@@ -262,8 +300,9 @@ function moshJoins() {
 }
 
 function releaseImages() {
-  project.anchorImages.forEach(url => { if (url) URL.revokeObjectURL(url); });
-  project.anchorImages = [];
+  project.frames.forEach(frame => {
+    if (frame.still && frame.still.startsWith('blob:')) URL.revokeObjectURL(frame.still);
+  });
   if (previewURL) { URL.revokeObjectURL(previewURL); previewURL = null; }
   video.removeAttribute('src');
   video.load();
@@ -272,7 +311,11 @@ function releaseImages() {
 /* ---------- filmstrip ---------- */
 
 function anchorNumber(frameIndex) {
-  return project.anchors.indexOf(frameIndex);
+  let n = -1;
+  for (let i = 0; i <= frameIndex && i < project.frames.length; i++) {
+    if (project.frames[i].type === 'I') n++;
+  }
+  return n;
 }
 
 function buildFilmstrip() {
@@ -289,7 +332,7 @@ function buildFilmstrip() {
 
     if (frame.type === 'I') {
       const n = anchorNumber(index);
-      const url = project.anchorImages[n];
+      const url = frame.still;
       if (url) {
         const img = document.createElement('img');
         img.src = url;
@@ -349,27 +392,35 @@ function anchorGoverning(index) {
   return at;
 }
 
+/* Two positions, not one. `frameIndex` is exactly what was clicked, because
+   the motion operations need to be aimed at a particular P-frame; the anchor
+   editor works on `anchorIndex`, the anchor governing it, because a P-frame
+   has no picture to edit. Clicking motion therefore still loads its anchor
+   into the editor, while giving the Mosh menu a precise target. */
 async function selectFrame(index) {
   if (!project.frames.length) return;
-  const anchor = anchorGoverning(index);
-  edit.frameIndex = anchor;
+  const at = Math.max(0, Math.min(index, project.frames.length - 1));
+  const anchor = anchorGoverning(at);
+  edit.frameIndex = at;
+  edit.anchorIndex = anchor;
   resetSliders();
   edit.sourceLabel = 'original';
 
   const n = anchorNumber(anchor);
-  const url = project.anchorImages[n];
+  const url = project.frames[anchor].still;
   edit.image = url ? await loadImage(url).catch(() => null) : null;
 
   const frame = project.frames[anchor];
+  const here = at === anchor ? '' : ` · at motion frame ${at}`;
   $('#anchor-label').textContent =
     `anchor ${n + 1} of ${project.anchors.length} · frame ${anchor}` +
-    (frame.deleted ? ' · deleted' : frame.edited ? ' · edited' : '');
+    (frame.deleted ? ' · deleted' : frame.edited ? ' · edited' : '') + here;
 
   drawEditor();
   refreshStripState();
   syncControls();
 
-  const button = $(`#filmstrip .frame[data-index="${anchor}"]`);
+  const button = $(`#filmstrip .frame[data-index="${at}"]`);
   button?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
@@ -449,8 +500,8 @@ function canvasToPng() {
 }
 
 async function applyEdit() {
-  if (edit.frameIndex === null) return;
-  const index = edit.frameIndex;
+  if (edit.anchorIndex === null) return;
+  const index = edit.anchorIndex;
 
   await withBusy('Encoding the anchor…', async () => {
     const png = await canvasToPng();
@@ -469,12 +520,12 @@ async function applyEdit() {
     frame.deleted = false;
 
     const n = anchorNumber(index);
-    const old = project.anchorImages[n];
-    project.anchorImages[n] = canvas.toDataURL('image/jpeg', 0.82);
+    const old = frame.still;
+    frame.still = canvas.toDataURL('image/jpeg', 0.82);
     if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
 
     const img = $(`#filmstrip .frame[data-index="${index}"] img`);
-    if (img) img.src = project.anchorImages[n];
+    if (img) img.src = frame.still;
     else buildFilmstrip();
 
     edit.dirty = false;
@@ -487,22 +538,23 @@ async function applyEdit() {
 }
 
 function deleteAnchor() {
-  if (edit.frameIndex === null) return;
-  const frame = project.frames[edit.frameIndex];
+  if (edit.anchorIndex === null) return;
+  pushUndo('deleting an anchor');
+  const frame = project.frames[edit.anchorIndex];
   frame.deleted = true;
   refreshStripState();
   syncControls();
-  const n = anchorNumber(edit.frameIndex);
-  $('#anchor-label').textContent = `anchor ${n + 1} of ${project.anchors.length} · frame ${edit.frameIndex} · deleted`;
+  const n = anchorNumber(edit.anchorIndex);
+  $('#anchor-label').textContent = `anchor ${n + 1} of ${project.anchors.length} · frame ${edit.anchorIndex} · deleted`;
   setStatus(`Anchor ${n + 1} deleted — the previous picture now runs on through it.`, 'READY');
 }
 
 function restoreAnchor() {
-  if (edit.frameIndex === null) return;
-  project.frames[edit.frameIndex].deleted = false;
+  if (edit.anchorIndex === null) return;
+  project.frames[edit.anchorIndex].deleted = false;
   refreshStripState();
   syncControls();
-  selectFrame(edit.frameIndex);
+  selectFrame(edit.anchorIndex);
   setStatus('Anchor restored.', 'READY');
 }
 
@@ -515,22 +567,22 @@ async function stillFor(frame) {
   return url;
 }
 
-function replaceStill(ordinal, url) {
-  const old = project.anchorImages[ordinal];
-  project.anchorImages[ordinal] = url;
+function replaceStill(frame, url) {
+  const old = frame.still;
+  frame.still = url;
   if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
 }
 
 async function resetFrame() {
-  if (edit.frameIndex === null) return;
-  const index = edit.frameIndex;
+  if (edit.anchorIndex === null) return;
+  const index = edit.anchorIndex;
   const frame = project.frames[index];
   frame.payload = frame.original;
   frame.edited = false;
   frame.deleted = false;
 
   await withBusy('Putting the original picture back…', async () => {
-    replaceStill(anchorNumber(index), await stillFor(frame));
+    replaceStill(frame, await stillFor(frame));
     buildFilmstrip();
     await selectFrame(index);
     setStatus('Anchor reset.', 'READY');
@@ -549,8 +601,7 @@ async function resetAll() {
     const urls = await engine.keyframeThumbnails(
       restored, project.anchors.length, project.settings.width
     );
-    project.anchorImages.forEach(url => { if (url && url.startsWith('blob:')) URL.revokeObjectURL(url); });
-    project.anchorImages = urls;
+    project.anchors.forEach((index, n) => replaceStill(project.frames[index], urls[n]));
     buildFilmstrip();
     await selectFrame(project.anchors[0] ?? 0);
     setStatus('Every edit undone.', 'READY');
@@ -563,6 +614,7 @@ async function resetAll() {
    the first anchor selected; this is the version you can aim. */
 function stripAnchors() {
   if (edit.frameIndex === null) return;
+  pushUndo('deleting the anchors after this point');
   let gone = 0;
   for (let i = edit.frameIndex + 1; i < project.frames.length; i++) {
     const frame = project.frames[i];
@@ -604,14 +656,15 @@ function shuffleAnchors() {
     [order[i], order[swap]] = [order[swap], order[i]];
   });
 
+  pushUndo('shuffling the anchor pictures');
   const pictures = slots.map(index => project.frames[index].payload);
-  const stills = slots.map((_, n) => project.anchorImages[n]);
+  const stills = slots.map(index => project.frames[index].still);
 
   slots.forEach((index, n) => {
     const frame = project.frames[index];
     frame.payload = spliceVop(frame.original, pictures[order[n]]);
     frame.edited = true;
-    project.anchorImages[n] = stills[order[n]];
+    frame.still = stills[order[n]];
   });
 
   buildFilmstrip();
@@ -629,6 +682,7 @@ function shuffleAnchors() {
    single picture, so the tail of the video becomes a hard slideshow. */
 function stripMotion() {
   if (edit.frameIndex === null) return;
+  pushUndo('deleting the motion after this anchor');
   let gone = 0;
   for (let i = edit.frameIndex + 1; i < project.frames.length; i++) {
     const frame = project.frames[i];
@@ -650,12 +704,278 @@ function stripMotion() {
 
 function bloomAll() {
   if (!project.frames.length) return;
+  pushUndo('deleting every anchor but the first');
   project.anchors.forEach((index, n) => {
     if (n > 0) project.frames[index].deleted = true;
   });
   refreshStripState();
   syncControls();
   setStatus('Every anchor after the first is gone — the opening picture now has to last the whole video.', 'READY');
+}
+
+/* ---------- wrecking the stream ----------
+
+   Everything here is chunk surgery: reordering, duplicating, trimming or
+   corrupting payloads that already exist. None of it re-encodes, so all of it
+   lands instantly however long the video is. The one thing that cannot be
+   done this way is scaling the motion vectors themselves — MPEG-4 Part 2
+   codes them with variable-length codes and predicts each from its
+   neighbours, so there is no byte to multiply. */
+
+const clone = frame => ({ ...frame });
+
+function afterCursor(predicate) {
+  const out = [];
+  for (let i = (edit.frameIndex ?? 0) + 1; i < project.frames.length; i++) {
+    if (predicate(project.frames[i])) out.push(i);
+  }
+  return out;
+}
+
+/* Repeat one frame. On a P-frame this is the classic slide: the same motion
+   vectors are applied again and again, so whatever is on screen keeps being
+   pushed the same way and shears further with every repeat. */
+function holdFrame(times) {
+  if (edit.frameIndex === null) return;
+  const at = edit.frameIndex;
+  const frame = project.frames[at];
+  pushUndo(`holding frame ${at}`);
+  const copies = Array.from({ length: times - 1 }, () => ({ ...clone(frame), join: false }));
+  project.frames.splice(at + 1, 0, ...copies);
+  reindex();
+  buildFilmstrip();
+  selectFrame(at);
+  setStatus(
+    `Frame ${at} held for ${times}${frame.type === 'P'
+      ? ' — its motion is now applied that many times over.'
+      : ' — the picture simply sits there.'}`,
+    'READY'
+  );
+}
+
+/* Repeat the run of motion belonging to the selected anchor. Where holding one
+   frame slides in a straight line, looping a whole run replays a gesture, so
+   the picture drifts in a rhythm instead. */
+function loopRun(times) {
+  if (edit.anchorIndex === null) return;
+  const { start, end } = previewRange(project.frames, edit.anchorIndex);
+  const run = project.frames.slice(start + 1, end);
+  if (!run.length) { setStatus('This anchor has no motion to loop.', 'READY'); return; }
+  pushUndo('looping the motion of a run');
+  const extra = [];
+  for (let n = 1; n < times; n++) extra.push(...run.map(f => ({ ...clone(f), join: false })));
+  project.frames.splice(end, 0, ...extra);
+  reindex();
+  buildFilmstrip();
+  selectFrame(edit.anchorIndex);
+  setStatus(`${run.length} motion frames looped ${times} times over.`, 'READY');
+}
+
+/* Thin the motion out. The movement still happens, but in bigger jumps. */
+function dropAlternateMotion() {
+  const targets = afterCursor(frame => frame.type === 'P' && !frame.deleted);
+  if (!targets.length) { setStatus('There is no motion after this point.', 'READY'); return; }
+  pushUndo('dropping alternate motion frames');
+  targets.filter((_, n) => n % 2 === 1).forEach(i => { project.frames[i].deleted = true; });
+  refreshStripState();
+  syncControls();
+  setStatus(`${Math.floor(targets.length / 2)} motion frames dropped — the movement now jumps.`, 'READY');
+}
+
+/* Reverse the whole chunk list. The first frame is then whatever used to be
+   last, which is usually motion rather than an anchor, so the video opens on
+   whatever the decoder makes of a delta with nothing behind it. */
+function reverseAll() {
+  if (project.frames.length < 2) return;
+  pushUndo('reversing every frame');
+  project.frames.reverse();
+  reindex();
+  buildFilmstrip();
+  selectFrame(0);
+  setStatus('Every frame reversed — the motion now runs backwards against the pictures.', 'READY');
+}
+
+/* Muddle the motion, the mirror of muddling the anchors. There the picture was
+   wrong and the movement right; here the picture is right and the movement
+   wrong, and because each P-frame's error feeds the next the damage builds
+   through a run and then snaps back at the anchor. */
+function shuffleMotion(scope) {
+  const groups = scope === 'global'
+    ? [project.frames.map((f, i) => i).filter(i => project.frames[i].type === 'P')]
+    : project.anchors.map((start, n) => {
+        const end = n + 1 < project.anchors.length ? project.anchors[n + 1] : project.frames.length;
+        const out = [];
+        for (let i = start + 1; i < end; i++) if (project.frames[i].type === 'P') out.push(i);
+        return out;
+      });
+
+  const usable = groups.filter(group => group.length > 1);
+  if (!usable.length) { setStatus('There is not enough motion to muddle.', 'READY'); return; }
+  pushUndo(scope === 'reverse' ? 'reversing the motion in each run' : 'shuffling the motion');
+
+  let moved = 0;
+  usable.forEach(group => {
+    const order = scope === 'reverse'
+      ? group.map((_, i) => group.length - 1 - i)
+      : (() => {
+          const o = group.map((_, i) => i);
+          for (let i = o.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [o[i], o[j]] = [o[j], o[i]];
+          }
+          return o;
+        })();
+    const payloads = group.map(i => project.frames[i].payload);
+    group.forEach((index, n) => {
+      project.frames[index].payload = payloads[order[n]];
+      project.frames[index].edited = true;
+      moved++;
+    });
+  });
+
+  refreshStripState();
+  syncControls();
+  const what = scope === 'reverse' ? 'reversed within their runs'
+    : scope === 'global' ? 'muddled across the whole video'
+    : 'muddled within their own runs';
+  setStatus(
+    `${moved} motion frames ${what} — the pictures are untouched, so each run tears itself ` +
+    'apart and resets at the next anchor.',
+    'READY'
+  );
+}
+
+/* Damage the payloads themselves. Flipping bytes inside a P-frame desynchronises
+   the variable-length codes, so the decoder conceals its way through a frame
+   that no longer means anything and the picture rots block by block. */
+function corruptMotion(perFrame) {
+  const targets = project.frames
+    .map((frame, i) => i)
+    .filter(i => project.frames[i].type === 'P' && project.frames[i].payload.length > 80);
+  if (!targets.length) { setStatus('There is no motion to damage.', 'READY'); return; }
+  pushUndo('corrupting the motion');
+
+  targets.forEach(i => {
+    const frame = project.frames[i];
+    const bytes = frame.payload.slice();
+    for (let n = 0; n < perFrame; n++) {
+      /* Past the VOP header, so the frame still announces itself as motion and
+         the decoder commits to reading it before finding the mess. */
+      const at = 40 + Math.floor(Math.random() * (bytes.length - 40));
+      bytes[at] ^= 1 + Math.floor(Math.random() * 255);
+    }
+    frame.payload = bytes;
+    frame.edited = true;
+  });
+
+  refreshStripState();
+  syncControls();
+  setStatus(
+    `${targets.length} motion frames damaged, ${perFrame} bytes each — the picture will rot ` +
+    'through each run and recover at every anchor.',
+    'READY'
+  );
+}
+
+/* Cut the motion short. The decoder updates the macroblocks it was given and
+   leaves the rest of the frame as it was, so the picture updates in a band
+   down to where the data ran out. */
+function truncateMotion(keep) {
+  const targets = project.frames.filter(frame => frame.type === 'P' && frame.payload.length > 60);
+  if (!targets.length) { setStatus('There is no motion to cut short.', 'READY'); return; }
+  pushUndo('truncating the motion');
+  targets.forEach(frame => {
+    frame.payload = frame.payload.slice(0, Math.max(24, Math.floor(frame.payload.length * keep)));
+    frame.edited = true;
+  });
+  refreshStripState();
+  syncControls();
+  setStatus(
+    `${targets.length} motion frames cut to ${Math.round(keep * 100)}% — each one now updates ` +
+    'only part of the picture.',
+    'READY'
+  );
+}
+
+/* ---------- operations that need a second video ---------- */
+
+async function normaliseCompanion(file) {
+  const result = await engine.normalise(file, {
+    width: project.settings.width,
+    height: project.settings.height,
+    fps: project.settings.fps,
+    maxSeconds: Math.max(1, Number($('#opt-seconds').value) || 20),
+    ...projectEncode()
+  });
+  const parsed = parseAvi(result.bytes);
+  if (!parsed.frames.length) throw new Error('No frames came out of that file.');
+  await engine.quiet(result.sourcePath);
+  return { parsed, bytes: result.bytes };
+}
+
+/* This video's pictures, another video's movement. The anchors stay exactly
+   where they are and keep their own pictures; every P-frame is replaced by one
+   from the other clip, so each run is this footage being pushed around by
+   something that was never filmed with it. */
+async function transferMotion(file) {
+  await withBusy(`Taking the motion out of “${file.name}”…`, async () => {
+    const { parsed } = await normaliseCompanion(file);
+    const donor = parsed.frames.filter(frame => frame.type === 'P');
+    if (!donor.length) throw new Error('That clip has no motion frames in it.');
+
+    pushUndo('transferring motion from another clip');
+    let n = 0;
+    project.frames.forEach(frame => {
+      if (frame.type !== 'P') return;
+      frame.payload = donor[n % donor.length].payload.slice();
+      frame.edited = true;
+      n++;
+    });
+    refreshStripState();
+    syncControls();
+    setStatus(
+      `${n} motion frames taken from “${file.name}” — this video's pictures, that video's movement.`,
+      'READY'
+    );
+  });
+}
+
+/* Alternate frames from the two clips. Both streams' motion is applied to one
+   shared picture, so they fight over it and neither wins. */
+async function interleaveClip(file) {
+  await withBusy(`Interleaving “${file.name}”…`, async () => {
+    const { parsed, bytes } = await normaliseCompanion(file);
+    const incoming = makeFrames(parsed);
+    if (project.frames.length + incoming.length > MAX_FRAMES) {
+      throw new Error(
+        `That would make ${project.frames.length + incoming.length} frames; ` +
+        `the ceiling is ${MAX_FRAMES}.`
+      );
+    }
+    const incomingAnchors = keyframeIndices(incoming);
+    const stills = await engine.keyframeThumbnails(
+      bytes, incomingAnchors.length, project.settings.width
+    );
+    incomingAnchors.forEach((index, n) => { incoming[index].still = stills[n]; });
+
+    pushUndo(`interleaving “${file.name}”`);
+    const woven = [];
+    const most = Math.max(project.frames.length, incoming.length);
+    for (let i = 0; i < most; i++) {
+      if (i < project.frames.length) woven.push(project.frames[i]);
+      if (i < incoming.length) woven.push(incoming[i]);
+    }
+    project.frames = woven;
+    project.clips.push({ name: file.name, frames: incoming.length });
+    reindex();
+    buildFilmstrip();
+    await selectFrame(0);
+    setStatus(
+      `“${file.name}” woven in frame by frame — ${project.frames.length} frames, two sets of ` +
+      'motion fighting over one picture.',
+      'READY'
+    );
+  });
 }
 
 /* ---------- building and rendering ---------- */
@@ -761,7 +1081,7 @@ async function replaceWithAnchor() {
   const grid = $('#picker-grid');
   grid.textContent = '';
   project.anchors.forEach((frameIndex, n) => {
-    const url = project.anchorImages[n];
+    const url = project.frames[frameIndex].still;
     if (!url) return;
     const button = document.createElement('button');
     button.type = 'button';
@@ -790,7 +1110,7 @@ async function replaceWithAnchor() {
 function syncControls() {
   const loaded = project.frames.length > 0;
   const selected = edit.frameIndex !== null;
-  const frame = selected ? project.frames[edit.frameIndex] : null;
+  const frame = edit.anchorIndex !== null ? project.frames[edit.anchorIndex] : null;
 
   const enable = (selector, on) => $$(selector).forEach(button => { button.disabled = !on; });
   enable('[data-action="preview"]', loaded && selected && !busy);
@@ -809,6 +1129,15 @@ function syncControls() {
   enable('[data-action="strip-motion"]', loaded && selected && !busy);
   enable('[data-action="strip-anchors"]', loaded && selected && !busy);
   enable('[data-action="shuffle-anchors"]', loaded && !busy && project.anchors.length > 1);
+  enable('[data-action="undo"]', !busy && undoStack.length > 0);
+  const motion = loaded && !busy;
+  ['hold-2', 'hold-4', 'hold-8', 'hold-16', 'hold-32'].forEach(a =>
+    enable(`[data-action="${a}"]`, motion && selected));
+  ['loop-2', 'loop-3', 'loop-4'].forEach(a => enable(`[data-action="${a}"]`, motion && selected));
+  ['drop-alternate', 'reverse-all', 'shuffle-motion-global', 'shuffle-motion-run',
+   'reverse-motion-run', 'corrupt-light', 'corrupt-medium', 'corrupt-heavy',
+   'truncate-75', 'truncate-50', 'truncate-25', 'transfer-motion', 'interleave-clip'
+  ].forEach(a => enable(`[data-action="${a}"]`, motion));
   enable('[data-action="reimport"]', !!project.file && !busy);
   enable('[data-action="open"]', !busy);
   enable('[data-action="add-front"]', loaded && !busy);
@@ -820,6 +1149,7 @@ function syncControls() {
 /* ---------- actions, menus, input ---------- */
 
 let pendingClipPosition = 'end';
+let pendingCompanion = 'transfer';
 
 const actions = {
   open: () => $('#file-input').click(),
@@ -844,10 +1174,40 @@ const actions = {
   'strip-motion': () => stripMotion(),
   'strip-anchors': () => stripAnchors(),
   'shuffle-anchors': () => shuffleAnchors(),
+  undo: () => undo(),
+  'hold-2': () => holdFrame(2),
+  'hold-4': () => holdFrame(4),
+  'hold-8': () => holdFrame(8),
+  'hold-16': () => holdFrame(16),
+  'hold-32': () => holdFrame(32),
+  'loop-2': () => loopRun(2),
+  'loop-3': () => loopRun(3),
+  'loop-4': () => loopRun(4),
+  'drop-alternate': () => dropAlternateMotion(),
+  'reverse-all': () => reverseAll(),
+  'shuffle-motion-global': () => shuffleMotion('global'),
+  'shuffle-motion-run': () => shuffleMotion('run'),
+  'reverse-motion-run': () => shuffleMotion('reverse'),
+  'corrupt-light': () => corruptMotion(2),
+  'corrupt-medium': () => corruptMotion(6),
+  'corrupt-heavy': () => corruptMotion(20),
+  'truncate-75': () => truncateMotion(0.75),
+  'truncate-50': () => truncateMotion(0.5),
+  'truncate-25': () => truncateMotion(0.25),
+  'transfer-motion': () => { pendingCompanion = 'transfer'; $('#companion-input').click(); },
+  'interleave-clip': () => { pendingCompanion = 'interleave'; $('#companion-input').click(); },
   about: () => $('#about-dialog').showModal()
 };
 
+function closeSubMenus() {
+  $$('.rm-sub').forEach(sub => {
+    sub.classList.remove('open');
+    sub.querySelector(':scope > .rm-sub-open').setAttribute('aria-expanded', 'false');
+  });
+}
+
 function closeMenus() {
+  closeSubMenus();
   $$('.rm').forEach(menu => {
     menu.classList.remove('open');
     menu.querySelector(':scope > .rm-dd').style.transform = '';
@@ -872,8 +1232,23 @@ document.addEventListener('click', event => {
     if (!button.disabled) actions[button.dataset.action]?.();
     closeMenus();
   } else if (!event.target.closest('.rm')) {
+    /* the shared bar script closes .rm on a click away; the fly-outs inside
+       one are this app's own, so they are closed here */
     closeMenus();
   }
+});
+
+$$('.rm-sub').forEach(sub => {
+  const opener = sub.querySelector(':scope > .rm-sub-open');
+  opener.addEventListener('click', event => {
+    event.stopPropagation();
+    const wasOpen = sub.classList.contains('open');
+    closeSubMenus();
+    if (!wasOpen) {
+      sub.classList.add('open');
+      opener.setAttribute('aria-expanded', 'true');
+    }
+  });
 });
 
 $$('.rm').forEach(menu => {
@@ -936,6 +1311,14 @@ $('#clip-input').addEventListener('change', event => {
   if (file) addClip(file, pendingClipPosition);
 });
 
+$('#companion-input').addEventListener('change', event => {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  if (pendingCompanion === 'transfer') transferMotion(file);
+  else interleaveClip(file);
+});
+
 /* The encoding readouts. Motion reach reads "default" at zero rather than 0,
    because leaving it alone is not the same as asking for a search range of
    nothing. */
@@ -981,7 +1364,8 @@ document.addEventListener('keydown', event => {
   if ($('#about-dialog').open || $('#anchor-picker').open) return;
   const meta = event.ctrlKey || event.metaKey;
 
-  if (meta && event.key === 'o') { event.preventDefault(); actions.open(); }
+  if (meta && event.key === 'z') { event.preventDefault(); undo(); }
+  else if (meta && event.key === 'o') { event.preventDefault(); actions.open(); }
   else if (meta && event.key === 'e') { event.preventDefault(); actions['export-mp4'](); }
   else if (meta && event.key === 'Enter') { event.preventDefault(); actions.apply(); }
   else if (meta && event.key === 'p') { event.preventDefault(); actions.preview(); }
