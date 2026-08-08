@@ -70,6 +70,26 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .rm-dd .pixel-icon { width: 16px; height: 16px; }
 .rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
 .menu-item-label { display: flex; align-items: center; gap: 9px; }
+
+/* Fly-outs. The Mosh menu holds two dozen operations grouped by what they
+   attack, which is a submenu each rather than one unreadable column. They sit
+   beside the parent on a desktop and drop underneath it on a phone, where
+   there is no room to the side. */
+.rm-sub { position: relative; }
+.rm-sub-arrow { margin-left: auto; font-size: 10px; }
+.rm-sub-dd { top: -6px; left: 100%; min-width: 280px; border-radius: 0 8px 8px 8px; }
+.rm-sub.open > .rm-sub-dd { display: block; }
+.rm-sub.open > .rm-sub-open { background: var(--ink); color: var(--menu-text); }
+/* On a phone a fly-out has nowhere to fly to, so it drops inline under its
+   parent instead — and the labels, which are sentences rather than words, are
+   allowed to wrap rather than forcing the menu off the side of the screen. */
+@media (max-width: 620px) {
+  .rm-dd { min-width: 0; max-width: calc(100vw - 20px); }
+  .rm-dd button { white-space: normal; }
+  .menu-item-label { align-items: flex-start; }
+  .rm-sub-dd { position: static; min-width: 0; max-width: none; border: 0; border-radius: 0;
+               box-shadow: none; padding: 0 0 0 14px; background: transparent; }
+}
 kbd {
   font: inherit; font-size: 11px; color: var(--sage);
   border: 1px solid var(--paper-line); border-radius: 3px; padding: 0 4px;
