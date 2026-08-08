@@ -41,6 +41,10 @@ smear runs on through what should have been a fresh start.
   tail of the video becomes a hard slideshow.
 - **Mosh → Shuffle the anchor pictures**, which gives every anchor a different
   anchor's picture without moving anything.
+- Holding a frame, looping a run, dropping alternate motion, muddling or
+  reversing the motion, corrupting or truncating it, reversing the whole
+  video, taking the motion out of another clip, and interleaving two clips —
+  all under **Mosh**, and all undoable.
 - Add more clips at the start, at the selected anchor, or at the end, and mosh
   them into each other.
 - Preview just the run of frames the selected anchor governs, which comes back
@@ -136,6 +140,62 @@ dial, and both are worth trying once to see the ends of the range: delete
 every anchor and nothing ever resets, delete every P-frame and nothing ever
 moves.
 
+## The Mosh menu
+
+Everything under **Mosh** is chunk surgery: reordering, duplicating, trimming
+or damaging payloads that already exist. Nothing re-encodes, so all of it
+lands instantly however long the video is, and every one of them takes an undo
+snapshot first — `Frame → Undo last mosh`, or `Ctrl+Z`, twelve steps deep.
+Reset cannot help here, because it puts payloads back but cannot un-duplicate
+or un-reverse a frame list.
+
+The operations are grouped by what they attack.
+
+**Anchors** — delete every anchor but the first, delete every anchor after
+this point, or shuffle the anchor pictures.
+
+**Motion** — delete every P-frame after this anchor, drop every other motion
+frame so the movement jumps, or muddle the motion: within each run, across
+the whole video, or reversed inside each run.
+
+**Hold this frame** — repeat the selected frame 2 to 32 times, or loop the
+whole run 2 to 4 times. On a P-frame the repeat is the classic slide: the same
+motion vectors are applied over and over, so whatever is on screen keeps being
+pushed the same way and shears further with every repeat. This is the one to
+reach for first. Looping a whole run replays a gesture instead of a direction,
+so the picture drifts in a rhythm.
+
+**Damage** — corrupt the motion (light, medium, heavy) or cut it short (a
+quarter, a half, three quarters off). Corrupting flips bytes past the VOP
+header so the frame still announces itself as motion and the decoder commits
+to reading it before finding the mess; the picture then rots block by block
+and recovers at each anchor. Truncating leaves the decoder with only part of
+the frame, so the picture updates in a band down to where the data ran out.
+
+**Whole video** — reverse every frame, take the motion from another clip, or
+interleave with another clip. Taking the motion from another clip is the most
+interesting of the three: the anchors keep their own pictures and every
+P-frame is replaced from the donor, so each run is this footage being pushed
+around by something never filmed with it. Interleaving weaves the two frame
+lists together so both streams' motion fights over one picture.
+
+Because the motion operations need a particular frame to aim at, clicking a
+P-frame in the filmstrip selects that frame while still loading its anchor
+into the editor. The label under the editor says which is which.
+
+### What cannot be done
+
+Scaling the motion vectors — "make all the movement three times bigger" — is
+the obvious thing to want and is not possible here. MPEG-4 Part 2 codes
+vectors with variable-length codes and predicts each from its neighbours, so
+there is no byte to multiply; it would need a full bitstream decoder and
+re-encoder rather than chunk surgery.
+
+Video packet resync markers (`-ps`) were tried as a way of keeping corruption
+in bands instead of letting it eat a whole frame, and made no measurable
+difference — 1409 decoder complaints against 1414 without, and visually
+identical. So, like `-me_method`, it is not offered.
+
 ## Muddling the anchors
 
 **Mosh → Shuffle the anchor pictures** is the third bulk move, and the one
@@ -192,6 +252,7 @@ size:
 | Motion reach | `-me_range`. A short search cannot follow fast movement, so the encoder gives up into large, messy residuals and the smears get wilder. |
 | Fine motion blocks | `-flags +mv4`: a motion vector per 8×8 block instead of per 16×16 macroblock, so smears break up more finely. |
 | Sub-pixel motion | `-flags +qpel`: quarter-pixel vectors, for smoother, more liquid drags. |
+| Throw away the colour | `-flags +gray`: luma only, so damage reads as shape rather than as stray colour. |
 
 Two omissions are deliberate. **`-me_method` is not offered because it does
 nothing**: the mpeg4 encoder ignores it, and every value from `zero` to `full`

@@ -58,6 +58,8 @@
         <button type="button" data-action="restore"><span class="menu-item-label"><span class="pixel-icon" data-icon="undo" aria-hidden="true"></span>Restore anchor</span></button>
         <div class="sep"></div>
         <button type="button" data-action="reset-all"><span class="menu-item-label"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Reset every edit</span></button>
+        <div class="sep"></div>
+        <button type="button" data-action="undo"><span class="menu-item-label"><span class="pixel-icon" data-icon="undo" aria-hidden="true"></span>Undo last mosh</span><kbd>Ctrl+Z</kbd></button>
       </div>
     </div>
     <div class="rm">
@@ -66,11 +68,59 @@
         <button type="button" data-action="preview"><span class="menu-item-label"><span class="pixel-icon" data-icon="play" aria-hidden="true"></span>Preview this run</span><kbd>Ctrl+P</kbd></button>
         <button type="button" data-action="render"><span class="menu-item-label"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span>Render whole video</span><kbd>Ctrl+R</kbd></button>
         <div class="sep"></div>
-        <button type="button" data-action="bloom-all"><span class="menu-item-label"><span class="pixel-icon" data-icon="spray-can" aria-hidden="true"></span>Delete every anchor but the first</span></button>
-        <button type="button" data-action="strip-anchors"><span class="menu-item-label"><span class="pixel-icon" data-icon="minus-box" aria-hidden="true"></span>Delete every anchor after this point</span></button>
-        <button type="button" data-action="strip-motion"><span class="menu-item-label"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Delete every P-frame after this anchor</span></button>
-        <div class="sep"></div>
-        <button type="button" data-action="shuffle-anchors"><span class="menu-item-label"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Shuffle the anchor pictures</span></button>
+        <div class="rm-sub">
+          <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="menu-item-label"><span class="pixel-icon" data-icon="letter-i" aria-hidden="true"></span>Anchors</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+          <div class="rm-dd rm-sub-dd">
+            <button type="button" data-action="bloom-all"><span class="menu-item-label"><span class="pixel-icon" data-icon="spray-can" aria-hidden="true"></span>Delete every anchor but the first</span></button>
+            <button type="button" data-action="strip-anchors"><span class="menu-item-label"><span class="pixel-icon" data-icon="minus-box" aria-hidden="true"></span>Delete every anchor after this point</span></button>
+            <button type="button" data-action="shuffle-anchors"><span class="menu-item-label"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Shuffle the anchor pictures</span></button>
+          </div>
+        </div>
+        <div class="rm-sub">
+          <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="menu-item-label"><span class="pixel-icon" data-icon="align-horizontal-space-between" aria-hidden="true"></span>Motion</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+          <div class="rm-dd rm-sub-dd">
+            <button type="button" data-action="strip-motion"><span class="menu-item-label"><span class="pixel-icon" data-icon="minus-box" aria-hidden="true"></span>Delete every P-frame after this anchor</span></button>
+            <button type="button" data-action="drop-alternate"><span class="menu-item-label"><span class="pixel-icon" data-icon="align-horizontal-distribute-center" aria-hidden="true"></span>Drop every other motion frame</span></button>
+            <div class="sep"></div>
+            <button type="button" data-action="shuffle-motion-run"><span class="menu-item-label"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Shuffle the motion in each run</span></button>
+            <button type="button" data-action="shuffle-motion-global"><span class="menu-item-label"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Shuffle the motion everywhere</span></button>
+            <button type="button" data-action="reverse-motion-run"><span class="menu-item-label"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Reverse the motion in each run</span></button>
+          </div>
+        </div>
+        <div class="rm-sub">
+          <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="menu-item-label"><span class="pixel-icon" data-icon="expand" aria-hidden="true"></span>Hold this frame</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+          <div class="rm-dd rm-sub-dd">
+            <button type="button" data-action="hold-2"><span class="menu-item-label">Twice over</span></button>
+            <button type="button" data-action="hold-4"><span class="menu-item-label">Four times</span></button>
+            <button type="button" data-action="hold-8"><span class="menu-item-label">Eight times</span></button>
+            <button type="button" data-action="hold-16"><span class="menu-item-label">Sixteen times</span></button>
+            <button type="button" data-action="hold-32"><span class="menu-item-label">Thirty-two times</span></button>
+            <div class="sep"></div>
+            <button type="button" data-action="loop-2"><span class="menu-item-label">Loop this whole run twice</span></button>
+            <button type="button" data-action="loop-3"><span class="menu-item-label">Loop this whole run three times</span></button>
+            <button type="button" data-action="loop-4"><span class="menu-item-label">Loop this whole run four times</span></button>
+          </div>
+        </div>
+        <div class="rm-sub">
+          <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="menu-item-label"><span class="pixel-icon" data-icon="bug" aria-hidden="true"></span>Damage</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+          <div class="rm-dd rm-sub-dd">
+            <button type="button" data-action="corrupt-light"><span class="menu-item-label">Corrupt the motion — light</span></button>
+            <button type="button" data-action="corrupt-medium"><span class="menu-item-label">Corrupt the motion — medium</span></button>
+            <button type="button" data-action="corrupt-heavy"><span class="menu-item-label">Corrupt the motion — heavy</span></button>
+            <div class="sep"></div>
+            <button type="button" data-action="truncate-75"><span class="menu-item-label">Cut the motion short — a quarter off</span></button>
+            <button type="button" data-action="truncate-50"><span class="menu-item-label">Cut the motion short — half off</span></button>
+            <button type="button" data-action="truncate-25"><span class="menu-item-label">Cut the motion short — three quarters off</span></button>
+          </div>
+        </div>
+        <div class="rm-sub">
+          <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="menu-item-label"><span class="pixel-icon" data-icon="video" aria-hidden="true"></span>Whole video</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+          <div class="rm-dd rm-sub-dd">
+            <button type="button" data-action="reverse-all"><span class="menu-item-label"><span class="pixel-icon" data-icon="arrow-left" aria-hidden="true"></span>Reverse every frame</span></button>
+            <button type="button" data-action="transfer-motion"><span class="menu-item-label"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span>Take the motion from another clip…</span></button>
+            <button type="button" data-action="interleave-clip"><span class="menu-item-label"><span class="pixel-icon" data-icon="align-vertical-space-between" aria-hidden="true"></span>Interleave with another clip…</span></button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="rm">
@@ -122,6 +172,9 @@
             </label>
             <label class="check"><input type="checkbox" id="opt-qpel"> Sub-pixel motion
               <span class="field-note">Quarter-pixel vectors. Smoother, more liquid drags than whole-pixel steps.</span>
+            </label>
+            <label class="check"><input type="checkbox" id="opt-gray"> Throw away the colour
+              <span class="field-note">Encodes luma only, so the picture is monochrome and damage shows as shape rather than as stray colour.</span>
             </label>
           </div>
           <p class="hint">These apply when a clip is brought in, so changing them needs a re-import.</p>
@@ -247,6 +300,7 @@
 
 <input type="file" id="file-input" accept="video/*" hidden>
 <input type="file" id="clip-input" accept="video/*" hidden>
+<input type="file" id="companion-input" accept="video/*" hidden>
 <input type="file" id="image-input" accept="image/*" hidden>
 
 <dialog id="anchor-picker">
