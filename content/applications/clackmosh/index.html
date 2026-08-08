@@ -38,6 +38,16 @@
       </div>
     </div>
     <div class="rm">
+      <button type="button">Clip</button>
+      <div class="rm-dd">
+        <button type="button" data-action="add-front"><span class="menu-item-label"><span class="pixel-icon" data-icon="arrow-bar-left" aria-hidden="true"></span>Add clip at the start…</span></button>
+        <button type="button" data-action="add-here"><span class="menu-item-label"><span class="pixel-icon" data-icon="map-pin" aria-hidden="true"></span>Add clip here…</span></button>
+        <button type="button" data-action="add-end"><span class="menu-item-label"><span class="pixel-icon" data-icon="arrow-bar-right" aria-hidden="true"></span>Add clip at the end…</span></button>
+        <div class="sep"></div>
+        <button type="button" data-action="mosh-joins"><span class="menu-item-label"><span class="pixel-icon" data-icon="git-commit" aria-hidden="true"></span>Mosh the joins</span></button>
+      </div>
+    </div>
+    <div class="rm">
       <button type="button">Frame</button>
       <div class="rm-dd">
         <button type="button" data-action="replace-image"><span class="menu-item-label"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>Replace with image…</span></button>
@@ -68,27 +78,55 @@
   </nav>
 
   <div class="app-main">
-    <div class="toolbar" role="group" aria-label="Import settings">
-      <button type="button" class="primary" data-action="open">
-        <span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open video…
-      </button>
-      <span class="toolbar-sep" aria-hidden="true"></span>
-      <label class="field">Anchor every
-        <input type="number" id="opt-gop" value="25" min="2" max="300" step="1"> frames
-      </label>
-      <label class="field">Width
-        <input type="number" id="opt-width" value="480" min="128" max="960" step="16">
-      </label>
-      <label class="field">FPS
-        <input type="number" id="opt-fps" value="25" min="5" max="60" step="1">
-      </label>
-      <label class="field">Max
-        <input type="number" id="opt-seconds" value="20" min="1" max="60" step="1"> s
-      </label>
-      <button type="button" data-action="reimport" disabled>
-        <span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Re-import
-      </button>
-    </div>
+    <section class="toolbar" aria-label="Import settings">
+      <div class="toolbar-row">
+        <button type="button" class="primary" data-action="open">
+          <span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open video…
+        </button>
+        <button type="button" data-action="add-end" disabled>
+          <span class="pixel-icon" data-icon="plus-box" aria-hidden="true"></span>Add clip…
+        </button>
+        <button type="button" data-action="reimport" disabled>
+          <span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Re-import
+        </button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <label class="field">Anchor every
+          <input type="number" id="opt-gop" value="25" min="2" max="300" step="1"> frames
+        </label>
+        <label class="field">Width
+          <input type="number" id="opt-width" value="480" min="128" max="960" step="16">
+        </label>
+        <label class="field">FPS
+          <input type="number" id="opt-fps" value="25" min="5" max="60" step="1">
+        </label>
+        <label class="field">Max
+          <input type="number" id="opt-seconds" value="20" min="1" max="60" step="1"> s
+        </label>
+      </div>
+
+      <details class="encoding">
+        <summary><span class="pixel-icon" data-icon="cpu" aria-hidden="true"></span>Encoding — how the mosh will look</summary>
+        <div class="encoding-grid">
+          <label class="slider">Blockiness <output id="out-quality">5</output>
+            <input type="range" id="opt-quality" min="1" max="31" value="5" step="1">
+            <span class="field-note">The quantiser. Push it up for coarse, chunky blocks and cheap-looking residuals.</span>
+          </label>
+          <label class="slider">Motion reach <output id="out-merange">default</output>
+            <input type="range" id="opt-merange" min="0" max="32" value="0" step="1">
+            <span class="field-note">How far the encoder may search for movement. Short reach cannot follow fast action, so it gives up into wilder, messier smears.</span>
+          </label>
+          <div class="encoding-toggles">
+            <label class="check"><input type="checkbox" id="opt-mv4"> Fine motion blocks
+              <span class="field-note">Motion vectors per 8×8 block instead of 16×16, so smears break up more finely.</span>
+            </label>
+            <label class="check"><input type="checkbox" id="opt-qpel"> Sub-pixel motion
+              <span class="field-note">Quarter-pixel vectors. Smoother, more liquid drags than whole-pixel steps.</span>
+            </label>
+          </div>
+          <p class="hint">These apply when a clip is brought in, so changing them needs a re-import.</p>
+        </div>
+      </details>
+    </section>
 
     <div class="stage">
       <section class="panel editor" aria-labelledby="editor-title">
@@ -183,6 +221,7 @@
           <span class="key p"></span> motion (P)
           <span class="key gone"></span> deleted
           <span class="key edited"></span> edited
+          <span class="key join"></span> clip join
         </span>
       </h2>
       <div class="filmstrip" id="filmstrip" tabindex="0" role="listbox" aria-label="Video frames"></div>
@@ -197,6 +236,7 @@
 </div>
 
 <input type="file" id="file-input" accept="video/*" hidden>
+<input type="file" id="clip-input" accept="video/*" hidden>
 <input type="file" id="image-input" accept="image/*" hidden>
 
 <dialog id="anchor-picker">
@@ -220,6 +260,12 @@
       which is the trick: replace an anchor and the original video's movement
       keeps right on dragging your picture around. Delete one and the picture
       never resets, so the smear runs on into the next run of frames.</p>
+    <p>Clips added from the <strong>Clip</strong> menu are re-encoded to the
+      project's exact frame and settings, which makes their frames
+      interchangeable with the ones already there. Delete the anchor at a join
+      and the incoming clip's movement lands on the outgoing clip's last
+      picture — that is two videos moshed into each other rather than cut
+      together.</p>
     <p>Nothing is uploaded. Everything happens in this tab.</p>
     <menu><button type="submit" value="ok">Close</button></menu>
   </form>

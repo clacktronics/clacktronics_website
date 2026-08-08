@@ -30,6 +30,8 @@ smear runs on through what should have been a fresh start.
 - Delete an anchor (the bloom), restore it, reset one frame, or reset the lot.
 - **Mosh → Delete every anchor but the first**, which makes the opening picture
   last the whole video.
+- Add more clips at the start, at the selected anchor, or at the end, and mosh
+  them into each other.
 - Preview just the run of frames the selected anchor governs, which comes back
   in a second or two, or render the whole video.
 - Export the rendered MP4, or the moshed AVI itself.
@@ -87,6 +89,49 @@ same settings otherwise produces a header that differs by one byte — the GOV
 timecode — which is exactly the sort of small disagreement a decoder is
 entitled to object to.
 
+## Moshing clips together
+
+Frames are only interchangeable if the stream configuration they were encoded
+under agrees, because the pixel dimensions and the sample aspect both end up
+in the VOL header. So a clip added to a project is not merely re-encoded — it
+is re-encoded to the project's exact frame, letterboxed rather than stretched,
+with `setsar=1` and the same encoder settings. Do that and three clips from
+three different sources, sizes and frame rates produce byte-identical VOL
+headers, and their chunks can be spliced into one another freely.
+
+A **join** is an anchor with another clip's picture in front of it. Delete it
+and the incoming clip's motion is applied to the outgoing clip's last frame,
+which is the difference between two videos moshed together and two videos cut
+together. Joins are marked in the filmstrip, and **Clip → Mosh the joins**
+deletes all of them at once.
+
+Adding at the start creates a join at the far end of the incoming clip rather
+than at its head — there is nothing in front of the first frame of the video
+to mosh into, and deleting that anchor would only leave the file opening on a
+P-frame. Adding in the middle creates a join at both ends.
+
+Only the first clip's audio is kept. Everything else about the timing has
+already stopped lining up by the time you are moshing joins.
+
+## Encoding settings
+
+These are applied as a clip is brought in, so changing them means a
+re-import. They change the character of the smear rather than just the file
+size:
+
+| Setting | What it does |
+| ------- | ------------ |
+| Blockiness | The quantiser, 1–31. High values give coarse blocks and cheap residuals — the classic look. |
+| Motion reach | `-me_range`. A short search cannot follow fast movement, so the encoder gives up into large, messy residuals and the smears get wilder. |
+| Fine motion blocks | `-flags +mv4`: a motion vector per 8×8 block instead of per 16×16 macroblock, so smears break up more finely. |
+| Sub-pixel motion | `-flags +qpel`: quarter-pixel vectors, for smoother, more liquid drags. |
+
+Two omissions are deliberate. **`-me_method` is not offered because it does
+nothing**: the mpeg4 encoder ignores it, and every value from `zero` to `full`
+produces a byte-identical file. And B-frames stay off, because they would
+break the model the whole app is built on — every frame being either a whole
+picture you can edit or motion you leave alone.
+
 ## Practical limits
 
 Everything runs in one tab, on the single-thread FFmpeg core, so the ceilings
@@ -94,10 +139,18 @@ are low on purpose: 60 seconds and 960 pixels wide at the outside, and the
 defaults (20 seconds, 480 wide) are the comfortable range. Datamoshing is a
 short-clip form anyway.
 
+Adding clips is the only way to get near the ceiling of 3000 frames, and the
+app refuses an import that would cross it.
+
 Anchor spacing is the setting that matters most. A long gap gives few anchors
 and long, luxurious smears; a short one gives many anchors and a choppier,
 more collaged result. It cannot be changed after import without re-importing,
 because it is an encoder setting.
+
+On a phone the panels are reordered to follow the job — bring a clip in, pick
+the anchor to work on, edit it, look at the result — rather than keeping the
+desktop's two-column arrangement, which would bury the filmstrip under a
+screenful of sliders.
 
 Deleting frames shortens the video and the audio does not follow, so **Keep
 audio** re-muxes the original track at its original timing and lets it drift.

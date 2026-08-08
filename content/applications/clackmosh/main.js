@@ -21,6 +21,11 @@ const canvas = $('#editor-canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: false });
 const video = $('#preview-video');
 
+/* A hard ceiling on the frame list. Adding clips is the only way to get near
+   it, and past roughly this many frames a rebuild-and-render cycle stops
+   feeling like an edit and starts risking the tab. */
+const MAX_FRAMES = 3000;
+
 const project = {
   file: null,
   sourcePath: null,
@@ -28,7 +33,8 @@ const project = {
   frames: [],
   anchors: [],
   anchorImages: [],
-  settings: { width: 480, height: 360, fps: 25, gop: 25, quality: 5 },
+  clips: [],
+  settings: { width: 480, height: 360, fps: 25, gop: 25, quality: 5, meRange: 0, mv4: false, qpel: false },
   hasAudio: false
 };
 
@@ -91,14 +97,39 @@ async function withBusy(label, task) {
 
 /* ---------- opening ---------- */
 
-async function openVideo(file) {
-  const settings = {
+/* What the toolbar currently asks for. Read fresh on every import, because
+   these only ever take effect as a clip comes in. */
+function importSettings() {
+  return {
     width: Math.max(128, Number($('#opt-width').value) || 480),
     fps: Math.max(5, Number($('#opt-fps').value) || 25),
     gop: Math.max(2, Number($('#opt-gop').value) || 25),
     maxSeconds: Math.max(1, Number($('#opt-seconds').value) || 20),
-    quality: 5
+    quality: Math.min(31, Math.max(1, Number($('#opt-quality').value) || 5)),
+    meRange: Math.max(0, Number($('#opt-merange').value) || 0),
+    mv4: $('#opt-mv4').checked,
+    qpel: $('#opt-qpel').checked
   };
+}
+
+/* The encoder settings a frame must have been made with to be spliceable into
+   this project — everything that lands in the VOL header, plus the ones that
+   simply ought to match so an added clip looks like it belongs. */
+function projectEncode() {
+  const { gop, quality, meRange, mv4, qpel } = project.settings;
+  return { gop, quality, meRange, mv4, qpel };
+}
+
+function makeFrames(parsed) {
+  return parsed.frames.map(frame => {
+    const payload = frame.payload.slice();
+    return { id: frame.id, type: frame.type, payload, original: payload,
+             deleted: false, edited: false, join: false };
+  });
+}
+
+async function openVideo(file) {
+  const settings = importSettings();
 
   await withBusy(`Re-encoding “${file.name}” into moshable frames…`, async () => {
     if (project.sourcePath) await engine.quiet(project.sourcePath);
@@ -113,17 +144,12 @@ async function openVideo(file) {
     project.sourcePath = result.sourcePath;
     project.hasAudio = result.hasAudio;
     project.settings = {
-      width: parsed.width, height: parsed.height,
-      fps: parsed.fps, gop: settings.gop, quality: settings.quality
+      width: parsed.width, height: parsed.height, fps: parsed.fps,
+      gop: settings.gop, quality: settings.quality,
+      meRange: settings.meRange, mv4: settings.mv4, qpel: settings.qpel
     };
-    project.frames = parsed.frames.map(frame => ({
-      id: frame.id,
-      type: frame.type,
-      payload: frame.payload,
-      original: frame.payload,
-      deleted: false,
-      edited: false
-    }));
+    project.frames = makeFrames(parsed);
+    project.clips = [{ name: file.name, frames: parsed.frames.length }];
     project.anchors = keyframeIndices(parsed.frames);
 
     canvas.width = parsed.width;
@@ -148,6 +174,91 @@ async function openVideo(file) {
       'READY'
     );
   });
+}
+
+/* Bringing a second video in.
+
+   The incoming clip is put through exactly the settings the project was built
+   with — same frame, same rate, same encoder — so its chunks are the same
+   currency as the ones already there and can simply be spliced into the list.
+   Its first frame is flagged as a join, because that anchor is the one worth
+   deleting: drop it and the new clip's motion is applied to the last picture
+   of the old one, which is how two videos mosh into each other rather than
+   just being cut together. */
+async function addClip(file, where) {
+  if (!project.frames.length) return;
+
+  await withBusy(`Bringing “${file.name}” in to match the project…`, async () => {
+    const result = await engine.normalise(file, {
+      width: project.settings.width,
+      height: project.settings.height,
+      fps: project.settings.fps,
+      maxSeconds: Math.max(1, Number($('#opt-seconds').value) || 20),
+      ...projectEncode()
+    });
+    const parsed = parseAvi(result.bytes);
+    if (!parsed.frames.length) throw new Error('No frames came out of that file.');
+
+    if (project.frames.length + parsed.frames.length > MAX_FRAMES) {
+      await engine.quiet(result.sourcePath);
+      throw new Error(
+        `That would make ${project.frames.length + parsed.frames.length} frames; ` +
+        `the ceiling is ${MAX_FRAMES}. Shorten it with Max seconds and try again.`
+      );
+    }
+
+    const incoming = makeFrames(parsed);
+
+    const at = where === 'front' ? 0
+      : where === 'end' ? project.frames.length
+      : (edit.frameIndex ?? 0);
+
+    /* Thumbnails are held one per anchor in order, so the incoming clip's
+       stills go in at the same ordinal the frames themselves do. */
+    const ordinal = project.frames.slice(0, at).filter(frame => frame.type === 'I').length;
+    const stills = await engine.keyframeThumbnails(
+      result.bytes, keyframeIndices(parsed.frames).length, project.settings.width
+    );
+
+    project.frames.splice(at, 0, ...incoming);
+    project.anchorImages.splice(ordinal, 0, ...stills);
+
+    /* A join is an anchor that has another clip's picture in front of it —
+       delete it and that picture is what the motion carries on from. Dropping
+       a clip in creates one wherever something now precedes something else,
+       which is both ends of a middle insert and neither the very start of the
+       video (there is nothing before it to mosh into) nor past the very end. */
+    const after = at + incoming.length;
+    if (at > 0) project.frames[at].join = true;
+    if (after < project.frames.length) project.frames[after].join = true;
+    const joinAt = at > 0 ? at : after;
+
+    project.anchors = keyframeIndices(project.frames);
+    project.clips.push({ name: file.name, frames: incoming.length });
+
+    // Only the first clip's audio is kept, so this one's source is not needed.
+    await engine.quiet(result.sourcePath);
+
+    buildFilmstrip();
+    await selectFrame(joinAt);
+    setStatus(
+      `“${file.name}” added — ${incoming.length} frames. ` +
+      'Delete the anchor at the join to mosh the two together.',
+      'READY'
+    );
+  });
+}
+
+function moshJoins() {
+  const joins = project.frames.filter(frame => frame.join && !frame.deleted);
+  if (!joins.length) { setStatus('No clip joins left to mosh.', 'READY'); return; }
+  joins.forEach(frame => { frame.deleted = true; });
+  refreshStripState();
+  syncControls();
+  setStatus(
+    `${joins.length} join${joins.length > 1 ? 's' : ''} moshed — each clip now lands on the picture before it.`,
+    'READY'
+  );
 }
 
 function releaseImages() {
@@ -204,14 +315,16 @@ function refreshStripState() {
   const live = project.frames.filter(frame => !frame.deleted).length;
   const anchorsLeft = project.frames.filter(frame => frame.type === 'I' && !frame.deleted).length;
   const edited = project.frames.filter(frame => frame.edited).length;
+  const clips = project.clips.length > 1 ? ` · ${project.clips.length} clips` : '';
   $('#strip-note').textContent = project.frames.length
-    ? `${live} of ${project.frames.length} kept · ${anchorsLeft} anchors · ${edited} edited`
+    ? `${live} of ${project.frames.length} kept · ${anchorsLeft} anchors · ${edited} edited${clips}`
     : '—';
 
   $$('#filmstrip .frame').forEach(button => {
     const frame = project.frames[Number(button.dataset.index)];
     button.classList.toggle('deleted', frame.deleted);
     button.classList.toggle('edited', frame.edited);
+    button.classList.toggle('join', frame.join);
     button.classList.toggle('selected', Number(button.dataset.index) === edit.frameIndex);
   });
 }
@@ -341,8 +454,7 @@ async function applyEdit() {
     const payload = await engine.encodeStill(png, {
       width: project.settings.width,
       height: project.settings.height,
-      gop: project.settings.gop,
-      quality: project.settings.quality
+      ...projectEncode()
     });
 
     const frame = project.frames[index];
@@ -390,6 +502,21 @@ function restoreAnchor() {
   setStatus('Anchor restored.', 'READY');
 }
 
+/* Re-reading a picture out of the stream, rather than off the source file:
+   with clips added, the frames no longer all come from one import, but they
+   are all in the frame list, and an anchor decodes on its own. */
+async function stillFor(frame) {
+  const one = buildAvi(project.bytes, [{ ...frame, payload: frame.original, deleted: false }]);
+  const [url] = await engine.keyframeThumbnails(one, 1, project.settings.width);
+  return url;
+}
+
+function replaceStill(ordinal, url) {
+  const old = project.anchorImages[ordinal];
+  project.anchorImages[ordinal] = url;
+  if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
+}
+
 async function resetFrame() {
   if (edit.frameIndex === null) return;
   const index = edit.frameIndex;
@@ -399,17 +526,7 @@ async function resetFrame() {
   frame.deleted = false;
 
   await withBusy('Putting the original picture back…', async () => {
-    const urls = await engine.keyframeThumbnails(project.bytes, project.anchors.length, project.settings.width);
-    const n = anchorNumber(index);
-    urls.forEach((url, i) => {
-      if (i === n) {
-        const old = project.anchorImages[i];
-        project.anchorImages[i] = url;
-        if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
-      } else if (url) {
-        URL.revokeObjectURL(url);
-      }
-    });
+    replaceStill(anchorNumber(index), await stillFor(frame));
     buildFilmstrip();
     await selectFrame(index);
     setStatus('Anchor reset.', 'READY');
@@ -424,10 +541,12 @@ async function resetAll() {
     frame.deleted = false;
   });
   await withBusy('Reloading the anchors…', async () => {
-    project.anchorImages.forEach(url => { if (url && url.startsWith('blob:')) URL.revokeObjectURL(url); });
-    project.anchorImages = await engine.keyframeThumbnails(
-      project.bytes, project.anchors.length, project.settings.width
+    const restored = buildAvi(project.bytes, project.frames);
+    const urls = await engine.keyframeThumbnails(
+      restored, project.anchors.length, project.settings.width
     );
+    project.anchorImages.forEach(url => { if (url && url.startsWith('blob:')) URL.revokeObjectURL(url); });
+    project.anchorImages = urls;
     buildFilmstrip();
     await selectFrame(project.anchors[0] ?? 0);
     setStatus('Every edit undone.', 'READY');
@@ -594,13 +713,23 @@ function syncControls() {
   enable('[data-action="bloom-all"]', loaded && !busy);
   enable('[data-action="reimport"]', !!project.file && !busy);
   enable('[data-action="open"]', !busy);
+  enable('[data-action="add-front"]', loaded && !busy);
+  enable('[data-action="add-here"]', loaded && selected && !busy);
+  enable('[data-action="add-end"]', loaded && !busy);
+  enable('[data-action="mosh-joins"]', !busy && project.frames.some(frame => frame.join && !frame.deleted));
 }
 
 /* ---------- actions, menus, input ---------- */
 
+let pendingClipPosition = 'end';
+
 const actions = {
   open: () => $('#file-input').click(),
   reimport: () => { if (project.file) openVideo(project.file); },
+  'add-front': () => { pendingClipPosition = 'front'; $('#clip-input').click(); },
+  'add-here': () => { pendingClipPosition = 'here'; $('#clip-input').click(); },
+  'add-end': () => { pendingClipPosition = 'end'; $('#clip-input').click(); },
+  'mosh-joins': () => moshJoins(),
   'export-mp4': () => exportMp4(),
   'export-avi': () => exportAvi(),
   'replace-image': () => replaceWithImage(),
@@ -698,6 +827,23 @@ $('#file-input').addEventListener('change', event => {
   const file = event.target.files?.[0];
   event.target.value = '';
   if (file) openVideo(file);
+});
+
+$('#clip-input').addEventListener('change', event => {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (file) addClip(file, pendingClipPosition);
+});
+
+/* The encoding readouts. Motion reach reads "default" at zero rather than 0,
+   because leaving it alone is not the same as asking for a search range of
+   nothing. */
+$('#opt-quality').addEventListener('input', event => {
+  $('#out-quality').textContent = event.target.value;
+});
+$('#opt-merange').addEventListener('input', event => {
+  const value = Number(event.target.value);
+  $('#out-merange').textContent = value ? String(value) : 'default';
 });
 
 $('#image-input').addEventListener('change', async event => {
