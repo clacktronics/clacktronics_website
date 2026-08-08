@@ -383,6 +383,8 @@ function resetSliders() {
   $('#ed-rotate').value = 0; $('#ed-hue').value = 0; $('#ed-sat').value = 100;
   $('#ed-contrast').value = 100; $('#ed-bright').value = 100;
   $('#ed-flip-h').checked = false; $('#ed-flip-v').checked = false; $('#ed-invert').checked = false;
+  $('#apply-button').classList.remove('dirty');
+  $('#adjustments').classList.remove('touched');
   syncOutputs();
 }
 
@@ -432,6 +434,7 @@ function drawEditor() {
 function markDirty() {
   edit.dirty = true;
   $('#apply-button').classList.add('dirty');
+  $('#adjustments').classList.add('touched');
 }
 
 /* ---------- committing an edit ---------- */
@@ -476,6 +479,7 @@ async function applyEdit() {
 
     edit.dirty = false;
     $('#apply-button').classList.remove('dirty');
+    $('#adjustments').classList.remove('touched');
     $('#anchor-label').textContent = `anchor ${n + 1} of ${project.anchors.length} · frame ${index} · edited`;
     refreshStripState();
     setStatus(`Anchor ${n + 1} replaced. Preview the run to see the motion take it.`, 'READY');
@@ -551,6 +555,31 @@ async function resetAll() {
     await selectFrame(project.anchors[0] ?? 0);
     setStatus('Every edit undone.', 'READY');
   });
+}
+
+/* The opposite bulk move to bloomAll: that one takes the anchors out and
+   leaves nothing but motion, this one takes the motion out and leaves nothing
+   but anchors. From the selected frame onwards each run collapses to its own
+   single picture, so the tail of the video becomes a hard slideshow. */
+function stripMotion() {
+  if (edit.frameIndex === null) return;
+  let gone = 0;
+  for (let i = edit.frameIndex + 1; i < project.frames.length; i++) {
+    const frame = project.frames[i];
+    if (frame.type === 'P' && !frame.deleted) { frame.deleted = true; gone++; }
+  }
+  if (!gone) { setStatus('There is no motion left after this anchor.', 'READY'); return; }
+
+  const anchorsLeft = project.frames
+    .slice(edit.frameIndex)
+    .filter(frame => frame.type === 'I' && !frame.deleted).length;
+  refreshStripState();
+  syncControls();
+  setStatus(
+    `${gone} motion frames deleted — from here on the video is ${anchorsLeft} ` +
+    'anchors, one frame each.',
+    'READY'
+  );
 }
 
 function bloomAll() {
@@ -711,6 +740,7 @@ function syncControls() {
   enable('[data-action="replace-anchor"]', loaded && selected && !busy);
   enable('[data-action="revert-source"]', loaded && selected && !busy);
   enable('[data-action="bloom-all"]', loaded && !busy);
+  enable('[data-action="strip-motion"]', loaded && selected && !busy);
   enable('[data-action="reimport"]', !!project.file && !busy);
   enable('[data-action="open"]', !busy);
   enable('[data-action="add-front"]', loaded && !busy);
@@ -743,6 +773,7 @@ const actions = {
   preview: () => previewRun(),
   render: () => renderAll(),
   'bloom-all': () => bloomAll(),
+  'strip-motion': () => stripMotion(),
   about: () => $('#about-dialog').showModal()
 };
 

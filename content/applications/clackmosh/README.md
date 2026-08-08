@@ -26,10 +26,16 @@ smear runs on through what should have been a fresh start.
   anchor, or with the original.
 - Scale, move, turn and flip the picture inside the frame; hue, saturation,
   contrast, brightness and invert on top. All of it redraws live on a canvas —
-  only committing an edit costs an encode.
+  only committing an edit costs an encode. The sliders are folded away by
+  default, because eight ranges stacked under the picture are eight things to
+  catch with a thumb while scrolling, and each one is a change to the frame.
+  A closed fold with uncommitted changes inside says so.
 - Delete an anchor (the bloom), restore it, reset one frame, or reset the lot.
 - **Mosh → Delete every anchor but the first**, which makes the opening picture
   last the whole video.
+- **Mosh → Delete every P-frame after this anchor**, the opposite move: from
+  the selected frame on, every run collapses to its own single picture and the
+  tail of the video becomes a hard slideshow.
 - Add more clips at the start, at the selected anchor, or at the end, and mosh
   them into each other.
 - Preview just the run of frames the selected anchor governs, which comes back
@@ -88,6 +94,42 @@ payload from the VOP start code onwards. Re-encoding a single still with the
 same settings otherwise produces a header that differs by one byte — the GOV
 timecode — which is exactly the sort of small disagreement a decoder is
 entitled to object to.
+
+## Working with anchors
+
+One rule governs everything else: **an edited anchor is only as good as the
+motion that follows it.** The picture you put in does not move on its own —
+the P-frames after it are what drag it about, and if the camera was still and
+the subject was still, they are describing almost nothing and your replacement
+will just sit there like a slide. Before spending time on an anchor, look at
+how much motion follows it. In the filmstrip the ticks are drawn per frame, so
+a run sitting over a busy passage is where the effect lives; if in doubt,
+preview the run first and edit second.
+
+From that, the things actually worth doing:
+
+- **Replace an anchor just before a pan, a zoom or someone walking through
+  the shot.** The stronger and more coherent the movement, the more the
+  replacement gets carried rather than merely dissolved.
+- **Delete an anchor immediately after a cut.** That is where two unrelated
+  pictures meet, so the incoming scene's motion is applied to the outgoing
+  scene's picture — the largest possible mismatch, and the most dramatic
+  bloom. Anchors on either side of a clip join are marked for exactly this
+  reason.
+- **Replace an anchor with the picture from the anchor before it.** A subtle
+  one: the video appears to slip backwards in time while the movement carries
+  straight on.
+- **Scale or turn the picture before applying it.** The motion vectors were
+  written for the original framing, so a rotated or blown-up picture is
+  dragged in directions that no longer match its content.
+- **Leave most anchors alone.** Editing every one gives a uniform mush; the
+  effect reads as an effect when there is untouched footage either side of it
+  to be surprised by.
+
+The two bulk operations in the **Mosh** menu are the extremes of the same
+dial, and both are worth trying once to see the ends of the range: delete
+every anchor and nothing ever resets, delete every P-frame and nothing ever
+moves.
 
 ## Moshing clips together
 
