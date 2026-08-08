@@ -1,5 +1,9 @@
 # Vendored media engine provenance
 
+These files are shared: Video Lab and ClackMosh
+(`content/applications/clackmosh/`) both import the client from here rather
+than vendoring it twice, so the notices below cover both apps.
+
 ## ffmpeg.wasm client
 
 - Package: `@ffmpeg/ffmpeg`
