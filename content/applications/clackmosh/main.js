@@ -557,6 +557,72 @@ async function resetAll() {
   });
 }
 
+/* Bloom from here on: every anchor after the selected frame goes, so the
+   selected picture is the last one that ever resets and everything following
+   it is motion applied to whatever is already on screen. bloomAll is this with
+   the first anchor selected; this is the version you can aim. */
+function stripAnchors() {
+  if (edit.frameIndex === null) return;
+  let gone = 0;
+  for (let i = edit.frameIndex + 1; i < project.frames.length; i++) {
+    const frame = project.frames[i];
+    if (frame.type === 'I' && !frame.deleted) { frame.deleted = true; gone++; }
+  }
+  if (!gone) { setStatus('There are no anchors left after this point.', 'READY'); return; }
+  refreshStripState();
+  syncControls();
+  setStatus(
+    `${gone} anchor${gone > 1 ? 's' : ''} deleted — from here on the picture never resets.`,
+    'READY'
+  );
+}
+
+/* Muddle the anchors: every anchor keeps its place in the stream, and its own
+   header bytes with it, but is given a different anchor's picture. The motion
+   is untouched, so each run drags the wrong picture through the right
+   movement — the transplant the anchor editor does by hand, applied to the
+   whole video at once, and with every picture still coming from the footage,
+   so it reads as coherent-but-wrong rather than as noise.
+
+   No encoding: the pictures already exist as chunks, so this is the same
+   payload splice as an edit and happens instantly. The thumbnails are
+   permuted the same way rather than pulled out again. */
+function shuffleAnchors() {
+  const slots = project.anchors;
+  if (slots.length < 2) { setStatus('There is only one anchor to muddle.', 'READY'); return; }
+
+  const order = slots.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  /* Leaving a picture where it started is a wasted anchor, so any that the
+     shuffle left in place trades with its neighbour. */
+  order.forEach((from, i) => {
+    if (from !== i) return;
+    const swap = (i + 1) % order.length;
+    [order[i], order[swap]] = [order[swap], order[i]];
+  });
+
+  const pictures = slots.map(index => project.frames[index].payload);
+  const stills = slots.map((_, n) => project.anchorImages[n]);
+
+  slots.forEach((index, n) => {
+    const frame = project.frames[index];
+    frame.payload = spliceVop(frame.original, pictures[order[n]]);
+    frame.edited = true;
+    project.anchorImages[n] = stills[order[n]];
+  });
+
+  buildFilmstrip();
+  selectFrame(edit.frameIndex ?? slots[0]);
+  setStatus(
+    `${slots.length} anchor pictures muddled — the motion is untouched, so each run ` +
+    'now drags the wrong picture. Muddle again for a different draw.',
+    'READY'
+  );
+}
+
 /* The opposite bulk move to bloomAll: that one takes the anchors out and
    leaves nothing but motion, this one takes the motion out and leaves nothing
    but anchors. From the selected frame onwards each run collapses to its own
@@ -741,6 +807,8 @@ function syncControls() {
   enable('[data-action="revert-source"]', loaded && selected && !busy);
   enable('[data-action="bloom-all"]', loaded && !busy);
   enable('[data-action="strip-motion"]', loaded && selected && !busy);
+  enable('[data-action="strip-anchors"]', loaded && selected && !busy);
+  enable('[data-action="shuffle-anchors"]', loaded && !busy && project.anchors.length > 1);
   enable('[data-action="reimport"]', !!project.file && !busy);
   enable('[data-action="open"]', !busy);
   enable('[data-action="add-front"]', loaded && !busy);
@@ -774,6 +842,8 @@ const actions = {
   render: () => renderAll(),
   'bloom-all': () => bloomAll(),
   'strip-motion': () => stripMotion(),
+  'strip-anchors': () => stripAnchors(),
+  'shuffle-anchors': () => shuffleAnchors(),
   about: () => $('#about-dialog').showModal()
 };
 

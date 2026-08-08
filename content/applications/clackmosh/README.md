@@ -33,9 +33,14 @@ smear runs on through what should have been a fresh start.
 - Delete an anchor (the bloom), restore it, reset one frame, or reset the lot.
 - **Mosh → Delete every anchor but the first**, which makes the opening picture
   last the whole video.
+- **Mosh → Delete every anchor after this point**, the same bloom but aimed:
+  everything before the selected frame is left alone, and from it onwards the
+  picture never resets.
 - **Mosh → Delete every P-frame after this anchor**, the opposite move: from
   the selected frame on, every run collapses to its own single picture and the
   tail of the video becomes a hard slideshow.
+- **Mosh → Shuffle the anchor pictures**, which gives every anchor a different
+  anchor's picture without moving anything.
 - Add more clips at the start, at the selected anchor, or at the end, and mosh
   them into each other.
 - Preview just the run of frames the selected anchor governs, which comes back
@@ -126,10 +131,30 @@ From that, the things actually worth doing:
   effect reads as an effect when there is untouched footage either side of it
   to be surprised by.
 
-The two bulk operations in the **Mosh** menu are the extremes of the same
+Two of the bulk operations in the **Mosh** menu are the extremes of the same
 dial, and both are worth trying once to see the ends of the range: delete
 every anchor and nothing ever resets, delete every P-frame and nothing ever
 moves.
+
+## Muddling the anchors
+
+**Mosh → Shuffle the anchor pictures** is the third bulk move, and the one
+that most reliably produces something worth keeping. Every anchor stays where
+it is and keeps its own header bytes — only the pictures trade places, so the
+motion is left completely untouched. Each run then drags the wrong picture
+through the right movement.
+
+It is the transplant the anchor editor does by hand, applied to the whole
+video at once, with one difference that matters: every picture still comes
+from the footage, so the result reads as coherent-but-wrong rather than as
+noise. Applied to a project with several clips in it, the pictures cross
+between them and each source ends up moving with another's motion.
+
+Nothing is re-encoded. The pictures already exist as chunks, so this is the
+same payload splice an edit performs and it happens instantly — which makes
+it worth pressing repeatedly, since each press is a fresh draw. A picture is
+never left where it started, because an anchor that keeps its own picture is
+a wasted one.
 
 ## Moshing clips together
 
