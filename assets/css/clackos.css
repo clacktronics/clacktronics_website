@@ -479,5 +479,13 @@ button.task.minimised .task-icon { color: var(--menu-text); }
   .page { padding: 24px 20px; }
   #menubar { gap: 0; font-size: 12px; }
   .menu > button { padding: 0 8px; }
-  #resource-stats { gap: 7px; padding-left: 8px; font-size: 9px; }
+  /* Everything to the right of #tasks is flex: none and nowrap, so on a phone
+     the readouts were taking their full width out of a 390px bar and leaving
+     the window switcher — the one control in the taskbar you actually need —
+     23px to sit in. The telemetry and the build stamp are furniture; they go,
+     and the Plain HTML link stays, because the mirror being one tap away is
+     the point of putting it there. */
+  #resource-stats, #build-stamp-tb { display: none; }
+  /* narrower buttons so a second window is still legible in what is left */
+  button.task { min-width: 92px; max-width: 150px; padding: 0 9px; gap: 7px; }
 }

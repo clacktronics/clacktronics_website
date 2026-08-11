@@ -668,6 +668,23 @@ are part of the shell rather than content:
 Menus are inserted before `#menubar-right`, so they always fill the bar from
 the left however many there are.
 
+### The taskbar, and what it drops on a phone
+
+The taskbar holds the window buttons in `#tasks`, then three fixtures: the
+**Plain HTML** link to the mirror, the **CPU/RAM** readouts (browser telemetry
+— CPU is a pressure state, not a percentage; RAM is this page's JS heap), and
+the **build stamp** naming the deployed commit.
+
+`#tasks` is the only flexible one; everything after it is `flex: none` and
+`white-space: nowrap`. On a 390px phone those three were taking 292px of the
+bar between them and leaving the window switcher 23px to sit in — one open
+window's button wants 120px minimum, so it was unreadable and the control you
+most need on a small screen was the one squeezed out. Below 640px the
+telemetry and the build stamp are therefore hidden and the task buttons
+narrow, which gives `#tasks` about 243px and room for two legible windows.
+The Plain HTML link stays: the mirror being one tap away is the reason it is
+in the taskbar at all.
+
 ### Menu items (`menu.json`)
 
 ```json
