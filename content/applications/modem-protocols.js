@@ -1227,7 +1227,22 @@ global.ClackModem = {
   get: id => BY_ID[id],
   defaults: defaults,
   resolve: resolve,
-  encode: encode
+  encode: encode,
+  /* The alphabets and tone plans, exported so the demodulators in
+   * modem-decoders.js can invert these tables rather than keep second copies
+   * that would quietly stop matching. */
+  tables: {
+    DTMF_ROWS: DTMF_ROWS, DTMF_COLS: DTMF_COLS, DTMF_KEYS: DTMF_KEYS,
+    MF_TONES: MF_TONES,
+    ITA2_LTRS: ITA2_LTRS, ITA2_FIGS: ITA2_FIGS,
+    RTTY_LTRS_CODE: RTTY_LTRS_CODE, RTTY_FIGS_CODE: RTTY_FIGS_CODE,
+    MORSE: MORSE,
+    PSK_VARICODE: PSK_VARICODE,
+    LTC_FPS: LTC_FPS,
+    ZX_T: ZX_T, ZX_PILOT: ZX_PILOT, ZX_SYNC1: ZX_SYNC1, ZX_SYNC2: ZX_SYNC2,
+    ZX_ZERO: ZX_ZERO, ZX_ONE: ZX_ONE,
+    C64_CLOCK: C64_CLOCK, C64_SHORT: C64_SHORT, C64_MED: C64_MED, C64_LONG: C64_LONG
+  }
 };
 
 })(window);

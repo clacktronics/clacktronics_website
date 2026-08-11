@@ -196,20 +196,26 @@
         same keying the single-tone mode writes, so a filter narrow enough to sit on one tone
         reads that channel back on its own. The mix is scaled by a single number afterwards so
         that channels keyed at the same instant cannot clip.</p>
+      <h4>Reading it back</h4>
+      <p><a href="modem-rx.html">ClackModem Receiver</a> decodes thirteen of these modes from a file
+        or live from the microphone. Send a signal across with <b>To Recorder</b>, or put the two
+        windows side by side and let it listen to the speakers.</p>
       <h4>Limits</h4>
-      <p>Encoding only, for now. Signals are capped at three minutes — a long message at 45 baud is
-        a very long file.</p>
+      <p>Signals are capped at three minutes — a long message at 45 baud is a very long file.
+        V.22 DQPSK and multi-channel CW are encode-only; everything else can be read back.</p>
     </div>
   </div>
 </div>
 
-<!-- Loaded here rather than deferred from the head so it has run by the time
+<!-- Loaded here rather than deferred from the head so they have run by the time
      the app's own script does: an app that waits for DOMContentLoaded never
      starts if some other subresource on the page stalls. -->
 <script src="modem-protocols.js"></script>
+<script src="modem-ui.js"></script>
 <script>
 (() => {
 const appRoot = window.ClackOSMountRoot || document.currentScript?.getRootNode() || document;
+const UI = window.ClackModemUI;
 
 /* ---- elements ---- */
 const $ = sel => appRoot.querySelector(sel);
@@ -223,273 +229,38 @@ const yearEl = $('.mdm-year');
 const blurbEl = $('.mdm-blurb');
 const notesEl = $('.mdm-notes');
 const statEl = $('.mdm-stat');
-const specEl = $('.mdm-spec');
-const waveEl = $('.mdm-wave');
-const axisEl = $('.mdm-axis');
-const playheadEl = $('.mdm-play');
 const refEl = $('.mdm-ref');
-const specCx = specEl.getContext('2d');
-const waveCx = waveEl.getContext('2d');
+
+const scope = UI.createScope({
+  root: $('.mdm-scope'),
+  spec: $('.mdm-spec'),
+  wave: $('.mdm-wave'),
+  axis: $('.mdm-axis'),
+  playhead: $('.mdm-play')
+});
+const player = UI.createPlayer(scope);
+const clip = UI.createClipboard();
 
 /* ---- state ---- */
 let current = null;          /* the protocol descriptor */
 let values = {};             /* its parameter values */
 let result = null;           /* the last encode */
-let audioCtx = null, source = null, playStart = 0, raf = 0;
 let encodeTimer = 0;
 let touched = false;         /* has the user edited the text away from the example */
 
-const say = (msg, isNote) => { notesEl.innerHTML = msg || ''; void isNote; };
-
-/* ---- WAV, same 16-bit mono container the Sound Recorder writes ---- */
-function encodeWav(samples, rate) {
-  const n = samples.length;
-  const buf = new ArrayBuffer(44 + n * 2);
-  const v = new DataView(buf);
-  const wstr = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  wstr(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); wstr(8, 'WAVE');
-  wstr(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-  wstr(36, 'data'); v.setUint32(40, n * 2, true);
-  for (let i = 0; i < n; i++) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-  }
-  return new Blob([buf], { type: 'audio/wav' });
-}
-
-/* the clipboard the Sound Recorder instances share, so a generated signal can
- * be pasted straight into one and edited there */
-const clipBus = 'BroadcastChannel' in window ? new BroadcastChannel('clackos-audio-clipboard') : null;
-
-/* ---- FFT, for the spectrogram ---- */
-const FFT_N = 512;
-const fftCos = new Float32Array(FFT_N / 2), fftSin = new Float32Array(FFT_N / 2);
-for (let i = 0; i < FFT_N / 2; i++) {
-  fftCos[i] = Math.cos(-2 * Math.PI * i / FFT_N);
-  fftSin[i] = Math.sin(-2 * Math.PI * i / FFT_N);
-}
-const hann = new Float32Array(FFT_N);
-for (let i = 0; i < FFT_N; i++) hann[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / FFT_N);
-
-function fft(re, im) {
-  const n = re.length;
-  for (let i = 1, j = 0; i < n; i++) {
-    let bit = n >> 1;
-    for (; j & bit; bit >>= 1) j ^= bit;
-    j ^= bit;
-    if (i < j) {
-      let t = re[i]; re[i] = re[j]; re[j] = t;
-      t = im[i]; im[i] = im[j]; im[j] = t;
-    }
-  }
-  for (let len = 2; len <= n; len <<= 1) {
-    const step = n / len;
-    for (let i = 0; i < n; i += len) {
-      for (let k = 0; k < len / 2; k++) {
-        const c = fftCos[k * step], s = fftSin[k * step];
-        const ar = re[i + k], ai = im[i + k];
-        const br = re[i + k + len / 2], bi = im[i + k + len / 2];
-        const tr = br * c - bi * s, ti = br * s + bi * c;
-        re[i + k] = ar + tr; im[i + k] = ai + ti;
-        re[i + k + len / 2] = ar - tr; im[i + k + len / 2] = ai - ti;
-      }
-    }
-  }
-}
-
-/* Everything these protocols do lives under 4 kHz, so the waterfall stops
- * there rather than spending four fifths of its height on silence. */
-const SPEC_TOP_HZ = 4000;
-
-function drawSpectrogram(samples, rate) {
-  const W = specEl.width, H = specEl.height;
-  specCx.fillStyle = '#09140d';
-  specCx.fillRect(0, 0, W, H);
-  axisEl.textContent = '';
-  if (!samples || samples.length < FFT_N) return;
-
-  const bins = Math.round(SPEC_TOP_HZ / (rate / FFT_N));
-  const img = specCx.createImageData(W, H);
-  const hop = Math.max(1, (samples.length - FFT_N) / W);
-  const re = new Float32Array(FFT_N), im = new Float32Array(FFT_N);
-  const col = new Float32Array(bins);
-
-  for (let x = 0; x < W; x++) {
-    const at = Math.round(x * hop);
-    for (let i = 0; i < FFT_N; i++) {
-      re[i] = (samples[at + i] || 0) * hann[i];
-      im[i] = 0;
-    }
-    fft(re, im);
-    for (let b = 0; b < bins; b++) {
-      const mag = Math.sqrt(re[b] * re[b] + im[b] * im[b]) / (FFT_N / 4);
-      col[b] = Math.max(0, Math.min(1, (20 * Math.log10(mag + 1e-9) + 62) / 62));
-    }
-    for (let y = 0; y < H; y++) {
-      /* low frequencies at the bottom, the way a waterfall is read */
-      const b = Math.min(bins - 1, Math.round((1 - y / H) * (bins - 1)));
-      const v = col[b];
-      const o = (y * W + x) * 4;
-      /* dark ink → leaf → paper, the app's own ramp */
-      img.data[o] = 9 + v * v * 240;
-      img.data[o + 1] = 20 + Math.pow(v, 0.7) * 222;
-      img.data[o + 2] = 13 + Math.pow(v, 1.4) * 208;
-      img.data[o + 3] = 255;
-    }
-  }
-  specCx.putImageData(img, 0, 0);
-
-  for (let f = SPEC_TOP_HZ - 1000; f > 0; f -= 1000) {
-    const tick = document.createElement('span');
-    tick.textContent = (f / 1000) + 'k';
-    tick.style.top = ((1 - f / SPEC_TOP_HZ) * 100) + '%';
-    axisEl.appendChild(tick);
-  }
-}
-
-function drawWaveform(samples) {
-  const W = waveEl.width, H = waveEl.height;
-  waveCx.fillStyle = '#09140d';
-  waveCx.fillRect(0, 0, W, H);
-  if (!samples || !samples.length) return;
-  waveCx.strokeStyle = '#4fae7d';
-  waveCx.lineWidth = 1;
-  waveCx.beginPath();
-  const per = samples.length / W;
-  for (let x = 0; x < W; x++) {
-    let lo = 1, hi = -1;
-    const from = Math.floor(x * per), to = Math.min(samples.length, Math.floor((x + 1) * per) || from + 1);
-    for (let i = from; i < to; i++) { const v = samples[i]; if (v < lo) lo = v; if (v > hi) hi = v; }
-    if (lo > hi) { lo = hi = 0; }
-    waveCx.moveTo(x + 0.5, H / 2 - hi * H / 2);
-    waveCx.lineTo(x + 0.5, H / 2 - lo * H / 2);
-  }
-  waveCx.stroke();
-}
-
-/* The two canvases are sized by the layout, so their backing stores have to
- * follow the window rather than the width and height they were written with. */
-function fitCanvases() {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  let changed = false;
-  for (const el of [specEl, waveEl]) {
-    const w = Math.max(64, Math.round(el.clientWidth * dpr));
-    const h = Math.max(20, Math.round(el.clientHeight * dpr));
-    if (el.width !== w || el.height !== h) { el.width = w; el.height = h; changed = true; }
-  }
-  return changed;
-}
-
-/* Called by the ResizeObserver as soon as it starts observing, which is before
- * the deferred protocol library has run — so it must not reach for it. */
-function repaint() {
-  drawSpectrogram(result ? result.samples : null, result ? result.rate : 48000);
-  drawWaveform(result ? result.samples : null);
-}
-
-const scopeObserver = 'ResizeObserver' in window
-  ? new ResizeObserver(() => { if (fitCanvases()) repaint(); })
-  : null;
-if (scopeObserver) scopeObserver.observe($('.mdm-scope'));
+const say = msg => { notesEl.innerHTML = msg || ''; };
 
 /* ---- parameter form ---- */
 function buildParams() {
-  paramsEl.textContent = '';
-  for (const f of current.params) {
-    if (f.when && !f.when(values)) continue;
-    const row = document.createElement('label');
-    row.className = 'mdm-field';
-    const label = document.createElement('span');
-    label.textContent = f.label;
-    const wrap = document.createElement('span');
-    wrap.className = 'mdm-input';
-
-    let input;
-    if (f.type === 'select') {
-      input = document.createElement('select');
-      for (const [v, text] of f.options) {
-        const o = document.createElement('option');
-        o.value = v;
-        o.textContent = text;
-        input.appendChild(o);
-      }
-      input.value = values[f.id];
-    } else if (f.type === 'check') {
-      input = document.createElement('input');
-      input.type = 'checkbox';
-      input.checked = values[f.id] !== false;
-    } else if (f.type === 'text') {
-      input = document.createElement('input');
-      input.type = 'text';
-      input.value = values[f.id] == null ? '' : values[f.id];
-    } else {
-      input = document.createElement('input');
-      input.type = 'number';
-      if (f.min != null) input.min = f.min;
-      if (f.max != null) input.max = f.max;
-      if (f.step != null) input.step = f.step;
-      input.value = values[f.id];
-    }
-    input.addEventListener('input', () => {
-      values[f.id] = f.type === 'check' ? input.checked
-        : f.type === 'select' || f.type === 'text' ? input.value
-        : parseFloat(input.value);
-      values = ClackModem.resolve(current, values);
-      /* a preset select can change which fields are relevant */
-      if (f.type === 'select' || f.type === 'check') buildParams();
-      scheduleEncode();
-    });
-
-    wrap.appendChild(input);
-    if (f.unit) {
-      const u = document.createElement('span');
-      u.className = 'mdm-unit';
-      u.textContent = f.unit;
-      wrap.appendChild(u);
-    }
-    row.appendChild(label);
-    row.appendChild(wrap);
-    paramsEl.appendChild(row);
-  }
-}
-
-/* ---- protocol selection ---- */
-function buildProtocolLists() {
-  const groups = [];
-  for (const p of ClackModem.PROTOCOLS) {
-    let g = groups.find(x => x.name === p.group);
-    if (!g) groups.push(g = { name: p.group, items: [] });
-    g.items.push(p);
-  }
-  for (const g of groups) {
-    const og = document.createElement('optgroup');
-    og.label = g.name;
-    for (const p of g.items) {
-      const o = document.createElement('option');
-      o.value = p.id;
-      o.textContent = p.name;
-      og.appendChild(o);
-    }
-    selectEl.appendChild(og);
-  }
-  /* the same hierarchy in the menu bar, where the descriptions have room */
-  const menu = $('.mdm-protomenu');
-  groups.forEach((g, i) => {
-    if (i) menu.appendChild(Object.assign(document.createElement('div'), { className: 'sep' }));
-    const head = document.createElement('button');
-    head.disabled = true;
-    head.textContent = g.name;
-    menu.appendChild(head);
-    for (const p of g.items) {
-      const b = document.createElement('button');
-      b.dataset.proto = p.id;
-      b.textContent = p.name;
-      menu.appendChild(b);
-    }
+  UI.buildParamForm(paramsEl, current, values, (id, v, rebuild) => {
+    values[id] = v;
+    values = ClackModem.resolve(current, values);
+    if (rebuild) buildParams();
+    scheduleEncode();
   });
 }
 
+/* ---- protocol selection ---- */
 function selectProtocol(id, keepText) {
   const proto = ClackModem.get(id);
   if (!proto) return;
@@ -513,81 +284,39 @@ function scheduleEncode() {
 }
 
 function encode() {
-  stop();
+  player.stop();
   let r;
   try {
     r = ClackModem.encode(current.id, textEl.value, values);
   } catch (err) {
     result = null;
     say('<b>Could not encode:</b> ' + String(err.message || err));
-    repaint();
+    scope.clear();
     statEl.textContent = '';
     return;
   }
   result = r;
-  fitCanvases();
-  repaint();
+  scope.drawBuffer(r.samples, r.rate);
   const kb = (r.samples.length * 2 / 1024).toFixed(0);
-  statEl.textContent = r.seconds.toFixed(2) + ' s · ' + r.rate / 1000 + ' kHz · ' + kb + ' KB';
+  statEl.textContent = r.seconds.toFixed(2) + ' s \u00b7 ' + r.rate / 1000 + ' kHz \u00b7 ' + kb + ' KB';
   say(r.notes.length ? r.notes.join(' ') : 'Ready.');
 }
 
-/* ---- transport ---- */
-function ensureCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
-}
-
-function play() {
-  if (!result || !result.samples.length) return;
-  stop();
-  const ctx = ensureCtx();
-  /* the signal is generated at a fixed 48 kHz; if the output device runs at
-   * another rate the buffer says so and the browser resamples it */
-  const buf = ctx.createBuffer(1, result.samples.length, result.rate);
-  buf.copyToChannel(result.samples, 0);
-  source = ctx.createBufferSource();
-  source.buffer = buf;
-  source.connect(ctx.destination);
-  source.onended = () => { source = null; playheadEl.style.display = 'none'; cancelAnimationFrame(raf); raf = 0; };
-  playStart = ctx.currentTime;
-  source.start();
-  playheadEl.style.display = 'block';
-  const follow = () => {
-    if (!source) return;
-    const t = (audioCtx.currentTime - playStart) / result.seconds;
-    playheadEl.style.left = (Math.min(1, Math.max(0, t)) * 100) + '%';
-    raf = requestAnimationFrame(follow);
-  };
-  follow();
-}
-
-function stop() {
-  if (source) { source.onended = null; try { source.stop(); } catch {} source = null; }
-  playheadEl.style.display = 'none';
-  cancelAnimationFrame(raf);
-  raf = 0;
-}
-
+/* ---- file and clipboard ---- */
 function save() {
   if (!result || !result.samples.length) { say('Nothing to save.'); return; }
-  const suggested = current.id + '.wav';
-  const name = prompt('Save audio as:', suggested);
-  if (!name) return;
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(encodeWav(result.samples, result.rate));
-  a.download = /\.wav$/i.test(name) ? name : name + '.wav';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  say('Saved ' + a.download + ' (downloaded).');
+  const name = UI.saveWav(result.samples, result.rate, current.id + '.wav');
+  if (name) say('Saved ' + name + ' (downloaded).');
 }
 
 function toRecorder() {
   if (!result || !result.samples.length) { say('Nothing to copy.'); return; }
-  if (!clipBus) { say('This browser has no BroadcastChannel, so the shared clipboard is unavailable.'); return; }
-  clipBus.postMessage({ type: 'clip', samples: result.samples, rate: result.rate });
-  say('Copied to the shared audio clipboard — paste it in Sound Recorder with Edit → Paste Insert.');
+  if (!clip.post(result.samples, result.rate)) {
+    say('This browser has no BroadcastChannel, so the shared clipboard is unavailable.');
+    return;
+  }
+  say('Copied to the shared audio clipboard \u2014 paste it in Sound Recorder with Edit \u2192 Paste Insert, ' +
+    'or read it back in ClackModem Receiver with File \u2192 From Shared Clipboard.');
 }
 
 /* ---- commands ---- */
@@ -597,8 +326,8 @@ function runCmd(cmd) {
     case 'sample': textEl.value = current.sample; touched = false; encode(); break;
     case 'save': save(); break;
     case 'clip': toRecorder(); break;
-    case 'play': play(); break;
-    case 'stop': stop(); break;
+    case 'play': if (result) player.play(result.samples, result.rate); break;
+    case 'stop': player.stop(); break;
     case 'defaults': values = ClackModem.defaults(current); buildParams(); encode(); break;
     case 'ref': refEl.classList.toggle('open'); break;
   }
@@ -608,39 +337,28 @@ function runCmd(cmd) {
 selectEl.addEventListener('change', () => selectProtocol(selectEl.value, true));
 textEl.addEventListener('input', () => { touched = true; scheduleEncode(); });
 
-const rms = appRoot.querySelectorAll('.rm');
-const closeRm = () => rms.forEach(m => m.classList.remove('open'));
-rms.forEach(m => {
-  m.querySelector(':scope > button').addEventListener('click', e => {
-    e.stopPropagation();
-    const was = m.classList.contains('open');
-    closeRm();
-    if (!was) m.classList.add('open');
-  });
-});
-$('.rm-bar').addEventListener('click', e => {
-  const proto = e.target.closest('[data-proto]');
-  if (proto) { closeRm(); selectProtocol(proto.dataset.proto, true); return; }
-  const cmd = e.target.closest('[data-cmd]');
-  if (!cmd || cmd.disabled) return;
-  closeRm();
-  runCmd(cmd.dataset.cmd);
+UI.wireMenuBar(appRoot, {
+  onCmd: runCmd,
+  onProto: id => selectProtocol(id, true)
 });
 $('.mdm-btns').addEventListener('click', e => {
   const cmd = e.target.closest('[data-cmd]');
   if (cmd) runCmd(cmd.dataset.cmd);
 });
-appRoot.addEventListener('click', e => { if (!e.target.closest('.rm')) closeRm(); });
 
 if (appRoot !== document) appRoot.host.addEventListener('clackos-disconnect', () => {
   clearTimeout(encodeTimer);
-  stop();
-  if (scopeObserver) scopeObserver.disconnect();
-  if (audioCtx) audioCtx.close().catch(() => {});
-  if (clipBus) clipBus.close();
+  player.stop();
+  scope.destroy();
+  UI.closeAudioContext();
+  clip.close();
 }, { once: true });
 
-buildProtocolLists();
+UI.buildProtocolLists({
+  protocols: ClackModem.PROTOCOLS,
+  select: selectEl,
+  menu: $('.mdm-protomenu')
+});
 selectProtocol('dtmf', false);
 })();
 </script>

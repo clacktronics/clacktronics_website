@@ -683,13 +683,40 @@ windows, and desktop actions.
   audio clipboard to edit it there. The modulators live in
   `applications/modem-protocols.js`, one `encode` per protocol over a single
   Writer that owns sample timing and phase; the framing helpers are kept
-  separate from the tone generation so decoders can be added beside them.
-  Encoders were verified by writing demodulators for them: the tone modes
-  through a Goertzel bank, the FSK modes through a matched-filter detector, the
-  tape and timecode formats through edge timing, and the phase modes through a
-  differential slicer; the multi-channel CW mix was read back one channel at a
-  time, each through a filter narrow enough to reject its neighbours. Signals
-  are capped at three minutes.
+  separate from the tone generation so the decoders could be written beside
+  them. Signals are capped at three minutes.
+- `applications/modem-rx.html` (Applications → Multimedia → ClackModem
+  Receiver) — the other half: it takes audio and reads it back into text.
+  Thirteen of the fifteen modes decode (V.22 DQPSK and multi-channel CW are
+  encode-only so far). Audio comes from a WAV or other file the browser can
+  decode, from a drop onto the window, from the shared audio clipboard, or live
+  from the microphone, where the waterfall scrolls and characters appear as
+  they arrive. The parameters are the tuning controls — mark and space
+  frequencies, baud, framing — and what the demodulator actually measured is
+  shown beneath them along with a lock lamp, which is the quickest way to tell
+  a mistuned parameter from a bad recording. Output can be read as text or as a
+  timestamped event log carrying frame boundaries, callsigns and checksum
+  results. Because both windows are ordinary apps, putting the encoder and the
+  receiver side by side and pressing Play in one while the other listens
+  decodes the signal acoustically, out of the speakers and back in through the
+  microphone.
+- `applications/modem-decoders.js` — the demodulators, in four front ends: a
+  Goertzel tone bank for DTMF and MF R1; a quadrature correlator pair feeding
+  asynchronous framing for Bell 202, Bell 103, V.21, V.23, RTTY and the Kansas
+  City Standard, and a bit-clock recovery loop with NRZI, bit destuffing and a
+  verified frame check sequence for AX.25; zero-crossing interval timing for
+  the ZX Spectrum and C64 tape formats and SMPTE timecode, checksums verified;
+  and a differential detector with the varicode alphabet for PSK31. Morse is
+  read from the envelope of the keyed tone. Every decoder is a state machine
+  fed by `push()`, so the same code runs over a whole file and over a
+  microphone delivering a few thousand samples at a time. The alphabets and
+  tone plans are read back out of `modem-protocols.js` through its `tables`
+  export rather than copied, so an encoder's alphabet cannot change without its
+  decoder following.
+- `applications/modem-ui.js` — what the two share: the waterfall and waveform
+  scope (including its live scrolling mode, one column per FFT hop), the
+  parameter form, the protocol menus, the 16-bit WAV container, file reading
+  and resampling, the shared audio clipboard and the transport.
 - `applications/clacksweeper.html` (Applications → Games → Clacksweeper) — a
   classic minesweeper game with Beginner, Intermediate, Expert and
   custom boards; safe first reveal; flags and question marks; number chording;
