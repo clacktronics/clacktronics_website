@@ -1573,10 +1573,32 @@ with `ErrorDocument 404 /404.html` — a server-root path, so it tracks `SUBDIR`
 in the deploy workflow. It is `noindex`: a soft 404 in the index is worse than
 no page at all.
 
-`index.html` carries a relative `<link rel="canonical" href="plain/index.html">`
-so the empty desktop shell doesn't compete with the mirror's copy of the same
-page — the shell serves the desktop to every device, so the canonical link is
-the only thing pointing crawlers at the mirror.
+### Which URL is the home page
+
+The desktop boots `content/file/home.md` into a window, so the site root and
+`plain/index.html` render the same page and only one of them should be indexed.
+It is the root: it is what people link to, it reads properly in a search result,
+and it is the desktop the site is actually for. `index.html` therefore carries
+`<link rel="canonical" href="./">`, and `build_plain_site.py` points the
+mirror's home page back at the root rather than at itself.
+
+`./` rather than a self-referencing absolute URL because it resolves to the site
+root from `/index.html` and from `/index.html?desktop=1` — the link back from
+every mirror page's footer — as well as from `/`, folding all three addresses
+into one; and because staying relative keeps it right under `SUBDIR`. The
+shell's `<title>` and description are home.md's `seoTitle:` and `description:`,
+the same pair the mirror's copy carries, so the two agree in a search result;
+they are hand-written in `index.html` and need keeping in step if that
+frontmatter changes.
+
+This is the one place a mirror page's canonical link is not its own address, so
+`build_plain_site.py` keeps the two ideas apart: `page_url()` is where a page is
+served from and stays the base for resolving its relative links (og:image would
+break otherwise), while `canonical_url()` is the address crawlers are given and
+special-cases the home page. The sitemap lists the root and not
+`plain/index.html`. Every other mirror page is the only URL its content has and
+keeps its own self-canonical — the desktop's deep links are fragments, which
+never become separate URLs.
 
 The description is taken from `description:` in the frontmatter, else
 `tagline:`, else the first real paragraph, trimmed to ~155 characters. Blog
