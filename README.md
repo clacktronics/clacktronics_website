@@ -1195,7 +1195,10 @@ windows, and desktop actions.
   colours; arbitrary bitmap dimensions up to 8192 × 8192; undo/redo with a
   Photoshop-style History panel under the layers (every state named after the
   action that made it, click one to step back or forward, ⌫ clears the states
-  to release their memory, Layer → Minimise History Panel folds it away); local or
+  to release their memory, Layer → Minimise History Panel folds it away). The
+  rail holding both panels starts folded to its edge tab so a fresh window gives
+  the canvas the width; open it from the tab or with Layer → Minimise Layers
+  Panel and that choice is remembered from then on. Local or
   website background opening; PNG saving and uploading straight to the web host
   (File → Upload to website…); image-size resampling, anchored
   canvas resizing, crop selection, flip, invert and clear. Transparent pixels
