@@ -155,8 +155,10 @@
 /* The tool palette grew past the point where one long column of icons could be
    read, so each group is a menu button and its tools live in a drop-down. The
    rail is then short enough to see at a glance, and the drop-down has room for
-   names next to the icons. */
-.paint-tools { display: flex; flex-direction: column; gap: 5px; width: 78px; overflow-x: hidden; overflow-y: auto; }
+   names next to the icons. Its width only has to clear the longest group name
+   ("Texture") under the icon, so it is kept close to that — every pixel spent
+   on the rail is a pixel the picture does not get. */
+.paint-tools { display: flex; flex-direction: column; gap: 5px; width: 58px; overflow-x: hidden; overflow-y: auto; }
 .paint-tool-menu { position: relative; }
 .paint-tool-menu-btn, .paint-tool-solo {
   all: unset; box-sizing: border-box; cursor: pointer; width: 100%;
@@ -180,7 +182,7 @@
 .paint-tool-name { font-size: 10px; white-space: nowrap; }
 .paint-tool-solo .paint-zoom-icon { margin: 3px 0 1px; }
 @media (max-width: 560px) {
-  .paint-tools { width: 62px; gap: 4px; }
+  .paint-tools { width: 50px; gap: 4px; }
   .paint-tool-dd { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 /* One options row per tool, in the place every photo editor puts it: under the
@@ -1507,7 +1509,13 @@ function setLayersCollapsed(collapsed, announce) {
 }
 
 layerToggle.addEventListener('click', () => setLayersCollapsed(!layersCollapsed, true));
-try { if (localStorage.getItem(LAYER_PANEL_KEY) === '1') setLayersCollapsed(true, false); } catch { /* private browsing */ }
+/* The rail starts folded away, because most of a first visit is spent drawing
+   on one layer and the canvas wants the width more than an empty panel does.
+   Opening it is what records a preference — only a stored '0' keeps it open,
+   so a reader who never touches it never has to close it. */
+let storedLayerPanel = null;
+try { storedLayerPanel = localStorage.getItem(LAYER_PANEL_KEY); } catch { /* private browsing */ }
+if (storedLayerPanel !== '0') setLayersCollapsed(true, false);
 
 const setStatus = message => {
   if ((seamXButton.getAttribute('aria-pressed') === 'true' || seamYButton.getAttribute('aria-pressed') === 'true') && !seamAnimating) updateOffsetPreview();
