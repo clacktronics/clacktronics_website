@@ -89,6 +89,7 @@ Editing any of these gets overwritten by the next script run or CI job:
 | --- | --- |
 | `plain/**`, `sitemap.xml`, `robots.txt`, `feed.xml`, `404.html` | `scripts/build_plain_site.py` |
 | `content/file/blog.md`, `blog-page-N.md`, `blog-list.md` | `scripts/build_blog_index.py` |
+| the `application/ld+json` block in each `content/applications/*.html` | `scripts/build_app_metadata.py` |
 | `content/media-index.json` | `scripts/build_media_index.py` |
 | `content/applications/calendar/luma.json` | `scripts/fetch_luma_events.py` (CI, manual dispatch) |
 | `content/applications/qbasic/programs/programs.json` | `scripts/build_qbasic_programs.py` |
@@ -213,6 +214,11 @@ A new app should:
   file: a canonical link and no `noindex` puts it in the sitemap. Desktop
   furniture (editors, games, file manager) is `noindex,follow`; distinctive
   tools are indexed. There is no second list to keep in step;
+- get its `WebApplication` schema.org block from
+  `scripts/build_app_metadata.py` — run it after adding the app or editing its
+  description or menu entry. The block is derived from the app's own
+  `description` meta and its `menu.json` entry, and is rewritten in place, so
+  **edit the description, not the block**;
 - be registered in `content/applications/menu.json`.
 
 Desktop integration hooks:

@@ -1533,6 +1533,37 @@ second list to keep in step. Their canonical links are hardcoded to the live
 origin (unlike the mirror's, which follow `SITE_URL`) — if the domain ever
 changes, they need a find-and-replace.
 
+What those tags could not say is *what kind of thing the page is*. Most apps
+render nothing at all until JavaScript has run — `circuit.html` is a bare
+`<iframe>`, so a crawler that doesn't get as far as executing the page finds an
+empty body and a sentence of description. `scripts/build_app_metadata.py` gives
+each indexed app a `WebApplication` block in `<head>` saying it is a free,
+browser-based tool of a particular category, which stands on its own without
+anything being rendered:
+
+```sh
+python3 scripts/build_app_metadata.py          # rewrite the blocks
+python3 scripts/build_app_metadata.py --check  # verify without writing
+```
+
+Every field is derived from something the repo already states — the name and
+the `applicationCategory` from the app's entry in
+`content/applications/menu.json` (the submenu it sits in picks the category,
+so moving an app between submenus moves its category with it), the description
+and URL from the page's own `<meta>` tags. **So the way to change what a
+crawler is told about an app is to edit that app's
+`<meta name="description">` and re-run the script** — the block is generated
+between markers and hand edits to it are overwritten. Apps carrying `noindex`
+get no block at all; the script applies the same two tests as the sitemap
+builder, so the two can't disagree about an app. The `publisher` node shares
+the `#organization` `@id` the mirror's home page uses, which is what ties the
+apps and the site together as one publisher rather than two organisations with
+the same name.
+
+Both the mirror workflow and the deploy workflow run the script, for the same
+reason they rebuild the blog index — a bot push doesn't re-trigger them, so the
+tree they check out can still hold the previous block.
+
 ### The 404 page
 
 Two websites came before this one and their URLs are still linked from other
@@ -1542,10 +1573,32 @@ with `ErrorDocument 404 /404.html` — a server-root path, so it tracks `SUBDIR`
 in the deploy workflow. It is `noindex`: a soft 404 in the index is worse than
 no page at all.
 
-`index.html` carries a relative `<link rel="canonical" href="plain/index.html">`
-so the empty desktop shell doesn't compete with the mirror's copy of the same
-page — the shell serves the desktop to every device, so the canonical link is
-the only thing pointing crawlers at the mirror.
+### Which URL is the home page
+
+The desktop boots `content/file/home.md` into a window, so the site root and
+`plain/index.html` render the same page and only one of them should be indexed.
+It is the root: it is what people link to, it reads properly in a search result,
+and it is the desktop the site is actually for. `index.html` therefore carries
+`<link rel="canonical" href="./">`, and `build_plain_site.py` points the
+mirror's home page back at the root rather than at itself.
+
+`./` rather than a self-referencing absolute URL because it resolves to the site
+root from `/index.html` and from `/index.html?desktop=1` — the link back from
+every mirror page's footer — as well as from `/`, folding all three addresses
+into one; and because staying relative keeps it right under `SUBDIR`. The
+shell's `<title>` and description are home.md's `seoTitle:` and `description:`,
+the same pair the mirror's copy carries, so the two agree in a search result;
+they are hand-written in `index.html` and need keeping in step if that
+frontmatter changes.
+
+This is the one place a mirror page's canonical link is not its own address, so
+`build_plain_site.py` keeps the two ideas apart: `page_url()` is where a page is
+served from and stays the base for resolving its relative links (og:image would
+break otherwise), while `canonical_url()` is the address crawlers are given and
+special-cases the home page. The sitemap lists the root and not
+`plain/index.html`. Every other mirror page is the only URL its content has and
+keeps its own self-canonical — the desktop's deep links are fragments, which
+never become separate URLs.
 
 The description is taken from `description:` in the frontmatter, else
 `tagline:`, else the first real paragraph, trimmed to ~155 characters. Blog

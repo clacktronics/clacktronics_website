@@ -143,8 +143,28 @@ def fix_url(url, page_out, allow_fragment=True):
 DESCRIPTION_LIMIT = 155
 
 def page_url(page_out):
-    """Absolute URL of a mirror page (canonical link and sitemap entry)."""
+    """Where a mirror page is actually served from.
+
+    This is the page's own location, so it is what relative links inside it
+    resolve against — keep it that way even when the address crawlers are given
+    differs (see canonical_url).
+    """
     return SITE_URL + 'plain/' + page_out
+
+def canonical_url(page_out):
+    """The address crawlers should treat as this page's own.
+
+    The mirror's home page is the one place this differs from where the file
+    sits. The desktop shell at the site root builds the same home.md into a
+    window at runtime, so the root and plain/index.html end up being the same
+    page; of the two the root is the one worth indexing — it is what people
+    link to, it reads properly in a search result, and it is the desktop the
+    site is actually for. So the shell claims the root and the mirror's copy
+    points at it, rather than the other way round.
+
+    Every other mirror page is the only URL its content has, and keeps itself.
+    """
+    return SITE_URL if page_out == 'index.html' else page_url(page_out)
 
 def absolute_url(url, page_out):
     """Promote a URL already resolved for this page to an absolute one."""
@@ -242,7 +262,7 @@ def organization():
 
 def json_ld(md_rel, page_out, title, description, image):
     """Schema.org metadata: BlogPosting for posts, WebSite for the home page."""
-    url = page_url(page_out)
+    url = canonical_url(page_out)
     if page_out.startswith('blog/'):
         data = {'@context': 'https://schema.org', '@type': 'BlogPosting',
                 'headline': title, 'url': url, 'mainEntityOfPage': url,
@@ -286,12 +306,12 @@ def head_meta(md_rel, page_out, meta, body):
     if noindex:
         # Test and scratch pages stay crawlable but out of the index.
         tags.append('<meta name="robots" content="noindex,follow">')
-    tags += [f'<link rel="canonical" href="{esc(page_url(page_out))}">',
+    tags += [f'<link rel="canonical" href="{esc(canonical_url(page_out))}">',
              f'<meta property="og:site_name" content="{esc(SITE_NAME)}">',
              '<meta property="og:type" content="%s">'
              % ('article' if page_out.startswith('blog/') else 'website'),
              f'<meta property="og:title" content="{esc(title)}">',
-             f'<meta property="og:url" content="{esc(page_url(page_out))}">']
+             f'<meta property="og:url" content="{esc(canonical_url(page_out))}">']
     if description:
         tags.append(f'<meta property="og:description" content="{esc(description)}">')
     if image:
@@ -1288,13 +1308,13 @@ def main():
         dest.write_text(page, encoding='utf-8', newline='\n')
         if noindex:
             continue
-        indexable.append((page_url(page_out), last_modified(md_rel)))
+        indexable.append((canonical_url(page_out), last_modified(md_rel)))
         # Posts live in blog/, the listings (blog.html, blog-page-N.html) do
         # not — so this picks up the writing and none of the indexes of it.
         if page_out.startswith('blog/'):
             meta, body = parse_front_matter(
                 (content / md_rel).read_text(encoding='utf-8'))
-            posts.append((search_title(meta, body), page_url(page_out),
+            posts.append((search_title(meta, body), canonical_url(page_out),
                           summarise(meta, body), post_date(md_rel)))
     # Newest first, and an undated post sorts last rather than first.
     posts.sort(key=lambda item: item[3] or '', reverse=True)

@@ -97,6 +97,14 @@ jobs:
         # here makes the deploy self-sufficient. Tree-only; nothing is committed.
         run: python3 scripts/build_blog_index.py
 
+      - name: Refresh the applications' schema.org blocks
+        # Same reasoning as the blog index above: the plain-mirror workflow
+        # commits these with the automatic GITHUB_TOKEN, so the checkout for
+        # the push that changed an app description still carries the old block.
+        # Rebuilding here keeps the deployed pages describing themselves
+        # accurately. Tree-only; nothing is committed.
+        run: python3 scripts/build_app_metadata.py
+
       - name: Regenerate plain HTML mirror
         # Build the static plain/ pages from the current content so the deploy
         # always ships an up-to-date mirror, even before the plain-mirror
