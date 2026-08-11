@@ -245,7 +245,7 @@ via GitHub and that restriction is what keeps it writing only into that folder.
 | --- | --- | --- |
 | `blog-index.yml` | push touching `content/file/blog/**` | rebuilds the blog windows, commits them |
 | `plain-mirror.yml` | push touching `content/**` or the generator | rebuilds `plain/` + sitemap/robots/feed/404, commits them |
-| `deploy-purely.yml` | push to `main`, or manual | stamps `version.json`, rebuilds blog + mirror, gzips `.wasm`, rsyncs over SSH to the host |
+| `deploy-purely.yml` | push to `main` (except `todo.md`/`README.md`/`.github/**`), or manual | stamps `version.json`, rebuilds blog + mirror, gzips `.wasm`, rsyncs over SSH to the host |
 | `luma-events.yml` | manual | mirrors the Luma events into `calendar/luma.json`, then triggers the deploy |
 | `dead-links.yml` | 1st of the month, or manual | checks outbound links, repoints dead ones at Wayback snapshots, **opens a PR** (never pushes to `main`) |
 
@@ -264,6 +264,12 @@ The deploy uses `rsync` **without `--delete`** — it never removes anything on
 the host, which is what protects `assets/uploads/` and `assets/old_assets/`
 (neither is in Git). Files deleted from the repo therefore linger on the host
 until removed by hand.
+
+The host serves the deploy directory straight to the web, so anything rsynced
+up is a public URL. The repo's own furniture — `README.md`, `todo.md`,
+`CLAUDE.md`, `.gitignore` — is excluded from the upload for that reason, and
+excluded from the deploy trigger too. Adding a file to the rsync excludes does
+not take an already-uploaded copy down; that needs deleting on the host.
 
 ## Secrets and host-only paths
 
