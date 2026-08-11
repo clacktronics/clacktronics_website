@@ -21,4 +21,8 @@
   --accent-hover: #ffffff;
   --button-text: #ffffff;
   --disabled-text: #d1d1d1;
+  --danger: #000000;
+  --warning: #767676;
+  --ok: #00ffcc;
+  --info: #a0a0a0;
 }

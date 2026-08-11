@@ -49,8 +49,8 @@ kbd { float: right; margin-left: 24px; color: var(--sage); font: inherit; font-s
 .pdf-stage {
   position: relative; flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain;
   background-color: var(--reader-bg);
-  background-image: linear-gradient(45deg, rgba(255,255,255,.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.035) 75%),
-                    linear-gradient(45deg, rgba(255,255,255,.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.035) 75%);
+  background-image: linear-gradient(45deg, color-mix(in srgb, var(--paper) 4%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--paper) 4%, transparent) 75%),
+                    linear-gradient(45deg, color-mix(in srgb, var(--paper) 4%, transparent) 25%, transparent 25%, transparent 75%, color-mix(in srgb, var(--paper) 4%, transparent) 75%);
   background-position: 0 0, 8px 8px; background-size: 16px 16px;
 }
 .empty-state {
@@ -64,29 +64,29 @@ kbd { float: right; margin-left: 24px; color: var(--sage); font: inherit; font-s
 .pdf-mark {
   width: 68px; height: 82px; display: grid; place-items: end center; padding-bottom: 11px;
   color: var(--paper); background: var(--leaf-deep); border: 2px solid currentColor; border-radius: 5px;
-  font-weight: 600; font-size: 17px; letter-spacing: .08em; box-shadow: 5px 5px 0 rgba(9,20,13,.35);
+  font-weight: 600; font-size: 17px; letter-spacing: .08em; box-shadow: 5px 5px 0 color-mix(in srgb, var(--shadow) 35%, transparent);
   clip-path: polygon(0 0, 72% 0, 100% 22%, 100% 100%, 0 100%);
 }
 .pages { display: none; flex-direction: column; align-items: center; gap: 22px; padding: 28px 34px 64px; min-width: max-content; }
 .pages.open { display: flex; }
 .pdf-page {
-  position: relative; background: white; box-shadow: 0 4px 16px rgba(9,20,13,.42);
-  outline: 1px solid rgba(9,20,13,.42); flex: none; overflow: hidden;
+  position: relative; background: white; box-shadow: 0 4px 16px color-mix(in srgb, var(--shadow) 42%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--shadow) 42%, transparent); flex: none; overflow: hidden;
 }
 .pdf-page::before {
   content: attr(data-page-label); position: absolute; inset: 0; display: grid; place-items: center;
-  color: #7f897d; font-size: 11px; background: #f8f8f4;
+  color: var(--sage); font-size: 11px; background: var(--paper-deep);
 }
 .pdf-page.rendered::before { display: none; }
 .pdf-page canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .search-hits { position: absolute; inset: 0; pointer-events: none; }
 .search-hit {
-  position: absolute; background: rgba(255, 221, 64, .45); border: 1px solid rgba(130, 92, 0, .7);
+  position: absolute; background: color-mix(in srgb, var(--warning) 45%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 70%, var(--shadow));
   mix-blend-mode: multiply;
 }
 .drop-target {
   position: fixed; inset: 52px 18px 42px; z-index: 30; display: none; place-items: center;
-  border: 3px dashed var(--leaf); border-radius: 12px; background: rgba(9,20,13,.84);
+  border: 3px dashed var(--leaf); border-radius: 12px; background: var(--overlay-strong);
   color: var(--menu-text); font-size: 18px; letter-spacing: .08em; text-transform: uppercase;
 }
 body.dragging .drop-target { display: grid; }
@@ -111,13 +111,13 @@ body.dragging .drop-target { display: grid; }
 
 .site-modal {
   position: fixed; inset: 0; z-index: 50; display: none;
-  background: rgba(9,20,13,.42); align-items: center; justify-content: center;
+  background: var(--overlay); align-items: center; justify-content: center;
 }
 .site-modal.open { display: flex; }
 .site-box {
   width: min(620px, 92vw); max-height: 82vh; display: flex; flex-direction: column;
   background: var(--paper); border: 2px solid var(--ink); border-radius: 10px;
-  box-shadow: 8px 8px 0 rgba(9,20,13,.38);
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 38%, transparent);
 }
 .site-box header {
   display: flex; align-items: center; justify-content: space-between;
@@ -151,9 +151,9 @@ body.dragging .drop-target { display: grid; }
 
 dialog {
   margin: auto; width: min(430px, calc(100vw - 32px)); border: 2px solid var(--ink);
-  border-radius: 9px; background: var(--paper); color: var(--ink-soft); box-shadow: 8px 8px 0 rgba(9,20,13,.38);
+  border-radius: 9px; background: var(--paper); color: var(--ink-soft); box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 38%, transparent);
 }
-dialog::backdrop { background: rgba(9,20,13,.5); }
+dialog::backdrop { background: var(--overlay); }
 dialog form {
   position: relative; display: flex; flex-direction: column; align-items: center;
   gap: 14px; padding: 28px; text-align: center;

@@ -192,11 +192,17 @@ const refresh = () => {
 const say = t => { status.textContent = t; };
 
 /* ---- scope ---- */
+/* The canvas cannot resolve var(), so the scope reads its two colours back off
+   the element each frame — from the canvas rather than documentElement, so it
+   works the same in an iframe and in an integrated app's shadow root. */
+const scopeColour = (name, fallback) =>
+  getComputedStyle(canvas).getPropertyValue(name).trim() || fallback;
+
 const drawScope = data => {
   const w = canvas.width, h = canvas.height;
-  cx.fillStyle = '#09140d';
+  cx.fillStyle = scopeColour('--ink', '#09140d');
   cx.fillRect(0, 0, w, h);
-  cx.strokeStyle = '#4fae7d';
+  cx.strokeStyle = scopeColour('--leaf', '#4fae7d');
   cx.lineWidth = 2;
   cx.beginPath();
   if (!data) { cx.moveTo(0, h / 2); cx.lineTo(w, h / 2); }
@@ -213,6 +219,9 @@ const scopeLoop = () => {
   drawScope(data);
 };
 const stopScope = () => { cancelAnimationFrame(raf); raf = 0; drawScope(null); };
+/* An idle scope is a still image, so nothing would repaint it on a theme
+   change until the next recording started. */
+window.addEventListener('clackos-themechange', () => { if (!raf) drawScope(null); });
 
 /* the analyser is visualisation-only and never feeds the speakers,
  * so a live microphone can't feed back */

@@ -105,6 +105,50 @@ Theme filenames are restricted to letters, numbers, dots, underscores and
 hyphens and must end in `.css`. This keeps every template self-contained in the
 theme folder and prevents the editor from writing elsewhere in the repository.
 
+### Status, scrim and series roles
+
+The palette proper describes surfaces, text and one accent. It has no word for
+"this went wrong" or "careful", so for a long time every app that needed one
+wrote its own red or amber out in hex — and then kept it through a theme
+change. Four roles close that gap, and the Theme Editor offers them under
+**Status**:
+
+| Variable | Used for |
+| --- | --- |
+| `--danger` | errors, destructive actions, recording, a mine going off |
+| `--warning` | cautions, a busy lamp, a hot level meter, code `[!CAUTION]` |
+| `--ok` | success and confirmation; defaults to `--leaf-deep` |
+| `--info` | informational text and secondary data; defaults to `--sage` in the editor |
+
+Three more groups are **derived in the base stylesheet rather than set by a
+theme**, so a palette written before they existed — or by someone who has never
+heard of them — still moves them:
+
+- `--overlay` and `--overlay-strong` are the scrims behind modals, dialogs and
+  drop targets, mixed out of `--shadow`. They used to be written as
+  `rgba(9, 20, 13, …)`, which is the *default* theme's ink, so every modal on
+  the website laid a swamp-green veil over whatever palette was actually
+  chosen.
+- `--series-1` … `--series-6` are plot traces and chart series, used by the
+  serial and MIDI consoles, the graphing calculator and Clacksweeper's
+  neighbour counts. They are derived from the palette, so a new theme gets a
+  matching set of traces without naming them.
+
+Because the derived roles are built from variables the theme *does* set, only
+the four status colours need adding when writing a palette by hand.
+
+**What is deliberately left alone.** Some colours on the site carry meaning
+rather than style, and a theme must not move them: the resistor colour code,
+the PCB layer colours in the panel and heater tools, CircuitJS1's green
+positive and red negative voltage, ClackPaint's transparency checkerboard and
+default swatches, the RGB channel traces in the gamma table, and the two-tone
+selection outlines that have to read over arbitrary artwork. The graphing
+calculator's Oscilloscope and Blueprint surfaces keep their own fixed palettes
+too — those are drawing surfaces the reader picks, not the theme showing
+through. On the `monochrome` theme the series roles collapse to near-identical
+greys, which is that palette working as intended; the tools that use them all
+carry a label or a digit as the primary cue.
+
 ### Syntax highlighting
 
 Fenced code blocks are coloured by `assets/js/highlight.js`, a small tokeniser

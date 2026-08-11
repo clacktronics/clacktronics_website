@@ -89,7 +89,7 @@ kbd { font: inherit; color: var(--sage); }
 }
 .viewer::before {
   content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .15;
-  background-image: linear-gradient(rgba(79,174,125,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(79,174,125,.18) 1px, transparent 1px);
+  background-image: linear-gradient(color-mix(in srgb, var(--leaf) 18%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--leaf) 18%, transparent) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 .viewer.dragging { outline: 3px solid var(--leaf); outline-offset: -6px; }
@@ -98,7 +98,7 @@ kbd { font: inherit; color: var(--sage); }
   position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 10px; color: var(--menu-text); text-align: center;
 }
-.empty-state span { color: #8fcaa8; }
+.empty-state span { color: var(--menu-dim); }
 .empty-icon {
   display: grid; place-items: center; width: 54px; height: 54px; margin-bottom: 4px;
   border: 1px solid var(--leaf); border-radius: 8px; color: var(--leaf) !important; font-size: 22px;
@@ -106,7 +106,7 @@ kbd { font: inherit; color: var(--sage); }
 .empty-icon .pixel-icon { width: 32px; height: 32px; }
 .viewer-badge, .drop-hint {
   position: absolute; z-index: 3; top: 10px; padding: 5px 8px; border: 1px solid var(--leaf);
-  color: var(--leaf); background: rgba(9,20,13,.82); font-size: 10px; letter-spacing: .08em;
+  color: var(--leaf); background: var(--overlay-strong); font-size: 10px; letter-spacing: .08em;
 }
 .viewer-badge { left: 10px; max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .drop-hint { right: 10px; display: none; }
@@ -131,7 +131,7 @@ kbd { font: inherit; color: var(--sage); }
   min-width: 34px; height: 31px; border: 1px solid var(--ink); border-radius: 5px;
   background: var(--paper); color: var(--ink); font-weight: 600;
 }
-.icon-btn:hover, .toggle-btn:hover { background: #e9e1c3; }
+.icon-btn:hover, .toggle-btn:hover { background: color-mix(in srgb, var(--paper-deep) 84%, var(--ink)); }
 .icon-btn .pixel-icon { width: 18px; height: 18px; }
 .pause-bars { position: relative; display: inline-block; width: 15px; height: 17px; }
 .pause-bars::before, .pause-bars::after {
@@ -159,7 +159,7 @@ kbd { font: inherit; color: var(--sage); }
   padding: 9px 10px; overflow: hidden; border-right: 1px solid var(--ink); background: var(--paper);
 }
 .clip-segment:last-of-type { border-right: 0; }
-.clip-segment:hover, .clip-segment.active { background: #e5efd8; }
+.clip-segment:hover, .clip-segment.active { background: color-mix(in srgb, var(--leaf) 22%, var(--paper)); }
 .clip-segment.active::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--leaf-deep); }
 .clip-segment b, .clip-segment span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .clip-segment b { color: var(--ink); font-size: 11px; font-weight: 600; }
@@ -208,7 +208,7 @@ input[type="text"], select {
 }
 .btn.primary { background: var(--ink); color: var(--menu-text); }
 .btn.primary:hover { background: var(--leaf-deep); border-color: var(--leaf-deep); }
-.btn.ghost:hover { background: #e9e1c3; }
+.btn.ghost:hover { background: color-mix(in srgb, var(--paper-deep) 84%, var(--ink)); }
 .btn:disabled { opacity: .45; cursor: default; }
 
 .statusbar { display: flex; align-items: center; gap: 8px; min-height: 27px; padding: 5px 9px; border: 1px solid var(--paper-line); border-radius: 5px; color: var(--sage); background: var(--paper-deep); font-size: 10.5px; }
@@ -218,7 +218,7 @@ input[type="text"], select {
 @keyframes pulse { 50% { opacity: .25; } }
 
 dialog { width: min(540px, calc(100% - 28px)); border: 0; padding: 0; background: transparent; color: var(--ink-soft); }
-dialog::backdrop { background: rgba(9, 20, 13, .55); }
+dialog::backdrop { background: var(--overlay); }
 .dialog-card { border: 2px solid var(--ink); border-radius: 8px; padding: 16px; background: var(--paper); box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 25%, transparent); }
 .dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
 .dialog-close { all: unset; cursor: pointer; color: var(--ink); font-size: 24px; line-height: 1; }

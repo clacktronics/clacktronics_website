@@ -22,4 +22,8 @@
   --accent-hover: #82e8c4;
   --button-text: #f2f6ff;
   --disabled-text: #6e7892;
+  --danger: #ec7f74;
+  --warning: #e3b45f;
+  --ok: #6fd8b0;
+  --info: #7fb2ef;
 }

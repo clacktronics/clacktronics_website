@@ -23,11 +23,11 @@
 <link rel="stylesheet" href="../../assets/css/app.css">
 <style>
 :root {
-  --rx: #14231a;
-  --tx: #276b47;
-  --sys: #66755a;
-  --bad: #a53628;
-  --note: #3f66ad;
+  --rx: var(--ink-soft);
+  --tx: var(--leaf-deep);
+  --sys: var(--sage);
+  --bad: var(--danger);
+  --note: var(--info);
 }
 html, body, .term-app { height: 100%; min-height: 0; }
 body { overflow: hidden; }
@@ -58,7 +58,7 @@ button, input, select, textarea { font: inherit; }
   border: 1px solid var(--ink); background: var(--paper-deep);
 }
 .lamp.on { background: var(--leaf); }
-.lamp.busy { background: #d8a33c; }
+.lamp.busy { background: var(--warning); }
 .lamp.err { background: var(--bad); }
 
 .field { display: grid; grid-template-columns: minmax(0, 1fr) 132px; align-items: center; gap: 8px; margin: 6px 0; }
@@ -1598,18 +1598,33 @@ async function sendFile(file) {
 
 /* ---- plotter ---------------------------------------------------------- */
 
-const PLOT_COLOURS = ['#276b47', '#c0453a', '#3f66ad', '#a3762a', '#6d3f8f', '#2f8b8b', '#8b5a2b', '#4f7a1f'];
+/* Traces take the desktop's series roles rather than a fixed list. A line
+   keeps the slot it was handed; only the colour behind that slot moves, so a
+   theme change recolours the legend and the canvas together and a trace does
+   not swap identity mid-capture. There are six roles and room for eight lines,
+   so a very chatty device wraps and the last two repeat a colour — the legend
+   names every trace, and dropping the data would be the worse trade. */
+const PLOT_SLOTS = 6;
+/* The canvas cannot resolve var(), so every colour it paints is read back from
+   the live palette at draw time. */
+const themeColour = (name, fallback = '#09140d') =>
+  getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
+const plotColour = slot => themeColour(`--series-${slot + 1}`, '#276b47');
 const PLOT_POINTS = 900;
 const series = new Map();
 const plotCanvas = $('plot');
 let plotDirty = false;
+/* Repaint on a theme change even when no new samples have arrived, or the plot
+   keeps the old palette until the next value turns up — which on an idle port
+   can be a long time. */
+window.addEventListener('clackos-themechange', () => { plotDirty = true; });
 
 function plotPush(name, value) {
   if (!Number.isFinite(value)) return;
   let line = series.get(name);
   if (!line) {
     if (series.size >= 8) return;
-    line = { colour: PLOT_COLOURS[series.size % PLOT_COLOURS.length], data: [] };
+    line = { slot: series.size % PLOT_SLOTS, data: [] };
     series.set(name, line);
     drawLegend();
   }
@@ -1623,7 +1638,7 @@ function drawLegend() {
   if (!series.size) { legend.innerHTML = '<span>no numbers seen yet</span>'; return; }
   legend.innerHTML = [...series.entries()].map(([name, line]) =>
     `<span data-series="${esc(name)}" style="cursor:pointer;opacity:${line.hidden ? 0.4 : 1}" title="click to hide or show this line">` +
-    `<i style="background:${line.colour}"></i>${esc(name)} <b>${esc(line.data.length ? line.data[line.data.length - 1] : '')}</b></span>`).join('');
+    `<i style="background:var(--series-${line.slot + 1})"></i>${esc(name)} <b>${esc(line.data.length ? line.data[line.data.length - 1] : '')}</b></span>`).join('');
 }
 
 function sizePlot() {
@@ -1641,8 +1656,7 @@ function drawPlot() {
   const h = plotCanvas.height / ratio;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  const paper = getComputedStyle(document.body).getPropertyValue('--paper') || '#f8f2dd';
-  ctx.fillStyle = paper;
+  ctx.fillStyle = themeColour('--paper', '#f8f2dd');
   ctx.fillRect(0, 0, w, h);
 
   const shown = [...series.values()].filter(line => !line.hidden && line.data.length);
@@ -1671,8 +1685,8 @@ function drawPlot() {
   const plotH = bottom - top;
   const y = value => bottom - ((value - low) / (high - low)) * plotH;
 
-  ctx.strokeStyle = 'rgba(9,20,13,0.13)';
-  ctx.fillStyle = 'rgba(9,20,13,0.55)';
+  ctx.strokeStyle = themeColour('--paper-line');
+  ctx.fillStyle = themeColour('--sage');
   ctx.lineWidth = 1;
   ctx.font = '10px "IBM Plex Mono", monospace';
   ctx.textAlign = 'right';
@@ -1702,7 +1716,7 @@ function drawPlot() {
     const at = value => bottom - ((value - lineLow) / (lineHigh - lineLow)) * plotH;
     const step = plotW / Math.max(1, longest - 1);
     const offset = left + plotW - (line.data.length - 1) * step;
-    ctx.strokeStyle = line.colour;
+    ctx.strokeStyle = plotColour(line.slot);
     ctx.lineWidth = 1.4;
     ctx.beginPath();
     line.data.forEach((value, index) => {
@@ -1712,7 +1726,7 @@ function drawPlot() {
     });
     ctx.stroke();
   }
-  ctx.strokeStyle = 'rgba(9,20,13,0.4)';
+  ctx.strokeStyle = themeColour('--sage');
   ctx.strokeRect(left + 0.5, top + 0.5, plotW - 1, plotH - 1);
 }
 

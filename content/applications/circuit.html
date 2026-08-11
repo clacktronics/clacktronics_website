@@ -37,13 +37,22 @@ iframe { display: block; width: 100%; height: 100%; border: 0; }
  *   ?ctz=<data>      passes a compressed circuit straight through
  */
 (async () => {
+  /* CircuitJS1 takes its colours as startup parameters, so they are read off
+   * the live palette here rather than written out. Only the interface colours
+   * follow the theme: positive and negative voltage stay green and red because
+   * that pairing is how a schematic is read, and a palette that happened to
+   * make both of them blue would take meaning out of the simulation rather than
+   * restyling it — the same reason the resistor colour code and the PCB layer
+   * colours elsewhere on the site are left alone. */
+  const themeColour = (name, fallback) =>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
   const params = new URLSearchParams({
     whiteBackground: 'true',    /* painted white; the skin multiplies it to paper-cream */
     positiveColor: '#00c000',   /* bright green positive voltage */
     negativeColor: '#ea0000',   /* bright red negative voltage */
-    neutralColor: '#66755a',    /* sage for ground/neutral */
-    selectColor: '#4fae7d',     /* leaf for selection */
-    currentColor: '#a8841f',    /* dark amber current dots */
+    neutralColor: themeColour('--sage', '#66755a'),
+    selectColor: themeColour('--leaf', '#4fae7d'),
+    currentColor: themeColour('--warning', '#a8841f'),
     euroResistors: 'true'
   });
   const q = new URLSearchParams(location.search);

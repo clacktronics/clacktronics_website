@@ -3,7 +3,6 @@
 ### Aesthetic Tweaks and experience improvements
 
 * Make entire site downloadable
-* Consistent theme in in apps
 
 ### Non working features and bugs
 

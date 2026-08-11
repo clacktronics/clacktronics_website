@@ -205,11 +205,34 @@ function createScope(opts) {
   let live = null;              /* live state, when scrolling */
   let observer = null;
 
-  /* The app's own ramp: dark ink through leaf to paper. */
+  /* The ramp is dark ink through leaf to menu text. It used to say that in
+   * numbers, which meant the waterfall stayed the default palette's swamp green
+   * under every other theme. Colours are read off the canvas itself rather than
+   * documentElement so this works the same in an iframe and in the shadow root
+   * an integrated app is mounted into, and they are read once per frame because
+   * getComputedStyle per pixel is far too slow. */
+  const HEX = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
+  function rgbOf(name, fallback) {
+    const match = HEX.exec(getComputedStyle(specEl).getPropertyValue(name).trim());
+    return match ? [parseInt(match[1], 16), parseInt(match[2], 16), parseInt(match[3], 16)] : fallback;
+  }
+  let ramp = [[9, 20, 13], [79, 174, 125], [245, 239, 219]];
+  function readRamp() {
+    ramp = [rgbOf('--ink', [9, 20, 13]), rgbOf('--leaf', [79, 174, 125]), rgbOf('--menu-text', [245, 239, 219])];
+  }
+  function themeRgb(name, fallback) { return `rgb(${rgbOf(name, fallback).join(',')})`; }
+
   function paint(img, o, v) {
-    img.data[o] = 9 + v * v * 240;
-    img.data[o + 1] = 20 + Math.pow(v, 0.7) * 222;
-    img.data[o + 2] = 13 + Math.pow(v, 1.4) * 208;
+    /* eased so the quiet end of the window keeps the detail the old per-channel
+       gammas gave it */
+    const eased = Math.pow(v, 0.8);
+    const half = eased < 0.5;
+    const from = half ? ramp[0] : ramp[1];
+    const to = half ? ramp[1] : ramp[2];
+    const t = half ? eased * 2 : (eased - 0.5) * 2;
+    img.data[o] = from[0] + (to[0] - from[0]) * t;
+    img.data[o + 1] = from[1] + (to[1] - from[1]) * t;
+    img.data[o + 2] = from[2] + (to[2] - from[2]) * t;
     img.data[o + 3] = 255;
   }
 
@@ -239,9 +262,10 @@ function createScope(opts) {
   }
 
   function blank() {
-    specCx.fillStyle = '#09140d';
+    const ink = themeRgb('--ink', [9, 20, 13]);
+    specCx.fillStyle = ink;
     specCx.fillRect(0, 0, specEl.width, specEl.height);
-    waveCx.fillStyle = '#09140d';
+    waveCx.fillStyle = ink;
     waveCx.fillRect(0, 0, waveEl.width, waveEl.height);
   }
 
@@ -260,7 +284,8 @@ function createScope(opts) {
 
   function drawSpectrogram(samples, rate) {
     const W = specEl.width, H = specEl.height;
-    specCx.fillStyle = '#09140d';
+    readRamp();
+    specCx.fillStyle = themeRgb('--ink', [9, 20, 13]);
     specCx.fillRect(0, 0, W, H);
     if (axisEl) axisEl.textContent = '';
     if (!samples || samples.length < FFT_N) return;
@@ -287,10 +312,10 @@ function createScope(opts) {
 
   function drawWaveform(samples) {
     const W = waveEl.width, H = waveEl.height;
-    waveCx.fillStyle = '#09140d';
+    waveCx.fillStyle = themeRgb('--ink', [9, 20, 13]);
     waveCx.fillRect(0, 0, W, H);
     if (!samples || !samples.length) return;
-    waveCx.strokeStyle = '#4fae7d';
+    waveCx.strokeStyle = themeRgb('--leaf', [79, 174, 125]);
     waveCx.lineWidth = 1;
     waveCx.beginPath();
     const per = samples.length / W;
@@ -370,6 +395,7 @@ function createScope(opts) {
     const n = Math.min(pending.length, W);
     const from = pending.length - n;
     specCx.drawImage(specEl, -n, 0);
+    readRamp();
     const img = specCx.createImageData(n, H);
     for (let k = 0; k < n; k++) {
       const mags = pending[from + k][0];
@@ -382,9 +408,9 @@ function createScope(opts) {
 
     const wn = Math.min(pending.length, wavW);
     waveCx.drawImage(waveEl, -wn, 0);
-    waveCx.fillStyle = '#09140d';
+    waveCx.fillStyle = themeRgb('--ink', [9, 20, 13]);
     waveCx.fillRect(wavW - wn, 0, wn, wavH);
-    waveCx.strokeStyle = '#4fae7d';
+    waveCx.strokeStyle = themeRgb('--leaf', [79, 174, 125]);
     waveCx.lineWidth = 1;
     waveCx.beginPath();
     for (let k = 0; k < wn; k++) {

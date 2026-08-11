@@ -29,7 +29,7 @@ body { overflow: hidden; }
 .pd-bar .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; }
 .pd-bar .pixel-icon { width: 16px; height: 16px; }
 .pd-run { color: var(--leaf-deep); }
-.pd-stop { color: #a04a3a; }
+.pd-stop { color: var(--danger); }
 .pd-spacer { flex: 1; }
 .pd-mode.btn { padding: 6px 12px; }
 .pd-mode.editing { background: var(--leaf-deep); border-color: var(--leaf-deep); color: var(--menu-text); }
@@ -65,7 +65,7 @@ body { overflow: hidden; }
 #cords .rubber { stroke: var(--leaf-deep); stroke-width: 1.6; stroke-dasharray: 4 3; fill: none; }
 #marquee {
   position: absolute; border: 1px dashed var(--leaf-deep);
-  background: rgba(79, 174, 125, 0.12); display: none; pointer-events: none;
+  background: color-mix(in srgb, var(--leaf) 12%, transparent); display: none; pointer-events: none;
 }
 
 /* ---- patch boxes ---- */
@@ -151,7 +151,7 @@ body { overflow: hidden; }
 /* ---- source modal ---- */
 .site-modal {
   position: fixed; inset: 0; z-index: 50; display: none;
-  background: rgba(9, 20, 13, 0.35); align-items: center; justify-content: center;
+  background: var(--overlay); align-items: center; justify-content: center;
 }
 .site-modal.open { display: flex; }
 .site-box {
