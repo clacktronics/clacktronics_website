@@ -164,8 +164,17 @@
 .commit-form input[type="text"], .commit-form input[type="password"] { width: 100%; }
 .commit-form .checkline { flex-direction: row; align-items: center; }
 .commit-actions { display: flex; gap: 12px; align-items: center; }
+/* Stacked, the two panes stop being their own scrollers and .theme-main becomes
+   the only one. That means undoing the min-height: 0 they carry for the
+   side-by-side layout as well: it is what lets a pane shrink below its content
+   so an inner overflow: auto has something to scroll, and left in place here it
+   let the grid hand the colour list a 378px row to draw 1800px of swatches in.
+   They did not scroll and they did not push the preview down — they painted
+   straight over it. align-content keeps the rows at their content height rather
+   than stretching them to share the container. */
 @media (max-width: 760px) {
-  .theme-main { grid-template-columns: 1fr; overflow: auto; }
+  .theme-main { grid-template-columns: 1fr; align-content: start; overflow: auto; }
+  .theme-controls, .theme-preview-wrap { min-height: auto; }
   .theme-controls { overflow: visible; }
   .mock-desktop { min-height: 390px; }
 }

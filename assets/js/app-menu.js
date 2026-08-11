@@ -18,6 +18,9 @@
  * into a shadow root, whose menus live in the desktop document. */
 (function () {
   const INSTALLED = 'clackosMenuHoverInstalled';
+  const VIEW_INSTALLED = 'clackosMenuResizeInstalled';
+  /* breathing room between a shifted dropdown and the edge it was shifted off */
+  const EDGE_GAP = 8;
 
   /* the deepest element under the pointer, reached through any shadow boundary
    * — the desktop's copy of this script sees a mounted app's menus only as the
@@ -42,6 +45,67 @@
   function closeMenu(menu) {
     menu.classList.remove('open');
     menu.querySelectorAll('.rm.open').forEach(nested => nested.classList.remove('open'));
+  }
+
+  /* A dropdown is anchored under its own button, which is fine until the button
+   * is most of the way along a phone-width bar: File opens against the left edge
+   * and everything after it opens progressively further off the right one — on a
+   * 390px screen ClackPaint's Effects menu started 244px past the edge. The
+   * desktop's own menus have always clamped themselves this way (see the menu
+   * placement in assets/js/clackos.js); this is the app bar's half of it.
+   *
+   * The bar, not the viewport, is the edge to measure against: an app mounted
+   * into the desktop draws its menus in the desktop document, where the viewport
+   * is the whole screen and the app is only as wide as its window. */
+  function place(dd) {
+    const bar = dd.closest('.rm-bar');
+    if (!bar) return;
+    const view = dd.ownerDocument?.defaultView;
+    if (!view) return;
+
+    dd.style.left = '';
+    dd.style.maxWidth = '';
+    const room = bar.getBoundingClientRect();
+    /* narrow it first if it cannot fit whatever it is shifted against, so the
+     * measurement below is of the width it will actually be drawn at */
+    const fits = Math.min(room.width, view.innerWidth) - EDGE_GAP * 2;
+    if (fits > 0 && dd.getBoundingClientRect().width > fits) dd.style.maxWidth = fits + 'px';
+
+    const box = dd.getBoundingClientRect();
+    const limit = Math.min(room.right, view.innerWidth) - EDGE_GAP;
+    /* never past the left edge of the bar: a dropdown hanging off that side is
+     * no more reachable than one hanging off the other */
+    const shift = Math.min(box.right - limit, box.left - (room.left + EDGE_GAP));
+    if (shift > 0) dd.style.left = -shift + 'px';
+  }
+
+  function placeOpen(bar) {
+    bar.querySelectorAll('.rm.open > .rm-dd').forEach(place);
+  }
+
+  /* Placement waits a frame because this runs in the capture phase, before the
+   * app's own toggle has added .open to the menu that was clicked. */
+  function onClickPlace(event) {
+    const el = hovered(event);
+    const bar = el && el.closest ? el.closest('.rm-bar') : null;
+    if (!bar) return;
+    const view = bar.ownerDocument?.defaultView;
+    if (view) view.requestAnimationFrame(() => placeOpen(bar));
+  }
+
+  /* Turning a phone changes which menus fit and which have to be shifted, and
+   * an open menu would otherwise keep the offset it was given in the old
+   * orientation until it is closed and opened again. */
+  function onViewResize(event) {
+    const doc = event.target?.document;
+    if (!doc) return;
+    const bars = new Set();
+    const collect = root => {
+      root.querySelectorAll('.rm-bar').forEach(bar => bars.add(bar));
+      root.querySelectorAll('*').forEach(el => { if (el.shadowRoot) collect(el.shadowRoot); });
+    };
+    collect(doc);
+    bars.forEach(placeOpen);
   }
 
   function onPointerOver(event) {
@@ -98,6 +162,15 @@
     root.addEventListener('pointerover', onPointerOver, true);
     root.addEventListener('keydown', onKeyDown);
     root.addEventListener('click', onClick);
+    /* capture, so it sees the click the app stops at its own menu button */
+    root.addEventListener('click', onClickPlace, true);
+
+    /* one resize listener per window, however many roots it ends up holding */
+    const view = (root.ownerDocument || root).defaultView;
+    if (view && !view[VIEW_INSTALLED]) {
+      view[VIEW_INSTALLED] = true;
+      view.addEventListener('resize', onViewResize);
+    }
   }
 
   install(document);

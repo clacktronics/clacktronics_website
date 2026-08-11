@@ -24,7 +24,7 @@
    * that already has that stylesheet keeps its own icons. */
   const BAR_CSS = `
 .rm-standalone-bar {
-  flex: none; display: flex; gap: 2px; padding: 0 8px;
+  flex: none; display: flex; flex-wrap: wrap; gap: 2px; padding: 0 8px;
   background: var(--paper-deep, #e7e2d4); border-bottom: 1px solid var(--paper-line, #c9c2ae);
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
 }
@@ -38,6 +38,7 @@
 }
 .rm-standalone-bar .rm-dd {
   position: absolute; top: 100%; left: 0; min-width: 240px; z-index: 2147483000;
+  max-width: calc(100vw - 16px);
   background: var(--paper, #f6f2e6); border: 2px solid var(--ink, #2f2a1f);
   border-radius: 0 0 8px 8px; display: none; padding: 6px 2px;
 }
