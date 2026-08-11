@@ -1547,13 +1547,25 @@ GitHub stays the source of truth; a GitHub Action copies the built site to the
 web host so everything is served from one origin. `.github/workflows/deploy-purely.yml`
 runs on every push to `main` (and can be run by hand from the Actions tab) and
 `rsync`s the repo to the host over SSH. It uploads only changed files, never
-deletes on the host, and excludes VCS/CI files, `scripts/`, the notes, and the
-upload folders. It publishes to the web root; set `SUBDIR` in the workflow to a
-folder name to stage a build in a subfolder instead.
+deletes on the host, and excludes VCS/CI files, `scripts/`, the notes
+(`README.md`, `todo.md`, `CLAUDE.md`), and the upload folders. It publishes to
+the web root; set `SUBDIR` in the workflow to a folder name to stage a build in
+a subfolder instead.
+
+The notes are excluded because the host serves the deploy directory straight to
+the web: anything rsynced up is a public URL, and repository documentation is
+not something the site should be handing out. `CLAUDE.md` was missing from that
+list for a while and was answering `200` on the live host as a result — the
+deploy never deletes, so removing it from the repo would not have taken it down
+either. It has to be deleted on the host by hand, once:
+
+```sh
+rm public_html/CLAUDE.md
+```
 
 A `paths-ignore` on the trigger skips the run entirely for commits that touch
-only `todo.md`, `README.md` or `.github/` — all of them excluded from the rsync,
-so the deploy could not have changed what the host serves anyway. `scripts/` is
+only `todo.md`, `README.md`, `CLAUDE.md` or `.github/` — all of them excluded
+from the rsync, so the deploy could not have changed what the host serves anyway. `scripts/` is
 excluded from the upload but *not* from the trigger, because the generators run
 during the deploy: a fix to `build_plain_site.py` changes the mirror that gets
 shipped even though the script itself never leaves the repository. Editing the

@@ -29,11 +29,11 @@ on:
     # excluded from the upload: the generators run *during* the deploy, so a
     # fix to build_plain_site.py does change the output and has to reach the
     # host. Keep this list a subset of the rsync excludes; anything the deploy
-    # actually uploads (CLAUDE.md, .gitignore, the site itself) belongs
-    # nowhere near it.
+    # actually uploads belongs nowhere near it.
     paths-ignore:
       - 'todo.md'
       - 'README.md'
+      - 'CLAUDE.md'
       - '.github/**'
   workflow_dispatch:            # lets you deploy on demand from the Actions tab
 
@@ -198,6 +198,7 @@ jobs:
                  --exclude 'scripts/' \
                  --exclude 'README.md' \
                  --exclude 'todo.md' \
+                 --exclude 'CLAUDE.md' \
                  --exclude 'assets/uploads/' \
                  --exclude 'assets/old_assets/' \
                  --exclude 'assets/upload-config.php' \
