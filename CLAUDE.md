@@ -245,7 +245,7 @@ via GitHub and that restriction is what keeps it writing only into that folder.
 | --- | --- | --- |
 | `blog-index.yml` | push touching `content/file/blog/**` | rebuilds the blog windows, commits them |
 | `plain-mirror.yml` | push touching `content/**` or the generator | rebuilds `plain/` + sitemap/robots/feed/404, commits them |
-| `deploy-purely.yml` | push to `main`, or manual | stamps `version.json`, rebuilds blog + mirror, gzips `.wasm`, rsyncs over SSH to the host |
+| `deploy-purely.yml` | push to `main` (except `todo.md`/`README.md`/`.github/**`), or manual | stamps `version.json`, rebuilds blog + mirror, gzips `.wasm`, rsyncs over SSH to the host |
 | `luma-events.yml` | manual | mirrors the Luma events into `calendar/luma.json`, then triggers the deploy |
 | `dead-links.yml` | 1st of the month, or manual | checks outbound links, repoints dead ones at Wayback snapshots, **opens a PR** (never pushes to `main`) |
 

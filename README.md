@@ -1551,6 +1551,15 @@ deletes on the host, and excludes VCS/CI files, `scripts/`, the notes, and the
 upload folders. It publishes to the web root; set `SUBDIR` in the workflow to a
 folder name to stage a build in a subfolder instead.
 
+A `paths-ignore` on the trigger skips the run entirely for commits that touch
+only `todo.md`, `README.md` or `.github/` — all of them excluded from the rsync,
+so the deploy could not have changed what the host serves anyway. `scripts/` is
+excluded from the upload but *not* from the trigger, because the generators run
+during the deploy: a fix to `build_plain_site.py` changes the mirror that gets
+shipped even though the script itself never leaves the repository. Editing the
+deploy workflow no longer deploys as a side effect either — use **Actions →
+Deploy to purely.website → Run workflow** to try a change out.
+
 ### The move from `/temp/` to the root
 
 The site was staged under `https://clacktronics.co.uk/temp/` while it was being

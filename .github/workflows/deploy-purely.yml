@@ -22,6 +22,19 @@ name: Deploy to purely.website
 on:
   push:
     branches: [main]
+    # These paths are excluded from the rsync below, so a commit touching only
+    # them cannot change anything the host serves — the run would spend a few
+    # minutes rebuilding the mirror and re-stamping version.json to ship
+    # nothing. `scripts/` is deliberately NOT in this list even though it is
+    # excluded from the upload: the generators run *during* the deploy, so a
+    # fix to build_plain_site.py does change the output and has to reach the
+    # host. Keep this list a subset of the rsync excludes; anything the deploy
+    # actually uploads (CLAUDE.md, .gitignore, the site itself) belongs
+    # nowhere near it.
+    paths-ignore:
+      - 'todo.md'
+      - 'README.md'
+      - '.github/**'
   workflow_dispatch:            # lets you deploy on demand from the Actions tab
 
 concurrency:                    # never let two deploys overlap
