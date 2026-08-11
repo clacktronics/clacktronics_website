@@ -69,6 +69,42 @@ a ClackOS window the desktop is already there — and full-window apps with no
 bar are given one for it. Both links build their bar with
 `assets/js/app-bar.js`.
 
+### The app menu bar on a phone
+
+A window on a 390px phone is about 366px wide, which is narrower than most
+apps' menu bars. Two things in `assets/css/app.css` keep the menus reachable
+there, and both apply to `.rm-standalone-bar` too (the copy of the same rules
+inside `assets/js/app-bar.js`, for apps that style themselves):
+
+- **`.rm-bar` wraps.** A flex row that does not wrap has no scrollbar and no
+  second line, so a menu past the right edge is not scrolled off, it is gone —
+  ClackPaint lost Image and Effects, Pure Data lost everything past Put. A
+  wrapped bar takes a second row only when there was no room for one, so
+  nothing changes on a desktop. Scrolling the bar sideways was the other
+  option and is the worse one: it makes the bar a clipping box, and then the
+  dropdowns are cut off at the bar's own height instead (Video Lab tried it
+  that way first — see the comment in `content/applications/video/styles.css`).
+- **Dropdowns are nudged back inside.** `.rm-dd` is anchored under its own
+  button, so on a narrow bar each successive menu opens further off the right
+  edge. `place()` in `assets/js/app-menu.js` measures an opening dropdown and
+  shifts it left until it fits, stopping at the left edge of the bar; the
+  `max-width` in the CSS narrows one too wide to be shifted anywhere useful.
+  It measures against **the bar, not the viewport**, because an integrated app
+  draws its menus in the desktop document, where the viewport is the whole
+  screen and the app is only as wide as its window. This is the same clamp the
+  desktop's own menus have always applied in `assets/js/clackos.js`; the app
+  bar is a separate implementation that needed its own.
+
+A non-wrapping bar was also what pushed several app pages wider than the
+screen: a `nowrap` flex row sets a min-content width the document has to
+honour, so the bar alone was making Python, Pure Data and the 3D Model Viewer
+scroll sideways. With it wrapping, every app page fits a 320px screen.
+
+Video Lab and ClackMosh keep private copies of the menu chrome rather than
+loading `app.css`, so a change here needs the matching change in
+`content/applications/video/styles.css` and
+`content/applications/clackmosh/styles.css`.
+
 There is **no build step**: the browser fetches `site.json`, each folder's
 `menu.json`, and the markdown files at runtime. Edit a `.md` file, refresh,
 done. Hosted on GitHub Pages (or any static host).

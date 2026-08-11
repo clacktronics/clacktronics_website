@@ -84,6 +84,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    parent instead — and the labels, which are sentences rather than words, are
    allowed to wrap rather than forcing the menu off the side of the screen. */
 @media (max-width: 620px) {
+  /* Mosh and Help fell off the end of the bar on a phone, the way Video Lab's
+     did before it wrapped its own — this file keeps its own copy of the menu
+     chrome, so it needs its own copy of the fix. */
+  .rm-bar { flex-wrap: wrap; padding-inline: 4px; }
   .rm-dd { min-width: 0; max-width: calc(100vw - 20px); }
   .rm-dd button { white-space: normal; }
   .menu-item-label { align-items: flex-start; }
