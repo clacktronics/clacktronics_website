@@ -1533,6 +1533,37 @@ second list to keep in step. Their canonical links are hardcoded to the live
 origin (unlike the mirror's, which follow `SITE_URL`) — if the domain ever
 changes, they need a find-and-replace.
 
+What those tags could not say is *what kind of thing the page is*. Most apps
+render nothing at all until JavaScript has run — `circuit.html` is a bare
+`<iframe>`, so a crawler that doesn't get as far as executing the page finds an
+empty body and a sentence of description. `scripts/build_app_metadata.py` gives
+each indexed app a `WebApplication` block in `<head>` saying it is a free,
+browser-based tool of a particular category, which stands on its own without
+anything being rendered:
+
+```sh
+python3 scripts/build_app_metadata.py          # rewrite the blocks
+python3 scripts/build_app_metadata.py --check  # verify without writing
+```
+
+Every field is derived from something the repo already states — the name and
+the `applicationCategory` from the app's entry in
+`content/applications/menu.json` (the submenu it sits in picks the category,
+so moving an app between submenus moves its category with it), the description
+and URL from the page's own `<meta>` tags. **So the way to change what a
+crawler is told about an app is to edit that app's
+`<meta name="description">` and re-run the script** — the block is generated
+between markers and hand edits to it are overwritten. Apps carrying `noindex`
+get no block at all; the script applies the same two tests as the sitemap
+builder, so the two can't disagree about an app. The `publisher` node shares
+the `#organization` `@id` the mirror's home page uses, which is what ties the
+apps and the site together as one publisher rather than two organisations with
+the same name.
+
+Both the mirror workflow and the deploy workflow run the script, for the same
+reason they rebuild the blog index — a bot push doesn't re-trigger them, so the
+tree they check out can still hold the previous block.
+
 ### The 404 page
 
 Two websites came before this one and their URLs are still linked from other

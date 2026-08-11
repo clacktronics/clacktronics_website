@@ -31,6 +31,13 @@ jobs:
         # then hand content/file back to the blog-index job, which owns it.
         run: python3 scripts/build_blog_index.py
 
+      - name: Refresh the applications' schema.org blocks
+        # Derived from each app's own description and its menu entry, so an
+        # edit to either leaves the block behind. Runs before the mirror build
+        # because that build reads the application heads to decide which of
+        # them belong in the sitemap.
+        run: python3 scripts/build_app_metadata.py
+
       - name: Regenerate plain/
         # No SITE_* env here: the committed mirror stays unstamped ("dev") so
         # about.html doesn't churn on every push. The deploy workflow rebuilds
@@ -50,10 +57,10 @@ jobs:
           # checkout leaves behind as an untracked file and git pull trips on.)
           git checkout -- content/file
           git clean -fd content/file
-          if [ -n "$(git status --porcelain plain sitemap.xml robots.txt feed.xml 404.html)" ]; then
+          if [ -n "$(git status --porcelain plain sitemap.xml robots.txt feed.xml 404.html content/applications)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add plain sitemap.xml robots.txt feed.xml 404.html
+            git add plain sitemap.xml robots.txt feed.xml 404.html content/applications
             git commit -m "Rebuild plain HTML mirror"
             # the blog-index workflow may push concurrently
             git pull --rebase
