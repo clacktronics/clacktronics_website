@@ -3,58 +3,105 @@
   "associations": [
     {
       "label": "ClackPaint",
-      "kinds": ["image"],
+      "kinds": [
+        "image"
+      ],
       "app": "applications/paint.html",
       "parameter": "src"
     },
     {
       "label": "Markdown Editor",
-      "kinds": ["markdown"],
+      "kinds": [
+        "markdown"
+      ],
       "app": "applications/markdown.html",
       "parameter": "repo"
     },
     {
       "label": "Markdown Viewer",
-      "kinds": ["markdown"],
+      "kinds": [
+        "markdown"
+      ],
       "app": "applications/markdown.html",
       "parameter": "repo",
-      "params": { "view": "rendered" }
+      "params": {
+        "view": "rendered"
+      }
     },
     {
       "label": "PDF Reader",
-      "kinds": ["pdf"],
+      "kinds": [
+        "pdf"
+      ],
       "app": "applications/pdf-reader/index.html",
       "parameter": "file"
     },
     {
       "label": "Video Lab",
-      "kinds": ["video"],
+      "kinds": [
+        "video"
+      ],
       "app": "applications/video/index.html",
       "parameter": "src"
     },
     {
       "label": "Text Editor",
-      "extensions": ["txt", "log", "csv", "json", "css", "js", "mjs", "xml", "yaml", "yml", "ini", "conf"],
+      "extensions": [
+        "txt",
+        "log",
+        "csv",
+        "json",
+        "css",
+        "js",
+        "mjs",
+        "xml",
+        "yaml",
+        "yml",
+        "ini",
+        "conf"
+      ],
       "app": "applications/text.html",
       "parameter": "repo"
     },
     {
       "label": "OpenSCAD",
-      "extensions": ["scad"],
-      "drives": ["github"],
+      "extensions": [
+        "scad"
+      ],
+      "drives": [
+        "github"
+      ],
       "app": "applications/openscad.html",
       "parameter": "src"
     },
     {
       "label": "Pure Data",
-      "extensions": ["pd"],
-      "drives": ["github"],
+      "extensions": [
+        "pd"
+      ],
+      "drives": [
+        "github"
+      ],
       "app": "applications/puredata.html",
       "parameter": "src"
     },
     {
+      "label": "ClackModem Receiver",
+      "extensions": [
+        "wav",
+        "flac",
+        "ogg",
+        "mp3"
+      ],
+      "app": "applications/modem-rx.html",
+      "parameter": "src"
+    },
+    {
       "label": "Web Browser",
-      "extensions": ["html", "htm"],
+      "extensions": [
+        "html",
+        "htm"
+      ],
       "app": "applications/browser.html",
       "parameter": "url",
       "source": "url"

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>ClackModem Receiver — decode audio modulation</title>
+<!-- crawler metadata — a decoder is a thing people look for in its own right,
+     so this page says what it reads and is indexed separately from the encoder. -->
+<meta name="description" content="Decode audio modulation back into text — DTMF and MF touch tones, Bell 202 AFSK and AX.25 packet, Bell 103, V.21, V.23, RTTY, Morse, Kansas City Standard, ZX Spectrum and C64 tape, SMPTE timecode and PSK31 — from a WAV file or live from the microphone.">
+<link rel="canonical" href="https://clacktronics.co.uk/content/applications/modem-rx.html">
+<meta property="og:site_name" content="Clacktronics">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ClackModem Receiver — decode audio modulation">
+<meta property="og:url" content="https://clacktronics.co.uk/content/applications/modem-rx.html">
+<meta property="og:description" content="Read a signal back into text — touch tones, packet radio, dial-up, teletype, Morse, cassette tape formats, timecode and phase shift keying — from a file or live from the microphone.">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/app.css">
+<style>
+.app-main { padding: 12px 14px 10px; gap: 10px; }
+.mdm-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.mdm-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+.mdm-year {
+  font-size: 10px; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 4px;
+  background: var(--ink); color: var(--menu-text);
+}
+.mdm-blurb { flex: 1 1 260px; font-size: 11px; color: var(--sage); line-height: 1.6; }
+
+.mdm-cols { display: flex; gap: 12px; align-items: stretch; }
+.mdm-side { flex: 0 0 250px; display: flex; flex-direction: column; gap: 8px; }
+.mdm-work { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.mdm-side select { width: 100%; }
+.mdm-params {
+  display: flex; flex-direction: column; gap: 7px; padding: 10px;
+  border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep);
+  max-height: 190px; overflow-y: auto; scrollbar-width: thin;
+}
+.mdm-field { display: flex; align-items: center; gap: 8px; }
+.mdm-field > span {
+  flex: 0 0 88px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--leaf-deep);
+}
+.mdm-field > .mdm-input { flex: 1; min-width: 0; display: flex; align-items: center; gap: 5px; }
+.mdm-field input[type="number"], .mdm-field input[type="text"], .mdm-field select {
+  font: inherit; font-size: 11.5px; color: var(--control-text); background: var(--paper);
+  border: 1px solid var(--ink); border-radius: 5px; padding: 4px 6px; width: 100%; min-width: 0;
+}
+.mdm-unit { font-size: 10px; color: var(--sage); flex: none; }
+.mdm-field input[type="checkbox"] { accent-color: var(--leaf-deep); width: 14px; height: 14px; }
+
+/* the measured readouts, under the parameters they are the answer to */
+.mdm-tune {
+  display: flex; flex-direction: column; gap: 5px; padding: 9px 10px;
+  border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep);
+}
+.mdm-tune .row { display: flex; justify-content: space-between; gap: 8px; font-size: 10.5px; }
+.mdm-tune .row span {
+  font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--leaf-deep);
+}
+.mdm-tune .row b { font-weight: 400; font-variant-numeric: tabular-nums; color: var(--control-text); }
+.mdm-tune .none { font-size: 10.5px; color: var(--sage); }
+.mdm-lock { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--sage); }
+.mdm-lock i { width: 8px; height: 8px; border-radius: 50%; background: var(--paper-line); flex: none; }
+.mdm-lock.on { color: var(--leaf-deep); }
+.mdm-lock.on i { background: var(--leaf); }
+
+.mdm-inlabel { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mdm-out {
+  font: inherit; font-size: 12px; line-height: 1.55; flex: 1; min-height: 120px;
+  color: var(--menu-dim); background: var(--ink);
+  border: 1px solid var(--ink); border-radius: 6px; padding: 8px 10px;
+  overflow: auto; scrollbar-width: thin; white-space: pre-wrap; word-break: break-word;
+}
+.mdm-out.empty { color: var(--sage); background: var(--paper-deep); }
+.mdm-out .t { color: #6f8a78; }
+.mdm-out .lbl { color: var(--accent-hover); }
+.mdm-out .bad { color: #d98a6a; }
+
+/* a two-state control built from the same parts as a button row */
+.mdm-seg { display: inline-flex; border: 1px solid var(--ink); border-radius: 5px; overflow: hidden; }
+.mdm-seg button {
+  all: unset; cursor: pointer; padding: 3px 11px; font: inherit; font-size: 10.5px;
+  background: var(--paper); color: var(--control-text);
+}
+.mdm-seg button.on { background: var(--ink); color: var(--button-text); }
+.mdm-seg button:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+
+.mdm-btns { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.mdm-btns .btn { padding: 6px 12px; font-size: 11.5px; display: flex; align-items: center; gap: 6px; }
+.mdm-btns .pixel-icon { width: 15px; height: 15px; }
+.mdm-rec { color: #a04a3a; }
+
+.mdm-meter { display: flex; align-items: flex-end; gap: 2px; height: 18px; margin-left: auto; }
+.mdm-meter i { width: 4px; border-radius: 1px; background: var(--paper-line); }
+.mdm-meter i.on { background: var(--leaf); }
+.mdm-meter i.hot { background: #a04a3a; }
+.mdm-level { font-size: 10px; color: var(--sage); font-variant-numeric: tabular-nums; min-width: 62px; text-align: right; }
+
+/* the waterfall takes whatever height is left, so a taller window is spent on
+   the part of the app worth looking at */
+.mdm-scope {
+  position: relative; flex: 1; min-height: 140px;
+  border: 1px solid var(--ink); border-radius: 6px; overflow: hidden;
+}
+/* Both canvases are taken out of flow and positioned. A canvas in normal flow
+   carries an intrinsic aspect ratio from its width and height attributes, and
+   since resizing the backing store rewrites those, leaving them in flow makes
+   the observer that resizes them grow the layout that triggers it. */
+.mdm-scope canvas { position: absolute; left: 0; display: block; width: 100%; background: var(--ink); }
+.mdm-spec { top: 0; height: calc(100% - 42px); }
+.mdm-wave { bottom: 0; height: 42px; border-top: 1px solid var(--paper-line); }
+.mdm-play {
+  position: absolute; top: 0; bottom: 0; width: 1px; background: var(--accent-hover);
+  display: none; pointer-events: none;
+}
+.mdm-axis { position: absolute; top: 0; bottom: 42px; left: 0; width: 24px; pointer-events: none; }
+.mdm-axis span {
+  position: absolute; left: 4px; transform: translateY(-50%);
+  font-size: 9px; color: var(--menu-dim);
+}
+
+.mdm-foot { display: flex; gap: 12px; align-items: flex-start; }
+.mdm-notes { flex: 1; font-size: 10.5px; color: var(--sage); line-height: 1.6; min-height: 15px; }
+.mdm-stat {
+  flex: none; font-size: 10.5px; color: var(--control-text);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.mdm-ref { display: none; }
+.mdm-ref.open { display: block; }
+.mdm-ref h4 { font-size: 11px; margin-top: 8px; color: var(--leaf-deep); }
+.mdm-ref h4:first-child { margin-top: 0; }
+.mdm-ref p { margin: 3px 0; }
+
+/* dropping a recording anywhere on the window opens it */
+.app.drop { outline: 2px dashed var(--leaf-deep); outline-offset: -6px; }
+
+@media (max-width: 720px) {
+  .mdm-cols { flex-direction: column; }
+  .mdm-side { flex: none; }
+  .mdm-params { max-height: none; }
+}
+</style>
+<script src="../../assets/js/app-menu.js" defer></script>
+<script src="../../assets/js/app-bar.js" defer></script>
+<script src="../../assets/js/app-home.js" defer></script>
+</head>
+<body>
+<div class="app">
+  <div class="rm-bar">
+    <div class="rm"><button>File</button><div class="rm-dd">
+      <button data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open Audio&hellip;</button>
+      <button data-cmd="paste"><span class="pixel-icon" data-icon="clipboard" aria-hidden="true"></span>From Shared Clipboard</button>
+      <div class="sep"></div>
+      <button data-cmd="savetext"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save Decoded Text&hellip;</button>
+      <button data-cmd="copytext"><span class="pixel-icon" data-icon="copy" aria-hidden="true"></span>Copy Decoded Text</button>
+    </div></div>
+    <div class="rm"><button>Receive</button><div class="rm-dd">
+      <button data-cmd="listen"><span class="pixel-icon" data-icon="mic" aria-hidden="true"></span>Listen to Microphone</button>
+      <button data-cmd="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop Listening</button>
+      <div class="sep"></div>
+      <button data-cmd="again"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>Decode Again</button>
+      <button data-cmd="clear"><span class="pixel-icon" data-icon="close" aria-hidden="true"></span>Clear</button>
+      <div class="sep"></div>
+      <button data-cmd="defaults"><span class="pixel-icon" data-icon="undo" aria-hidden="true"></span>Reset Parameters</button>
+    </div></div>
+    <div class="rm"><button>Protocol</button><div class="rm-dd mdm-protomenu"></div></div>
+    <div class="rm"><button>Help</button><div class="rm-dd">
+      <button data-cmd="ref"><span class="pixel-icon" data-icon="info-box" aria-hidden="true"></span>Reference</button>
+    </div></div>
+  </div>
+
+  <div class="app-main">
+    <div class="mdm-head">
+      <span class="mdm-name"></span>
+      <span class="mdm-year"></span>
+      <span class="mdm-blurb"></span>
+    </div>
+
+    <div class="mdm-cols">
+      <div class="mdm-side">
+        <span class="app-lbl">Protocol</span>
+        <select class="mdm-select" aria-label="Protocol to decode"></select>
+        <span class="app-lbl">Parameters</span>
+        <div class="mdm-params"></div>
+        <span class="app-lbl">Signal</span>
+        <div class="mdm-tune"></div>
+      </div>
+      <div class="mdm-work">
+        <div class="mdm-inlabel">
+          <span class="app-lbl">Decoded</span>
+          <span class="mdm-seg" role="group" aria-label="Output view">
+            <button data-view="text" class="on">Text</button><button data-view="log">Log</button>
+          </span>
+        </div>
+        <div class="mdm-out empty" tabindex="0" aria-live="polite" aria-label="Decoded output"></div>
+        <div class="mdm-btns">
+          <button class="btn primary" data-cmd="listen"><span class="pixel-icon" data-icon="mic" aria-hidden="true"></span>Listen</button>
+          <button class="btn ghost" data-cmd="stop"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop</button>
+          <button class="btn ghost" data-cmd="open"><span class="pixel-icon" data-icon="folder" aria-hidden="true"></span>Open Audio&hellip;</button>
+          <button class="btn ghost" data-cmd="paste"><span class="pixel-icon" data-icon="clipboard" aria-hidden="true"></span>From Recorder</button>
+          <span class="mdm-meter" aria-hidden="true"></span>
+          <span class="mdm-level"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mdm-scope">
+      <canvas class="mdm-spec" width="1000" height="168" aria-label="Spectrogram of the signal being decoded"></canvas>
+      <canvas class="mdm-wave" width="1000" height="42" aria-label="Waveform of the signal being decoded"></canvas>
+      <div class="mdm-axis"></div>
+      <div class="mdm-play"></div>
+    </div>
+
+    <div class="mdm-foot">
+      <div class="mdm-notes"></div>
+      <div class="mdm-stat"></div>
+    </div>
+
+    <div class="app-panel mdm-ref">
+      <h4>What this is</h4>
+      <p>The other half of <a href="modem.html">ClackModem</a>. It takes audio &mdash; a file, a
+        recording pasted from Sound Recorder, or the microphone &mdash; and reads it back into the
+        text that made it, using real demodulators rather than a lookup of what was encoded.</p>
+      <h4>Using it</h4>
+      <p>Pick the protocol, check the parameters match how the signal was sent, then choose a
+        source. <b>Listen</b> decodes continuously from the microphone and scrolls the waterfall as
+        it goes; the other three read a whole recording at once. A file can also be dropped
+        anywhere on the window.</p>
+      <p>The parameters are the tuning controls: the mark and space frequencies, baud rate and
+        framing have to match the transmitter. What the decoder actually measured appears under
+        <b>Signal</b>, which is the quickest way to tell a mistuned parameter from a bad recording.</p>
+      <h4>Acoustic loopback</h4>
+      <p>Open ClackModem in another window, put the two side by side, press <b>Listen</b> here and
+        <b>Play</b> there. The signal goes out of the speakers and back in through the microphone,
+        and what arrives is decoded from the air rather than passed between the two.</p>
+      <h4>What it reads</h4>
+      <p><b>DTMF</b> and <b>MF R1</b> through a Goertzel tone bank; <b>Bell 202</b>, <b>Bell
+        103</b>, <b>V.21</b>, <b>V.23</b>, <b>RTTY</b> and the <b>Kansas City Standard</b> through a
+        quadrature correlator and asynchronous framing; <b>AX.25</b> through a bit-clock recovery
+        loop with NRZI, bit destuffing and a verified frame check sequence; <b>ZX Spectrum</b>,
+        <b>Commodore 64</b> and <b>SMPTE timecode</b> by edge timing, with their checksums
+        verified; <b>Morse</b> from the envelope of the keyed tone; and <b>PSK31</b> through a
+        differential detector and the varicode alphabet.</p>
+      <h4>Not yet</h4>
+      <p><b>V.22 DQPSK</b> and <b>multi-channel CW</b> are encode-only for now. V.22 needs carrier
+        and timing recovery through a scrambler; multi-channel CW needs the channel tones to be
+        found before they can be read, since the transmitter chooses them per line.</p>
+      <h4>Limits</h4>
+      <p>Audio is resampled to 48 kHz and mixed to mono before decoding. A protocol is decoded with
+        the parameters shown, not guessed at &mdash; there is no automatic identification.</p>
+    </div>
+  </div>
+</div>
+
+<input type="file" class="mdm-file" accept="audio/*,.wav" hidden>
+
+<!-- Loaded here rather than deferred from the head so they have run by the time
+     the app's own script does: an app that waits for DOMContentLoaded never
+     starts if some other subresource on the page stalls. -->
+<script src="modem-protocols.js"></script>
+<script src="modem-ui.js"></script>
+<script src="modem-decoders.js"></script>
+<script>
+(() => {
+const appRoot = window.ClackOSMountRoot || document.currentScript?.getRootNode() || document;
+const UI = window.ClackModemUI;
+const RX = window.ClackModemDecode;
+
+/* ---- elements ---- */
+const $ = sel => appRoot.querySelector(sel);
+const selectEl = $('.mdm-select');
+const paramsEl = $('.mdm-params');
+const tuneEl = $('.mdm-tune');
+const outEl = $('.mdm-out');
+const nameEl = $('.mdm-name');
+const yearEl = $('.mdm-year');
+const blurbEl = $('.mdm-blurb');
+const notesEl = $('.mdm-notes');
+const statEl = $('.mdm-stat');
+const refEl = $('.mdm-ref');
+const fileEl = $('.mdm-file');
+const meterEl = $('.mdm-meter');
+const levelEl = $('.mdm-level');
+
+const scope = UI.createScope({
+  root: $('.mdm-scope'),
+  spec: $('.mdm-spec'),
+  wave: $('.mdm-wave'),
+  axis: $('.mdm-axis'),
+  playhead: $('.mdm-play')
+});
+
+/* ---- state ---- */
+let current = null;        /* the protocol descriptor */
+let values = {};           /* its parameter values */
+let buffer = null;         /* the last recording decoded, for Decode Again */
+let result = null;         /* the last decode */
+let view = 'text';
+let live = null;           /* { stream, source, node, decoder, raf } while listening */
+
+const say = msg => { notesEl.innerHTML = msg || ''; };
+
+for (let i = 0; i < 12; i++) meterEl.appendChild(document.createElement('i'));
+
+/* ---- output ---- */
+function render() {
+  const empty = !result || (view === 'text' ? !result.text : !result.events.length);
+  outEl.classList.toggle('empty', empty);
+  if (empty) {
+    outEl.textContent = result
+      ? (view === 'text' ? 'Nothing decoded.' : 'No events.')
+      : 'Choose a source — Listen, Open Audio, or paste a recording from Sound Recorder.';
+    return;
+  }
+  if (view === 'text') { outEl.textContent = result.text; }
+  else {
+    outEl.textContent = '';
+    for (const e of result.events) {
+      const line = document.createElement('div');
+      const t = document.createElement('span');
+      t.className = 't';
+      t.textContent = e.t.toFixed(2).padStart(6, ' ') + ' ';
+      const lbl = document.createElement('span');
+      lbl.className = e.ok ? 'lbl' : 'bad';
+      lbl.textContent = e.label.padEnd(7, ' ');
+      line.appendChild(t);
+      line.appendChild(lbl);
+      line.appendChild(document.createTextNode(' ' + e.text));
+      if (!e.ok) line.className = 'bad';
+      outEl.appendChild(line);
+    }
+  }
+  /* follow the tail while listening, unless the user has scrolled up to read */
+  if (live && outEl.scrollHeight - outEl.scrollTop - outEl.clientHeight < 40) {
+    outEl.scrollTop = outEl.scrollHeight;
+  }
+}
+
+function renderTune() {
+  tuneEl.textContent = '';
+  const m = result ? result.measured : null;
+  const keys = m ? Object.keys(m) : [];
+  if (!keys.length) {
+    tuneEl.appendChild(Object.assign(document.createElement('div'),
+      { className: 'none', textContent: 'Nothing measured yet.' }));
+  }
+  for (const k of keys) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.appendChild(Object.assign(document.createElement('span'), { textContent: k }));
+    row.appendChild(Object.assign(document.createElement('b'), { textContent: m[k] }));
+    tuneEl.appendChild(row);
+  }
+  const lock = document.createElement('div');
+  lock.className = 'mdm-lock' + (result && result.locked ? ' on' : '');
+  lock.appendChild(document.createElement('i'));
+  lock.appendChild(document.createTextNode(
+    result ? (result.locked ? 'locked' : 'no lock') : 'idle'));
+  tuneEl.appendChild(lock);
+}
+
+function showResult(r, extraStat) {
+  result = r;
+  render();
+  renderTune();
+  statEl.textContent = extraStat || '';
+  say(r && r.notes.length ? r.notes.join(' ') : '');
+}
+
+/* ---- parameters and protocol ---- */
+function buildParams() {
+  UI.buildParamForm(paramsEl, current, values, (id, v, rebuild) => {
+    values[id] = v;
+    values = ClackModem.resolve(current, values);
+    if (rebuild) buildParams();
+    /* the parameters are the tuning controls, so a change re-reads the
+     * recording immediately rather than waiting to be asked */
+    if (buffer) decodeBuffer();
+    else if (live) restartLive();
+  });
+}
+
+function selectProtocol(id) {
+  const proto = ClackModem.get(id);
+  if (!proto || !RX.supports(id)) return;
+  current = proto;
+  values = ClackModem.defaults(proto);
+  selectEl.value = id;
+  nameEl.textContent = proto.name;
+  yearEl.textContent = proto.year;
+  blurbEl.textContent = proto.blurb;
+  buildParams();
+  if (buffer) decodeBuffer();
+  else if (live) restartLive();
+  else { showResult(null, ''); }
+}
+
+/* ---- decoding a whole recording ---- */
+function decodeBuffer() {
+  if (!buffer) return;
+  stopLive();
+  scope.drawBuffer(buffer.samples, buffer.rate);
+  let r;
+  try {
+    r = RX.decode(current.id, buffer.samples, buffer.rate, values);
+  } catch (err) {
+    showResult(null, '');
+    say('<b>Could not decode:</b> ' + String(err.message || err));
+    return;
+  }
+  const secs = buffer.samples.length / buffer.rate;
+  showResult(r, secs.toFixed(2) + ' s · ' + (buffer.rate / 1000) + ' kHz');
+}
+
+function take(samples, rate, label) {
+  buffer = { samples: samples, rate: rate };
+  decodeBuffer();
+  if (label) say(label + (result && result.notes.length ? ' ' + result.notes.join(' ') : ''));
+}
+
+async function openFile(file) {
+  if (!file) return;
+  say('Reading ' + file.name + '…');
+  try {
+    const audio = await UI.readAudioFile(file, ClackModem.RATE);
+    take(audio.samples, audio.rate, 'Opened ' + file.name + '.');
+  } catch (err) {
+    say('<b>Could not read that file:</b> ' + String(err.message || err));
+  }
+}
+
+/* the clipboard Sound Recorder and ClackModem share */
+const clip = UI.createClipboard(c => {
+  if (!live) take(c.samples, c.rate, 'Took a recording from the shared clipboard.');
+});
+
+function pasteFromClipboard() {
+  const c = clip.peek();
+  if (!c) {
+    say(clip.available
+      ? 'Nothing on the shared clipboard yet — copy a signal from ClackModem or Sound Recorder first.'
+      : 'This browser has no BroadcastChannel, so the shared clipboard is unavailable.');
+    return;
+  }
+  take(c.samples, c.rate, 'Took a recording from the shared clipboard.');
+}
+
+/* ---- listening ----
+ * A ScriptProcessorNode rather than an AudioWorklet: the decoders need every
+ * sample in order and without gaps, which rules out polling an analyser, and a
+ * worklet would need a second script file loaded from a module URL — which this
+ * page cannot rely on when it is opened straight off the disk. The work per
+ * sample is a handful of multiplies, so the main thread carries it.
+ */
+function setMeter(peak) {
+  const bars = meterEl.children;
+  const db = peak > 0 ? 20 * Math.log10(peak) : -99;
+  const lit = Math.max(0, Math.min(bars.length, Math.round((db + 60) / 60 * bars.length)));
+  for (let i = 0; i < bars.length; i++) {
+    bars[i].style.height = (4 + i * 1.2) + 'px';
+    bars[i].className = i < lit ? (i >= bars.length - 2 ? 'hot' : 'on') : '';
+  }
+  levelEl.textContent = peak > 0 ? db.toFixed(0) + ' dBFS' : '';
+}
+
+async function startLive() {
+  if (live) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    say('This browser will not give a page the microphone. A page served over HTTPS can ask; ' +
+      'over plain HTTP most browsers refuse.');
+    return;
+  }
+  let stream;
+  try {
+    /* the browser's own cleanup would fight the demodulators for the signal */
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+  } catch (err) {
+    say('<b>No microphone:</b> ' + String(err.message || err) +
+      ' Permission has to be granted, and the page has to be on HTTPS.');
+    return;
+  }
+
+  buffer = null;
+  const ctx = UI.audioContext();
+  const source = ctx.createMediaStreamSource(stream);
+  const node = ctx.createScriptProcessor(4096, 1, 1);
+  const decoder = RX.create(current.id, values, ctx.sampleRate);
+  scope.beginLive(ctx.sampleRate);
+
+  node.onaudioprocess = e => {
+    const block = e.inputBuffer.getChannelData(0);
+    /* the same array is handed back every call, so the scope and the decoder
+     * both read it before it is reused */
+    scope.pushLive(block);
+    decoder.push(block);
+  };
+  source.connect(node);
+  /* a ScriptProcessorNode only runs while it is connected to something; the
+   * gain of zero keeps the microphone out of the speakers */
+  const sink = ctx.createGain();
+  sink.gain.value = 0;
+  node.connect(sink);
+  sink.connect(ctx.destination);
+
+  live = { stream: stream, source: source, node: node, sink: sink, decoder: decoder, raf: 0 };
+
+  const tick = () => {
+    if (!live) return;
+    showResult({
+      text: decoder.text, events: decoder.events, notes: [],
+      measured: decoder.measured, locked: decoder.locked
+    }, decoder.seconds.toFixed(1) + ' s · listening');
+    setMeter(decoder.peak);
+    decoder.peak = 0;
+    live.raf = setTimeout(tick, 200);
+  };
+  tick();
+  say('Listening on the microphone. Parameters can be changed while it runs — the decoder ' +
+    'restarts with the new ones.');
+}
+
+function stopLive() {
+  if (!live) return;
+  clearTimeout(live.raf);
+  live.node.onaudioprocess = null;
+  try { live.source.disconnect(); live.node.disconnect(); live.sink.disconnect(); } catch { /* already gone */ }
+  for (const t of live.stream.getTracks()) t.stop();
+  const decoder = live.decoder;
+  live = null;
+  scope.endLive();
+  setMeter(0);
+  const r = decoder.flush();
+  showResult(r, decoder.seconds.toFixed(1) + ' s heard');
+}
+
+function restartLive() {
+  if (!live) return;
+  stopLive();
+  startLive();
+}
+
+/* ---- commands ---- */
+function runCmd(cmd) {
+  switch (cmd) {
+    case 'open': fileEl.click(); break;
+    case 'paste': pasteFromClipboard(); break;
+    case 'listen': startLive(); break;
+    case 'stop': stopLive(); break;
+    case 'again': if (buffer) decodeBuffer(); else say('Nothing to decode again.'); break;
+    case 'clear':
+      stopLive(); buffer = null; showResult(null, ''); scope.clear(); say('');
+      break;
+    case 'defaults': values = ClackModem.defaults(current); buildParams(); if (buffer) decodeBuffer(); break;
+    case 'savetext': saveText(); break;
+    case 'copytext': copyText(); break;
+    case 'ref': refEl.classList.toggle('open'); break;
+  }
+}
+
+function outputText() {
+  if (!result) return '';
+  return view === 'text'
+    ? result.text
+    : result.events.map(e => e.t.toFixed(2) + '  ' + e.label + '  ' + e.text +
+        (e.ok ? '' : '  [failed]')).join('\n');
+}
+
+function saveText() {
+  const text = outputText();
+  if (!text) { say('Nothing decoded to save.'); return; }
+  const name = prompt('Save decoded text as:', current.id + '-decoded.txt');
+  if (!name) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+  a.download = /\.\w+$/.test(name) ? name : name + '.txt';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  say('Saved ' + a.download + ' (downloaded).');
+}
+
+function copyText() {
+  const text = outputText();
+  if (!text) { say('Nothing decoded to copy.'); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => say('Decoded text copied.'))
+      .catch(() => say('The browser would not let the page write to the clipboard.'));
+  } else {
+    say('This browser has no clipboard access for pages.');
+  }
+}
+
+/* ---- wiring ---- */
+selectEl.addEventListener('change', () => selectProtocol(selectEl.value));
+fileEl.addEventListener('change', () => { openFile(fileEl.files[0]); fileEl.value = ''; });
+
+appRoot.querySelector('.mdm-seg').addEventListener('click', e => {
+  const b = e.target.closest('[data-view]');
+  if (!b) return;
+  view = b.dataset.view;
+  for (const other of appRoot.querySelectorAll('.mdm-seg [data-view]')) {
+    other.classList.toggle('on', other === b);
+  }
+  render();
+});
+
+UI.wireMenuBar(appRoot, { onCmd: runCmd, onProto: selectProtocol });
+$('.mdm-btns').addEventListener('click', e => {
+  const cmd = e.target.closest('[data-cmd]');
+  if (cmd) runCmd(cmd.dataset.cmd);
+});
+
+const appEl = appRoot.querySelector('.app');
+appEl.addEventListener('dragover', e => { e.preventDefault(); appEl.classList.add('drop'); });
+appEl.addEventListener('dragleave', e => { if (e.target === appEl) appEl.classList.remove('drop'); });
+appEl.addEventListener('drop', e => {
+  e.preventDefault();
+  appEl.classList.remove('drop');
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) openFile(f);
+});
+
+if (appRoot !== document) appRoot.host.addEventListener('clackos-disconnect', () => {
+  stopLive();
+  scope.destroy();
+  UI.closeAudioContext();
+  clip.close();
+}, { once: true });
+
+/* ---- start ---- */
+UI.buildProtocolLists({
+  protocols: ClackModem.PROTOCOLS,
+  filter: p => RX.supports(p.id),
+  select: selectEl,
+  menu: $('.mdm-protomenu')
+});
+
+/* File Manager opens a recording by handing the path over in the query string,
+ * and a protocol can be named the same way for a link that lands ready to read. */
+const q = new URLSearchParams(location.search);
+const wanted = q.get('protocol');
+selectProtocol(wanted && RX.supports(wanted) ? wanted : 'dtmf');
+render();
+renderTune();
+
+const src = q.get('src') || q.get('file');
+if (src) {
+  say('Loading ' + src + '…');
+  fetch(src)
+    .then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.statusText); return r.blob(); })
+    .then(b => openFile(new File([b], src.split('/').pop() || 'audio.wav')))
+    .catch(err => say('<b>Could not load ' + src + ':</b> ' + String(err.message || err)));
+}
+})();
+</script>
+</body>
+</html>
