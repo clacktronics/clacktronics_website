@@ -1548,24 +1548,36 @@ web host so everything is served from one origin. `.github/workflows/deploy-pure
 runs on every push to `main` (and can be run by hand from the Actions tab) and
 `rsync`s the repo to the host over SSH. It uploads only changed files, never
 deletes on the host, and excludes VCS/CI files, `scripts/`, the notes
-(`README.md`, `todo.md`, `CLAUDE.md`), and the upload folders. It publishes to
-the web root; set `SUBDIR` in the workflow to a folder name to stage a build in
-a subfolder instead.
+(`README.md`, `todo.md`, `CLAUDE.md`), `.gitignore`, and the upload folders. It
+publishes to the web root; set `SUBDIR` in the workflow to a folder name to
+stage a build in a subfolder instead.
 
-The notes are excluded because the host serves the deploy directory straight to
-the web: anything rsynced up is a public URL, and repository documentation is
-not something the site should be handing out. `CLAUDE.md` was missing from that
-list for a while and was answering `200` on the live host as a result — the
-deploy never deletes, so removing it from the repo would not have taken it down
-either. It has to be deleted on the host by hand, once:
+Those excludes are the only thing keeping the repository's own furniture off the
+web, because the host serves the deploy directory straight out: whatever is
+rsynced up has a public URL. The notes are documentation nobody browsing the
+site should be handed. `.gitignore` is the one that reads harmlessly and is not
+— it names `assets/upload-config.php` as the upload secret and lists the
+host-only media directories, so it hands anyone who asks a map of the parts of
+the server that are not in Git.
+
+**Adding a file to the excludes does not take an already-uploaded copy down.**
+The deploy runs without `--delete`, so a file that shipped before it was
+excluded stays on the host until it is removed there. `CLAUDE.md` and
+`.gitignore` were both live before they were added to the list; clearing them is
+a one-off on the host:
 
 ```sh
-rm public_html/CLAUDE.md
+rm public_html/CLAUDE.md public_html/.gitignore
 ```
 
+Apache refuses `.htaccess` itself (its built-in `^\.ht` rule, not anything in
+this repo), and `upload.php` answers a bare `GET` with `405`, so neither needs
+an exclude.
+
 A `paths-ignore` on the trigger skips the run entirely for commits that touch
-only `todo.md`, `README.md`, `CLAUDE.md` or `.github/` — all of them excluded
-from the rsync, so the deploy could not have changed what the host serves anyway. `scripts/` is
+only `todo.md`, `README.md`, `CLAUDE.md`, `.gitignore` or `.github/` — all of
+them excluded from the rsync, so the deploy could not have changed what the host
+serves anyway. `scripts/` is
 excluded from the upload but *not* from the trigger, because the generators run
 during the deploy: a fix to `build_plain_site.py` changes the mirror that gets
 shipped even though the script itself never leaves the repository. Editing the

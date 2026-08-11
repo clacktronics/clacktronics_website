@@ -34,6 +34,7 @@ on:
       - 'todo.md'
       - 'README.md'
       - 'CLAUDE.md'
+      - '.gitignore'
       - '.github/**'
   workflow_dispatch:            # lets you deploy on demand from the Actions tab
 
@@ -173,6 +174,15 @@ jobs:
           SSH_PORT: ${{ secrets.SSH_PORT }}
 
       - name: Sync to purely
+        # Everything that lands on the host is a public URL, so the excludes
+        # below are the only thing keeping the repository's own furniture off
+        # the web. The notes (README/todo/CLAUDE) are documentation nobody
+        # browsing the site should be served; .gitignore is worse than it looks
+        # — it names assets/upload-config.php as the upload secret and lists the
+        # host-only media directories, which is a map of the server for anyone
+        # who asks for it. The .gitignore pattern is unanchored on purpose so it
+        # catches the nested copies inside the vendor trees too.
+        #
         # Retried for the same reason as the host key above, and it matters more
         # here: this pushes ~30 MB of gzipped Wasm over a single SSH connection,
         # so it is the step most exposed to a dropped or throttled connection,
@@ -199,6 +209,7 @@ jobs:
                  --exclude 'README.md' \
                  --exclude 'todo.md' \
                  --exclude 'CLAUDE.md' \
+                 --exclude '.gitignore' \
                  --exclude 'assets/uploads/' \
                  --exclude 'assets/old_assets/' \
                  --exclude 'assets/upload-config.php' \

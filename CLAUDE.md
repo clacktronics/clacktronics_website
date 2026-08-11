@@ -266,10 +266,10 @@ the host, which is what protects `assets/uploads/` and `assets/old_assets/`
 until removed by hand.
 
 The host serves the deploy directory straight to the web, so anything rsynced
-up is a public URL. The repo's own documentation — `README.md`, `todo.md`,
-`CLAUDE.md` — is excluded from the upload for that reason, and excluded from
-the deploy trigger too. Adding a file to the rsync excludes does not take an
-already-uploaded copy down; that needs deleting on the host.
+up is a public URL. The repo's own furniture — `README.md`, `todo.md`,
+`CLAUDE.md`, `.gitignore` — is excluded from the upload for that reason, and
+excluded from the deploy trigger too. Adding a file to the rsync excludes does
+not take an already-uploaded copy down; that needs deleting on the host.
 
 ## Secrets and host-only paths
 
