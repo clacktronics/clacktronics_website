@@ -24,7 +24,7 @@ const THEME_VARS = [
   '--leaf', '--leaf-deep', '--menu-text', '--menu-dim', '--desktop',
   '--titlebar', '--window-border', '--window-inactive', '--window-border-inactive',
   '--title-text', '--title-text-inactive', '--accent-hover', '--button-text',
-  '--disabled-text'
+  '--disabled-text', '--danger', '--warning', '--ok', '--info'
 ];
 /* Non-colour controls are validated before an editor preview can put them into
  * another document's inline style. */

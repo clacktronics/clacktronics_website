@@ -145,7 +145,7 @@ pre.code {
   position: absolute; inset: auto 0 10px; margin: 0;
   color: var(--sage); font-size: 10.5px; text-align: center;
 }
-.model-embed-status.error { color: #9a3f35; }
+.model-embed-status.error { color: var(--danger); }
 .model-embed-fallback {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   padding: 0 12px; color: var(--leaf-deep); font-size: 11px; text-align: center;

@@ -467,9 +467,15 @@
       }
       .card-corner { font-size: clamp(.72rem, 1.65vw, 1rem); }
       .card-suit-main { font-size: clamp(1.65rem, 4vw, 2.55rem); }
+      /* Upstream drew the recycle glyph in half-transparent white for a dark
+         green felt. The board is the window surface here, so on every light
+         palette it was white on cream — the pile looked empty and dead rather
+         than clickable. It follows the other empty-pile marks instead. */
+      #stock-pile.empty::before { color: var(--sage); }
+      .card.dragging { box-shadow: 5px 5px 0 color-mix(in srgb, var(--shadow) 30%, transparent); }
       .pile.drag-over { border-color: var(--leaf-deep); background: color-mix(in srgb, var(--leaf) 18%, transparent); }
       .hint-highlight { box-shadow: 0 0 0 4px var(--accent-hover), 3px 3px 0 var(--ink); }
-      .modal { background: color-mix(in srgb, var(--ink) 42%, transparent); }
+      .modal { background: var(--overlay); }
       .modal-content {
         width: min(420px, 90%); padding: 22px; border: 2px solid var(--ink); border-radius: 8px;
         color: var(--control-text); background: var(--paper); box-shadow: 7px 7px 0 color-mix(in srgb, var(--shadow) 32%, transparent);

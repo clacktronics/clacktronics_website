@@ -63,13 +63,13 @@ body { overflow: hidden; }
 }
 .viewer-status strong { color: var(--control-text); font-weight: 500; }
 .viewer-message { flex: 1; min-width: 180px; }
-.viewer-message.error { color: #9a3f35; }
+.viewer-message.error { color: var(--danger); }
 .viewer-credit { margin-left: auto; white-space: nowrap; }
 .viewer-credit a { color: var(--leaf-deep); }
 /* Upload dialog — a model goes to the web host, never through GitHub. */
 .viewer-modal {
   position: fixed; inset: 0; z-index: 50; display: none;
-  align-items: center; justify-content: center; background: rgba(9, 20, 13, 0.35);
+  align-items: center; justify-content: center; background: var(--overlay);
 }
 .viewer-modal.open { display: flex; }
 .viewer-modal-box {

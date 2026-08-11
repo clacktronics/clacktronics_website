@@ -56,7 +56,7 @@
   all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
   width: var(--cell); height: var(--cell); cursor: pointer; overflow: hidden;
   border: 1px solid var(--ink); border-radius: 2px; background: var(--paper);
-  box-shadow: inset -2px -2px 0 var(--paper-line), inset 2px 2px 0 #fffaf0;
+  box-shadow: inset -2px -2px 0 var(--paper-line), inset 2px 2px 0 color-mix(in srgb, var(--paper) 72%, var(--menu-text));
   color: var(--ink); font: 600 calc(var(--cell) * .62)/1 'IBM Plex Mono', monospace;
 }
 .sweeper-cell:hover:not(.revealed) { background: var(--paper-deep); }
@@ -65,16 +65,16 @@
 .sweeper-cell.flagged { color: var(--leaf-deep); }
 .sweeper-cell.questioned { color: var(--sage); }
 .sweeper-cell.mine { color: var(--ink); background: color-mix(in srgb, var(--leaf) 30%, var(--paper)); }
-.sweeper-cell.exploded { color: #fff; background: #a04a3a; border-color: #722f27; }
-.sweeper-cell.wrong { color: #a04a3a; text-decoration: line-through; }
-.sweeper-cell[data-near="1"] { color: #276b47; }
-.sweeper-cell[data-near="2"] { color: #3f6d36; }
-.sweeper-cell[data-near="3"] { color: #a04a3a; }
-.sweeper-cell[data-near="4"] { color: #414b82; }
-.sweeper-cell[data-near="5"] { color: #7c3c31; }
-.sweeper-cell[data-near="6"] { color: #287579; }
-.sweeper-cell[data-near="7"] { color: #3b3b3b; }
-.sweeper-cell[data-near="8"] { color: #747474; }
+.sweeper-cell.exploded { color: var(--button-text); background: var(--danger); border-color: color-mix(in srgb, var(--danger) 62%, var(--shadow)); }
+.sweeper-cell.wrong { color: var(--danger); text-decoration: line-through; }
+.sweeper-cell[data-near="1"] { color: var(--series-1); }
+.sweeper-cell[data-near="2"] { color: var(--series-3); }
+.sweeper-cell[data-near="3"] { color: var(--series-2); }
+.sweeper-cell[data-near="4"] { color: var(--series-6); }
+.sweeper-cell[data-near="5"] { color: var(--series-4); }
+.sweeper-cell[data-near="6"] { color: var(--series-5); }
+.sweeper-cell[data-near="7"] { color: var(--ink-soft); }
+.sweeper-cell[data-near="8"] { color: var(--sage); }
 .sweeper-cell .pixel-icon { width: 72%; height: 72%; }
 .sweeper-cell .sweeper-glyph { font-size: calc(var(--cell) * .58); }
 .sweeper-counter .sweeper-glyph { font-size: 17px; }

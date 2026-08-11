@@ -45,11 +45,12 @@ pre.code, .code-dark {
   --code-accent-4: color-mix(in oklab, var(--strong-text) 65%, var(--leaf-deep));
 }
 
-/* Alerts have no theme variable to borrow, so they start from a fixed hue and
-   are then pulled towards the theme's own foreground like everything else. */
+/* Alerts take the theme's own status colours and are then pulled towards the
+   code surface's foreground like every other token, so a red panel cannot end
+   up with a red error marker. */
 :root {
-  --code-alert: #d24b32;
-  --code-caution: #d0a132;
+  --code-alert: var(--danger);
+  --code-caution: var(--warning);
 }
 
 /* The derivation, declared on the same elements as the inputs above so each

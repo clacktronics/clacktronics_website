@@ -313,7 +313,10 @@ const FIELDS = [
   ['--disabled-text', 'Disabled text'],
   'Accents & shadow',
   ['--leaf', 'Accent'], ['--leaf-deep', 'Deep accent'],
-  ['--accent-hover', 'Accent hover'], ['--shadow', 'Drop shadow']
+  ['--accent-hover', 'Accent hover'], ['--shadow', 'Drop shadow'],
+  'Status',
+  ['--danger', 'Error / destructive'], ['--warning', 'Warning'],
+  ['--ok', 'Success'], ['--info', 'Information']
 ];
 const COLOURS = FIELDS.filter(field => Array.isArray(field));
 /* Non-colour theme values, edited with sliders. */
@@ -347,7 +350,10 @@ const DEFAULTS = {
   '--window-inactive':'#2a3b2f', '--window-border-inactive':'#2a3b2f',
   '--title-text':'#c8e3d2', '--title-text-inactive':'#91a899',
   '--accent-hover':'#6fcf9a', '--button-text':'#f2ecd6',
-  '--disabled-text':'#b3ab8d', ...MEDIA_PRESETS.none, '--media-filter':'none'
+  '--disabled-text':'#b3ab8d',
+  '--danger':'#a04a3a', '--warning':'#b58b3a',
+  '--ok':'#276b47', '--info':'#3f66ad',
+  ...MEDIA_PRESETS.none, '--media-filter':'none'
 };
 const palette = byId('palette');
 const sliders = byId('sliders');
@@ -537,6 +543,12 @@ function loadCss(css, name) {
   if (!seen.has('--window-border-inactive')) next['--window-border-inactive'] = next['--window-inactive'];
   /* Title text used to be one colour for active and inactive windows. */
   if (!seen.has('--title-text-inactive')) next['--title-text-inactive'] = next['--title-text'];
+  /* Success and information had no role of their own, so a theme that predates
+     them opens showing the accent it would have been painted with rather than
+     the default palette's green — which on a red or blue theme would look like
+     the editor had lost the file's colours. */
+  if (!seen.has('--ok')) next['--ok'] = next['--leaf-deep'];
+  if (!seen.has('--info')) next['--info'] = next['--sage'];
   values = next;
   values['--media-filter'] = makeMediaFilter();
   themeName.value = safeName(name);

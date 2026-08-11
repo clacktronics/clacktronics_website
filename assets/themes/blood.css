@@ -26,4 +26,8 @@
   --shadow: #bb0000;
   --shadow-distance: 8px;
   --shadow-alpha: 30%;
+  --danger: #380000;
+  --warning: #ffd166;
+  --ok: #ffffff;
+  --info: #ffb3b3;
 }

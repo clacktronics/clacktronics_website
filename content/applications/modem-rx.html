@@ -79,9 +79,9 @@
   overflow: auto; scrollbar-width: thin; white-space: pre-wrap; word-break: break-word;
 }
 .mdm-out.empty { color: var(--sage); background: var(--paper-deep); }
-.mdm-out .t { color: #6f8a78; }
+.mdm-out .t { color: var(--sage); }
 .mdm-out .lbl { color: var(--accent-hover); }
-.mdm-out .bad { color: #d98a6a; }
+.mdm-out .bad { color: var(--danger); }
 
 /* a two-state control built from the same parts as a button row */
 .mdm-seg { display: inline-flex; border: 1px solid var(--ink); border-radius: 5px; overflow: hidden; }
@@ -95,12 +95,12 @@
 .mdm-btns { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
 .mdm-btns .btn { padding: 6px 12px; font-size: 11.5px; display: flex; align-items: center; gap: 6px; }
 .mdm-btns .pixel-icon { width: 15px; height: 15px; }
-.mdm-rec { color: #a04a3a; }
+.mdm-rec { color: var(--danger); }
 
 .mdm-meter { display: flex; align-items: flex-end; gap: 2px; height: 18px; margin-left: auto; }
 .mdm-meter i { width: 4px; border-radius: 1px; background: var(--paper-line); }
 .mdm-meter i.on { background: var(--leaf); }
-.mdm-meter i.hot { background: #a04a3a; }
+.mdm-meter i.hot { background: var(--danger); }
 .mdm-level { font-size: 10px; color: var(--sage); font-variant-numeric: tabular-nums; min-width: 62px; text-align: right; }
 
 /* the waterfall takes whatever height is left, so a taller window is spent on

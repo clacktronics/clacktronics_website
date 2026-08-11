@@ -161,7 +161,7 @@ const observer = new IntersectionObserver(entries => {
 
 function setStatus(message, error = false) {
   statusNode.textContent = message
-  statusNode.style.color = error ? "#a04a3a" : ""
+  statusNode.style.color = error ? "var(--danger)" : ""
 }
 
 function setDocumentControls(enabled) {

@@ -294,7 +294,7 @@ button .pixel-icon { width: 15px; height: 15px; }
   background: var(--sage); color: var(--menu-text);
 }
 .status-state[data-state="READY"] { background: var(--leaf); color: var(--ink); }
-.status-state[data-state="WORKING"], .status-state[data-state="LOADING"] { background: #b58b3a; color: var(--ink); }
+.status-state[data-state="WORKING"], .status-state[data-state="LOADING"] { background: var(--warning); color: var(--ink); }
 .status-state[data-state="ERROR"] { background: var(--danger); }
 .status-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .progress { width: 140px; height: 8px; background: color-mix(in srgb, var(--menu-text) 22%, transparent); border-radius: 4px; overflow: hidden; }
