@@ -41,6 +41,7 @@ content/
     appearance.html         ← background + theme chooser
     paint.html              ← ClackPaint app
     recorder.html           ← Sound Recorder app
+    scope.html              ← ClackScope oscilloscope app
     calendar.html           ← Calendar app
     calendar/events.csv     ← the upcoming events it shows
     calendar/luma.json      ← mirror of the Luma events (generated)
@@ -810,6 +811,69 @@ windows, and desktop actions.
   tone plans are read back out of `modem-protocols.js` through its `tables`
   export rather than copied, so an encoder's alphabet cannot change without its
   decoder following.
+- `applications/scope.html` (Applications → Multimedia → ClackScope
+  Oscilloscope) — an oscilloscope for audio, laid out the way a bench
+  instrument is: a screen carrying the numbers that change while you watch, and
+  a column of settings beside it. Input is the soundcard (needs HTTPS +
+  permission; the browser's echo cancellation, noise suppression and automatic
+  gain are all turned off, since they gate and filter exactly the signal the
+  instrument exists to show), an audio file opened or dropped on the screen and
+  played through the speakers, or a built-in test tone with a waveform, a
+  frequency and a channel ratio — the tone is what the app opens with, so it
+  draws something before any permission has been granted. One volt on the
+  graticule is digital full scale.
+
+  Four displays, all off the same pair of `AnalyserNode`s (32768 points, so a
+  node gives both the newest 0.7 s of samples and their spectrum, which is a
+  timebase and an FFT for the price of one node per channel):
+
+  - **Sweep** — a triggered Y-T trace. The trigger hunts the level crossing
+    inside the captured block rather than trusting the clock, with hysteresis so
+    noise cannot arm it, and takes the most recent crossing so the picture is as
+    fresh as the buffer allows. Rising or falling, either channel as the source,
+    and Auto / Normal / Single: Auto sweeps anyway and says `AUTO`, Normal holds
+    the last triggered picture until an edge arrives, Single freezes on the
+    first one. Fast sweeps are drawn sample by sample and slow ones as one
+    min/max column per pixel, which is what a real timebase does at its two
+    extremes.
+  - **Roll** — the envelope, scrolling. A screen at 100 ms/div is twelve times
+    longer than the analyser holds, so the newest samples are reduced to
+    min/max pairs two milliseconds wide and pushed into a ring buffer: peak
+    detect, which is what a bench instrument switches to when a pixel is worth
+    more than a cycle. Sweep and roll are two ends of one timebase — stepping
+    past 50 ms/div moves into roll and back out again — but each remembers where
+    it was left.
+  - **X-Y** — right channel across, left channel up, for stereo. Its divisions
+    are kept square whatever shape the window is, or a circle comes out an
+    ellipse and the figure stops meaning anything.
+  - **FFT** — the spectrum on a log frequency axis from 20 Hz to Nyquist, 10 dB
+    a division, with its own decade graticule. The peak bin is refined by the
+    parabola through its neighbours, and that same reading feeds the `Freq`
+    measurement in every mode.
+
+  Volts and time per division are 1-2-5 steppers (also the wheel over the
+  screen, Shift for time, and the arrow keys); each channel has a vertical
+  position, drawn as a ground marker at the left edge the way a DSO draws it,
+  and the trigger level rides its own source channel's position rather than the
+  middle of the screen. AC coupling is the instrument's, not the browser's: the
+  offset is measured off the captured block and subtracted on the way to the
+  screen, never taken out of what is heard. Persistence is a phosphor: the trace
+  layer is eaten away a little each frame instead of cleared, off / short /
+  long. Measurements are Vpp, Vrms, peak in dBFS and frequency, with a peak
+  hold; **Measure → Copy Readings** puts them on the clipboard and
+  **File → Save Screen as PNG** saves the screen. `Space` runs and stops — STOP
+  freezes the picture rather than the maths, so what is on the phosphor when it
+  stops is what stays there.
+
+  The canvas cannot resolve `var()`, and the palettes are not all dark-on-light
+  — `blood` paints white ink on red paper, `tasteless` mint on tan — so rather
+  than assume `--ink` is the dark one, the screen takes whichever of the two
+  grounds is darker and picks its trace colours from the theme by contrast
+  against it, falling back to plain white or black for the readouts when no
+  theme colour clears a contrast ratio of 4. State (mode, both scales, trigger,
+  positions, persistence) is saved with the desktop through
+  [app state](#letting-an-app-remember-its-own-state); the input is deliberately
+  not, so a restored session cannot reopen the microphone by itself.
 - `applications/modem-ui.js` — what the two share: the waterfall and waveform
   scope (including its live scrolling mode, one column per FFT hop), the
   parameter form, the protocol menus, the 16-bit WAV container, file reading
