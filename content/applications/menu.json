@@ -15,6 +15,7 @@
       { "type": "app", "page": "video/index.html", "label": "Video Lab", "title": "Video Lab", "icon": "video", "width": 1180, "height": 780, "multi": true },
       { "type": "app", "page": "clackmosh/index.html", "label": "ClackMosh", "title": "ClackMosh", "icon": "spray-can", "width": 1200, "height": 820, "minHeight": 640, "multi": true },
       { "type": "app", "page": "recorder.html", "label": "Sound Recorder", "title": "Sound Recorder", "icon": "mic", "width": 400, "height": 245, "fixed": true, "multi": true, "integrated": true },
+      { "type": "app", "page": "scope.html", "label": "ClackScope Oscilloscope", "title": "ClackScope", "icon": "analytics", "width": 1020, "height": 660, "minHeight": 480, "multi": true, "allow": "microphone" },
       { "type": "app", "page": "modem.html", "label": "ClackMo", "title": "ClackMo", "icon": "volume", "width": 1060, "height": 790, "minHeight": 620, "multi": true },
       { "type": "app", "page": "modem-rx.html", "label": "ClackDem", "title": "ClackDem", "icon": "mic", "width": 1060, "height": 790, "minHeight": 620, "multi": true, "allow": "microphone" },
       { "type": "app", "page": "paint.html", "label": "ClackPaint", "title": "ClackPaint", "icon": "brush", "width": 900, "height": 680, "minHeight": 560, "multi": true, "integrated": true },
