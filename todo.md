@@ -26,7 +26,7 @@
 * Midi controllable, downloadable, mono synth.
 * Waveacity
 * SSTV encoder and decoder
-* ClackModem: decoders for V.22 DQPSK and multi-channel CW — the other thirteen modes read back in ClackModem Receiver
+* ClackMo: decoders for V.22 DQPSK and multi-channel CW — the other thirteen modes read back in ClackDem
 * Falstad2KiCAD vise versa
 * Falstad2Spice vise versa
 

@@ -765,7 +765,7 @@ windows, and desktop actions.
   BroadcastChannel), Insert/Mix with File, Delete Before/After Current
   Position. Effects: Increase/Decrease Volume, Increase/Decrease Speed
   (pitch shifts, like the original), Add Echo, Reverse. Multi-instance.
-- `applications/modem.html` (Applications → Multimedia → ClackModem) — a faux
+- `applications/modem.html` (Applications → Multimedia → ClackMo) — a faux
   modem that turns typed text into real audio modulation, plays it and saves it
   as a 16-bit mono `.wav`. Fifteen protocols in five families: DTMF and MF R1
   signalling; Bell 202 AFSK (raw async or a genuine AX.25 UI frame, with bit
@@ -782,8 +782,8 @@ windows, and desktop actions.
   Writer that owns sample timing and phase; the framing helpers are kept
   separate from the tone generation so the decoders could be written beside
   them. Signals are capped at three minutes.
-- `applications/modem-rx.html` (Applications → Multimedia → ClackModem
-  Receiver) — the other half: it takes audio and reads it back into text.
+- `applications/modem-rx.html` (Applications → Multimedia → ClackDem) — the
+  other half: it takes audio and reads it back into text.
   Thirteen of the fifteen modes decode (V.22 DQPSK and multi-channel CW are
   encode-only so far). Audio comes from a WAV or other file the browser can
   decode, from a drop onto the window, from the shared audio clipboard, or live

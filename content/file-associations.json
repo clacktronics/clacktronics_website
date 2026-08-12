@@ -86,7 +86,7 @@
       "parameter": "src"
     },
     {
-      "label": "ClackModem Receiver",
+      "label": "ClackDem",
       "extensions": [
         "wav",
         "flac",
