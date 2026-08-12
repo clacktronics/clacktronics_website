@@ -1,0 +1,2302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Oscilloscope Panel Studies</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230b1410'/%3E%3Cpath d='M1 8q1.75-6 3.5 0T8 8q1.75-6 3.5 0T15 8' fill='none' stroke='%239dffc0' stroke-width='1.4'/%3E%3C/svg%3E">
+<!--
+  Four interface studies for a ClackOS oscilloscope app, drawn before any of the
+  real signal path exists. Every panel runs the same synthetic two-channel source
+  through the same renderer, so the differences you see are differences of
+  layout and control philosophy rather than of drawing quality.
+
+  This page is a design document, not part of the site. It is not registered in
+  any menu.json and carries noindex,nofollow; delete the whole `mockups/` folder
+  once the app it is arguing about has been built.
+-->
+<style>
+/* ---------------------------------------------------------------- tokens --
+   The board chrome borrows the site's own palette — cream paper, ink, leaf
+   green — so the studies sit in the world they are being proposed for. The
+   panels below define their own colours locally, because each is imitating a
+   real instrument and must not drift with the viewer's theme. Only study D
+   is theme-driven, which is the whole point of study D.                     */
+:root {
+  --paper:      #f6f1de;
+  --paper-2:    #efe8cd;
+  --paper-3:    #e6ddbc;
+  --rule:       #d3c9a4;
+  --ink:        #101a13;
+  --ink-2:      #46574b;
+  --ink-3:      #6f8175;
+  --leaf:       #276b47;
+  --leaf-bright:#4fae7d;
+  --trace-2:    #c08a2b;
+  --plate:      #e3ddc4;
+  --plate-hi:   #fbf7e8;
+  --plate-lo:   #c9c0a0;
+  --shadow:     rgba(16, 26, 19, 0.18);
+
+  --font-body: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --measure: 66ch;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #0e150f;
+    --paper-2:    #141d16;
+    --paper-3:    #1b261d;
+    --rule:       #2a382d;
+    --ink:        #e8e3c9;
+    --ink-2:      #b3bdaf;
+    --ink-3:      #8b9a8d;
+    --leaf:       #6fd09b;
+    --leaf-bright:#9ae6bd;
+    --trace-2:    #e0b25a;
+    --plate:      #1d2820;
+    --plate-hi:   #2c3a2e;
+    --plate-lo:   #101a13;
+    --shadow:     rgba(0, 0, 0, 0.5);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:      #0e150f;
+  --paper-2:    #141d16;
+  --paper-3:    #1b261d;
+  --rule:       #2a382d;
+  --ink:        #e8e3c9;
+  --ink-2:      #b3bdaf;
+  --ink-3:      #8b9a8d;
+  --leaf:       #6fd09b;
+  --leaf-bright:#9ae6bd;
+  --trace-2:    #e0b25a;
+  --plate:      #1d2820;
+  --plate-hi:   #2c3a2e;
+  --plate-lo:   #101a13;
+  --shadow:     rgba(0, 0, 0, 0.5);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--leaf); }
+:focus-visible { outline: 2px solid var(--leaf-bright); outline-offset: 2px; }
+code {
+  font-family: var(--font-mono); font-size: 0.86em; color: var(--ink);
+  background: var(--paper-3); border-radius: 2px; padding: 1px 5px;
+  overflow-wrap: anywhere;
+}
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 90px; }
+
+/* ------------------------------------------------------------------ head -- */
+.head { padding: 56px 0 26px; border-bottom: 1px solid var(--rule); }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--ink-3); margin: 0 0 14px;
+}
+h1 {
+  font-family: var(--font-mono); font-weight: 600; font-size: clamp(30px, 5.4vw, 52px);
+  line-height: 1.04; letter-spacing: -0.02em; margin: 0 0 18px; text-wrap: balance;
+}
+h1 em { font-style: normal; color: var(--leaf); }
+.lede { max-width: var(--measure); font-size: 18px; color: var(--ink-2); margin: 0 0 22px; }
+.lede strong { color: var(--ink); font-weight: 600; }
+
+.brief { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.brief li {
+  font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 5px 10px; border: 1px solid var(--rule);
+  border-radius: 2px; background: var(--paper-2); color: var(--ink-2);
+}
+
+/* jump bar */
+.jump {
+  position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 10px 0; margin-bottom: 8px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(6px); border-bottom: 1px solid var(--rule);
+}
+.jump a {
+  font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; text-decoration: none; color: var(--ink-2);
+  padding: 5px 11px; border: 1px solid var(--rule); border-radius: 2px;
+}
+.jump a:hover { background: var(--paper-3); color: var(--ink); }
+.jump a b { color: var(--leaf); font-weight: 600; }
+
+/* ---------------------------------------------------------- study blocks -- */
+.study { padding: 44px 0 8px; scroll-margin-top: 64px; }
+
+/* A screwed-on nameplate, the way the real machines label their sections. */
+.plate {
+  display: inline-flex; align-items: baseline; gap: 16px; position: relative;
+  padding: 9px 34px; margin: 0 0 8px;
+  background: linear-gradient(180deg, var(--plate-hi), var(--plate));
+  border: 1px solid var(--plate-lo); border-radius: 3px;
+  box-shadow: 0 1px 0 var(--plate-hi) inset, 0 2px 6px var(--shadow);
+}
+.plate::before, .plate::after {
+  content: ""; position: absolute; top: 50%; width: 7px; height: 7px; margin-top: -3.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--plate-hi), var(--plate-lo) 70%);
+  box-shadow: 0 0 0 1px var(--plate-lo) inset;
+}
+.plate::before { left: 11px; }
+.plate::after  { right: 11px; }
+.plate .tag {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.1em; color: var(--leaf);
+}
+.plate h2 {
+  font-family: var(--font-mono); font-size: 15px; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink); margin: 0;
+}
+.subtitle { margin: 0 0 22px; color: var(--ink-3); font-size: 14.5px; max-width: var(--measure); }
+
+/* the fixed-geometry panels scale down to fit narrow viewports */
+.stagewrap { position: relative; overflow: hidden; margin: 0 0 22px; }
+.stage { transform-origin: top left; }
+
+/* caption columns under each study */
+.notes {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 22px 30px; padding: 22px 0 0; border-top: 1px solid var(--rule);
+}
+.notes h3 {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--ink-3); margin: 0 0 8px; font-weight: 500;
+}
+.notes p { margin: 0 0 10px; font-size: 14.5px; color: var(--ink-2); }
+.notes p:last-child { margin-bottom: 0; }
+.notes strong { color: var(--ink); }
+.maplist { margin: 0; padding: 0; list-style: none; font-size: 13.5px; }
+.maplist li { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px dotted var(--rule); }
+.maplist li:last-child { border-bottom: 0; }
+.maplist b {
+  flex: 0 0 74px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+  padding-top: 3px;
+}
+.maplist span { color: var(--ink-2); }
+
+.verdictline {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.05em;
+  color: var(--ink-2); margin: 14px 0 0; padding: 9px 12px;
+  background: var(--paper-2); border-left: 3px solid var(--leaf);
+}
+
+/* ------------------------------------------------------------- compare --- */
+.tablewrap { overflow-x: auto; margin: 0 0 30px; }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 14px; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-3); font-weight: 500;
+  border-bottom: 1px solid var(--ink-3);
+}
+tbody th {
+  font-weight: 600; color: var(--ink); font-size: 13.5px; white-space: nowrap;
+}
+td { color: var(--ink-2); }
+td.yes { color: var(--leaf); }
+
+.callout {
+  padding: 26px 28px; background: var(--paper-2);
+  border: 1px solid var(--rule); border-radius: 3px; max-width: 760px;
+}
+.callout h3 { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 12px; }
+.callout p { margin: 0 0 12px; color: var(--ink-2); }
+.callout p:last-child { margin-bottom: 0; }
+.callout ol { margin: 0; padding-left: 20px; color: var(--ink-2); }
+.callout ol li { margin-bottom: 7px; }
+
+h2.sec {
+  font-family: var(--font-mono); font-size: 15px; letter-spacing: 0.16em;
+  text-transform: uppercase; margin: 54px 0 6px; padding-top: 34px;
+  border-top: 1px solid var(--rule);
+}
+
+/* ===========================================================================
+   Shared panel furniture. Each study scopes its own look under a root class,
+   so nothing here leaks between them.
+   ======================================================================== */
+.stage { position: relative; font-family: var(--font-body); }
+.stage canvas { display: block; }
+
+/* rotary controls, built by JS into any .rot element */
+.rot { position: relative; width: 54px; height: 54px; cursor: ns-resize; touch-action: none; }
+.rot-knob {
+  position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px 0 0 -19px;
+  border-radius: 50%; transition: transform 90ms ease-out;
+}
+.rot-ptr {
+  position: absolute; left: 50%; top: 3px; width: 2px; height: 12px; margin-left: -1px;
+  border-radius: 1px;
+}
+.rot-ring { position: absolute; inset: 0; pointer-events: none; }
+.rot-ring span {
+  position: absolute; left: 50%; top: 50%; font-family: var(--font-mono);
+  font-size: 6.5px; letter-spacing: 0.02em; white-space: nowrap;
+}
+.rot-ring span.on { font-weight: 700; }
+
+/* ============================================================ STUDY A ==== */
+.p465 {
+  width: 1020px; height: 704px; padding: 12px;
+  background: linear-gradient(180deg, #55606b, #3c454e);
+  border-radius: 8px; box-shadow: 0 14px 34px rgba(0,0,0,0.34);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.p465 .cab {
+  height: 100%; padding: 10px 14px 12px; border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.10), rgba(0,0,0,0.10)),
+    #9aa0a2;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.28) inset, 0 -2px 6px rgba(0,0,0,0.24) inset;
+  display: flex; flex-direction: column; gap: 9px;
+  color: #1b2024;
+}
+.p465 .brand { display: flex; align-items: baseline; gap: 14px; padding: 0 2px 6px; border-bottom: 1px solid rgba(0,0,0,0.22); }
+.p465 .brand b { font-size: 15px; letter-spacing: 0.3em; font-weight: 700; }
+.p465 .brand span { font-size: 9.5px; letter-spacing: 0.24em; color: #39424a; text-transform: uppercase; }
+.p465 .brand .ser { margin-left: auto; font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.14em; color: #4c565e; }
+
+.p465 .row { display: flex; gap: 14px; }
+.p465 .crt {
+  padding: 9px; border-radius: 5px; background: #23282c;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.4) inset, 0 1px 0 rgba(255,255,255,0.18);
+}
+.p465 .crt canvas { border-radius: 2px; }
+.p465 .crt-foot { display: flex; align-items: center; gap: 12px; padding: 7px 2px 0; }
+.p465 .crt-foot .lbl { font-size: 7.5px; letter-spacing: 0.16em; color: #aeb6bb; text-transform: uppercase; }
+
+.p465 .side { flex: 1; display: flex; flex-direction: column; gap: 8px; justify-content: space-between; }
+.p465 .grp {
+  border: 1px solid rgba(0,0,0,0.30); border-radius: 3px; padding: 14px 10px 9px;
+  position: relative; background: rgba(255,255,255,0.05);
+}
+.p465 .grp > .gt {
+  position: absolute; top: -6px; left: 9px; padding: 0 5px; background: #9aa0a2;
+  font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; color: #12171b;
+}
+.p465 .ctls { display: flex; align-items: flex-start; gap: 8px; }
+.p465 .ctl { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 60px; }
+.p465 .ctl.wide { width: 92px; }
+.p465 .cl { font-size: 7px; letter-spacing: 0.13em; text-transform: uppercase; text-align: center; color: #1b2024; }
+.p465 .cv { font-family: var(--font-mono); font-size: 8.5px; color: #2c3439; letter-spacing: 0.04em; }
+
+.p465 .rot-knob {
+  background: radial-gradient(circle at 34% 26%, #6d757b, #22282c 74%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.42), 0 0 0 3px #babfc1, 0 0 0 4px rgba(0,0,0,0.25);
+}
+.p465 .rot-ptr { background: #f2f4f2; box-shadow: 0 0 2px rgba(0,0,0,0.5); }
+.p465 .rot-ring span { color: #1e2428; }
+.p465 .rot-ring span.on { color: #05170d; }
+.p465 .rot.big { width: 82px; height: 82px; }
+.p465 .rot.big .rot-knob { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
+.p465 .rot.big .rot-ring span { font-size: 7px; }
+
+.p465 .sw { display: flex; border: 1px solid rgba(0,0,0,0.4); border-radius: 2px; overflow: hidden; }
+.p465 .sw button {
+  font: 600 7.5px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 5px 6px; border: 0; border-right: 1px solid rgba(0,0,0,0.3); cursor: pointer;
+  background: #b9bec0; color: #2a3237;
+}
+.p465 .sw button:last-child { border-right: 0; }
+.p465 .sw button[aria-pressed="true"] { background: #eceee9; color: #06180e; box-shadow: 0 1px 3px rgba(0,0,0,0.35) inset; }
+
+/* the display-mode lever, a column of engraved positions with a sliding cap */
+.p465 .lever { position: relative; width: 66px; padding: 3px 0; }
+.p465 .lever .pos {
+  display: block; width: 100%; text-align: right; padding: 2px 20px 2px 0; border: 0; background: none;
+  font: 600 7.5px/1.5 var(--font-mono); letter-spacing: 0.12em; color: #262d32; cursor: pointer;
+}
+.p465 .lever .pos[aria-pressed="true"] { color: #05170d; }
+.p465 .lever .cap {
+  position: absolute; right: 2px; width: 13px; height: 15px; border-radius: 2px;
+  background: linear-gradient(180deg, #f0f2ee, #9fa5a7);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.45); transition: top 120ms ease-out; pointer-events: none;
+}
+.p465 .jack {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 32%, #6f777d, #14181b 70%);
+  box-shadow: 0 0 0 3px #b6bbbd, 0 2px 4px rgba(0,0,0,0.4);
+}
+.p465 .btn465 {
+  font: 600 7.5px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 7px 9px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.4); cursor: pointer;
+  background: linear-gradient(180deg, #c9cdce, #a4aaac); color: #1d2429;
+}
+.p465 .btn465[aria-pressed="true"] { background: linear-gradient(180deg, #7f878c, #6b7378); color: #f2f4f2; }
+.p465 .bottom { display: flex; gap: 10px; }
+.p465 .bottom .grp { flex: 1; }
+
+/* ============================================================ STUDY B ==== */
+.dso {
+  width: 1036px; height: 592px; padding: 14px 16px;
+  background: linear-gradient(180deg, #3a3f44 0%, #292d31 62%, #212528 100%);
+  border-radius: 9px; box-shadow: 0 14px 34px rgba(0,0,0,0.4);
+  color: #d8dde1; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.dso .top { display: flex; align-items: baseline; gap: 12px; }
+.dso .top b { font-size: 14px; letter-spacing: 0.26em; color: #eef2f4; }
+.dso .top span { font-size: 9px; letter-spacing: 0.2em; color: #8d979e; text-transform: uppercase; }
+.dso .top .pwr { margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 8px; letter-spacing: 0.18em; color: #79838a; }
+.dso .top .led { width: 7px; height: 7px; border-radius: 50%; background: #5ce08c; box-shadow: 0 0 7px #5ce08c; }
+.dso .mid { display: flex; gap: 12px; flex: 1; }
+
+.dso .bezel {
+  padding: 10px; border-radius: 5px; background: #16191b;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.55) inset, 0 1px 0 rgba(255,255,255,0.08);
+  display: flex; gap: 8px;
+}
+.dso .soft { display: flex; flex-direction: column; gap: 5px; width: 78px; }
+.dso .soft button {
+  display: flex; flex-direction: column; justify-content: center; width: 100%; flex: 1;
+  text-align: left; padding: 5px 6px; cursor: pointer;
+  background: #22272a; border: 1px solid #343b3f; border-radius: 2px; color: #cfd6da;
+  font: 500 8.5px/1.25 var(--font-mono); letter-spacing: 0.04em; min-height: 30px;
+}
+.dso .soft button:hover { background: #2d3438; }
+.dso .soft button[aria-pressed="true"] { background: #d8b13a; border-color: #f0cc63; color: #1a1408; font-weight: 700; }
+.dso .soft button:disabled { color: #5d666b; cursor: default; background: #1c2023; }
+
+.dso .right { width: 296px; display: flex; flex-direction: column; gap: 9px; }
+.dso .sect {
+  border: 1px solid #40474c; border-radius: 3px; padding: 13px 9px 8px; position: relative;
+  background: rgba(255,255,255,0.028);
+}
+.dso .sect > .st {
+  position: absolute; top: -6px; left: 9px; padding: 0 5px; background: #2f3438;
+  font-size: 7.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #a9b3b9; font-weight: 700;
+}
+.dso .line { display: flex; align-items: center; gap: 8px; }
+.dso .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.dso .key {
+  font: 600 8px/1 var(--font-mono); letter-spacing: 0.06em; padding: 7px 3px; cursor: pointer;
+  background: linear-gradient(180deg, #4a5157, #383e43); border: 1px solid #565e64;
+  border-radius: 2px; color: #dde3e7; text-transform: uppercase;
+}
+.dso .key:hover { background: linear-gradient(180deg, #565e65, #434a50); }
+.dso .key[aria-pressed="true"] { background: linear-gradient(180deg, #d8b13a, #b7902a); border-color: #f0cc63; color: #1a1408; }
+.dso .key.run { background: linear-gradient(180deg, #3f9e63, #2c7549); border-color: #56b97b; color: #eafff2; }
+.dso .key.run[data-stopped="true"] { background: linear-gradient(180deg, #c4574a, #9b3f34); border-color: #dd776a; }
+.dso .key.single { background: linear-gradient(180deg, #b6503f, #8d3a2d); border-color: #d3705f; color: #fff0ec; }
+.dso .ctl { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 62px; }
+.dso .cl { font: 500 7px/1.3 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: #9aa4aa; text-align: center; }
+.dso .cv { font: 600 8.5px/1 var(--font-mono); color: #e6ecf0; }
+.dso .rot-knob {
+  background: radial-gradient(circle at 34% 26%, #6a7278, #2a2f33 76%);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5), 0 0 0 3px #4a5157;
+}
+.dso .rot-ptr { background: #f4f7f8; }
+.dso .rot.mfn { width: 74px; height: 74px; }
+.dso .rot.mfn .rot-knob {
+  width: 52px; height: 52px; margin: -26px 0 0 -26px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.55), 0 0 0 3px #d8b13a;
+}
+.dso .rot.ch1 .rot-knob { box-shadow: 0 2px 5px rgba(0,0,0,0.5), 0 0 0 3px #d8b13a; }
+.dso .rot.ch2 .rot-knob { box-shadow: 0 2px 5px rgba(0,0,0,0.5), 0 0 0 3px #4fc9dd; }
+.dso .chbtn {
+  font: 700 8px/1 var(--font-mono); letter-spacing: 0.08em; padding: 6px 8px; cursor: pointer;
+  border-radius: 2px; border: 1px solid #565e64; background: #3b4145; color: #ccd3d8;
+}
+.dso .chbtn[data-ch="1"][aria-pressed="true"] { background: #d8b13a; border-color: #f0cc63; color: #1a1408; }
+.dso .chbtn[data-ch="2"][aria-pressed="true"] { background: #4fc9dd; border-color: #7ee0ef; color: #06212a; }
+.dso .bnc { display: flex; gap: 10px; align-items: center; justify-content: center; padding-top: 3px; }
+.dso .bnc i {
+  width: 22px; height: 22px; border-radius: 50%; display: block;
+  background: radial-gradient(circle at 38% 30%, #7c848a, #16191b 70%);
+  box-shadow: 0 0 0 3px #4a5157, 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* ============================================================ STUDY C ==== */
+.crtscope {
+  width: 940px; height: 524px; padding: 16px;
+  background:
+    repeating-linear-gradient(122deg, rgba(255,255,255,0.035) 0 2px, rgba(0,0,0,0.035) 2px 4px),
+    linear-gradient(180deg, #4a534a, #333b34);
+  border: 3px solid #262d27; border-radius: 5px;
+  box-shadow: 0 16px 34px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.12) inset;
+  color: #ded8bd; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.crtscope .face { display: flex; gap: 20px; flex: 1; }
+.crtscope .tube {
+  position: relative; width: 396px; height: 396px; border-radius: 50%; flex: none;
+  background: #0a0f0b; overflow: hidden;
+  box-shadow: 0 0 0 9px #1e2420, 0 0 0 11px #59625a, 0 6px 16px rgba(0,0,0,0.6) inset;
+}
+.crtscope .tube canvas { border-radius: 50%; }
+.crtscope .glass {
+  position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.14), rgba(255,255,255,0) 52%);
+}
+.crtscope .left { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.crtscope .nameplate {
+  padding: 7px 16px; text-align: center; border-radius: 2px;
+  background: linear-gradient(180deg, #cdc7a8, #a9a486); color: #20261f;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.4) inset;
+}
+.crtscope .nameplate b { display: block; font-size: 12px; letter-spacing: 0.3em; }
+.crtscope .nameplate span { display: block; font-size: 7.5px; letter-spacing: 0.2em; margin-top: 2px; }
+.crtscope .cols { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; align-content: space-between; }
+.crtscope .grp {
+  border: 1px solid rgba(0,0,0,0.4); border-radius: 3px; padding: 15px 10px 10px; position: relative;
+  background: rgba(255,255,255,0.035);
+}
+.crtscope .grp > .gt {
+  position: absolute; top: -6px; left: 10px; padding: 0 6px; background: #414a42;
+  font-size: 7.5px; letter-spacing: 0.22em; text-transform: uppercase; color: #e6e0c6;
+}
+.crtscope .ctls { display: flex; gap: 12px; align-items: flex-start; justify-content: center; }
+.crtscope .ctl { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.crtscope .cl { font-size: 7px; letter-spacing: 0.16em; text-transform: uppercase; color: #cfc9ac; text-align: center; }
+.crtscope .rot-knob {
+  background: radial-gradient(circle at 32% 26%, #45443f, #0d0f0d 78%);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.6), 0 0 0 2px #757b6d;
+}
+.crtscope .rot-ptr { background: #e9e2c2; height: 13px; }
+.crtscope .rot.big { width: 72px; height: 72px; }
+.crtscope .rot.big .rot-knob { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
+.crtscope .rot-ring span { color: #ded8bd; font-size: 7px; }
+.crtscope .rot-ring span.on { color: #fff8dd; }
+.crtscope .toggle {
+  width: 34px; height: 20px; border-radius: 10px; border: 1px solid #20241f; cursor: pointer;
+  background: #2b302b; position: relative; padding: 0;
+}
+.crtscope .toggle i {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: linear-gradient(180deg, #efe9cd, #a9a486); transition: left 110ms ease-out;
+}
+.crtscope .toggle[aria-pressed="true"] i { left: 16px; }
+.crtscope .posts { display: flex; align-items: center; gap: 26px; padding: 0 6px; }
+.crtscope .post { display: flex; align-items: center; gap: 7px; font-size: 7.5px; letter-spacing: 0.18em; text-transform: uppercase; color: #cfc9ac; }
+.crtscope .post i {
+  width: 18px; height: 18px; border-radius: 50%; display: block;
+  background: radial-gradient(circle at 36% 30%, #d9d2b2, #6e6a54 72%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.crtscope .post.red i { background: radial-gradient(circle at 36% 30%, #d68a7c, #7d3a2f 72%); }
+.crtscope .lamp {
+  width: 15px; height: 15px; border-radius: 50%; margin-left: auto;
+  background: radial-gradient(circle at 38% 32%, #ffb9a6, #b4402c 70%);
+  box-shadow: 0 0 12px rgba(214,90,64,0.75);
+}
+
+/* ============================================================ STUDY D ==== */
+.clack {
+  width: 1000px; height: 600px;
+  background: var(--paper); color: var(--ink);
+  border: 2px solid var(--ink); border-radius: 4px; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 5px 5px 0 var(--shadow);
+  font-family: var(--font-body);
+}
+.clack .title {
+  display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+  background: var(--ink); color: var(--paper);
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em;
+}
+.clack .title .dots { display: flex; gap: 4px; }
+.clack .title .dots i { width: 9px; height: 9px; border: 1px solid var(--paper); display: block; }
+.clack .title .grow { flex: 1; }
+.clack .menu {
+  display: flex; gap: 2px; padding: 3px 6px; border-bottom: 1px solid var(--ink);
+  background: var(--paper-2);
+}
+.clack .menu button {
+  font: 500 12px/1 var(--font-body); padding: 5px 10px; border: 0; background: none;
+  color: var(--ink); cursor: pointer; border-radius: 2px;
+}
+.clack .menu button:hover { background: var(--leaf); color: var(--paper); }
+.clack .body { flex: 1; display: flex; gap: 10px; padding: 10px; min-height: 0; }
+.clack .screenwrap { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.clack .screen { border: 2px solid var(--ink); background: #0c130e; padding: 0; line-height: 0; }
+.clack .modes { display: flex; gap: 0; border: 1px solid var(--ink); border-radius: 3px; overflow: hidden; width: max-content; }
+.clack .modes button {
+  font: 600 11px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 8px 15px; border: 0; border-right: 1px solid var(--ink); cursor: pointer;
+  background: var(--paper-2); color: var(--ink);
+}
+.clack .modes button:last-child { border-right: 0; }
+.clack .modes button[aria-pressed="true"] { background: var(--leaf); color: var(--paper); }
+.clack .side { width: 250px; display: flex; flex-direction: column; gap: 9px; }
+.clack .card { border: 1px solid var(--ink); border-radius: 3px; padding: 9px 10px; background: var(--paper-2); }
+.clack .card h4 {
+  font: 600 10px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-2); margin: 0 0 8px;
+}
+.clack .field { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.clack .field:last-child { margin-bottom: 0; }
+.clack .field label { font-size: 11px; color: var(--ink-2); flex: 1; }
+.clack .step { display: flex; border: 1px solid var(--ink); border-radius: 3px; overflow: hidden; }
+.clack .step button {
+  width: 20px; border: 0; background: var(--paper); color: var(--ink); cursor: pointer;
+  font: 600 12px/1 var(--font-mono); padding: 4px 0;
+}
+.clack .step button:hover { background: var(--leaf); color: var(--paper); }
+.clack .step output {
+  min-width: 62px; text-align: center; font: 600 11px/1 var(--font-mono);
+  padding: 5px 4px; background: var(--paper); border-left: 1px solid var(--ink); border-right: 1px solid var(--ink);
+}
+.clack select {
+  font: 500 11px/1 var(--font-mono); padding: 4px 6px; border: 1px solid var(--ink);
+  border-radius: 3px; background: var(--paper); color: var(--ink);
+}
+.clack input[type="range"] { flex: 1; accent-color: var(--leaf); }
+.clack .meas { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font: 500 11.5px/1.5 var(--font-mono); }
+.clack .meas dt { color: var(--ink-3); letter-spacing: 0.08em; text-transform: uppercase; font-size: 10px; align-self: center; }
+.clack .meas dd { margin: 0; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+.clack .status {
+  display: flex; gap: 16px; padding: 5px 10px; border-top: 1px solid var(--ink);
+  background: var(--paper-2); font: 500 10.5px/1.6 var(--font-mono);
+  color: var(--ink-2); letter-spacing: 0.06em;
+}
+.clack .status .grow { flex: 1; }
+.clack .chip {
+  font: 600 10px/1 var(--font-mono); letter-spacing: 0.1em; padding: 3px 7px;
+  border: 1px solid var(--ink); border-radius: 2px; background: var(--paper);
+}
+.clack .chip.on { background: var(--leaf); color: var(--paper); border-color: var(--leaf); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rot-knob, .p465 .lever .cap, .crtscope .toggle i { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="head">
+  <p class="eyebrow">ClackOS · application proposal · <span id="today"></span></p>
+  <h1>Oscilloscope<br>Panel <em>Studies</em></h1>
+  <p class="lede">
+    Four interfaces for the same instrument: a browser oscilloscope fed either by a
+    dropped audio file or live from the soundcard. Each panel below is <strong>live</strong> —
+    the same synthetic two-channel source runs through the same renderer in all four,
+    so what differs is the layout and the control philosophy, not the drawing.
+    Turn the knobs, press the keys, switch the modes.
+  </p>
+  <ul class="brief">
+    <li>Scaling · V/div + s/div</li>
+    <li>Trigger · level, slope, mode</li>
+    <li>Roll</li>
+    <li>X-Y (stereo)</li>
+    <li>FFT</li>
+  </ul>
+</header>
+
+<nav class="jump" aria-label="Studies">
+  <a href="#study-a"><b>A</b> · 465 Bench</a>
+  <a href="#study-b"><b>B</b> · Modern DSO</a>
+  <a href="#study-c"><b>C</b> · Cathode Ray Oscillograph</a>
+  <a href="#study-d"><b>D</b> · ClackOS Native</a>
+  <a href="#compare"><b>·</b> Comparison</a>
+  <a href="#verdict"><b>·</b> Recommendation</a>
+</nav>
+
+<main>
+
+<!-- =============================================================== A ==== -->
+<section class="study" id="study-a">
+  <div class="plate"><span class="tag">A</span><h2>465 Bench</h2></div>
+  <p class="subtitle">
+    The Tektronix 465 layout: a rectangular CRT with the controls wrapped around it in
+    engraved groups. Nothing on the panel is a readout — the position of a knob <em>is</em>
+    the reading, and you learn the instrument by turning things.
+  </p>
+
+  <div class="stagewrap">
+    <div class="stage p465" data-w="1020" data-h="704">
+      <div class="cab">
+        <div class="brand">
+          <b>CLACKTRONICS</b>
+          <span>465B · Dual Trace Oscilloscope</span>
+          <span class="ser">DC – 100 MHz · SER B049117</span>
+        </div>
+
+        <div class="row">
+          <div class="crt">
+            <canvas id="scr-a" width="536" height="428" style="width:536px;height:428px"></canvas>
+            <div class="crt-foot">
+              <span class="lbl">Graticule Illum</span>
+              <div class="rot" data-rot="a-illum" style="width:34px;height:34px"></div>
+              <button class="btn465" data-act="a-beamfind">Beam Find</button>
+              <span class="lbl" style="margin-left:auto">Probe Adjust 0.5 V ⊓</span>
+              <span class="jack" style="width:18px;height:18px"></span>
+            </div>
+          </div>
+
+          <div class="side">
+            <div class="grp">
+              <span class="gt">Intensity / Focus</span>
+              <div class="ctls">
+                <div class="ctl"><div class="rot" data-rot="a-int"></div><span class="cl">Intensity</span></div>
+                <div class="ctl"><div class="rot" data-rot="a-foc"></div><span class="cl">Focus</span></div>
+                <div class="ctl"><div class="rot" data-rot="a-astig"></div><span class="cl">Astig</span></div>
+              </div>
+            </div>
+
+            <div class="grp">
+              <span class="gt">A Trigger</span>
+              <div class="ctls">
+                <div class="ctl"><div class="rot" data-rot="a-lvl"></div><span class="cl">Level</span></div>
+                <div class="ctl wide" style="align-items:stretch">
+                  <div class="sw" data-sw="a-slope">
+                    <button data-val="rise" aria-pressed="true">+ Slope</button>
+                    <button data-val="fall" aria-pressed="false">−</button>
+                  </div>
+                  <span class="cl">Slope</span>
+                  <div class="sw" data-sw="a-tmode">
+                    <button data-val="auto" aria-pressed="true">Auto</button>
+                    <button data-val="norm" aria-pressed="false">Norm</button>
+                    <button data-val="sgl" aria-pressed="false">Sgl</button>
+                  </div>
+                  <span class="cl">Mode</span>
+                </div>
+                <div class="ctl" style="align-items:stretch">
+                  <div class="sw" data-sw="a-tsrc">
+                    <button data-val="ch1" aria-pressed="true">CH 1</button>
+                    <button data-val="ch2" aria-pressed="false">CH 2</button>
+                  </div>
+                  <span class="cl">Source</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grp">
+              <span class="gt">Display Mode</span>
+              <div class="ctls" style="align-items:center">
+                <div class="lever" data-lever="a-disp">
+                  <button class="pos" data-val="ch1" aria-pressed="false">CH 1</button>
+                  <button class="pos" data-val="ch2" aria-pressed="false">CH 2</button>
+                  <button class="pos" data-val="alt"  aria-pressed="true">ALT</button>
+                  <button class="pos" data-val="add" aria-pressed="false">ADD</button>
+                  <button class="pos" data-val="xy"  aria-pressed="false">X-Y</button>
+                  <span class="cap"></span>
+                </div>
+                <div class="ctl">
+                  <button class="btn465" data-act="a-fft" aria-pressed="false">Spectrum</button>
+                  <span class="cl">Plug-in 7L5</span>
+                </div>
+                <div class="ctl">
+                  <div class="rot" data-rot="a-hpos"></div><span class="cl">Horiz Position</span>
+                </div>
+                <div class="ctl">
+                  <div class="rot" data-rot="a-var"></div><span class="cl">Sweep Var<br>(Uncal)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom">
+          <div class="grp">
+            <span class="gt">Channel 1</span>
+            <div class="ctls">
+              <div class="ctl wide"><div class="rot big" data-rot="a-v1"></div><span class="cl">Volts / Div</span></div>
+              <div class="ctl"><div class="rot" data-rot="a-p1"></div><span class="cl">Position</span></div>
+              <div class="ctl" style="align-items:stretch">
+                <div class="sw" data-sw="a-c1">
+                  <button data-val="ac" aria-pressed="true">AC</button>
+                  <button data-val="gnd" aria-pressed="false">GND</button>
+                  <button data-val="dc" aria-pressed="false">DC</button>
+                </div>
+                <span class="cl">Coupling</span>
+                <span class="cv" data-out="a-v1">0.5 V</span>
+              </div>
+              <div class="ctl"><span class="jack"></span><span class="cl">Input 1 MΩ</span></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <span class="gt">Channel 2</span>
+            <div class="ctls">
+              <div class="ctl wide"><div class="rot big" data-rot="a-v2"></div><span class="cl">Volts / Div</span></div>
+              <div class="ctl"><div class="rot" data-rot="a-p2"></div><span class="cl">Position</span></div>
+              <div class="ctl" style="align-items:stretch">
+                <div class="sw" data-sw="a-c2">
+                  <button data-val="ac" aria-pressed="true">AC</button>
+                  <button data-val="gnd" aria-pressed="false">GND</button>
+                  <button data-val="dc" aria-pressed="false">DC</button>
+                </div>
+                <span class="cl">Coupling</span>
+                <span class="cv" data-out="a-v2">0.5 V</span>
+              </div>
+              <div class="ctl"><span class="jack"></span><span class="cl">Input 1 MΩ</span></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <span class="gt">Horizontal</span>
+            <div class="ctls">
+              <div class="ctl wide"><div class="rot big" data-rot="a-time"></div><span class="cl">Time / Div</span></div>
+              <div class="ctl" style="align-items:stretch">
+                <span class="cv" data-out="a-time">0.2 ms</span>
+                <span class="cl">Extreme CCW = Roll</span>
+                <div class="sw" data-sw="a-mag">
+                  <button data-val="x1" aria-pressed="true">×1</button>
+                  <button data-val="x10" aria-pressed="false">×10 Mag</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div>
+      <h3>Why it works</h3>
+      <p>
+        It is the picture in everyone's head when you say "oscilloscope", and it suits a site
+        built out of retro desktop furniture. Every control is visible at once — no menus,
+        no modes hidden two levels down — which is genuinely faster once learned.
+      </p>
+      <p>
+        The panel is also the most fun to build: rotary switches with printed value rings,
+        a lever for display mode, real phosphor persistence on the trace.
+      </p>
+    </div>
+    <div>
+      <h3>Where it hurts</h3>
+      <p>
+        Knobs are a poor input device with a mouse, and worse with a thumb. Reading
+        "500 mV/div" means counting ticks around a ring rather than reading a number.
+      </p>
+      <p>
+        <strong>FFT and measurements have nowhere to live.</strong> The real 465 had neither;
+        here they arrive as a fictional plug-in and a display mode, which is a fudge.
+      </p>
+    </div>
+    <div>
+      <h3>Where the brief lands</h3>
+      <ul class="maplist">
+        <li><b>Scaling</b><span>VOLTS/DIV and TIME/DIV rotary switches, 1-2-5 rings</span></li>
+        <li><b>Trigger</b><span>LEVEL knob + SLOPE / MODE / SOURCE switches</span></li>
+        <li><b>Roll</b><span>the extreme anticlockwise position of TIME/DIV</span></li>
+        <li><b>X-Y</b><span>bottom position of the DISPLAY MODE lever</span></li>
+        <li><b>FFT</b><span>"Spectrum" button, dressed as a 7L5 plug-in</span></li>
+      </ul>
+      <p class="verdictline">Window 1020 × 704 · fixed · integrated</p>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== B ==== -->
+<section class="study" id="study-b">
+  <div class="plate"><span class="tag">B</span><h2>Modern DSO</h2></div>
+  <p class="subtitle">
+    The Rigol/Siglent bench arrangement: a big screen carrying all the numbers, six softkeys
+    down the bezel whose meaning changes with the menu, and a wall of hard keys that each open
+    one. Press <em>Math</em>, <em>Horiz</em> or <em>Display</em> to see the softkey column change.
+  </p>
+
+  <div class="stagewrap">
+    <div class="stage dso" data-w="1036" data-h="592">
+      <div class="top">
+        <b>CLACKSCOPE</b>
+        <span>DS-1102C · 100 MHz · 1 GSa/s</span>
+        <span class="pwr"><i class="led"></i> POWER</span>
+      </div>
+
+      <div class="mid">
+        <div class="bezel">
+          <canvas id="scr-b" width="600" height="456" style="width:600px;height:456px"></canvas>
+          <div class="soft" data-soft="b"></div>
+        </div>
+
+        <div class="right">
+          <div class="line" style="gap:6px">
+            <button class="key" data-act="b-auto" style="flex:1">Auto</button>
+            <button class="key run" data-act="b-run" style="flex:1" data-stopped="false">Run/Stop</button>
+            <button class="key single" data-act="b-single" style="flex:1">Single</button>
+          </div>
+
+          <div class="sect">
+            <span class="st">Multifunction</span>
+            <div class="line" style="justify-content:space-around">
+              <div class="ctl" style="width:auto"><div class="rot mfn" data-rot="b-mfn"></div><span class="cl">Push to select</span></div>
+              <div class="keys" style="grid-template-columns:repeat(2,1fr);flex:1">
+                <button class="key" data-menu="measure">Measure</button>
+                <button class="key" data-menu="acquire">Acquire</button>
+                <button class="key" data-menu="cursor">Cursor</button>
+                <button class="key" data-menu="display">Display</button>
+                <button class="key" data-menu="math">Math</button>
+                <button class="key" data-menu="horiz">Horiz</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <span class="st">Horizontal</span>
+            <div class="line">
+              <div class="ctl"><div class="rot" data-rot="b-time"></div><span class="cl">Scale</span><span class="cv" data-out="b-time">200 µs</span></div>
+              <div class="ctl"><div class="rot" data-rot="b-hpos"></div><span class="cl">Position</span></div>
+              <button class="key" data-menu="horiz" style="flex:1">Horiz<br>Menu</button>
+            </div>
+          </div>
+
+          <div class="sect">
+            <span class="st">Trigger</span>
+            <div class="line">
+              <div class="ctl"><div class="rot" data-rot="b-lvl"></div><span class="cl">Level</span><span class="cv" data-out="b-lvl">0.00 V</span></div>
+              <div class="keys" style="grid-template-columns:repeat(2,1fr);flex:1">
+                <button class="key" data-menu="trigger">Trig<br>Menu</button>
+                <button class="key" data-act="b-force">Force</button>
+                <button class="key" data-act="b-50">50 %</button>
+                <button class="key" data-menu="trigger">Coupling</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <span class="st">Vertical</span>
+            <div class="line">
+              <div class="ctl"><div class="rot ch1" data-rot="b-v1"></div><span class="cl">CH1 Scale</span><span class="cv" data-out="b-v1">500 mV</span></div>
+              <div class="ctl"><div class="rot ch2" data-rot="b-v2"></div><span class="cl">CH2 Scale</span><span class="cv" data-out="b-v2">500 mV</span></div>
+              <div class="keys" style="grid-template-columns:1fr;flex:1;gap:4px">
+                <button class="chbtn" data-ch="1" aria-pressed="true">CH 1</button>
+                <button class="chbtn" data-ch="2" aria-pressed="true">CH 2</button>
+              </div>
+            </div>
+            <div class="bnc"><i></i><i></i><span class="cl" style="align-self:center">1 MΩ ‖ 16 pF</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div>
+      <h3>Why it works</h3>
+      <p>
+        This is the layout that <strong>already solved the problem</strong>. Every requirement
+        in the brief has an obvious home, because a real DS-1000 has all of them: roll is a
+        horizontal timebase mode, X-Y is a display mode, FFT is a maths function.
+      </p>
+      <p>
+        The screen carries its own status strips, so the readouts are legible at any window
+        size and stay legible when the panel is scaled down on a phone.
+      </p>
+    </div>
+    <div>
+      <h3>Where it hurts</h3>
+      <p>
+        It is a lot of chrome for a web app — roughly 30 controls, most of which do nothing
+        until wired up. There is a real risk of building the furniture and running out of
+        appetite before the signal path is good.
+      </p>
+      <p>
+        It is also the least ClackOS-looking of the four: a grey Chinese bench instrument
+        sitting inside a cream retro desktop, ignoring the theme entirely.
+      </p>
+    </div>
+    <div>
+      <h3>Where the brief lands</h3>
+      <ul class="maplist">
+        <li><b>Scaling</b><span>CH1/CH2 Scale + Horizontal Scale knobs, values on screen</span></li>
+        <li><b>Trigger</b><span>Level knob, 50 % / Force keys, Trig Menu softkeys</span></li>
+        <li><b>Roll</b><span>Horiz Menu → Time Base → Roll</span></li>
+        <li><b>X-Y</b><span>Horiz Menu → X-Y (or Display → Format)</span></li>
+        <li><b>FFT</b><span>Math → FFT, with window and vertical-scale softkeys</span></li>
+      </ul>
+      <p class="verdictline">Window 1036 × 592 · min 900 × 520 · iframe</p>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== C ==== -->
+<section class="study" id="study-c">
+  <div class="plate"><span class="tag">C</span><h2>Cathode Ray Oscillograph</h2></div>
+  <p class="subtitle">
+    Valve era: a round tube behind a round graticule, hammertone paint, engraved
+    legends and six knobs total. Heavy phosphor persistence, no readouts at all.
+    The MODE switch does the work the other three panels spread across a menu system.
+  </p>
+
+  <div class="stagewrap">
+    <div class="stage crtscope" data-w="940" data-h="524">
+      <div class="face">
+        <div class="left">
+          <div class="tube">
+            <canvas id="scr-c" width="396" height="396" style="width:396px;height:396px"></canvas>
+            <div class="glass"></div>
+          </div>
+          <div class="nameplate">
+            <b>CLACKTRONICS</b>
+            <span>Type 61A · Cathode Ray Oscillograph</span>
+          </div>
+        </div>
+
+        <div class="cols">
+          <div class="grp" style="grid-column:1 / -1">
+            <span class="gt">Function</span>
+            <div class="ctls">
+              <div class="ctl"><div class="rot big" data-rot="c-mode"></div><span class="cl">Mode</span></div>
+              <div class="ctl"><div class="rot big" data-rot="c-time"></div><span class="cl">Sweep Range</span></div>
+              <div class="ctl"><div class="rot big" data-rot="c-gain"></div><span class="cl">Vert Gain</span></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <span class="gt">Synchronising</span>
+            <div class="ctls">
+              <div class="ctl"><div class="rot" data-rot="c-lvl"></div><span class="cl">Level</span></div>
+              <div class="ctl">
+                <button class="toggle" data-toggle="c-slope" aria-pressed="false"><i></i></button>
+                <span class="cl">Slope + / −</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <span class="gt">Beam</span>
+            <div class="ctls">
+              <div class="ctl"><div class="rot" data-rot="c-int"></div><span class="cl">Intens</span></div>
+              <div class="ctl"><div class="rot" data-rot="c-foc"></div><span class="cl">Focus</span></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <span class="gt">Positioning</span>
+            <div class="ctls">
+              <div class="ctl"><div class="rot" data-rot="c-hpos"></div><span class="cl">Horiz</span></div>
+              <div class="ctl"><div class="rot" data-rot="c-vpos"></div><span class="cl">Vert</span></div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <span class="gt">Persistence</span>
+            <div class="ctls">
+              <div class="ctl"><div class="rot" data-rot="c-pers"></div><span class="cl">Afterglow</span></div>
+              <div class="ctl">
+                <button class="toggle" data-toggle="c-grat" aria-pressed="true"><i></i></button>
+                <span class="cl">Graticule</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="posts">
+        <span class="post"><i></i> Vert Input</span>
+        <span class="post"><i></i> Horiz Input</span>
+        <span class="post red"><i></i> Earth</span>
+        <span class="post" style="margin-left:auto">Mains 230 V 50 Hz</span>
+        <span class="lamp" style="margin-left:0"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div>
+      <h3>Why it works</h3>
+      <p>
+        It is the best-looking of the four by a distance, and the cheapest to build — six
+        knobs, two toggles, no menu system, no readouts to keep in sync.
+      </p>
+      <p>
+        The round tube with real afterglow is a genuinely lovely thing to watch audio through,
+        and X-Y on a round screen is the classic stereo vectorscope picture.
+      </p>
+    </div>
+    <div>
+      <h3>Where it hurts</h3>
+      <p>
+        A round screen throws away a third of the pixels, and a spectrum display inside a
+        circle is <strong>actively bad</strong> — the frequency axis runs into curved glass at both ends.
+      </p>
+      <p>
+        No numbers anywhere means no measurements, and "which volts per division am I on"
+        can only be answered by looking at a knob.
+      </p>
+    </div>
+    <div>
+      <h3>Where the brief lands</h3>
+      <ul class="maplist">
+        <li><b>Scaling</b><span>VERT GAIN and SWEEP RANGE rotaries, ×1 ×10 ×100</span></li>
+        <li><b>Trigger</b><span>SYNC level knob + slope toggle; no trigger modes</span></li>
+        <li><b>Roll</b><span>MODE position 3</span></li>
+        <li><b>X-Y</b><span>MODE position 2 — the tube's native trick</span></li>
+        <li><b>FFT</b><span>MODE position 4, and it fights the round screen</span></li>
+      </ul>
+      <p class="verdictline">Window 940 × 524 · fixed · integrated</p>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== D ==== -->
+<section class="study" id="study-d">
+  <div class="plate"><span class="tag">D</span><h2>ClackOS Native</h2></div>
+  <p class="subtitle">
+    No imitation: a ClackOS application that happens to be a scope. Menu bar, theme
+    variables throughout, keyboard-reachable controls, numbers you can read.
+    This is the only study that changes with the page theme — switch your system to
+    dark and watch just this panel follow.
+  </p>
+
+  <div class="stagewrap">
+    <div class="stage clack" data-w="1000" data-h="600">
+      <div class="title">
+        <span class="dots"><i></i></span>
+        <span>ClackScope</span>
+        <span class="grow"></span>
+        <span class="dots"><i></i><i></i><i></i></span>
+      </div>
+      <div class="menu">
+        <button>File</button><button>Source</button><button>Timebase</button>
+        <button>Trigger</button><button>Display</button><button>Measure</button><button>Help</button>
+      </div>
+
+      <div class="body">
+        <div class="screenwrap">
+          <div class="screen"><canvas id="scr-d" width="672" height="448" style="width:672px;height:448px"></canvas></div>
+          <div class="modes" data-modes="d">
+            <button data-val="sweep" aria-pressed="true">Sweep</button>
+            <button data-val="roll" aria-pressed="false">Roll</button>
+            <button data-val="xy" aria-pressed="false">X-Y</button>
+            <button data-val="fft" aria-pressed="false">FFT</button>
+          </div>
+        </div>
+
+        <aside class="side">
+          <div class="card">
+            <h4>Source</h4>
+            <div class="field">
+              <label for="d-src">Input</label>
+              <select id="d-src">
+                <option>Soundcard — stereo in</option>
+                <option>Audio file…</option>
+                <option>Test tone 1 kHz</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="d-cpl">Coupling</label>
+              <select id="d-cpl"><option>AC</option><option>DC</option></select>
+            </div>
+          </div>
+
+          <div class="card">
+            <h4>Scaling</h4>
+            <div class="field">
+              <label>Volts / div</label>
+              <span class="step" data-step="d-v1">
+                <button data-d="-1" aria-label="Decrease volts per division">−</button>
+                <output data-out="d-v1">500 mV</output>
+                <button data-d="1" aria-label="Increase volts per division">+</button>
+              </span>
+            </div>
+            <div class="field">
+              <label>Time / div</label>
+              <span class="step" data-step="d-time">
+                <button data-d="-1" aria-label="Faster timebase">−</button>
+                <output data-out="d-time">200 µs</output>
+                <button data-d="1" aria-label="Slower timebase">+</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h4>Trigger</h4>
+            <div class="field">
+              <label for="d-lvl">Level</label>
+              <input type="range" id="d-lvl" min="-2" max="2" step="0.02" value="0">
+              <output data-out="d-lvl" style="font:600 11px/1 var(--font-mono);min-width:52px;text-align:right">0.00 V</output>
+            </div>
+            <div class="field">
+              <label for="d-slope">Slope</label>
+              <select id="d-slope"><option value="rise">Rising ↗</option><option value="fall">Falling ↘</option></select>
+            </div>
+            <div class="field">
+              <label for="d-tmode">Mode</label>
+              <select id="d-tmode"><option>Auto</option><option>Normal</option><option>Single</option></select>
+            </div>
+          </div>
+
+          <div class="card" style="flex:1">
+            <h4>Measurements</h4>
+            <dl class="meas">
+              <dt>Vpp</dt><dd data-out="d-vpp">—</dd>
+              <dt>Vrms</dt><dd data-out="d-vrms">—</dd>
+              <dt>Freq</dt><dd data-out="d-freq">—</dd>
+              <dt>Peak</dt><dd data-out="d-peak">—</dd>
+            </dl>
+          </div>
+        </aside>
+      </div>
+
+      <div class="status">
+        <span class="chip on" data-out="d-run">RUN</span>
+        <span data-out="d-status">Sweep · 200 µs/div · trig CH1 ↗ 0.00 V</span>
+        <span class="grow"></span>
+        <span>48 000 Hz · 16 bit · stereo</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div>
+      <h3>Why it works</h3>
+      <p>
+        It obeys the house rules: theme variables so all twelve palettes apply, real form
+        controls so it works with a keyboard and a screen reader, a menu bar built the way
+        every other app on the desktop builds one.
+      </p>
+      <p>
+        Measurements are free here — there is a panel to put them in. Adding cursors, a
+        second maths trace or a file transport later costs nothing structurally.
+      </p>
+    </div>
+    <div>
+      <h3>Where it hurts</h3>
+      <p>
+        It has no <em>character</em>. Sat next to the other three it looks like a settings
+        dialogue with a picture of a waveform, and the site's whole personality is that its
+        apps look like the machines they descend from.
+      </p>
+      <p>
+        A sidebar of dropdowns is also the slowest way to change gain while watching a
+        signal — the one thing you do constantly on a scope.
+      </p>
+    </div>
+    <div>
+      <h3>Where the brief lands</h3>
+      <ul class="maplist">
+        <li><b>Scaling</b><span>steppers in the sidebar, plus scroll-over-screen</span></li>
+        <li><b>Trigger</b><span>level slider with a live number, slope + mode selects</span></li>
+        <li><b>Roll</b><span>mode segment under the screen</span></li>
+        <li><b>X-Y</b><span>mode segment under the screen</span></li>
+        <li><b>FFT</b><span>mode segment under the screen</span></li>
+      </ul>
+      <p class="verdictline">Window 1000 × 600 · min 720 × 480 · integrated, themed</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================= compare ==== -->
+<section id="compare">
+  <h2 class="sec">Comparison</h2>
+  <p class="subtitle">Same five requirements, four different places to put them.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>&nbsp;</th><th>A · 465 Bench</th><th>B · Modern DSO</th><th>C · Oscillograph</th><th>D · ClackOS Native</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Reads scale at a glance</th>
+          <td>no — knob position only</td><td class="yes">yes — on-screen bar</td>
+          <td>no — knob position only</td><td class="yes">yes — sidebar</td></tr>
+        <tr><th>Room for FFT</th>
+          <td>awkward — invented plug-in</td><td class="yes">native — Math menu</td>
+          <td>poor — round screen</td><td class="yes">native — mode row</td></tr>
+        <tr><th>Room for measurements</th>
+          <td>none</td><td class="yes">on-screen + Measure menu</td>
+          <td>none</td><td class="yes">dedicated panel</td></tr>
+        <tr><th>Follows site themes</th>
+          <td>no — fixed grey/blue</td><td>no — fixed dark grey</td>
+          <td>no — fixed green</td><td class="yes">yes — every palette</td></tr>
+        <tr><th>Keyboard / touch</th>
+          <td>weak</td><td>medium</td><td>weak</td><td class="yes">strong</td></tr>
+        <tr><th>Character</th>
+          <td class="yes">very strong</td><td>medium</td><td class="yes">strongest</td><td>weak</td></tr>
+        <tr><th>Smallest sensible window</th>
+          <td>1020 × 704 fixed</td><td>900 × 520</td><td>940 × 524 fixed</td><td class="yes">720 × 480</td></tr>
+        <tr><th>Rough build cost</th>
+          <td>high — 14 knobs, rings, lever</td><td>highest — menu system</td>
+          <td class="yes">low — 8 controls</td><td class="yes">low — form controls</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========================================================= verdict ==== -->
+<section id="verdict">
+  <h2 class="sec">Recommendation</h2>
+
+  <div class="callout">
+    <h3>Build B's information design in D's clothes</h3>
+    <p>
+      B is the only layout where all five requirements already have a home, because a real
+      DSO solved this problem forty years ago: the screen carries the numbers, the softkey
+      column carries whichever menu is open, and roll / X-Y / FFT are ordinary entries in it.
+      D is the only study that obeys the site's own rules about themes, keyboards and window
+      sizes. They are not in conflict — B is an information design, D is a skin.
+    </p>
+    <p>
+      So: take the DSO arrangement — status strip along the top of the screen, channel and
+      timebase bar along the bottom, six softkeys down the right bezel, hard keys grouped by
+      function — and draw all of it from the ClackOS theme variables instead of grey plastic.
+      The trace colours come from <code>--series-1</code> and <code>--series-2</code>, the
+      screen ground from <code>--ink</code>, the panel from <code>--paper</code>.
+    </p>
+    <p>
+      A and C are the fun ones and should not be thrown away. Both are <em>skins over the same
+      renderer</em>: the same canvas, the same signal path, a different set of controls bound to
+      the same state object. If the state lives in one place from the start, "Appearance →
+      Scope panel: 465 / Oscillograph / ClackOS" is an afternoon's work later, not a rewrite.
+    </p>
+  </div>
+
+  <h2 class="sec">If this is the direction, next steps</h2>
+  <div class="callout">
+    <ol>
+      <li>
+        <strong>Signal path first, panel second.</strong> <code>getUserMedia</code> plus an
+        <code>AudioWorklet</code> ring buffer, and a <code>decodeAudioData</code> path for a
+        dropped file — with a test-tone generator so the panel can be developed with no input.
+      </li>
+      <li>
+        <strong>One state object, one renderer.</strong> Mode, s/div, V/div per channel, trigger
+        level / slope / mode, position, persistence. Every control writes to it; the canvas
+        reads it. This is what makes the skins cheap.
+      </li>
+      <li>
+        <strong>Trigger on the buffer, not on time.</strong> Hunt the crossing inside the captured
+        block, with hysteresis, and hold the last good position when the crossing is lost — that
+        is the difference between a scope and a wiggling line.
+      </li>
+      <li>
+        <strong>FFT via the real thing.</strong> <code>AnalyserNode.getFloatFrequencyData</code>
+        for the live path; a hand-rolled radix-2 for file playback, so both paths agree.
+      </li>
+      <li>
+        <strong>Register it properly.</strong> <code>content/applications/scope.html</code>, a
+        Multimedia entry in <code>menu.json</code> with <code>allow: "microphone"</code>, its own
+        <code>description</code> for crawlers, then
+        <code>build_app_metadata.py</code> and <code>build_plain_site.py</code>.
+      </li>
+    </ol>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const TAU = Math.PI * 2;
+
+/* ------------------------------------------------------------ the signal --
+   A stand-in for the real audio path: a 1 kHz fundamental with a little third
+   harmonic on the left channel, and a right channel of the same frequency whose
+   phase drifts slowly, so X-Y draws an ellipse that rotates instead of a dead
+   line. Noise is added at plot time only — the trigger hunts the clean signal,
+   which is what a real scope's hysteresis buys you.                          */
+const SRC = { f: 1000, a1: 0.95, a2: 0.62, noise: 0.016 };
+
+// a slow swell, so roll mode has an envelope to draw and the measurements wander
+// the way they do on live audio rather than sitting on a dead number
+const swell = t => 0.62 + 0.38 * Math.sin(TAU * t / 3.4);
+
+function ch1(t) {
+  return SRC.a1 * swell(t) * (Math.sin(TAU * SRC.f * t) + 0.16 * Math.sin(TAU * 3 * SRC.f * t + 0.6));
+}
+function ch2(t) {
+  return SRC.a2 * swell(t + 0.9) * Math.sin(TAU * SRC.f * t + 0.9 + 0.28 * t);
+}
+const grain = amt => (Math.random() - 0.5) * amt;
+
+/* ------------------------------------------------------------------- FFT --
+   Iterative radix-2, in place. 512 points at a 12 kHz notional sample rate puts
+   the fundamental and its harmonic in the left third of a 0–6 kHz axis, which is
+   where they sit on a real audio scope.                                      */
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { const tr = re[i]; re[i] = re[j]; re[j] = tr; const ti = im[i]; im[i] = im[j]; im[j] = ti; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -TAU / len, half = len >> 1;
+    for (let i = 0; i < n; i += len) {
+      for (let k = 0; k < half; k++) {
+        const a = ang * k, wr = Math.cos(a), wi = Math.sin(a);
+        const xr = re[i + k + half], xi = im[i + k + half];
+        const vr = xr * wr - xi * wi, vi = xr * wi + xi * wr;
+        const ur = re[i + k], ui = im[i + k];
+        re[i + k] = ur + vr;  im[i + k] = ui + vi;
+        re[i + k + half] = ur - vr; im[i + k + half] = ui - vi;
+      }
+    }
+  }
+}
+
+const FFT_N = 512, FFT_FS = 12000;
+const fftRe = new Float64Array(FFT_N), fftIm = new Float64Array(FFT_N);
+const fftMag = new Float64Array(FFT_N / 2);
+const hann = new Float64Array(FFT_N);
+for (let i = 0; i < FFT_N; i++) hann[i] = 0.5 - 0.5 * Math.cos(TAU * i / (FFT_N - 1));
+
+function spectrum(t0) {
+  for (let i = 0; i < FFT_N; i++) {
+    const t = t0 + i / FFT_FS;
+    fftRe[i] = (ch1(t) + grain(SRC.noise)) * hann[i];
+    fftIm[i] = 0;
+  }
+  fft(fftRe, fftIm);
+  for (let i = 0; i < FFT_N / 2; i++) {
+    fftMag[i] = Math.hypot(fftRe[i], fftIm[i]) / (FFT_N / 4);
+  }
+  return fftMag;
+}
+
+/* -------------------------------------------------------------- formatting */
+function fmtTime(s) {
+  if (s >= 1) return s.toFixed(s < 10 ? 1 : 0) + ' s';
+  if (s >= 1e-3) return (s * 1e3 >= 100 ? (s * 1e3).toFixed(0) : (s * 1e3).toFixed(s * 1e3 < 10 ? 1 : 0)) + ' ms';
+  return ((s * 1e6) >= 100 ? (s * 1e6).toFixed(0) : (s * 1e6).toFixed(0)) + ' µs';
+}
+function fmtTimeShort(s) {
+  if (s >= 1) return s + 's';
+  if (s >= 1e-3) return (s * 1e3) + 'm';
+  return (s * 1e6) + 'µ';
+}
+function fmtVolt(v) {
+  return v >= 1 ? v + ' V' : Math.round(v * 1000) + ' mV';
+}
+function fmtVoltShort(v) {
+  return v >= 1 ? v + 'V' : (v * 1000) + 'm';
+}
+
+const TIMES = [0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 5e-3, 2e-3, 1e-3, 5e-4, 2e-4, 1e-4, 5e-5, 2e-5, 1e-5];
+const VOLTS = [5, 2, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01];
+const T_DEF = TIMES.indexOf(2e-4);
+const V_DEF = VOLTS.indexOf(0.5);
+
+/* ----------------------------------------------------------- the renderer --
+   One draw function for all four panels. `cfg` carries everything cosmetic and
+   `st` everything the controls can change, which is the split the real app
+   should keep: swapping a skin must not mean swapping a renderer.            */
+function makeView(canvas, cfg, st) {
+  const trace = document.createElement('canvas');
+  const v = {
+    canvas, ctx: canvas.getContext('2d'),
+    trace, tctx: trace.getContext('2d'),
+    cfg, st, scale: 1,
+    w: canvas.width, h: canvas.height,
+    hold: null
+  };
+  v.resize = () => {
+    const dpr = (window.devicePixelRatio || 1) * v.scale;
+    for (const c of [canvas, trace]) {
+      c.width = Math.round(v.w * dpr);
+      c.height = Math.round(v.h * dpr);
+    }
+    canvas.style.width = v.w + 'px';
+    canvas.style.height = v.h + 'px';
+    v.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    v.tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    v.tctx.clearRect(0, 0, v.w, v.h);
+  };
+  v.resize();
+  views.push(v);
+  return v;
+}
+const views = [];
+
+/* the plotting rectangle inside the canvas — the DSO keeps strips top and bottom */
+function plotArea(v) {
+  const c = v.cfg;
+  return {
+    x: c.pad.l, y: c.pad.t,
+    w: v.w - c.pad.l - c.pad.r,
+    h: v.h - c.pad.t - c.pad.b
+  };
+}
+
+function drawGrid(ctx, a, cfg, st) {
+  const { cols, rows } = cfg;
+  ctx.save();
+  if (cfg.round) {
+    ctx.beginPath();
+    ctx.arc(a.x + a.w / 2, a.y + a.h / 2, Math.min(a.w, a.h) / 2 - 2, 0, TAU);
+    ctx.clip();
+  }
+  if (!st.graticule) { ctx.restore(); return; }
+
+  ctx.strokeStyle = cfg.grid;
+  ctx.lineWidth = 1;
+  if (cfg.gridStyle === 'dots') {
+    // A modern DSO draws dotted minor divisions and a solid centre cross.
+    ctx.fillStyle = cfg.grid;
+    for (let i = 1; i < cols; i++) {
+      for (let j = 1; j < rows; j++) {
+        for (let k = 1; k < 5; k++) {
+          ctx.fillRect(Math.round(a.x + a.w * i / cols), Math.round(a.y + a.h * (j - 1 + k / 5) / rows), 1, 1);
+          ctx.fillRect(Math.round(a.x + a.w * (i - 1 + k / 5) / cols), Math.round(a.y + a.h * j / rows), 1, 1);
+        }
+        ctx.fillRect(Math.round(a.x + a.w * i / cols) - 1, Math.round(a.y + a.h * j / rows) - 1, 2, 2);
+      }
+    }
+  } else {
+    ctx.beginPath();
+    for (let i = 1; i < cols; i++) {
+      const x = Math.round(a.x + a.w * i / cols) + 0.5;
+      ctx.moveTo(x, a.y); ctx.lineTo(x, a.y + a.h);
+    }
+    for (let j = 1; j < rows; j++) {
+      const y = Math.round(a.y + a.h * j / rows) + 0.5;
+      ctx.moveTo(a.x, y); ctx.lineTo(a.x + a.w, y);
+    }
+    ctx.stroke();
+  }
+
+  // centre axes, plus the 0.2-division tick marks a real graticule carries
+  ctx.strokeStyle = cfg.gridStrong || cfg.grid;
+  ctx.beginPath();
+  const cx = Math.round(a.x + a.w / 2) + 0.5, cy = Math.round(a.y + a.h / 2) + 0.5;
+  ctx.moveTo(a.x, cy); ctx.lineTo(a.x + a.w, cy);
+  ctx.moveTo(cx, a.y); ctx.lineTo(cx, a.y + a.h);
+  for (let i = 0; i <= cols * 5; i++) {
+    const x = Math.round(a.x + a.w * i / (cols * 5)) + 0.5;
+    ctx.moveTo(x, cy - 3); ctx.lineTo(x, cy + 3);
+  }
+  for (let j = 0; j <= rows * 5; j++) {
+    const y = Math.round(a.y + a.h * j / (rows * 5)) + 0.5;
+    ctx.moveTo(cx - 3, y); ctx.lineTo(cx + 3, y);
+  }
+  ctx.stroke();
+
+  if (cfg.border) {
+    ctx.strokeStyle = cfg.gridStrong || cfg.grid;
+    ctx.strokeRect(a.x + 0.5, a.y + 0.5, a.w - 1, a.h - 1);
+  }
+  ctx.restore();
+}
+
+/* Hunt backwards for the last crossing of the trigger level on the requested
+   slope. Returns null when the level is outside the signal, which is what makes
+   AUTO free-run and NORM hold — the behaviour the real app has to reproduce. */
+function findTrigger(level, slope, tEnd, span) {
+  const period = 1 / SRC.f;
+  const back = Math.min(Math.max(span, 4 * period), 12 * period);
+  const steps = 900;
+  const dt = back / steps;
+  let prev = ch1(tEnd - back);
+  let found = null;
+  for (let i = 1; i <= steps; i++) {
+    const t = tEnd - back + i * dt;
+    const cur = ch1(t);
+    const up = prev < level && cur >= level;
+    const down = prev > level && cur <= level;
+    if ((slope === 'rise' && up) || (slope === 'fall' && down)) {
+      const frac = (level - prev) / (cur - prev || 1);
+      found = t - dt + frac * dt;
+    }
+    prev = cur;
+  }
+  return found;
+}
+
+function strokeTrace(ctx, cfg, colour, pts, glow) {
+  ctx.lineWidth = cfg.lineWidth || 1.6;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = colour;
+  if (glow) { ctx.shadowColor = colour; ctx.shadowBlur = glow; }
+  ctx.beginPath();
+  for (let i = 0; i < pts.length; i += 2) {
+    if (i === 0) ctx.moveTo(pts[i], pts[i + 1]);
+    else ctx.lineTo(pts[i], pts[i + 1]);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function render(v, now) {
+  const { ctx, tctx, cfg, st } = v;
+  const a = plotArea(v);
+  const t = st.run ? now : (v.hold ?? (v.hold = now));
+  if (st.run) v.hold = null;
+
+  // phosphor: the trace layer is eaten away a little each frame rather than
+  // cleared, so a fast trace leaves a tail the way a real tube does
+  tctx.save();
+  tctx.globalCompositeOperation = 'destination-out';
+  tctx.fillStyle = 'rgba(0,0,0,' + (st.persist ?? cfg.fade) + ')';
+  tctx.fillRect(0, 0, v.w, v.h);
+  tctx.restore();
+
+  if (cfg.round) {
+    tctx.save();
+    tctx.beginPath();
+    tctx.arc(a.x + a.w / 2, a.y + a.h / 2, Math.min(a.w, a.h) / 2 - 2, 0, TAU);
+    tctx.clip();
+  }
+
+  const cols = cfg.cols, rows = cfg.rows;
+  const cx = a.x + a.w / 2, cy = a.y + a.h / 2;
+  const pxPerDivY = a.h / rows;
+  const N = Math.min(1400, Math.round(a.w * 1.5));
+  let triggered = true;
+
+  if (st.mode === 'xy') {
+    // X-Y: channel 1 up, channel 2 across — the stereo vectorscope picture
+    const pxPerDivX = a.w / cols;
+    const XY_N = 2400;
+    const pts = new Float64Array(XY_N * 2);
+    const span = 4 / SRC.f;
+    for (let i = 0; i < XY_N; i++) {
+      const tt = t + (i / (XY_N - 1)) * span;
+      const x = cx + ((ch2(tt) + grain(SRC.noise)) / st.v2) * pxPerDivX;
+      const y = cy - ((ch1(tt) + grain(SRC.noise)) / st.v1) * pxPerDivY;
+      pts[i * 2] = x; pts[i * 2 + 1] = y;
+    }
+    strokeTrace(tctx, cfg, cfg.trace1, pts, cfg.glow);
+
+  } else if (st.mode === 'fft') {
+    const mag = spectrum(t);
+    const bins = FFT_N / 2;
+    const pts = new Float64Array((bins + 2) * 2);
+    let peak = 0, peakBin = 1;
+    for (let i = 1; i < bins; i++) if (mag[i] > peak) { peak = mag[i]; peakBin = i; }
+    for (let i = 0; i < bins; i++) {
+      const db = 20 * Math.log10(Math.max(mag[i], 1e-6));
+      const norm = Math.max(0, Math.min(1, (db + 72) / 78));
+      pts[i * 2] = a.x + (i / (bins - 1)) * a.w;
+      pts[i * 2 + 1] = a.y + a.h - norm * (a.h - 6) - 3;
+    }
+    // filled skirt under the spectrum, then the line itself
+    tctx.save();
+    tctx.beginPath();
+    tctx.moveTo(a.x, a.y + a.h);
+    for (let i = 0; i < bins; i++) tctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
+    tctx.lineTo(a.x + a.w, a.y + a.h);
+    tctx.closePath();
+    tctx.fillStyle = cfg.fftFill || 'rgba(255,255,255,0.10)';
+    tctx.fill();
+    tctx.restore();
+    strokeTrace(tctx, cfg, cfg.fftLine || cfg.trace1, pts.subarray(0, bins * 2), cfg.glow);
+    v.peakHz = peakBin * FFT_FS / FFT_N;
+    v.peakDb = 20 * Math.log10(Math.max(peak, 1e-6));
+
+  } else if (st.mode === 'roll') {
+    // Roll only means anything at slow sweeps, so the timebase is clamped and the
+    // trace becomes an envelope: one vertical stroke per column between the
+    // minimum and maximum sample it covers. That is peak detect, which is what a
+    // real instrument switches to when a screen is worth more than a cycle.
+    const rollSpan = Math.max(st.s * cols, 1.2);
+    v.rollSpan = rollSpan;
+    v.rollDiv = rollSpan / cols;
+    const t0 = t - rollSpan;
+    const per = 6;
+    const chans = [];
+    if (st.ch1) chans.push([ch1, st.v1, st.p1, cfg.trace1]);
+    if (st.ch2) chans.push([ch2, st.v2, st.p2, cfg.trace2 || cfg.trace1]);
+    let gMin = Infinity, gMax = -Infinity, sum2 = 0, n = 0;
+    for (const [fn, vdiv, pos, colour] of chans) {
+      tctx.strokeStyle = colour;
+      tctx.lineWidth = 1.2;
+      if (cfg.glow) { tctx.shadowColor = colour; tctx.shadowBlur = cfg.glow * 0.6; }
+      tctx.beginPath();
+      for (let x = 0; x < a.w; x++) {
+        let lo = Infinity, hi = -Infinity;
+        for (let k = 0; k < per; k++) {
+          const tt = t0 + ((x + k / per) / a.w) * rollSpan;
+          const val = fn(tt);
+          if (val < lo) lo = val;
+          if (val > hi) hi = val;
+          if (fn === ch1) { gMin = Math.min(gMin, val); gMax = Math.max(gMax, val); sum2 += val * val; n++; }
+        }
+        const px = a.x + x + 0.5;
+        tctx.moveTo(px, cy - (hi / vdiv + pos) * pxPerDivY);
+        tctx.lineTo(px, cy - (lo / vdiv + pos) * pxPerDivY);
+      }
+      tctx.stroke();
+      tctx.shadowBlur = 0;
+    }
+    if (n) { v.vpp = gMax - gMin; v.vrms = Math.sqrt(sum2 / n); }
+
+  } else {
+    const span = st.s * cols;
+    const trig = findTrigger(st.trig, st.slope, t, span);
+    let t0;
+    if (trig === null) {
+      triggered = false;
+      t0 = t - span;                         // AUTO free-runs when it cannot trigger
+    } else {
+      t0 = trig - span / 2 - st.hpos * st.s;
+    }
+    const pts1 = new Float64Array(N * 2), pts2 = new Float64Array(N * 2);
+    for (let i = 0; i < N; i++) {
+      const tt = t0 + (i / (N - 1)) * span;
+      const x = a.x + (i / (N - 1)) * a.w;
+      pts1[i * 2] = x;
+      pts1[i * 2 + 1] = cy - ((ch1(tt) + grain(SRC.noise)) / st.v1 + st.p1) * pxPerDivY;
+      pts2[i * 2] = x;
+      pts2[i * 2 + 1] = cy - ((ch2(tt) + grain(SRC.noise)) / st.v2 + st.p2) * pxPerDivY;
+    }
+    if (st.ch1) strokeTrace(tctx, cfg, cfg.trace1, pts1, cfg.glow);
+    if (st.ch2) strokeTrace(tctx, cfg, cfg.trace2 || cfg.trace1, pts2, cfg.glow);
+
+    // measurements come off the same buffer the trace was drawn from
+    let mn = Infinity, mx = -Infinity, sum2 = 0;
+    for (let i = 0; i < N; i++) {
+      const val = (cy - pts1[i * 2 + 1]) / pxPerDivY * st.v1;
+      mn = Math.min(mn, val); mx = Math.max(mx, val); sum2 += val * val;
+    }
+    v.vpp = mx - mn;
+    v.vrms = Math.sqrt(sum2 / N);
+  }
+
+  if (cfg.round) tctx.restore();
+  v.triggered = triggered;
+
+  // composite: ground, graticule, then the phosphor layer over the top
+  ctx.fillStyle = cfg.bg;
+  ctx.fillRect(0, 0, v.w, v.h);
+  if (cfg.bgVignette) {
+    const g = ctx.createRadialGradient(v.w / 2, v.h / 2, 10, v.w / 2, v.h / 2, Math.max(v.w, v.h) / 1.5);
+    g.addColorStop(0, cfg.bgVignette[0]);
+    g.addColorStop(1, cfg.bgVignette[1]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, v.w, v.h);
+  }
+  drawGrid(ctx, a, cfg, st);
+  ctx.drawImage(v.trace, 0, 0, v.w, v.h);
+  if (cfg.chrome) cfg.chrome(ctx, v, a);
+}
+
+/* ------------------------------------------------------------- the knobs --
+   One factory for both kinds: a stepped rotary switch with a printed ring of
+   values, and a continuous control with no detents. Both are focusable and
+   answer to the arrow keys, because a knob that only works with a mouse is a
+   knob that does not work on half the machines this site is read on.         */
+const A_START = -138, A_END = 138;
+
+function makeKnob(el, opts) {
+  const stepped = Array.isArray(opts.values);
+  const count = stepped ? opts.values.length : 0;
+  let idx = opts.index ?? 0;
+  let frac = opts.value ?? 0.5;
+
+  const knob = document.createElement('div');
+  knob.className = 'rot-knob';
+  const ptr = document.createElement('div');
+  ptr.className = 'rot-ptr';
+  knob.appendChild(ptr);
+  el.appendChild(knob);
+
+  let ring = null;
+  if (stepped && opts.ring !== false) {
+    ring = document.createElement('div');
+    ring.className = 'rot-ring';
+    const r = opts.ringRadius ?? 25;
+    opts.values.forEach((val, i) => {
+      const ang = A_START + (A_END - A_START) * (i / (count - 1));
+      const s = document.createElement('span');
+      s.textContent = opts.label ? opts.label(val, i) : String(val);
+      s.style.transform = `translate(-50%,-50%) rotate(${ang}deg) translateY(${-r}px) rotate(${-ang}deg)`;
+      ring.appendChild(s);
+    });
+    el.appendChild(ring);
+  }
+
+  el.tabIndex = 0;
+  el.setAttribute('role', 'slider');
+  el.setAttribute('aria-label', opts.name || 'control');
+
+  function paint() {
+    const ang = stepped
+      ? A_START + (A_END - A_START) * (count > 1 ? idx / (count - 1) : 0)
+      : A_START + (A_END - A_START) * frac;
+    knob.style.transform = `rotate(${ang}deg)`;
+    if (ring) {
+      [...ring.children].forEach((s, i) => s.classList.toggle('on', i === idx));
+    }
+    el.setAttribute('aria-valuenow', stepped ? idx : Math.round(frac * 100));
+    if (stepped) el.setAttribute('aria-valuetext', String(opts.values[idx]));
+  }
+  function step(d) {
+    if (stepped) {
+      const next = Math.max(0, Math.min(count - 1, idx + d));
+      if (next === idx) return;
+      idx = next;
+    } else {
+      frac = Math.max(0, Math.min(1, frac + d * 0.05));
+    }
+    paint();
+    opts.onchange && opts.onchange(stepped ? idx : frac);
+  }
+
+  el.addEventListener('wheel', e => { e.preventDefault(); step(e.deltaY > 0 ? -1 : 1); }, { passive: false });
+  el.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+  });
+
+  let dragging = false, lastY = 0, accum = 0;
+  el.addEventListener('pointerdown', e => {
+    dragging = true; lastY = e.clientY; accum = 0;
+    el.setPointerCapture(e.pointerId);
+    el.focus();
+  });
+  el.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    accum += lastY - e.clientY;
+    lastY = e.clientY;
+    const unit = stepped ? 16 : 8;
+    while (Math.abs(accum) >= unit) {
+      step(accum > 0 ? 1 : -1);
+      accum -= Math.sign(accum) * unit;
+    }
+  });
+  el.addEventListener('pointerup', e => {
+    if (dragging && Math.abs(accum) < 3) {
+      // a plain click steps: left half down, right half up
+      const r = el.getBoundingClientRect();
+      step(e.clientX < r.left + r.width / 2 ? -1 : 1);
+    }
+    dragging = false;
+  });
+  el.addEventListener('pointercancel', () => { dragging = false; });
+
+  paint();
+  return {
+    set(n) { if (stepped) idx = n; else frac = n; paint(); },
+    get index() { return idx; }
+  };
+}
+
+/* small helpers for the segmented switches and pressed states */
+function group(root, sel, onpick) {
+  const el = root.querySelector(sel);
+  if (!el) return null;
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button[data-val]');
+    if (!b) return;
+    [...el.querySelectorAll('button[data-val]')].forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    onpick(b.dataset.val, b);
+  });
+  return el;
+}
+const out = (root, name, text) => {
+  const el = root.querySelector(`[data-out="${name}"]`);
+  if (el) el.textContent = text;
+};
+const knobEl = (root, name) => root.querySelector(`[data-rot="${name}"]`);
+
+/* ======================================================== STUDY A: 465 === */
+function buildA() {
+  const root = document.querySelector('.p465');
+  const st = {
+    mode: 'sweep', s: TIMES[T_DEF], v1: VOLTS[V_DEF], v2: VOLTS[V_DEF],
+    trig: 0, slope: 'rise', tmode: 'auto', hpos: 0, p1: 1.2, p2: -1.2,
+    ch1: true, ch2: true, run: true, graticule: true, persist: 0.30
+  };
+  const cfg = {
+    cols: 10, rows: 8, pad: { l: 8, t: 8, r: 8, b: 8 },
+    bg: '#0b1410', bgVignette: ['rgba(30,60,44,0.20)', 'rgba(0,0,0,0.55)'],
+    grid: 'rgba(150,190,170,0.30)', gridStrong: 'rgba(180,215,195,0.55)',
+    gridStyle: 'lines', border: true,
+    trace1: '#9dffc0', trace2: '#9dffc0', fftLine: '#9dffc0',
+    fftFill: 'rgba(120,255,170,0.14)',
+    glow: 9, fade: 0.30, lineWidth: 1.7
+  };
+  const v = makeView(document.getElementById('scr-a'), cfg, st);
+
+  makeKnob(knobEl(root, 'a-time'), {
+    name: 'Time per division', values: TIMES, index: T_DEF, ringRadius: 38,
+    label: fmtTimeShort,
+    onchange: i => {
+      st.s = TIMES[i];
+      // the anticlockwise end of the switch is the roll position, exactly as the
+      // caption claims — slower than 0.1 s/div and the sweep becomes a scroll
+      st.mode = (st.mode === 'fft' || st.mode === 'xy') ? st.mode : (TIMES[i] >= 0.2 ? 'roll' : 'sweep');
+      out(root, 'a-time', TIMES[i] >= 0.2 ? fmtTime(TIMES[i]) + ' · ROLL' : fmtTime(TIMES[i]));
+    }
+  });
+  makeKnob(knobEl(root, 'a-v1'), {
+    name: 'Channel 1 volts per division', values: VOLTS, index: V_DEF, ringRadius: 38,
+    label: fmtVoltShort,
+    onchange: i => { st.v1 = VOLTS[i]; out(root, 'a-v1', fmtVolt(VOLTS[i])); }
+  });
+  makeKnob(knobEl(root, 'a-v2'), {
+    name: 'Channel 2 volts per division', values: VOLTS, index: V_DEF, ringRadius: 38,
+    label: fmtVoltShort,
+    onchange: i => { st.v2 = VOLTS[i]; out(root, 'a-v2', fmtVolt(VOLTS[i])); }
+  });
+  makeKnob(knobEl(root, 'a-lvl'), {
+    name: 'Trigger level', value: 0.5,
+    onchange: f => { st.trig = (f - 0.5) * 4; }
+  });
+  makeKnob(knobEl(root, 'a-p1'), { name: 'Channel 1 position', value: 0.65, onchange: f => { st.p1 = (f - 0.5) * 6; } });
+  makeKnob(knobEl(root, 'a-p2'), { name: 'Channel 2 position', value: 0.35, onchange: f => { st.p2 = (f - 0.5) * 6; } });
+  makeKnob(knobEl(root, 'a-hpos'), { name: 'Horizontal position', value: 0.5, onchange: f => { st.hpos = (f - 0.5) * 8; } });
+  makeKnob(knobEl(root, 'a-int'), {
+    name: 'Intensity', value: 0.7,
+    onchange: f => { cfg.glow = 2 + f * 16; cfg.lineWidth = 1.1 + f * 1.4; }
+  });
+  makeKnob(knobEl(root, 'a-foc'), { name: 'Focus', value: 0.6, onchange: f => { cfg.glow = 2 + (1 - Math.abs(f - 0.6)) * 12; } });
+  makeKnob(knobEl(root, 'a-astig'), { name: 'Astigmatism', value: 0.5 });
+  makeKnob(knobEl(root, 'a-var'), { name: 'Sweep variable', value: 1 });
+  makeKnob(knobEl(root, 'a-illum'), {
+    name: 'Graticule illumination', value: 0.4,
+    onchange: f => { cfg.grid = `rgba(150,190,170,${0.12 + f * 0.5})`; }
+  });
+
+  group(root, '[data-sw="a-slope"]', val => { st.slope = val; });
+  group(root, '[data-sw="a-tmode"]', val => { st.tmode = val; st.run = val !== 'sgl'; });
+  group(root, '[data-sw="a-tsrc"]', () => {});
+  group(root, '[data-sw="a-c1"]', () => {});
+  group(root, '[data-sw="a-c2"]', () => {});
+  group(root, '[data-sw="a-mag"]', () => {});
+
+  // the display-mode lever
+  const lever = root.querySelector('[data-lever="a-disp"]');
+  const cap = lever.querySelector('.cap');
+  const fftBtn = root.querySelector('[data-act="a-fft"]');
+  function moveCap(btn) {
+    cap.style.top = (btn.offsetTop + btn.offsetHeight / 2 - 7) + 'px';
+  }
+  lever.addEventListener('click', e => {
+    const b = e.target.closest('.pos');
+    if (!b) return;
+    [...lever.querySelectorAll('.pos')].forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    moveCap(b);
+    fftBtn.setAttribute('aria-pressed', 'false');
+    const val = b.dataset.val;
+    st.ch1 = val !== 'ch2';
+    st.ch2 = val !== 'ch1';
+    st.mode = val === 'xy' ? 'xy' : (st.s >= 0.2 ? 'roll' : 'sweep');
+  });
+  moveCap(lever.querySelector('[aria-pressed="true"]'));
+
+  fftBtn.addEventListener('click', () => {
+    const on = fftBtn.getAttribute('aria-pressed') !== 'true';
+    fftBtn.setAttribute('aria-pressed', String(on));
+    st.mode = on ? 'fft' : (st.s >= 0.2 ? 'roll' : 'sweep');
+  });
+  root.querySelector('[data-act="a-beamfind"]').addEventListener('pointerdown', () => { cfg.glow = 26; });
+  root.querySelector('[data-act="a-beamfind"]').addEventListener('pointerup', () => { cfg.glow = 9; });
+
+  out(root, 'a-time', fmtTime(st.s));
+  return v;
+}
+
+/* ==================================================== STUDY B: modern DSO */
+const SOFT_MENUS = {
+  trigger: { title: 'Trigger', keys: [
+    ['Mode', 'Edge'], ['Source', 'CH 1'], ['Slope', 'Rising ↗'],
+    ['Sweep', 'Auto'], ['Coupling', 'AC'], ['Holdoff', '100 ns']] },
+  horiz: { title: 'Horizontal', keys: [
+    ['Time Base', 'Y-T'], ['Time Base', 'Roll'], ['Time Base', 'X-Y'],
+    ['Delayed', 'Off'], ['Position', '0.000 s'], ['Reset', '—']] },
+  math: { title: 'Math', keys: [
+    ['Operation', 'FFT'], ['Source', 'CH 1'], ['Window', 'Hanning'],
+    ['Split', 'Full'], ['Scale', 'dBV'], ['Span', '6 kHz']] },
+  display: { title: 'Display', keys: [
+    ['Type', 'Vectors'], ['Persist', 'Off'], ['Format', 'Y-T'],
+    ['Format', 'X-Y'], ['Grid', 'Full'], ['Bright', '60 %']] },
+  measure: { title: 'Measure', keys: [
+    ['Source', 'CH 1'], ['Voltage', 'Vpp'], ['Time', 'Freq'],
+    ['Clear', '—'], ['Display All', 'Off'], ['Counter', 'On']] },
+  acquire: { title: 'Acquire', keys: [
+    ['Mode', 'Normal'], ['Averages', '16'], ['Peak Detect', 'Off'],
+    ['Memory', '14 kpts'], ['Sa Rate', '1 GSa/s'], ['Sinx/x', 'On']] },
+  cursor: { title: 'Cursors', keys: [
+    ['Mode', 'Manual'], ['Type', 'Time'], ['Source', 'CH 1'],
+    ['ΔX', '1.00 ms'], ['1/ΔX', '1.00 kHz'], ['ΔY', '2.86 V']] }
+};
+
+function buildB() {
+  const root = document.querySelector('.dso');
+  const st = {
+    mode: 'sweep', s: TIMES[T_DEF], v1: VOLTS[V_DEF], v2: VOLTS[V_DEF],
+    trig: 0, slope: 'rise', hpos: 0, p1: 1.1, p2: -1.4,
+    ch1: true, ch2: true, run: true, graticule: true, persist: 1
+  };
+  let menu = 'trigger';
+
+  const cfg = {
+    cols: 12, rows: 8, pad: { l: 0, t: 26, r: 0, b: 30 },
+    bg: '#050708', grid: 'rgba(120,150,160,0.34)', gridStrong: 'rgba(150,185,195,0.5)',
+    gridStyle: 'dots', border: true,
+    trace1: '#f2cd35', trace2: '#4fc9dd',
+    fftLine: '#b98cf0', fftFill: 'rgba(150,110,220,0.20)',
+    glow: 3, fade: 1, lineWidth: 1.5,
+    chrome(ctx, v, a) {
+      const F = '600 10px ' + getComputedStyle(document.body).getPropertyValue('--font-mono');
+      ctx.font = F;
+      ctx.textBaseline = 'middle';
+
+      // top status strip
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillRect(0, 0, v.w, 21);
+      const stopped = !st.run;
+      ctx.fillStyle = stopped ? '#e0684f' : '#5ce08c';
+      ctx.fillRect(6, 5, 42, 12);
+      ctx.fillStyle = '#06100a';
+      ctx.fillText(stopped ? 'STOP' : 'RUN', 12, 11.5);
+
+      ctx.fillStyle = '#9fb0b8';
+      const modeName = { sweep: 'Y-T', roll: 'ROLL', xy: 'X-Y', fft: 'FFT' }[st.mode];
+      ctx.fillText(modeName, 60, 11.5);
+      ctx.fillText('14 kpts', 100, 11.5);
+      ctx.fillText('1 GSa/s', 152, 11.5);
+      ctx.fillStyle = v.triggered ? '#5ce08c' : '#e0c04f';
+      ctx.fillText(v.triggered ? 'TRIG’D' : 'AUTO', 210, 11.5);
+      ctx.fillStyle = '#9fb0b8';
+      ctx.textAlign = 'right';
+      ctx.fillText('T ' + (st.slope === 'rise' ? '↗' : '↘') + ' CH1  ' + st.trig.toFixed(2) + ' V', v.w - 8, 11.5);
+      ctx.textAlign = 'left';
+
+      // bottom parameter strip
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillRect(0, v.h - 25, v.w, 25);
+      let x = 8;
+      if (st.ch1) { ctx.fillStyle = '#f2cd35'; ctx.fillText('CH1  ' + fmtVolt(st.v1) + '  AC', x, v.h - 12.5); x += 118; }
+      if (st.ch2) { ctx.fillStyle = '#4fc9dd'; ctx.fillText('CH2  ' + fmtVolt(st.v2) + '  AC', x, v.h - 12.5); x += 118; }
+      ctx.fillStyle = '#d6dee2';
+      ctx.fillText('M  ' + fmtTime(st.mode === 'roll' ? (v.rollDiv || 0.1) : st.s) + '/div', x, v.h - 12.5);
+      ctx.textAlign = 'right';
+      if (st.mode === 'fft') {
+        ctx.fillStyle = '#b98cf0';
+        ctx.fillText('FFT  peak ' + (v.peakHz ? (v.peakHz / 1000).toFixed(2) : '—') + ' kHz  ' +
+          (v.peakDb ? v.peakDb.toFixed(1) : '—') + ' dBV', v.w - 8, v.h - 12.5);
+      } else {
+        ctx.fillStyle = '#d6dee2';
+        ctx.fillText('Vpp ' + (v.vpp ? v.vpp.toFixed(2) : '—') + ' V   ' +
+          'f 1.0000 kHz', v.w - 8, v.h - 12.5);
+      }
+      ctx.textAlign = 'left';
+
+      // channel ground markers and the trigger arrow
+      if (st.mode === 'sweep' || st.mode === 'roll') {
+        const pxDiv = a.h / cfg.rows, cy = a.y + a.h / 2;
+        const mark = (y, colour, txt) => {
+          ctx.fillStyle = colour;
+          ctx.beginPath();
+          ctx.moveTo(a.x, y); ctx.lineTo(a.x + 9, y - 5); ctx.lineTo(a.x + 9, y + 5);
+          ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#0a0d0e';
+          ctx.fillText(txt, a.x + 1.5, y + 0.5);
+        };
+        if (st.ch1) mark(cy - st.p1 * pxDiv, '#f2cd35', '1');
+        if (st.ch2) mark(cy - st.p2 * pxDiv, '#4fc9dd', '2');
+        const ty = cy - (st.trig / st.v1) * pxDiv;
+        if (ty > a.y && ty < a.y + a.h) {
+          ctx.fillStyle = '#f2cd35';
+          ctx.beginPath();
+          ctx.moveTo(v.w - 4, ty); ctx.lineTo(v.w - 13, ty - 5); ctx.lineTo(v.w - 13, ty + 5);
+          ctx.closePath(); ctx.fill();
+        }
+      }
+    }
+  };
+  const v = makeView(document.getElementById('scr-b'), cfg, st);
+
+  // softkeys
+  const soft = root.querySelector('[data-soft="b"]');
+  function paintSoft() {
+    const m = SOFT_MENUS[menu];
+    soft.innerHTML = '';
+    m.keys.forEach(([k, val], i) => {
+      const b = document.createElement('button');
+      b.innerHTML = `<span style="opacity:.72">${k}</span><br>${val}`;
+      const active =
+        (menu === 'horiz' && ((i === 0 && st.mode === 'sweep') || (i === 1 && st.mode === 'roll') || (i === 2 && st.mode === 'xy'))) ||
+        (menu === 'math' && i === 0 && st.mode === 'fft') ||
+        (menu === 'display' && ((i === 2 && st.mode === 'sweep') || (i === 3 && st.mode === 'xy')));
+      b.setAttribute('aria-pressed', String(active));
+      b.addEventListener('click', () => {
+        if (menu === 'horiz') {
+          if (i === 0) st.mode = 'sweep';
+          if (i === 1) st.mode = 'roll';
+          if (i === 2) st.mode = 'xy';
+        } else if (menu === 'math' && i === 0) {
+          st.mode = st.mode === 'fft' ? 'sweep' : 'fft';
+        } else if (menu === 'display') {
+          if (i === 2) st.mode = 'sweep';
+          if (i === 3) st.mode = 'xy';
+          if (i === 1) st.persist = st.persist === 1 ? 0.14 : 1;
+        } else if (menu === 'trigger' && i === 2) {
+          st.slope = st.slope === 'rise' ? 'fall' : 'rise';
+          SOFT_MENUS.trigger.keys[2][1] = st.slope === 'rise' ? 'Rising ↗' : 'Falling ↘';
+        }
+        paintSoft();
+      });
+      soft.appendChild(b);
+    });
+  }
+  root.querySelectorAll('[data-menu]').forEach(b => {
+    b.addEventListener('click', () => {
+      menu = b.dataset.menu;
+      root.querySelectorAll('[data-menu]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      paintSoft();
+    });
+  });
+  root.querySelector('[data-menu="trigger"]').setAttribute('aria-pressed', 'true');
+  paintSoft();
+
+  makeKnob(knobEl(root, 'b-time'), {
+    name: 'Horizontal scale', values: TIMES, index: T_DEF, ring: false,
+    onchange: i => { st.s = TIMES[i]; out(root, 'b-time', fmtTime(TIMES[i])); }
+  });
+  makeKnob(knobEl(root, 'b-v1'), {
+    name: 'Channel 1 scale', values: VOLTS, index: V_DEF, ring: false,
+    onchange: i => { st.v1 = VOLTS[i]; out(root, 'b-v1', fmtVolt(VOLTS[i])); }
+  });
+  makeKnob(knobEl(root, 'b-v2'), {
+    name: 'Channel 2 scale', values: VOLTS, index: V_DEF, ring: false,
+    onchange: i => { st.v2 = VOLTS[i]; out(root, 'b-v2', fmtVolt(VOLTS[i])); }
+  });
+  const lvlKnob = makeKnob(knobEl(root, 'b-lvl'), {
+    name: 'Trigger level', value: 0.5,
+    onchange: f => { st.trig = (f - 0.5) * 4; out(root, 'b-lvl', st.trig.toFixed(2) + ' V'); }
+  });
+  makeKnob(knobEl(root, 'b-hpos'), { name: 'Horizontal position', value: 0.5, onchange: f => { st.hpos = (f - 0.5) * 10; } });
+  makeKnob(knobEl(root, 'b-mfn'), { name: 'Multifunction', value: 0.5 });
+
+  root.querySelector('[data-act="b-run"]').addEventListener('click', e => {
+    st.run = !st.run;
+    e.currentTarget.dataset.stopped = String(!st.run);
+  });
+  root.querySelector('[data-act="b-single"]').addEventListener('click', () => { st.run = false; });
+  root.querySelector('[data-act="b-auto"]').addEventListener('click', () => {
+    st.run = true; st.mode = 'sweep'; st.trig = 0; st.p1 = 1.1; st.p2 = -1.4;
+    root.querySelector('[data-act="b-run"]').dataset.stopped = 'false';
+    out(root, 'b-lvl', '0.00 V');
+  });
+  root.querySelector('[data-act="b-50"]').addEventListener('click', () => {
+    st.trig = 0;
+    lvlKnob.set(0.5);
+    out(root, 'b-lvl', '0.00 V');
+  });
+  root.querySelector('[data-act="b-force"]').addEventListener('click', () => { st.run = true; });
+  root.querySelectorAll('.chbtn').forEach(b => {
+    b.addEventListener('click', () => {
+      const on = b.getAttribute('aria-pressed') !== 'true';
+      b.setAttribute('aria-pressed', String(on));
+      if (b.dataset.ch === '1') st.ch1 = on; else st.ch2 = on;
+    });
+  });
+  return v;
+}
+
+/* ============================================= STUDY C: valve-era CRT ==== */
+function buildC() {
+  const root = document.querySelector('.crtscope');
+  const MODES = ['SWEEP', 'X-Y', 'ROLL', 'SPEC'];
+  const GAINS = ['×100', '×50', '×20', '×10', '×5', '×2', '×1'];
+  const GAIN_V = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1];
+  const SWEEPS = [0.1, 0.05, 0.02, 0.01, 5e-3, 2e-3, 1e-3, 5e-4, 2e-4, 1e-4];
+
+  const st = {
+    mode: 'sweep', s: 2e-4, v1: 0.5, v2: 0.5, trig: 0, slope: 'rise',
+    hpos: 0, p1: 0, p2: 0, ch1: true, ch2: false, run: true,
+    graticule: true, persist: 0.14
+  };
+  const cfg = {
+    cols: 8, rows: 8, pad: { l: 4, t: 4, r: 4, b: 4 }, round: true,
+    bg: '#070c08', bgVignette: ['rgba(40,90,60,0.22)', 'rgba(0,0,0,0.8)'],
+    grid: 'rgba(140,190,160,0.24)', gridStrong: 'rgba(170,220,185,0.42)',
+    gridStyle: 'lines', border: false,
+    trace1: '#86ff9f', trace2: '#86ff9f', fftLine: '#86ff9f',
+    fftFill: 'rgba(110,255,150,0.16)',
+    glow: 13, fade: 0.14, lineWidth: 1.9
+  };
+  const v = makeView(document.getElementById('scr-c'), cfg, st);
+
+  makeKnob(knobEl(root, 'c-mode'), {
+    name: 'Mode', values: MODES, index: 0, ringRadius: 33,
+    onchange: i => { st.mode = ['sweep', 'xy', 'roll', 'fft'][i]; }
+  });
+  makeKnob(knobEl(root, 'c-time'), {
+    name: 'Sweep range', values: SWEEPS, index: 8, ringRadius: 33,
+    label: fmtTimeShort,
+    onchange: i => { st.s = SWEEPS[i]; }
+  });
+  makeKnob(knobEl(root, 'c-gain'), {
+    name: 'Vertical gain', values: GAINS, index: 5, ringRadius: 33,
+    onchange: i => { st.v1 = GAIN_V[i]; st.v2 = GAIN_V[i]; }
+  });
+  makeKnob(knobEl(root, 'c-lvl'), { name: 'Sync level', value: 0.5, onchange: f => { st.trig = (f - 0.5) * 4; } });
+  makeKnob(knobEl(root, 'c-int'), {
+    name: 'Intensity', value: 0.65,
+    onchange: f => { cfg.glow = 3 + f * 22; cfg.lineWidth = 1.2 + f * 1.6; }
+  });
+  makeKnob(knobEl(root, 'c-foc'), { name: 'Focus', value: 0.55 });
+  makeKnob(knobEl(root, 'c-hpos'), { name: 'Horizontal position', value: 0.5, onchange: f => { st.hpos = (f - 0.5) * 6; } });
+  makeKnob(knobEl(root, 'c-vpos'), { name: 'Vertical position', value: 0.5, onchange: f => { st.p1 = (f - 0.5) * 6; } });
+  makeKnob(knobEl(root, 'c-pers'), {
+    name: 'Afterglow', value: 0.6,
+    onchange: f => { st.persist = 0.5 - f * 0.47; }
+  });
+
+  root.querySelector('[data-toggle="c-slope"]').addEventListener('click', e => {
+    const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+    e.currentTarget.setAttribute('aria-pressed', String(on));
+    st.slope = on ? 'fall' : 'rise';
+  });
+  root.querySelector('[data-toggle="c-grat"]').addEventListener('click', e => {
+    const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+    e.currentTarget.setAttribute('aria-pressed', String(on));
+    st.graticule = on;
+  });
+  return v;
+}
+
+/* ============================================ STUDY D: ClackOS native ==== */
+function buildD() {
+  const root = document.querySelector('.clack');
+  let ti = T_DEF, vi = V_DEF;
+  const st = {
+    mode: 'sweep', s: TIMES[ti], v1: VOLTS[vi], v2: VOLTS[vi],
+    trig: 0, slope: 'rise', hpos: 0, p1: 1.2, p2: -1.2,
+    ch1: true, ch2: true, run: true, graticule: true, persist: 1
+  };
+
+  // The trace colours are read from the page's own custom properties, which is
+  // exactly how the real app would pick them up from a ClackOS theme file.
+  const css = getComputedStyle(document.documentElement);
+  const themed = () => ({
+    trace1: css.getPropertyValue('--leaf-bright').trim() || '#4fae7d',
+    trace2: css.getPropertyValue('--trace-2').trim() || '#c08a2b'
+  });
+
+  const cfg = {
+    cols: 12, rows: 8, pad: { l: 6, t: 6, r: 6, b: 6 },
+    bg: '#0c130e', grid: 'rgba(120,190,150,0.22)', gridStrong: 'rgba(150,215,175,0.40)',
+    gridStyle: 'lines', border: true,
+    trace1: '#7fe0a8', trace2: '#3f9c6d',
+    fftLine: '#7fe0a8', fftFill: 'rgba(90,200,140,0.18)',
+    glow: 4, fade: 1, lineWidth: 1.7,
+    chrome(ctx, v, a) {
+      if (st.mode !== 'sweep' && st.mode !== 'roll') return;
+      const pxDiv = a.h / cfg.rows, cy = a.y + a.h / 2;
+      const ty = cy - (st.trig / st.v1) * pxDiv;
+      if (ty > a.y && ty < a.y + a.h) {
+        ctx.strokeStyle = 'rgba(240,200,90,0.55)';
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath(); ctx.moveTo(a.x, ty); ctx.lineTo(a.x + a.w, ty); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#f0c85a';
+        ctx.beginPath();
+        ctx.moveTo(a.x + a.w, ty); ctx.lineTo(a.x + a.w - 9, ty - 5); ctx.lineTo(a.x + a.w - 9, ty + 5);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+  };
+  Object.assign(cfg, themed());
+  const v = makeView(document.getElementById('scr-d'), cfg, st);
+
+  // keep the trace in step with the viewer's theme
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  const sync = () => Object.assign(cfg, themed());
+  mq.addEventListener ? mq.addEventListener('change', sync) : mq.addListener(sync);
+
+  function status() {
+    const trig = `trig CH1 ${st.slope === 'rise' ? '↗' : '↘'} ${st.trig.toFixed(2)} V`;
+    let text;
+    if (st.mode === 'fft') text = 'FFT · 0 – 6 kHz · Hanning · dBV';
+    else if (st.mode === 'xy') text = `X-Y · CH2 horizontal · ${fmtVolt(st.v1)}/div both axes`;
+    else if (st.mode === 'roll') text = `Roll · ${fmtTime(v.rollDiv || 0.1)}/div · peak detect · untriggered`;
+    else text = `Sweep · ${fmtTime(st.s)}/div · ${trig}`;
+    out(root, 'd-status', text);
+  }
+
+  group(root, '[data-modes="d"]', val => { st.mode = val; status(); });
+
+  root.querySelector('[data-step="d-v1"]').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    vi = Math.max(0, Math.min(VOLTS.length - 1, vi + Number(b.dataset.d)));
+    st.v1 = st.v2 = VOLTS[vi];
+    out(root, 'd-v1', fmtVolt(VOLTS[vi]));
+  });
+  root.querySelector('[data-step="d-time"]').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    ti = Math.max(0, Math.min(TIMES.length - 1, ti - Number(b.dataset.d)));
+    st.s = TIMES[ti];
+    out(root, 'd-time', fmtTime(TIMES[ti]));
+    status();
+  });
+  root.querySelector('#d-lvl').addEventListener('input', e => {
+    st.trig = Number(e.target.value);
+    out(root, 'd-lvl', st.trig.toFixed(2) + ' V');
+    status();
+  });
+  root.querySelector('#d-slope').addEventListener('change', e => { st.slope = e.target.value; status(); });
+
+  // scrolling over the screen changes gain, the shortcut the sidebar cannot give you
+  v.canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    vi = Math.max(0, Math.min(VOLTS.length - 1, vi + (e.deltaY > 0 ? -1 : 1)));
+    st.v1 = st.v2 = VOLTS[vi];
+    out(root, 'd-v1', fmtVolt(VOLTS[vi]));
+  }, { passive: false });
+
+  v.after = () => {
+    out(root, 'd-vpp', v.vpp ? v.vpp.toFixed(2) + ' V' : '—');
+    out(root, 'd-vrms', v.vrms ? v.vrms.toFixed(3) + ' V' : '—');
+    out(root, 'd-freq', st.mode === 'fft' ? '—' : '1.0000 kHz');
+    out(root, 'd-peak', st.mode === 'fft' && v.peakHz
+      ? (v.peakHz / 1000).toFixed(2) + ' kHz'
+      : (v.vpp ? (v.vpp / 2).toFixed(2) + ' V' : '—'));
+  };
+  status();
+  return v;
+}
+
+/* ------------------------------------------------------------ fit + loop -- */
+function fitStages() {
+  document.querySelectorAll('.stage').forEach(stage => {
+    const wrap = stage.parentElement;
+    const dw = Number(stage.dataset.w), dh = Number(stage.dataset.h);
+    const s = Math.min(1, wrap.clientWidth / dw);
+    stage.style.transform = `scale(${s})`;
+    wrap.style.height = Math.round(dh * s) + 'px';
+    stage.querySelectorAll('canvas').forEach(c => {
+      const view = views.find(v => v.canvas === c);
+      if (view && Math.abs(view.scale - s) > 0.001) { view.scale = s; view.resize(); }
+    });
+  });
+}
+
+buildA(); buildB(); buildC(); buildD();
+
+// the fit pass has to run before the first frame or every canvas is drawn twice
+fitStages();
+window.addEventListener('resize', fitStages);
+
+let last = 0;
+function loop(ms) {
+  const now = ms / 1000;
+  // 40 fps is plenty for four scopes and keeps a laptop fan out of the demo
+  if (now - last > 0.025) {
+    last = now;
+    for (const v of views) {
+      render(v, now);
+      if (v.after) v.after();
+    }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+document.getElementById('today').textContent =
+  new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+})();
+</script>
+</body>
+</html>
