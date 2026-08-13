@@ -22,9 +22,12 @@ Integration (this applies to the WebGPU backend too, not just CPU).
 Shared runtime for in-browser ML apps: content/applications/chat.html,
 ClackPaint's background removal (paint-worker.js, which offers MODNet,
 Open RMBG, BiRefNet, BiRefNet lite and BEN2 behind one image-segmentation
-pipeline) and ClackPaint's Select Object tool (paint-sam-worker.js,
-SlimSAM). Workers must set `env.backends.onnx.wasm.wasmPaths` to this
-directory, otherwise the runtime fetches the .wasm from the jsDelivr CDN.
+pipeline), ClackPaint's Select Object tool (paint-sam-worker.js,
+SlimSAM) and ClackPaint's Text to Image (paint-text2image-worker.js,
+Janus-Pro-1B — an autoregressive image model rather than a diffusion one,
+which is what lets it run on this runtime at all). Workers must set
+`env.backends.onnx.wasm.wasmPaths` to this directory, otherwise the
+runtime fetches the .wasm from the jsDelivr CDN.
 
 The paint workers import this bundle lazily, inside the call that first
 needs a model, so the classic matting algorithms in paint-matte.js — and

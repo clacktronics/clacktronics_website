@@ -39,6 +39,24 @@
 .paint-dream-fields select { flex: 1; min-width: 0; max-width: 250px; }
 .paint-dream-fields output { font-size: 11px; color: var(--sage); min-width: 34px; text-align: right; }
 .paint-dream-note { font-size: 10.5px; color: var(--sage); line-height: 1.6; }
+/* ---- text to image: a prompt box on top, and once a picture exists the same
+   checkerboard preview the cut-out uses, since Contain leaves the margins of
+   the target transparent and that has to be visible before Apply ---- */
+.paint-t2i-prompt { display: flex; flex-direction: column; gap: 5px; font-size: 11.5px; }
+.paint-t2i-prompt textarea {
+  width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid var(--ink); border-radius: 6px;
+  background: var(--paper-deep); color: var(--control-text);
+  font-family: inherit; font-size: 11.5px; line-height: 1.5; resize: vertical;
+}
+.paint-t2i-done { display: flex; flex-direction: column; gap: 10px; }
+/* The preview is drawn at the target's shape, so it is only as wide as the
+   target is wide — a tall selection gives a narrow one. Centring it keeps that
+   reading as the shape of the area rather than as a picture stuck to the left
+   edge of the dialog. The cap matches the width the canvas is drawn at, so it
+   is shown pixel for pixel rather than resampled twice. */
+.paint-t2i-done .paint-bg-preview { max-width: 280px; align-self: center; }
+.paint-t2i-done[hidden], .paint-t2i-prompt[hidden] { display: none; }
+
 /* ---- background removal: the matte is shaped after the model has run, so the
    dialog turns into a small darkroom — a preview over a checkerboard, three
    ways of looking at it, and the controls that reshape the cut-out ---- */
@@ -640,6 +658,7 @@
         <div class="rm-dd rm-sub-dd">
           <button data-cmd="deep-dream"><span class="pixel-icon" data-icon="target" aria-hidden="true"></span><span class="rm-item">DeepDream…<small>Grows dogs, birds and eyes out of the picture, as Google's 2015 original did</small></span></button>
           <button data-cmd="remove-bg"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span><span class="rm-item">Remove Background…<small>Chroma key, flood fill, GrowCut or a neural model — to transparency, a new layer or a selection</small></span></button>
+          <button data-cmd="text-to-image"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span><span class="rm-item">Text to Image…<small>Describe a picture and Janus draws it into the selection, or into the whole frame</small></span></button>
         </div>
       </div>
       <div class="sep"></div>
@@ -1031,6 +1050,56 @@
       <div class="paint-dialog-actions">
         <button type="button" class="btn ghost" data-close="deepDreamModal">Cancel</button>
         <button type="button" class="btn primary" id="dreamStart">Dream</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Text to Image. The picture comes back at a size the model chose rather than
+     one the document did, so unlike every other effect this one cannot paint
+     straight onto the layer: it is shown first, and the fit into the target is
+     a decision taken with the result on screen. Generating again is the usual
+     second move — the model samples, so the same words give a different picture
+     every time — which is the other reason the layer is left alone until Apply. -->
+<div class="paint-modal" id="text2ImageModal" data-keep-open role="dialog" aria-modal="true" aria-labelledby="text2ImageTitle">
+  <div class="paint-modal-box paint-dialog">
+    <header><span id="text2ImageTitle">Text to Image</span><button type="button" data-close="text2ImageModal" aria-label="Close">×</button></header>
+    <div class="paint-dialog-body">
+      <label class="paint-t2i-prompt">Describe the picture
+        <textarea id="t2iPrompt" rows="3" spellcheck="true" placeholder="a brass oscilloscope on a workbench, warm evening light"></textarea>
+      </label>
+      <p class="paint-dream-note" id="t2iTarget"></p>
+      <div class="paint-ai-intro" data-t2iview="intro">
+        <p>DeepSeek's Janus-Pro, drawing on your own machine. It writes a picture the way a language model writes a sentence — one token at a time, 576 of them — and turns the finished sequence into an image at the end, which is why the wait is a count rather than a picture slowly clearing.</p>
+        <p id="t2iCost"></p>
+      </div>
+      <div data-t2iview="running" hidden>
+        <div class="paint-ai-progress" role="progressbar" aria-label="Generation progress"><div></div></div>
+        <p class="paint-ai-detail">Starting…</p>
+        <p class="paint-dream-note">Nothing is touched until you press Apply.</p>
+      </div>
+      <div class="paint-t2i-done" data-t2iview="done" hidden>
+        <canvas class="paint-bg-preview" id="t2iPreview" width="336" height="336" aria-label="The generated picture"></canvas>
+        <div class="paint-dream-fields">
+          <label>Fit <span><select id="t2iFit">
+            <option value="cover">Cover — fill the area, crop the overhang</option>
+            <option value="contain">Contain — fit inside, leave the margins</option>
+            <option value="stretch">Stretch — squash to the area's shape</option>
+          </select></span></label>
+          <p class="paint-dream-note" id="t2iFitNote"></p>
+        </div>
+      </div>
+      <div class="paint-dream-fields" data-t2iview="settings">
+        <label>Guidance <span><input id="t2iGuidance" type="range" min="1" max="10" step="0.5" value="5"><output id="t2iGuidanceValue">5.0</output></span></label>
+        <label>Variety <span><input id="t2iTemperature" type="range" min="0.1" max="1.5" step="0.05" value="1"><output id="t2iTemperatureValue">1.00</output></span></label>
+        <p class="paint-dream-note">Guidance is how closely the words are followed — low wanders off, high goes stiff and over-saturated. Variety is how adventurously each token is picked.</p>
+      </div>
+      <p class="paint-ai-credit">Model: <a href="https://huggingface.co/onnx-community/Janus-Pro-1B-ONNX" target="_blank" rel="noopener">Janus-Pro-1B</a> · DeepSeek licence · Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a></p>
+      <div class="paint-dialog-actions">
+        <button type="button" class="btn ghost" data-close="text2ImageModal">Cancel</button>
+        <button type="button" class="btn" id="t2iAgain" hidden>Generate Again</button>
+        <button type="button" class="btn primary" id="t2iStart">Generate</button>
+        <button type="button" class="btn primary" id="t2iApply" hidden>Apply</button>
       </div>
     </div>
   </div>
@@ -7518,11 +7587,253 @@ function openDeepDream() {
 dreamStartBtn.addEventListener('click', startDream);
 dreamModal.addEventListener('click', event => { if (event.target.closest('[data-close]')) cancelDream(); });
 
+/* ---- Text to Image — Janus-Pro-1B through Transformers.js, in a worker ----
+ * The model writes a 384 x 384 picture and has no say in where it goes; the
+ * document decides that. With something selected the picture lands in the
+ * selection's bounds and is then confined to its actual shape, so a lasso or a
+ * wand crops it as exactly as a rectangle does. With nothing selected it fills
+ * the frame.
+ *
+ * Everything here works in view coordinates rather than canonical ones, as the
+ * EFFECTS filters do: under a seam shift the layer, the selection and the
+ * target rectangle are all shifted together, so nothing has to be undone first.
+ *
+ * The picture outlives the dialog on purpose. It costs a minute to make and the
+ * model samples, so the one on screen cannot be got back by generating again —
+ * closing the dialog and reopening it finds it still there, ready to place. */
+const t2iModal = appRoot.querySelector('#text2ImageModal');
+const t2iViews = t2iModal.querySelectorAll('[data-t2iview]');
+const t2iBar = t2iModal.querySelector('.paint-ai-progress > div');
+const t2iDetail = t2iModal.querySelector('.paint-ai-detail');
+const t2iPromptBox = appRoot.querySelector('#t2iPrompt');
+const t2iStartBtn = appRoot.querySelector('#t2iStart');
+const t2iAgainBtn = appRoot.querySelector('#t2iAgain');
+const t2iApplyBtn = appRoot.querySelector('#t2iApply');
+const t2iFitSelect = appRoot.querySelector('#t2iFit');
+const t2iPreviewCanvas = appRoot.querySelector('#t2iPreview');
+let t2iWorker = null, t2iToken = 0, t2iRunning = false, t2iImage = null;
+
+const showT2iView = name => t2iViews.forEach(view => {
+  /* the prompt and the sliders belong to every view but the running one */
+  view.hidden = view.dataset.t2iview === 'settings' ? name === 'running' : view.dataset.t2iview !== name;
+});
+
+const t2iTargetRect = () => selection && selection.w >= 1 && selection.h >= 1
+  ? { x: selection.x, y: selection.y, w: selection.w, h: selection.h }
+  : { x: 0, y: 0, w: width(), h: height() };
+
+/* Source and destination rectangles for one drawImage call. Cover crops the
+   square picture to the target's shape; Contain shrinks it inside and leaves
+   the margins alone, so whatever was already there shows through. */
+function t2iPlacement(rect, sw, sh, mode) {
+  if (mode === 'stretch') return { sx: 0, sy: 0, sw, sh, dx: rect.x, dy: rect.y, dw: rect.w, dh: rect.h };
+  if (mode === 'cover') {
+    const scale = Math.max(rect.w / sw, rect.h / sh);
+    const cropW = Math.min(sw, rect.w / scale), cropH = Math.min(sh, rect.h / scale);
+    return { sx: (sw - cropW) / 2, sy: (sh - cropH) / 2, sw: cropW, sh: cropH,
+             dx: rect.x, dy: rect.y, dw: rect.w, dh: rect.h };
+  }
+  const scale = Math.min(rect.w / sw, rect.h / sh);
+  const dw = sw * scale, dh = sh * scale;
+  return { sx: 0, sy: 0, sw, sh,
+           dx: rect.x + (rect.w - dw) / 2, dy: rect.y + (rect.h - dh) / 2, dw, dh };
+}
+
+function syncT2iTarget() {
+  const rect = t2iTargetRect();
+  appRoot.querySelector('#t2iTarget').textContent = selection
+    ? `Into the selection — ${rect.w} × ${rect.h} px, then cropped to its shape.`
+    : `Into the whole frame — ${rect.w} × ${rect.h} px.`;
+  appRoot.querySelector('#t2iCost').textContent =
+    'The first run fetches the model — about 2 GB, cached by your browser afterwards — and needs WebGPU. '
+    + 'After that a picture takes something like a minute, whatever size it is going into: '
+    + 'the model always draws 384 × 384 and the fit happens here.';
+}
+
+/* What the chosen fit will actually do to this target, in the numbers that
+   matter — how much is lost, or how much is left untouched. */
+function syncT2iFit() {
+  if (!t2iImage) return;
+  const rect = t2iTargetRect();
+  const mode = t2iFitSelect.value;
+  const place = t2iPlacement(rect, t2iImage.width, t2iImage.height, mode);
+  const note = appRoot.querySelector('#t2iFitNote');
+  if (mode === 'stretch') {
+    const ratio = rect.w / rect.h;
+    note.textContent = Math.abs(ratio - 1) < 0.02
+      ? 'The area is square, so nothing is distorted.'
+      : `The area is ${ratio > 1 ? 'wider' : 'taller'} than it is ${ratio > 1 ? 'tall' : 'wide'}, so the picture is squashed to match.`;
+  } else if (mode === 'cover') {
+    const lostX = Math.round((1 - place.sw / t2iImage.width) * 100);
+    const lostY = Math.round((1 - place.sh / t2iImage.height) * 100);
+    note.textContent = lostX + lostY === 0
+      ? 'The area is square, so the whole picture fits with nothing cropped.'
+      : `${Math.max(lostX, lostY)}% of the picture is cropped ${lostX > lostY ? 'off the sides' : 'off the top and bottom'}.`;
+  } else {
+    const marginX = Math.round((rect.w - place.dw) / 2), marginY = Math.round((rect.h - place.dh) / 2);
+    note.textContent = marginX + marginY === 0
+      ? 'The area is square, so the picture fills it exactly.'
+      : `A ${Math.max(marginX, marginY)} px margin ${marginX > marginY ? 'each side' : 'above and below'} is left as it is.`;
+  }
+  drawT2iPreview(rect, place);
+}
+
+/* The preview is the target's shape, not the model's: what is worth looking at
+   before Apply is the crop, and a square thumbnail hides exactly that. */
+function drawT2iPreview(rect, place) {
+  const scale = 280 / Math.max(rect.w, rect.h);
+  const w = Math.max(1, Math.round(rect.w * scale)), h = Math.max(1, Math.round(rect.h * scale));
+  t2iPreviewCanvas.width = w; t2iPreviewCanvas.height = h;
+  const context = t2iPreviewCanvas.getContext('2d');
+  const scaled = t2iPlacement({ x: 0, y: 0, w, h }, t2iImage.width, t2iImage.height, t2iFitSelect.value);
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(t2iImage, scaled.sx, scaled.sy, scaled.sw, scaled.sh, scaled.dx, scaled.dy, scaled.dw, scaled.dh);
+}
+
+function ensureT2iWorker() {
+  if (t2iWorker) return t2iWorker;
+  t2iWorker = new Worker(new URL('paint-text2image-worker.js', appUrl), { type: 'module' });
+  t2iWorker.onerror = event => failText2Image(event.message || 'worker failed to start');
+  t2iWorker.onmessage = event => {
+    const msg = event.data;
+    if (msg.token !== undefined && msg.token !== t2iToken) return; /* a run we walked away from */
+    switch (msg.type) {
+      case 'loading': t2iDetail.textContent = msg.detail; break;
+      case 'progress': {
+        if (!msg.total) break;
+        t2iBar.style.width = Math.min(100, msg.loaded / msg.total * 100).toFixed(1) + '%';
+        t2iDetail.textContent = `Fetching the model — ${(msg.loaded / 1073741824).toFixed(2)} / ${(msg.total / 1073741824).toFixed(2)} GB (cached for next time)`;
+        break;
+      }
+      case 'ready':
+        t2iBar.style.width = '0%';
+        t2iDetail.textContent = 'Drawing…';
+        setStatus('Drawing the picture…');
+        break;
+      case 'tick':
+        t2iBar.style.width = (msg.done / msg.total * 100).toFixed(1) + '%';
+        t2iDetail.textContent = `${msg.done} of ${msg.total} image tokens`;
+        break;
+      case 'result': finishText2Image(msg); break;
+      case 'cancelled': break;                    /* the close already said so */
+      case 'error': failText2Image(msg.message); break;
+    }
+  };
+  return t2iWorker;
+}
+
+function startText2Image() {
+  const prompt = t2iPromptBox.value.trim();
+  if (!prompt) {
+    setStatus('Describe the picture first');
+    t2iPromptBox.focus();
+    return;
+  }
+  const token = ++t2iToken;
+  t2iRunning = true;
+  showT2iView('running');
+  t2iStartBtn.hidden = true; t2iAgainBtn.hidden = true; t2iApplyBtn.hidden = true;
+  t2iBar.style.width = '0%';
+  t2iDetail.textContent = 'Starting…';
+  setStatus('Fetching the Text to Image model…');
+  ensureT2iWorker().postMessage({
+    type: 'run', token, prompt,
+    guidance: Number(appRoot.querySelector('#t2iGuidance').value),
+    temperature: Number(appRoot.querySelector('#t2iTemperature').value),
+    topP: 0.95,
+  });
+}
+
+function finishText2Image(msg) {
+  t2iRunning = false;
+  const canvas = document.createElement('canvas');
+  canvas.width = msg.width; canvas.height = msg.height;
+  canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(msg.data), msg.width, msg.height), 0, 0);
+  t2iImage = canvas;
+  showT2iDone();
+  setStatus('Picture ready — press Apply to place it');
+}
+
+function showT2iDone() {
+  showT2iView('done');
+  t2iStartBtn.hidden = true;
+  t2iAgainBtn.hidden = false;
+  t2iApplyBtn.hidden = false;
+  syncT2iTarget();
+  syncT2iFit();
+}
+
+function applyText2Image() {
+  if (!t2iImage) return;
+  const rect = t2iTargetRect();
+  const place = t2iPlacement(rect, t2iImage.width, t2iImage.height, t2iFitSelect.value);
+  const before = bx.getImageData(0, 0, width(), height());
+  pushUndo('Text to Image');
+  bx.drawImage(t2iImage, place.sx, place.sy, place.sw, place.sh, place.dx, place.dy, place.dw, place.dh);
+  confineToSelection(before);
+  hideModal('text2ImageModal');
+  /* Repeating this cannot mean drawing it again — the model samples, so the
+     same words would give a different picture and the one just placed would be
+     gone for good. It means the dialog, with that picture still in it. */
+  rememberEffect('Text to Image', () => openText2Image());
+  setStatus(`Text to Image — ${rect.w} × ${rect.h} px${selection ? ', cropped to the selection' : ''}`);
+}
+
+function failText2Image(message) {
+  t2iToken++;
+  t2iRunning = false;
+  showT2iView(t2iImage ? 'done' : 'intro');
+  t2iStartBtn.hidden = !!t2iImage;
+  t2iAgainBtn.hidden = !t2iImage;
+  t2iApplyBtn.hidden = !t2iImage;
+  t2iDetail.textContent = '';
+  t2iBar.style.width = '0%';
+  setStatus(`Text to Image failed: ${message}`);
+}
+
+/* Closing abandons the run but keeps the picture: a minute's work should not go
+   to a stray Escape, and the weights stay loaded for the next time. */
+function closeText2Image() {
+  const running = t2iRunning;
+  if (running) {
+    t2iWorker?.postMessage({ type: 'cancel', token: t2iToken });
+    t2iToken++;
+    t2iRunning = false;
+  }
+  hideModal('text2ImageModal');
+  if (running) setStatus('Text to Image cancelled');
+}
+
+function openText2Image() {
+  t2iBar.style.width = '0%';
+  t2iDetail.textContent = '';
+  syncT2iTarget();
+  if (t2iImage) {
+    showT2iDone();
+  } else {
+    showT2iView('intro');
+    t2iStartBtn.hidden = false; t2iAgainBtn.hidden = true; t2iApplyBtn.hidden = true;
+  }
+  showModal('text2ImageModal');
+  if (!t2iImage) t2iPromptBox.focus();
+}
+
+[['t2iGuidance', 1], ['t2iTemperature', 2]].forEach(([id, places]) => {
+  const input = appRoot.querySelector(`#${id}`), readout = appRoot.querySelector(`#${id}Value`);
+  input.addEventListener('input', () => { readout.textContent = Number(input.value).toFixed(places); });
+});
+t2iFitSelect.addEventListener('change', syncT2iFit);
+t2iStartBtn.addEventListener('click', startText2Image);
+t2iAgainBtn.addEventListener('click', startText2Image);
+t2iApplyBtn.addEventListener('click', applyText2Image);
+t2iModal.addEventListener('click', event => { if (event.target.closest('[data-close]')) closeText2Image(); });
+
 const disconnect = () => {
   stopAnts();
   if (freeTransform) finishFreeTransform(false);
   if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
   if (dreamWorker) { dreamWorker.terminate(); dreamWorker = null; }
+  if (t2iWorker) { t2iWorker.terminate(); t2iWorker = null; }
   if (contentWorker) { contentWorker.terminate(); contentWorker = null; }
   cancelLiveContentPreview(true);
   if (appRoot.querySelector('#adjustModal').classList.contains('open')) closeAdjustment(true);
@@ -8408,6 +8719,7 @@ function runCmd(cmd) {
     case 'mirror-both': setMirrorMode('both'); break;
     case 'remove-bg': openBgRemoval(); break;
     case 'deep-dream': openDeepDream(); break;
+    case 'text-to-image': openText2Image(); break;
     case 'gaussian-blur': openGaussianBlur(); break;
     case 'noise': showModal('noiseModal'); appRoot.querySelector('#noiseAmount').focus(); break;
     case 'repeat-effect':
@@ -8542,6 +8854,8 @@ appRoot.addEventListener('keydown', event => {
   /* the cut-out dialog is data-keep-open for the same reason — a matte that
      took seconds to work out should not go to a stray click */
   if (event.key === 'Escape' && bgModal.classList.contains('open')) { event.preventDefault(); closeBgRemoval(); return; }
+  /* and the same for a picture that took a minute to draw */
+  if (event.key === 'Escape' && t2iModal.classList.contains('open')) { event.preventDefault(); closeText2Image(); return; }
   if (event.key === 'Escape') {
     closeContextMenu(); closeToolMenus();
     if (contentModal.classList.contains('open')) { hideModal('formDetectingModal'); if (contentJob) stopFormDetecting(true); }
