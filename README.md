@@ -1331,8 +1331,8 @@ windows, and desktop actions.
   the lines never crowd, with every eighth line drawn stronger. A non-destructive
   50% X/Y offset (Image → Check Seams) animates into a wrapped, fully
   editable seam-checking view. Effects → Mirror Paint mirrors new paint strokes
-  across either axis or both. The two effects that can call on a neural network
-  share an **Effects → AI** submenu, and both run in a Web Worker so a download
+  across either axis or both. The three effects that can call on a neural network
+  share an **Effects → AI** submenu, and each runs in a Web Worker so a download
   or a long inference never freezes the painting. **Remove Background** offers
   twelve ways of cutting the subject out, all behind one set of sliders. Seven
   are classic algorithms that download nothing and answer at once: a **chroma
@@ -1376,7 +1376,37 @@ windows, and desktop actions.
   seconds on a GPU and minutes without one — so the worker sends the picture
   back after every octave, and cancelling (or Escape) puts the original back
   untouched. Nothing is uploaded: TensorFlow.js and the ≈12 MB network are both
-  served from this site. **File → Export → As Program Array…** turns the
+  served from this site. **Text to Image** draws a picture from a description,
+  using DeepSeek's **Janus-Pro-1B** through the vendored Transformers.js.
+  Janus is the only text-to-image model that fits here, because it is the only
+  one that does not diffuse: it emits 576 image tokens autoregressively, exactly
+  as a language model emits words, and decodes them in one pass at the end, so
+  it runs through the same generate loop as every other causal model and needs
+  no scheduler, no VAE and no second inference runtime. What that costs is the
+  download — about 2 GB of weights even at four bits, fetched from the Hugging
+  Face Hub once and cached by the browser afterwards — and WebGPU, which is
+  required rather than preferred: 576 forward passes on the WASM backend is not
+  a slow version of this feature but a ten-minute wait ending in the same
+  picture, so the dialog says the figure and the requirement before the button
+  is pressed and refuses cleanly where there is no adapter. The model always
+  draws 384 × 384 and has no say in where it goes. **With something selected the
+  picture lands in the selection's bounds and is then confined to its actual
+  shape, so a lasso, a magic wand or a Select Object mask crops it as exactly as
+  a rectangle does; with nothing selected it fills the frame.** How it meets that
+  area is a decision taken with the result on screen — **Cover** fills it and
+  crops the overhang, **Contain** fits inside and leaves the margins as they
+  were, **Stretch** squashes it to the area's shape — and the note under the
+  chooser gives the actual figure, the percentage cropped or the margin in
+  pixels. **Guidance** sets how closely the words are followed and **variety**
+  how adventurously each token is picked. Unlike every other effect this one
+  never paints straight onto the layer: the picture is previewed at the target's
+  aspect over a checkerboard, and nothing is touched until Apply. Since the model
+  samples, the same words give a different picture every time, so the one on
+  screen cannot be got back by generating again — closing the dialog keeps it,
+  and reopening finds it still there ready to place, which is what Repeat Last
+  Effect does here rather than spending another minute on a different picture.
+  The prompt and the picture never leave the machine.
+  **File → Export → As Program Array…** turns the
   picture into something a microcontroller can draw, and **File → Import → From
   Program Array…** reads one back (both described below). File → Set as
   background tile stores a PNG tile in the browser and applies it to the
