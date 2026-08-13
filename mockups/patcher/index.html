@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Patchbay Studies</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230b1410'/%3E%3Ccircle cx='4.5' cy='4.5' r='2.4' fill='none' stroke='%239dffc0' stroke-width='1.3'/%3E%3Ccircle cx='11.5' cy='11.5' r='2.4' fill='none' stroke='%23e0b25a' stroke-width='1.3'/%3E%3Cpath d='M4.5 7q0 6 7 4.5' fill='none' stroke='%239dffc0' stroke-width='1.3'/%3E%3C/svg%3E">
+<!--
+  Four interface studies for patching ClackOS apps into one another, drawn before
+  any of the routing exists. Every study runs the same cast of apps, the same port
+  kinds and the same normalled rule, so what differs between them is where a cable
+  gets made and what it costs to look at — not what a cable means.
+
+  This page is a design document, not part of the site. It is not registered in
+  any menu.json and carries noindex,nofollow; delete the whole `mockups/` folder
+  once the app it is arguing about has been built.
+-->
+<style>
+/* ---------------------------------------------------------------- tokens --
+   The board chrome borrows the site's own palette — cream paper, ink, leaf
+   green — so the studies sit in the world they are being proposed for. Port
+   kinds get their own four colours, and those are the one thing that must stay
+   identical across all four studies: the argument is about layout, and a cable
+   changing colour between studies would read as a change of meaning.        */
+:root {
+  --paper:      #f6f1de;
+  --paper-2:    #efe8cd;
+  --paper-3:    #e6ddbc;
+  --rule:       #d3c9a4;
+  --ink:        #101a13;
+  --ink-2:      #46574b;
+  --ink-3:      #6f8175;
+  --leaf:       #276b47;
+  --leaf-bright:#4fae7d;
+  --plate:      #e3ddc4;
+  --plate-hi:   #fbf7e8;
+  --plate-lo:   #c9c0a0;
+  --shadow:     rgba(16, 26, 19, 0.18);
+
+  --k-bytes:    #2f7a51;
+  --k-audio:    #b8811f;
+  --k-midi:     #3d6ea8;
+  --k-video:    #a8497a;
+
+  --screen:     #0d1712;
+  --screen-2:   #16241c;
+
+  --font-body: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --measure: 66ch;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #0e150f;
+    --paper-2:    #141d16;
+    --paper-3:    #1b261d;
+    --rule:       #2a382d;
+    --ink:        #e8e3c9;
+    --ink-2:      #b3bdaf;
+    --ink-3:      #8b9a8d;
+    --leaf:       #6fd09b;
+    --leaf-bright:#9ae6bd;
+    --plate:      #1d2820;
+    --plate-hi:   #2c3a2e;
+    --plate-lo:   #101a13;
+    --shadow:     rgba(0, 0, 0, 0.5);
+
+    --k-bytes:    #6fd09b;
+    --k-audio:    #e0b25a;
+    --k-midi:     #7fb0e0;
+    --k-video:    #d98cb4;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:      #0e150f;
+  --paper-2:    #141d16;
+  --paper-3:    #1b261d;
+  --rule:       #2a382d;
+  --ink:        #e8e3c9;
+  --ink-2:      #b3bdaf;
+  --ink-3:      #8b9a8d;
+  --leaf:       #6fd09b;
+  --leaf-bright:#9ae6bd;
+  --plate:      #1d2820;
+  --plate-hi:   #2c3a2e;
+  --plate-lo:   #101a13;
+  --shadow:     rgba(0, 0, 0, 0.5);
+
+  --k-bytes:    #6fd09b;
+  --k-audio:    #e0b25a;
+  --k-midi:     #7fb0e0;
+  --k-video:    #d98cb4;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--leaf); }
+:focus-visible { outline: 2px solid var(--leaf-bright); outline-offset: 2px; }
+code {
+  font-family: var(--font-mono); font-size: 0.86em; color: var(--ink);
+  background: var(--paper-3); border-radius: 2px; padding: 1px 5px;
+  overflow-wrap: anywhere;
+}
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 90px; }
+
+/* ------------------------------------------------------------------ head -- */
+.head { padding: 56px 0 26px; border-bottom: 1px solid var(--rule); }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--ink-3); margin: 0 0 14px;
+}
+h1 {
+  font-family: var(--font-mono); font-weight: 600; font-size: clamp(30px, 5.4vw, 52px);
+  line-height: 1.04; letter-spacing: -0.02em; margin: 0 0 18px; text-wrap: balance;
+}
+h1 em { font-style: normal; color: var(--leaf); }
+.lede { max-width: var(--measure); font-size: 18px; color: var(--ink-2); margin: 0 0 22px; }
+.lede strong { color: var(--ink); font-weight: 600; }
+
+.brief { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.brief li {
+  font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 5px 10px; border: 1px solid var(--rule);
+  border-radius: 2px; background: var(--paper-2); color: var(--ink-2);
+}
+
+.jump {
+  position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 10px 0; margin-bottom: 8px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(6px); border-bottom: 1px solid var(--rule);
+}
+.jump a {
+  font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; text-decoration: none; color: var(--ink-2);
+  padding: 5px 11px; border: 1px solid var(--rule); border-radius: 2px;
+}
+.jump a:hover { background: var(--paper-3); color: var(--ink); }
+.jump a b { color: var(--leaf); font-weight: 600; }
+
+/* ---------------------------------------------------------- study blocks -- */
+.study { padding: 44px 0 8px; scroll-margin-top: 64px; }
+
+.plate {
+  display: inline-flex; align-items: baseline; gap: 16px; position: relative;
+  padding: 9px 34px; margin: 0 0 8px;
+  background: linear-gradient(180deg, var(--plate-hi), var(--plate));
+  border: 1px solid var(--plate-lo); border-radius: 3px;
+  box-shadow: 0 1px 0 var(--plate-hi) inset, 0 2px 6px var(--shadow);
+}
+.plate::before, .plate::after {
+  content: ""; position: absolute; top: 50%; width: 7px; height: 7px; margin-top: -3.5px;
+  border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--plate-hi), var(--plate-lo));
+  border: 1px solid var(--plate-lo);
+}
+.plate::before { left: 11px; }
+.plate::after  { right: 11px; }
+.plate h2 { font-family: var(--font-mono); font-size: 19px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.plate .tag {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--leaf);
+  letter-spacing: 0.1em;
+}
+.sec {
+  font-family: var(--font-mono); font-size: 22px; font-weight: 600;
+  margin: 0 0 6px; letter-spacing: -0.01em;
+}
+.subtitle { max-width: var(--measure); color: var(--ink-2); margin: 0 0 22px; }
+.subtitle em { color: var(--ink); font-style: normal; font-weight: 600; }
+
+.stagewrap { position: relative; overflow: hidden; margin: 0 0 22px; }
+.stage { transform-origin: top left; position: relative; font-family: var(--font-body); }
+.stage canvas { display: block; }
+
+.notes {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 22px 30px; padding: 22px 0 0; border-top: 1px solid var(--rule);
+}
+.notes h3 {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-3); margin: 0 0 10px; font-weight: 600;
+}
+.notes p { margin: 0 0 12px; font-size: 15px; color: var(--ink-2); }
+.notes p strong { color: var(--ink); font-weight: 600; }
+
+.maplist { list-style: none; margin: 0 0 12px; padding: 0; }
+.maplist li {
+  display: flex; gap: 10px; font-size: 14px; padding: 5px 0;
+  border-bottom: 1px dotted var(--rule); color: var(--ink-2);
+}
+.maplist li b { font-family: var(--font-mono); font-size: 12px; color: var(--ink); min-width: 78px; }
+.verdictline {
+  font-family: var(--font-mono); font-size: 12px; color: var(--ink-3);
+  border-left: 2px solid var(--leaf); padding-left: 10px; margin: 14px 0 0 !important;
+}
+
+.callout {
+  background: var(--paper-2); border: 1px solid var(--rule); border-left: 3px solid var(--leaf);
+  border-radius: 3px; padding: 22px 24px; margin: 0 0 26px;
+}
+.callout h3 { font-family: var(--font-mono); font-size: 17px; margin: 0 0 12px; font-weight: 600; }
+.callout p { margin: 0 0 12px; color: var(--ink-2); max-width: var(--measure); }
+.callout p:last-child, .callout ol:last-child { margin-bottom: 0; }
+.callout ol, .callout ul { margin: 0; padding-left: 22px; color: var(--ink-2); }
+.callout li { margin-bottom: 10px; max-width: var(--measure); }
+.callout li:last-child { margin-bottom: 0; }
+.callout strong { color: var(--ink); }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px; }
+table { border-collapse: collapse; width: 100%; min-width: 780px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th {
+  font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-3); background: var(--paper-2); font-weight: 600;
+}
+tbody th { font-weight: 600; color: var(--ink); width: 210px; }
+td { color: var(--ink-2); }
+td.yes { color: var(--leaf); }
+tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+
+/* legend of port kinds, repeated above every study so the colours stay learnt */
+.legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 16px; padding: 0; list-style: none; }
+.legend li {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.legend i { width: 16px; height: 3px; border-radius: 2px; display: block; }
+
+.hint {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-3);
+  margin: 0 0 14px; display: flex; align-items: center; gap: 8px;
+}
+.hint::before {
+  content: "▸"; color: var(--leaf); font-size: 13px;
+}
+
+/* =============================================================== shared ==
+   Every study draws the same furniture: a ClackOS window frame, a jack, a
+   lamp, a cable. Defined once here so a cable in study B and a cable in study
+   D are visibly the same object.                                           */
+.win {
+  position: absolute; background: var(--paper); border: 1px solid var(--ink);
+  border-radius: 3px; box-shadow: 0 3px 12px var(--shadow); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.win-bar {
+  display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 6px 0 8px;
+  background: var(--ink); color: var(--paper); flex: none;
+  font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.04em;
+}
+.win-bar .t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.win-bar .b {
+  width: 11px; height: 11px; border: 1px solid var(--paper); border-radius: 1px;
+  opacity: 0.65; flex: none;
+}
+.win-menu {
+  display: flex; gap: 2px; height: 22px; align-items: stretch; flex: none;
+  border-bottom: 1px solid var(--rule); background: var(--paper-2);
+}
+.win-menu button {
+  font: inherit; font-size: 12px; background: none; border: 0; color: var(--ink);
+  padding: 0 9px; cursor: pointer; font-family: var(--font-body);
+}
+.win-menu button:hover, .win-menu button.open { background: var(--ink); color: var(--paper); }
+.win-body { flex: 1; min-height: 0; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+/* a jack socket — the same object in every study */
+.jack {
+  position: relative; width: 22px; height: 22px; border-radius: 50%; flex: none;
+  background: radial-gradient(circle at 38% 32%, var(--plate-hi), var(--plate) 55%, var(--plate-lo));
+  border: 1px solid var(--plate-lo); cursor: crosshair; touch-action: none;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+.jack::after {
+  content: ""; position: absolute; inset: 6px; border-radius: 50%;
+  background: var(--screen); box-shadow: 0 1px 1px rgba(255,255,255,0.25) inset;
+}
+.jack.lit::after { background: currentColor; }
+.jack.tgt { box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 55%, transparent); }
+.jack.no { opacity: 0.28; cursor: not-allowed; }
+
+.lamp {
+  width: 9px; height: 9px; border-radius: 50%; flex: none;
+  background: var(--plate-lo); border: 1px solid var(--plate-lo);
+}
+.lamp.on { background: currentColor; box-shadow: 0 0 7px currentColor; }
+
+.cables { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.cables path { fill: none; stroke-linecap: round; }
+.cables path.hit { stroke-width: 14; stroke: transparent; pointer-events: stroke; cursor: pointer; }
+
+/* ------------------------------------------------------------- study A -- */
+.linkmenu {
+  position: absolute; z-index: 40; min-width: 232px; padding: 4px;
+  background: var(--paper); border: 1px solid var(--ink); border-radius: 2px;
+  box-shadow: 0 4px 14px var(--shadow); font-size: 12.5px;
+}
+.linkmenu .grp {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-3); padding: 6px 9px 4px;
+}
+.linkmenu .sep { height: 1px; background: var(--rule); margin: 4px 2px; }
+.linkmenu button {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  font: inherit; background: none; border: 0; color: var(--ink);
+  padding: 5px 9px; cursor: pointer; border-radius: 2px;
+}
+.linkmenu button:hover { background: var(--ink); color: var(--paper); }
+.linkmenu button .ck { width: 12px; flex: none; color: var(--leaf); font-weight: 700; }
+.linkmenu button:hover .ck { color: var(--paper); }
+.linkmenu button .kd { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.linkmenu button.dim { color: var(--ink-3); }
+
+.srcrow {
+  display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2);
+  font-family: var(--font-mono);
+}
+.srcrow select {
+  font: inherit; font-size: 12px; font-family: var(--font-body);
+  background: var(--paper); color: var(--ink); border: 1px solid var(--rule);
+  border-radius: 2px; padding: 2px 5px;
+}
+.srcrow select:disabled { opacity: 0.4; }
+.srcrow .over {
+  font-family: var(--font-mono); font-size: 11px; color: var(--k-audio);
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.scr {
+  flex: 1; min-height: 0; background: var(--screen); border: 1px solid var(--plate-lo);
+  border-radius: 2px; position: relative; overflow: hidden;
+}
+.scr canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* ------------------------------------------------------------- study B -- */
+.rack {
+  position: absolute; inset: 0; display: flex; gap: 0; padding: 14px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 22px, rgba(0,0,0,0.04) 22px 23px),
+    linear-gradient(180deg, var(--paper-3), var(--paper-2));
+  border: 1px solid var(--plate-lo); border-radius: 3px;
+}
+.rail {
+  position: absolute; left: 6px; right: 6px; height: 9px;
+  background: linear-gradient(180deg, var(--plate-hi), var(--plate-lo));
+  border: 1px solid var(--plate-lo); border-radius: 2px;
+}
+.rail.top { top: 4px; } .rail.bot { bottom: 4px; }
+.mod {
+  position: relative; width: 150px; flex: none; margin-right: 8px;
+  background: linear-gradient(180deg, var(--plate-hi), var(--plate) 22%, var(--plate) 100%);
+  border: 1px solid var(--plate-lo); border-radius: 2px;
+  box-shadow: 0 1px 3px var(--shadow); padding: 10px 10px 12px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.mod::before, .mod::after {
+  content: ""; position: absolute; left: 50%; width: 6px; height: 6px; margin-left: -3px;
+  border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--plate-hi), var(--plate-lo));
+  border: 1px solid var(--plate-lo);
+}
+.mod::before { top: 3px; } .mod::after { bottom: 3px; }
+.mod h4 {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600; margin: 4px 0 0;
+  letter-spacing: 0.04em; text-align: center; color: var(--ink);
+}
+.mod .sub {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-3); text-align: center; margin: -6px 0 2px;
+}
+.mod .div { height: 1px; background: var(--plate-lo); opacity: 0.7; margin: 2px 0; }
+.pj { display: flex; align-items: center; gap: 8px; }
+.pj .nm {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.05em;
+  color: var(--ink-2); line-height: 1.15; flex: 1; min-width: 0;
+}
+.pj.out { flex-direction: row-reverse; }
+.pj.out .nm { text-align: right; }
+.pj .nm i { display: block; font-style: normal; font-size: 8.5px; color: var(--ink-3); }
+.meter {
+  height: 4px; border-radius: 2px; background: var(--screen); overflow: hidden; margin-top: 2px;
+}
+.meter b { display: block; height: 100%; width: 0; background: currentColor; border-radius: 2px; }
+
+/* ------------------------------------------------------------- study C -- */
+.canvasbg {
+  position: absolute; inset: 0; border: 1px solid var(--rule); border-radius: 3px;
+  background:
+    radial-gradient(circle at 1px 1px, var(--rule) 1px, transparent 0) 0 0 / 22px 22px,
+    var(--paper-2);
+}
+.node {
+  position: absolute; width: 186px; background: var(--paper); border: 1px solid var(--ink);
+  border-radius: 3px; box-shadow: 0 2px 8px var(--shadow); cursor: grab; touch-action: none;
+}
+.node.drag { cursor: grabbing; box-shadow: 0 6px 18px var(--shadow); z-index: 5; }
+.node h4 {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600; margin: 0;
+  padding: 5px 9px; background: var(--ink); color: var(--paper); letter-spacing: 0.03em;
+  border-radius: 2px 2px 0 0; display: flex; align-items: center; gap: 6px;
+}
+.node h4 .lamp { margin-left: auto; }
+.node .ports { padding: 7px 9px 9px; display: flex; flex-direction: column; gap: 5px; }
+.node .prow {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--font-mono); font-size: 10px; color: var(--ink-2);
+}
+.node .prow .dot {
+  width: 11px; height: 11px; border-radius: 50%; flex: none; cursor: crosshair;
+  border: 2px solid currentColor; background: var(--paper); touch-action: none;
+}
+.node .prow .dot.filled { background: currentColor; }
+.node .prow.o { flex-direction: row-reverse; text-align: right; }
+.node .prow .nrm { color: var(--ink-3); font-size: 9px; margin-left: auto; }
+.node .prow.o .nrm { margin: 0 auto 0 0; }
+.node .prow .dot.tgt { box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 45%, transparent); }
+.node .prow .dot.no { opacity: 0.25; cursor: not-allowed; }
+
+/* ------------------------------------------------------------- study D -- */
+.desk {
+  position: absolute; inset: 0; overflow: hidden; border: 1px solid var(--rule); border-radius: 3px;
+  background:
+    repeating-conic-gradient(var(--paper-2) 0 25%, var(--paper-3) 0 50%) 0 0 / 12px 12px;
+}
+.deskbar {
+  position: absolute; left: 0; right: 0; top: 0; height: 22px; z-index: 30;
+  background: var(--paper); border-bottom: 1px solid var(--ink);
+  display: flex; align-items: center; gap: 14px; padding: 0 10px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink);
+}
+.deskbar .brandmark { font-weight: 700; letter-spacing: 0.08em; }
+.win .tab {
+  width: 13px; height: 13px; border-radius: 50%; flex: none; cursor: crosshair;
+  border: 2px solid currentColor; background: var(--ink); touch-action: none;
+}
+.win .tab.filled { background: currentColor; }
+.win .tab.tgt { box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 50%, transparent); }
+.win .tab.no { opacity: 0.25; cursor: not-allowed; }
+.win-bar .grip { cursor: grab; }
+.miniscope { flex: 1; min-height: 0; background: var(--screen); border-radius: 2px; position: relative; }
+.miniscope canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mininote {
+  font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-3);
+  display: flex; align-items: center; gap: 5px;
+}
+
+@media (max-width: 640px) {
+  .wrap { padding: 0 14px 60px; }
+  .head { padding: 38px 0 20px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="head">
+  <p class="eyebrow">ClackOS · interface studies · <span id="today"></span></p>
+  <h1>Where does a <em>cable</em> get made?</h1>
+  <p class="lede">
+    Four ways to patch one ClackOS app into another, drawn before any of the routing exists.
+    They all obey the same rule and carry the same four port kinds — what they disagree about
+    is <strong>where you go to make a connection</strong>, and what that costs you in windows,
+    clicks and screen. Drag between jacks, pull cables out, drag the boxes around.
+  </p>
+  <ul class="brief">
+    <li>Normalled · a cable breaks the default</li>
+    <li>Apps keep their own pickers</li>
+    <li>Kinds · bytes / audio / midi / video</li>
+    <li>No new permissions</li>
+    <li>Cables die with the window</li>
+  </ul>
+</header>
+
+<nav class="jump" aria-label="Studies">
+  <a href="#rule"><b>·</b> The rule</a>
+  <a href="#study-a"><b>A</b> · Link Menu</a>
+  <a href="#study-b"><b>B</b> · Patchbay</a>
+  <a href="#study-c"><b>C</b> · Signal Flow</a>
+  <a href="#study-d"><b>D</b> · Desktop Cables</a>
+  <a href="#compare"><b>·</b> Comparison</a>
+  <a href="#verdict"><b>·</b> Recommendation</a>
+</nav>
+
+<main>
+
+<!-- ============================================================ rule ==== -->
+<section class="study" id="rule">
+  <h2 class="sec">The rule every study obeys</h2>
+  <p class="subtitle">
+    This is the part that is <em>not</em> up for debate in these studies. A port is
+    <em>normalled</em>: it has a default connection that a cable interrupts, exactly like a
+    jack on a Eurorack panel or an old telephone patch panel.
+  </p>
+
+  <div class="callout">
+    <ol>
+      <li>
+        <strong>No cable — nothing changes.</strong> Sound Recorder asks for the microphone the
+        way it does today. ClackScope's <code>Input</code> dropdown works the way it does today.
+        No patch UI is involved, and none needs to be open.
+      </li>
+      <li>
+        <strong>Cable in — it overrides the normal, immediately.</strong> No configuration at
+        either end, no <code>patch</code> entry appearing in the app's own source dropdown. The
+        app shows the override rather than asking about it: the picker greys out and a lamp lights.
+      </li>
+      <li>
+        <strong>Cable out — the normal comes back.</strong> The app returns to whatever its own
+        picker last said. Closing a window drops its cables, which is what keeps this free of
+        dangling state.
+      </li>
+    </ol>
+  </div>
+
+  <p class="subtitle" style="margin-bottom:14px">
+    A cable is a <em>handshake, not a pipe</em>. The desktop introduces two apps and gets out of
+    the data path; what actually crosses depends on the kind, and no patch UI ever touches a
+    sample:
+  </p>
+  <ul class="legend">
+    <li><i style="background:var(--k-bytes)"></i> bytes → MessagePort</li>
+    <li><i style="background:var(--k-audio)"></i> audio → MediaStream</li>
+    <li><i style="background:var(--k-midi)"></i> midi → MessagePort</li>
+    <li><i style="background:var(--k-video)"></i> video → OffscreenCanvas</li>
+  </ul>
+</section>
+
+<!-- =============================================================== A ==== -->
+<section class="study" id="study-a">
+  <div class="plate"><span class="tag">A</span><h2>Link Menu</h2></div>
+  <p class="subtitle">
+    No patcher at all. Every app that declares ports grows a <em>Link</em> menu listing the
+    compatible ports on every other open window. This is the one ClackTerm already has — the
+    MIDIterm bridge entries at <code>serial-console.html:236</code> are this design with the
+    list hardcoded to one app.
+  </p>
+  <p class="hint">Open <b>Link</b> on ClackScope and choose a source. Watch the Input dropdown below it.</p>
+
+  <div class="stagewrap">
+    <div class="stage" id="stage-a" data-w="1000" data-h="430"></div>
+  </div>
+
+  <div class="notes">
+    <div>
+      <h3>Why it works</h3>
+      <p>
+        <strong>It is the most automatic of the four.</strong> One menu, one click, no window to
+        open, nothing to arrange. The connection is made from the end that wants it, which is
+        also the end you already have your mouse in.
+      </p>
+      <p>
+        It costs almost nothing to build: the desktop supplies the list of compatible ports,
+        <code>app-bar.js</code> already builds menus, and the app draws no patch UI whatsoever.
+      </p>
+    </div>
+    <div>
+      <h3>Where it hurts</h3>
+      <p>
+        <strong>There is no picture.</strong> With six windows patched you cannot see the routing
+        without opening six menus, and a cable you have forgotten about is invisible until
+        something sounds wrong.
+      </p>
+      <p>
+        It also only reads in one direction — you patch <em>into</em> the app you are in. Sending
+        an output somewhere means going to the far app and pulling, which is backwards from how
+        a patch cable feels.
+      </p>
+    </div>
+    <div>
+      <h3>Where the brief lands</h3>
+      <ul class="maplist">
+        <li><b>Normalled</b><span>a ✓ against the current source, "(normal)" against the default</span></li>
+        <li><b>Kinds</b><span>the menu only ever lists compatible ports</span></li>
+        <li><b>Override</b><span>picker disables, lamp in the status row lights</span></li>
+        <li><b>Unpatch</b><span>pick "(normal)" again</span></li>
+        <li><b>Overview</b><span>none — this is the whole problem</span></li>
+      </ul>
+      <p class="verdictline">No window · ~120 lines in app-bar.js · works today</p>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== B ==== -->
+<section class="study" id="study-b">
+  <div class="plate"><span class="tag">B</span><h2>Patchbay</h2></div>
+  <p class="subtitle">
+    A window of its own, dressed as a rack. Each open app becomes a module with jacks down its
+    face; you drag a lead from one to another and it hangs there. The site already has a Eurorack
+    Panel Generator and a EuroClack section — this is <em>the</em> ClackOS-native answer.
+  </p>
+  <p class="hint">Drag from any jack to another. Click a cable to pull it out.</p>
+
+  <div class="stagewrap">
+    <div class="stage" id="stage-b" data-w="1000" data-h="320"></div>
+  </div>
+
+  <div class="notes">
+    <div>
+      <h3>Why it works</h3>
+      <p>
+        <strong>It has the most character by a distance</strong>, and character is most of what
+        this site is for. Patching is a physical act — grab, stretch, plug — rather than a menu
+        selection, and the result is legible from across the room.
+      </p>
+      <p>
+        Two cables into one inlet is visibly a mess, which is exactly the arbitration model I
+        wanted to avoid writing in code. The panel says "you did that" better than a dialog can.
+      </p>
+    </div>
+    <div>
+      <h3>Where it hurts</h3>
+      <p>
+        Modules are a fixed width and apps have wildly different port counts, so a rack of eight
+        windows is <strong>wider than the desktop</strong> and needs scrolling — at which point
+        the at-a-glance benefit starts to leak away.
+      </p>
+      <p>
+        It is also the most drawing for the least information: a lot of pixels spent on rails,
+        screws and plate texture that carry no signal.
+      </p>
+    </div>
+    <div>
+      <h3>Where the brief lands</h3>
+      <ul class="maplist">
+        <li><b>Normalled</b><span>unpatched inlets print their default under the name</span></li>
+        <li><b>Kinds</b><span>jack ring colour; incompatible jacks fade on drag</span></li>
+        <li><b>Override</b><span>plugged jack fills, module meter goes live</span></li>
+        <li><b>Unpatch</b><span>click the lead</span></li>
+        <li><b>Overview</b><span>complete, until it needs scrolling</span></li>
+      </ul>
+      <p class="verdictline">Window 1000 × 320 · min 640 × 300 · integrated, plain: false</p>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== C ==== -->
+<section class="study" id="study-c">
+  <div class="plate"><span class="tag">C</span><h2>Signal Flow</h2></div>
+  <p class="subtitle">
+    The Pure Data idiom, which is already in the repo: boxes with inlets on top and outlets on
+    the bottom, arranged however you like. It cares about <em>the graph</em> rather than about
+    the furniture, and it is the only study that stays readable at twelve connections.
+  </p>
+  <p class="hint">Drag a box to move it. Drag from an outlet (bottom) to an inlet (top). Click a link to cut it.</p>
+
+  <div class="stagewrap">
+    <div class="stage" id="stage-c" data-w="1000" data-h="470"></div>
+  </div>
+
+  <div class="notes">
+    <div>
+      <h3>Why it works</h3>
+      <p>
+        <strong>It scales.</strong> Boxes move, so the user untangles their own patch; long
+        chains read left to right or top to bottom without crossing. Nothing else here survives
+        a genuinely complicated routing.
+      </p>
+      <p>
+        It is also the cheapest to draw — no plate texture, no rails, no window chrome — and the
+        easiest to make keyboard-navigable, which matters for a site that cares about that.
+      </p>
+    </div>
+    <div>
+      <h3>Where it hurts</h3>
+      <p>
+        <strong>It looks like a tool, not like ClackOS.</strong> Dropped into a desktop built of
+        cream paper and engraved nameplates, a node graph reads as something imported from a
+        different program.
+      </p>
+      <p>
+        Box positions are state, and state wants saving — the first thing anyone will ask is why
+        their layout reset, which drags persistence into a design that was meant to avoid it.
+      </p>
+    </div>
+    <div>
+      <h3>Where the brief lands</h3>
+      <ul class="maplist">
+        <li><b>Normalled</b><span>ghosted default printed beside an empty inlet</span></li>
+        <li><b>Kinds</b><span>dot ring colour; bad targets dim on drag</span></li>
+        <li><b>Override</b><span>dot fills, title lamp lights</span></li>
+        <li><b>Unpatch</b><span>click the link</span></li>
+        <li><b>Overview</b><span>the best of the four, and the only one that scales</span></li>
+      </ul>
+      <p class="verdictline">Window 1000 × 470 · min 560 × 360 · integrated, plain: false</p>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================== D ==== -->
+<section class="study" id="study-d">
+  <div class="plate"><span class="tag">D</span><h2>Desktop Cables</h2></div>
+  <p class="subtitle">
+    No patcher window either — the <em>desktop itself</em> is the patchbay. Each app window grows
+    a jack in its title bar, and leads hang between windows across the wallpaper. Drag a window
+    and its cables follow it.
+  </p>
+  <p class="hint">Drag a title bar to move a window. Drag from the jack on one title bar to another. Click a cable to pull it.</p>
+
+  <div class="stagewrap">
+    <div class="stage" id="stage-d" data-w="1000" data-h="470"></div>
+  </div>
+
+  <div class="notes">
+    <div>
+      <h3>Why it works</h3>
+      <p>
+        <strong>Nothing is indirect.</strong> The thing you patch is the actual window, in the
+        actual place you left it, and the routing is drawn over your real desktop rather than
+        over a diagram of it. No second representation to keep in step.
+      </p>
+      <p>
+        It costs no window and no menu entry, and it makes the desktop feel like a machine —
+        which is the single most on-brand outcome available here.
+      </p>
+    </div>
+    <div>
+      <h3>Where it hurts</h3>
+      <p>
+        <strong>One jack per window is not enough.</strong> ClackTerm has two ports and Pure Data
+        has three; a title bar cannot hold them without becoming a control panel, so this study
+        quietly assumes a single default port per app and that assumption will break.
+      </p>
+      <p>
+        Overlapping windows hide their own cables, minimised windows have nowhere to hang one
+        from, and a busy desktop turns into spaghetti drawn over the work you are trying to read.
+      </p>
+    </div>
+    <div>
+      <h3>Where the brief lands</h3>
+      <ul class="maplist">
+        <li><b>Normalled</b><span>nowhere to print it — needs a tooltip</span></li>
+        <li><b>Kinds</b><span>jack ring colour only</span></li>
+        <li><b>Override</b><span>jack fills; the app shows its own lamp</span></li>
+        <li><b>Unpatch</b><span>click the cable</span></li>
+        <li><b>Overview</b><span>good at three windows, unreadable at eight</span></li>
+      </ul>
+      <p class="verdictline">No window · changes clackos.js window chrome · highest risk</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================= compare ==== -->
+<section class="study" id="compare">
+  <h2 class="sec">Comparison</h2>
+  <p class="subtitle">Same rule, same four kinds, four different places to put the act of patching.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>&nbsp;</th><th>A · Link Menu</th><th>B · Patchbay</th><th>C · Signal Flow</th><th>D · Desktop Cables</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Clicks to patch</th>
+          <td class="yes">2 — menu, item</td><td>1 drag</td>
+          <td>1 drag</td><td class="yes">1 drag</td></tr>
+        <tr><th>Extra window</th>
+          <td class="yes">none</td><td>one</td><td>one</td><td class="yes">none</td></tr>
+        <tr><th>See the whole routing</th>
+          <td>no</td><td class="yes">yes, to ~6 apps</td>
+          <td class="yes">yes, at any size</td><td>only if nothing overlaps</td></tr>
+        <tr><th>Handles many ports per app</th>
+          <td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td>no — one per title bar</td></tr>
+        <tr><th>Survives eight windows</th>
+          <td>yes, but blind</td><td>needs scrolling</td>
+          <td class="yes">yes</td><td>no</td></tr>
+        <tr><th>Feels like ClackOS</th>
+          <td>yes — it is a menu</td><td class="yes">strongest</td>
+          <td>weak — imported idiom</td><td class="yes">very strong</td></tr>
+        <tr><th>Touches the desktop shell</th>
+          <td class="yes">no — app menus only</td><td class="yes">no — it is an app</td>
+          <td class="yes">no — it is an app</td><td>yes — window chrome</td></tr>
+        <tr><th>New state to persist</th>
+          <td class="yes">none</td><td class="yes">none</td>
+          <td>box positions</td><td class="yes">none</td></tr>
+        <tr><th>Rough build cost</th>
+          <td class="yes">lowest</td><td>highest — plate + rack</td>
+          <td>medium</td><td>medium, but in clackos.js</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========================================================= verdict ==== -->
+<section class="study" id="verdict">
+  <h2 class="sec">Recommendation</h2>
+
+  <div class="callout">
+    <h3>Ship A. Add B when there is something worth looking at.</h3>
+    <p>
+      A is the only study that matches what you actually asked for — patching should be
+      automatic, and nothing should stand between you and a connection. It needs no window, no
+      menu entry, no change to <code>clackos.js</code> window chrome and no new persisted state,
+      and the pattern is already in the tree at <code>serial-console.html:224</code>. If exactly
+      one of these gets built, it is this one, and it is the smallest of the four by a long way.
+    </p>
+    <p>
+      A's single real weakness is that it has no picture. That is an argument for building B
+      <em>later</em>, not instead: the patchbay is a <strong>read-only view over the same
+      registry</strong> plus drag-to-connect, so it costs nothing but its own drawing and can
+      arrive whenever the routing gets complicated enough to want it. Nothing in A has to change
+      when it does.
+    </p>
+    <p>
+      C is the right answer to a question this site is not asking. It wins the moment there are
+      a dozen connections, and there will never be a dozen connections — six apps with two ports
+      each is the realistic ceiling, which is comfortably inside what B can draw. Its box
+      positions also drag persistence into a design whose main virtue is not having any.
+    </p>
+    <p>
+      D is the most fun and the one I would not build. One jack per title bar cannot represent
+      ClackTerm's two ports or Pure Data's three, so it needs a disclosure control in the window
+      chrome to be honest — and at that point it is B, drawn over the wallpaper, in the one place
+      where windows can cover it up. It is worth stealing one idea from: when a window is patched,
+      the title bar should say so.
+    </p>
+  </div>
+
+  <h2 class="sec">If this is the direction, next steps</h2>
+  <div class="callout">
+    <ol>
+      <li>
+        <strong>Ports first, UI second.</strong> <code>assets/js/app-patch.js</code> in the shape
+        of <code>app-state.js</code> — opt-in, no-op when the page is opened standalone, and
+        handling both the iframe and shadow-root cases the way
+        <code>app-state.js:34-46</code> already does.
+      </li>
+      <li>
+        <strong>One registry in the desktop.</strong> Window id → declared ports, hung off the
+        existing <code>windowIdFor</code> at <code>clackos.js:2206</code>, with a
+        <code>clackos-patch-*</code> message family alongside the ones in
+        <code>handleAppMessage</code>. The desktop mints the <code>MessageChannel</code> and then
+        stays out of the data path.
+      </li>
+      <li>
+        <strong>Normalled means the app decides.</strong> The port layer hands over an object and
+        raises an event; overriding the source is the app's own code, so ClackScope's
+        <code>selectSource()</code> at <code>scope.html:584</code> gains a cable branch and its
+        <code>#src-sel</code> dropdown gains nothing at all.
+      </li>
+      <li>
+        <strong>Two apps, one kind, to start.</strong> ClackTerm's serial RX into ClackScope is
+        the smallest useful pair and needs only <code>bytes</code>. Audio can wait until the
+        <code>MediaStream</code>-across-frames question has been tested in Firefox.
+      </li>
+      <li>
+        <strong>Retire the bridge into it.</strong> <code>clackos-midi-bridge</code> becomes two
+        ordinary <code>midi</code> ports, and the <code>BroadcastChannel</code> in both apps goes
+        away — the first real test that the abstraction is worth having.
+      </li>
+    </ol>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ============================================================== the cast ==
+   The same six apps in every study, with the ports they would plausibly
+   declare. `normal` is what an inlet falls back to when no cable is in it —
+   the whole point of the exercise, so every study has to show it somewhere. */
+const KIND = {
+  bytes: { css: 'var(--k-bytes)', label: 'bytes' },
+  audio: { css: 'var(--k-audio)', label: 'audio' },
+  midi:  { css: 'var(--k-midi)',  label: 'midi'  },
+  video: { css: 'var(--k-video)', label: 'video' }
+};
+
+const APPS = [
+  { id: 'term',  name: 'ClackTerm',  sub: 'serial',
+    outs: [{ id: 'rx',  label: 'Serial RX',   kind: 'bytes' }],
+    ins:  [{ id: 'tx',  label: 'Serial TX',   kind: 'bytes', normal: 'keyboard' }] },
+  { id: 'midi',  name: 'MIDIterm',   sub: 'midi',
+    outs: [{ id: 'out', label: 'MIDI Out',    kind: 'midi'  }],
+    ins:  [{ id: 'in',  label: 'MIDI In',     kind: 'midi',  normal: 'DIN input' }] },
+  { id: 'pd',    name: 'Pure Data',  sub: 'patch',
+    outs: [{ id: 'dac', label: 'dac~',        kind: 'audio' }],
+    ins:  [{ id: 'adc', label: 'adc~',        kind: 'audio', normal: 'microphone' },
+           { id: 'ctl', label: 'ctlin',       kind: 'midi',  normal: 'none' }] },
+  { id: 'dem',   name: 'ClackDem',   sub: 'modem',
+    outs: [{ id: 'dat', label: 'Decoded',     kind: 'bytes' }],
+    ins:  [{ id: 'aud', label: 'Audio In',    kind: 'audio', normal: 'microphone' }] },
+  { id: 'scope', name: 'ClackScope', sub: 'scope',
+    outs: [],
+    ins:  [{ id: 'sig', label: 'Signal In',   kind: 'audio', normal: 'microphone' },
+           { id: 'trc', label: 'Trace Data',  kind: 'bytes', normal: 'none' }] },
+  { id: 'rec',   name: 'Recorder',   sub: 'audio',
+    outs: [{ id: 'play', label: 'Playback',   kind: 'audio' }],
+    ins:  [{ id: 'rec',  label: 'Audio In',   kind: 'audio', normal: 'microphone' }] }
+];
+
+const appById = id => APPS.find(a => a.id === id);
+const portOf = (appId, portId, dir) => {
+  const app = appById(appId);
+  if (!app) return null;
+  return (dir === 'out' ? app.outs : app.ins).find(p => p.id === portId) || null;
+};
+
+/* ------------------------------------------------------------- plumbing -- */
+const SVGNS = 'http://www.w3.org/2000/svg';
+const svg = (tag, attrs) => {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+};
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+};
+
+/* A hanging lead. Real cable sags under its own weight and the sag grows with
+   slack, not with distance — a short lead between adjacent jacks droops almost
+   as much as a long one, which is what stops a patchbay looking like a graph. */
+function droopPath(x1, y1, x2, y2) {
+  const d = Math.hypot(x2 - x1, y2 - y1);
+  const sag = Math.min(120, 34 + d * 0.30);
+  return `M ${x1} ${y1} C ${x1} ${y1 + sag}, ${x2} ${y2 + sag}, ${x2} ${y2}`;
+}
+
+/* The flow graph wants the opposite: control points pulled along the axis of
+   travel so a link reads as direction rather than as a dangling object. */
+function flowPath(x1, y1, x2, y2) {
+  const dy = Math.max(30, Math.abs(y2 - y1) * 0.55);
+  return `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`;
+}
+
+/* SVG resolves var() in a presentation attribute; a canvas context does not,
+   and silently keeps its previous strokeStyle instead of complaining — which
+   is how a trace ends up drawn in whatever colour the last one used. So the
+   kind colours are resolved to real values before any canvas sees them, and
+   dropped when the viewer's colour scheme changes underneath us. */
+const colourCache = new Map();
+function cssColour(value) {
+  const m = /^var\((--[\w-]+)\)$/.exec(value);
+  if (!m) return value;
+  if (!colourCache.has(m[1])) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim();
+    colourCache.set(m[1], v || '#5ec98d');
+  }
+  return colourCache.get(m[1]);
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => colourCache.clear());
+
+/* Studies live inside a CSS-scaled .stage, so pointer coordinates have to come
+   back through that scale before they mean anything in stage space. */
+function localPoint(stage, ev) {
+  const r = stage.getBoundingClientRect();
+  const s = r.width / Number(stage.dataset.w) || 1;
+  return { x: (ev.clientX - r.left) / s, y: (ev.clientY - r.top) / s };
+}
+function centreIn(stage, node) {
+  const r = stage.getBoundingClientRect();
+  const n = node.getBoundingClientRect();
+  const s = r.width / Number(stage.dataset.w) || 1;
+  return {
+    x: (n.left + n.width / 2 - r.left) / s,
+    y: (n.top + n.height / 2 - r.top) / s
+  };
+}
+
+/* ------------------------------------------------------------- the tone --
+   A stand-in signal so a cable visibly carries something. Each source has its
+   own character, because "the cable changed what ClackScope is looking at" is
+   the single hardest thing to show in a still picture. */
+const SOURCES = {
+  microphone: { f: 0, amp: 0.30, noise: 0.55, hz: 3.1 },
+  'Pure Data · dac~':      { f: 3.0, amp: 0.72, noise: 0.03, hz: 0 },
+  'ClackDem · Decoded':    { f: 1.6, amp: 0.60, noise: 0.05, hz: 0, square: true },
+  'Recorder · Playback':   { f: 2.2, amp: 0.52, noise: 0.14, hz: 0.7 },
+  'test tone':             { f: 4.0, amp: 0.65, noise: 0.0,  hz: 0 },
+  none: { f: 0, amp: 0, noise: 0.02, hz: 0 }
+};
+function sampleAt(src, t, i, n) {
+  const s = SOURCES[src] || SOURCES.microphone;
+  const phase = (i / n) * Math.PI * 2 * (s.f || 1) + t * 2;
+  let v = 0;
+  if (s.f) v = s.square ? Math.sign(Math.sin(phase)) * 0.8 : Math.sin(phase) + Math.sin(phase * 3) * 0.12;
+  if (s.hz) v += Math.sin(t * s.hz + i * 0.05) * 0.5;
+  v *= s.amp;
+  v += (Math.random() - 0.5) * s.noise;
+  return v;
+}
+
+/* Everything that wants a frame registers here; one loop drives the page. */
+const tickers = [];
+
+function drawTrace(canvas, src, t, colour) {
+  const w = canvas.width, h = canvas.height;
+  const c = canvas.getContext('2d');
+  c.clearRect(0, 0, w, h);
+
+  c.strokeStyle = 'rgba(120,170,140,0.16)';
+  c.lineWidth = 1;
+  for (let i = 1; i < 6; i++) {
+    const y = (h / 6) * i;
+    c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke();
+  }
+  for (let i = 1; i < 10; i++) {
+    const x = (w / 10) * i;
+    c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke();
+  }
+
+  c.strokeStyle = cssColour(colour);
+  c.lineWidth = 1.6;
+  c.lineJoin = 'round';
+  c.beginPath();
+  const n = Math.max(60, Math.floor(w / 2));
+  for (let i = 0; i <= n; i++) {
+    const v = sampleAt(src, t, i, n);
+    const x = (i / n) * w;
+    const y = h / 2 - v * (h / 2.6);
+    if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+  }
+  c.stroke();
+}
+
+/* =============================================================== study A ==
+   The Link menu. One real app window with a working menu, plus a second window
+   beside it that never changes — the point being that patching one app leaves
+   every other app alone. */
+function buildA(stage) {
+  const scopeWin = el('div', 'win');
+  scopeWin.style.cssText = 'left:24px; top:26px; width:452px; height:344px;';
+  const bar = el('div', 'win-bar');
+  bar.append(el('span', 't', 'ClackScope'), el('span', 'b'), el('span', 'b'));
+  const menu = el('div', 'win-menu');
+  const linkBtn = el('button', null, 'Link');
+  menu.append(el('button', null, 'File'), el('button', null, 'View'), linkBtn, el('button', null, 'Help'));
+  const body = el('div', 'win-body');
+
+  const screen = el('div', 'scr');
+  const canvas = document.createElement('canvas');
+  canvas.width = 430; canvas.height = 250;
+  screen.append(canvas);
+
+  const srcRow = el('div', 'srcrow');
+  const srcLabel = el('span', null, 'Input');
+  const sel = document.createElement('select');
+  for (const opt of ['microphone', 'test tone', 'none']) {
+    const o = document.createElement('option');
+    o.value = opt; o.textContent = opt;
+    sel.append(o);
+  }
+  const over = el('span', 'over');
+  const lamp = el('span', 'lamp');
+  lamp.style.color = KIND.audio.css;
+  over.append(lamp, el('span', null, ''));
+  srcRow.append(srcLabel, sel, over);
+
+  body.append(screen, srcRow);
+  scopeWin.append(bar, menu, body);
+
+  /* the untouched neighbour */
+  const recWin = el('div', 'win');
+  recWin.style.cssText = 'left:512px; top:26px; width:266px; height:210px;';
+  const rbar = el('div', 'win-bar');
+  rbar.append(el('span', 't', 'Recorder'), el('span', 'b'), el('span', 'b'));
+  const rbody = el('div', 'win-body');
+  const rrow = el('div', 'srcrow');
+  const rsel = document.createElement('select');
+  for (const opt of ['microphone', 'line in']) {
+    const o = document.createElement('option'); o.value = o.textContent = opt; rsel.append(o);
+  }
+  rrow.append(el('span', null, 'Input'), rsel);
+  const rnote = el('p', 'mininote', 'unchanged — its own picker still owns its input');
+  rnote.style.margin = '6px 0 0';
+  rbody.append(rrow, rnote);
+  recWin.append(rbar, rbody);
+
+  const caption = el('p', 'mininote');
+  caption.style.cssText = 'position:absolute; left:512px; top:262px; width:266px; line-height:1.5; align-items:flex-start;';
+  caption.textContent = 'Patching ClackScope changes nothing here. No prompt, no permission, no shared state — Recorder never learns that a cable exists.';
+
+  stage.append(scopeWin, recWin, caption);
+
+  /* --- state --- */
+  let patched = null;                       /* null = normalled */
+  const sources = [
+    { app: 'Pure Data',  port: 'dac~',     kind: 'audio', src: 'Pure Data · dac~' },
+    { app: 'ClackDem',   port: 'Decoded',  kind: 'bytes', src: 'ClackDem · Decoded' },
+    { app: 'Recorder',   port: 'Playback', kind: 'audio', src: 'Recorder · Playback' }
+  ];
+
+  function sync() {
+    sel.disabled = !!patched;
+    over.style.display = patched ? 'inline-flex' : 'none';
+    lamp.classList.toggle('on', !!patched);
+    over.lastChild.textContent = patched ? '← ' + patched.app + ' · ' + patched.port : '';
+    lamp.style.color = patched ? KIND[patched.kind].css : KIND.audio.css;
+  }
+  sync();
+
+  let open = null;
+  function closeMenu() {
+    if (open) { open.remove(); open = null; }
+    linkBtn.classList.remove('open');
+  }
+  linkBtn.addEventListener('click', ev => {
+    ev.stopPropagation();
+    if (open) { closeMenu(); return; }
+    linkBtn.classList.add('open');
+    const m = el('div', 'linkmenu');
+    m.style.left = (scopeWin.offsetLeft + linkBtn.offsetLeft) + 'px';
+    m.style.top = (scopeWin.offsetTop + 24 + 22) + 'px';
+
+    m.append(el('div', 'grp', 'Signal In · audio'));
+
+    const normal = el('button', patched ? 'dim' : null);
+    normal.append(el('span', 'ck', patched ? '' : '✓'), el('span', null, '(normal) microphone'));
+    normal.addEventListener('click', () => { patched = null; sync(); closeMenu(); });
+    m.append(normal);
+
+    for (const s of sources) {
+      const b = document.createElement('button');
+      const dot = el('span', 'kd');
+      dot.style.background = KIND[s.kind].css;
+      const on = patched && patched.app === s.app && patched.port === s.port;
+      b.append(el('span', 'ck', on ? '✓' : ''), dot, el('span', null, s.app + ' · ' + s.port));
+      if (s.kind !== 'audio') {
+        /* kinds gate the list: a bytes outlet is simply not offered to an
+           audio inlet, so there is no error state to design */
+        b.classList.add('dim');
+        b.disabled = true;
+        b.style.cursor = 'not-allowed';
+        b.append(el('span', 'nrm', ''));
+        b.lastChild.style.cssText = 'margin-left:auto; font-size:10px; color:var(--ink-3)';
+        b.lastChild.textContent = 'bytes';
+      } else {
+        b.addEventListener('click', () => { patched = s; sync(); closeMenu(); });
+      }
+      m.append(b);
+    }
+
+    m.append(el('div', 'sep'));
+    const pb = document.createElement('button');
+    pb.append(el('span', 'ck', ''), el('span', null, 'Open Patchbay…'));
+    pb.addEventListener('click', () => {
+      closeMenu();
+      document.getElementById('study-b').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    m.append(pb);
+
+    stage.append(m);
+    open = m;
+  });
+  document.addEventListener('click', closeMenu);
+
+  tickers.push(t => {
+    const src = patched ? patched.src : sel.value;
+    drawTrace(canvas, src, t, patched ? KIND[patched.kind].css : '#5ec98d');
+  });
+}
+
+/* =============================================================== study B ==
+   The rack. Modules are fixed width and the jacks carry the argument, so the
+   drawing effort goes into making a jack look like a jack. */
+function buildB(stage) {
+  const rack = el('div', 'rack');
+  rack.append(el('div', 'rail top'), el('div', 'rail bot'));
+  const cables = svg('svg', { class: 'cables' });
+  const jacks = new Map();                  /* key -> element */
+  const meters = new Map();                 /* appId -> meter fill */
+  const links = [];                         /* {from, to, kind, path, hit} */
+
+  for (const app of APPS) {
+    const mod = el('div', 'mod');
+    mod.append(el('h4', null, app.name), el('div', 'sub', app.sub));
+
+    if (app.outs.length) {
+      mod.append(el('div', 'div'));
+      for (const p of app.outs) {
+        const row = el('div', 'pj out');
+        const j = el('div', 'jack');
+        j.style.color = KIND[p.kind].css;
+        j.dataset.key = app.id + ':' + p.id + ':out';
+        const nm = el('div', 'nm');
+        nm.append(document.createTextNode(p.label), el('i', null, 'out · ' + KIND[p.kind].label));
+        row.append(j, nm);
+        mod.append(row);
+        jacks.set(j.dataset.key, j);
+      }
+    }
+    if (app.ins.length) {
+      mod.append(el('div', 'div'));
+      for (const p of app.ins) {
+        const row = el('div', 'pj');
+        const j = el('div', 'jack');
+        j.style.color = KIND[p.kind].css;
+        j.dataset.key = app.id + ':' + p.id + ':in';
+        const nm = el('div', 'nm');
+        nm.append(document.createTextNode(p.label), el('i', null, 'norm · ' + p.normal));
+        row.append(j, nm);
+        mod.append(row);
+        jacks.set(j.dataset.key, j);
+      }
+    }
+
+    const spacer = el('div');
+    spacer.style.flex = '1';
+    mod.append(spacer);
+    const meter = el('div', 'meter');
+    const fill = el('b');
+    meter.append(fill);
+    meter.style.color = KIND.audio.css;
+    mod.append(meter);
+    meters.set(app.id, fill);
+
+    rack.append(mod);
+  }
+
+  stage.append(rack, cables);
+  wireJacks({ stage, cables, jacks, links, onChange: syncB, pathFn: droopPath, jackClass: 'jack' });
+
+  function syncB() {
+    for (const [key, j] of jacks) j.classList.toggle('lit', links.some(l => l.from === key || l.to === key));
+    for (const app of APPS) {
+      const live = links.some(l => l.to.startsWith(app.id + ':') || l.from.startsWith(app.id + ':'));
+      meters.get(app.id).dataset.live = live ? '1' : '';
+    }
+  }
+  syncB();
+
+  tickers.push(t => {
+    for (const [id, fill] of meters) {
+      const live = fill.dataset.live;
+      const v = live ? 0.35 + Math.abs(Math.sin(t * 2.2 + id.length)) * 0.6 : 0;
+      fill.style.width = (v * 100).toFixed(1) + '%';
+    }
+  });
+
+  /* two leads in from the start, so the study reads as a patch rather than as
+     an empty rack waiting to be understood */
+  setTimeout(() => {
+    connect('pd:dac:out', 'scope:sig:in');
+    connect('dem:dat:out', 'scope:trc:in');
+    connect('rec:play:out', 'dem:aud:in');
+  }, 0);
+
+  function connect(a, b) {
+    const ev = new CustomEvent('demo-connect', { detail: { from: a, to: b } });
+    stage.dispatchEvent(ev);
+  }
+}
+
+/* =============================================================== study C ==
+   The flow graph. Boxes are draggable, links are drawn between dots, and the
+   only real work is keeping the paths in step with the boxes. */
+function buildC(stage) {
+  stage.append(el('div', 'canvasbg'));
+  const cables = svg('svg', { class: 'cables' });
+  const jacks = new Map();
+  const links = [];
+  const nodes = [];
+
+  const layout = {
+    term:  { x: 30,  y: 30  },
+    dem:   { x: 262, y: 176 },
+    pd:    { x: 500, y: 30  },
+    scope: { x: 740, y: 214 },
+    midi:  { x: 30,  y: 258 },
+    rec:   { x: 500, y: 300 }
+  };
+
+  for (const app of APPS) {
+    const n = el('div', 'node');
+    n.style.left = layout[app.id].x + 'px';
+    n.style.top = layout[app.id].y + 'px';
+
+    const h = el('h4', null, app.name);
+    const lamp = el('span', 'lamp');
+    lamp.style.color = KIND.bytes.css;
+    h.append(lamp);
+    n.append(h);
+
+    const ports = el('div', 'ports');
+    for (const p of app.ins) {
+      const row = el('div', 'prow');
+      const dot = el('span', 'dot');
+      dot.style.color = KIND[p.kind].css;
+      dot.dataset.key = app.id + ':' + p.id + ':in';
+      row.append(dot, el('span', null, p.label), el('span', 'nrm', p.normal));
+      ports.append(row);
+      jacks.set(dot.dataset.key, dot);
+    }
+    for (const p of app.outs) {
+      const row = el('div', 'prow o');
+      const dot = el('span', 'dot');
+      dot.style.color = KIND[p.kind].css;
+      dot.dataset.key = app.id + ':' + p.id + ':out';
+      row.append(dot, el('span', null, p.label), el('span', 'nrm', KIND[p.kind].label));
+      ports.append(row);
+      jacks.set(dot.dataset.key, dot);
+    }
+    n.append(ports);
+    stage.append(n);
+    nodes.push({ app, el: n, lamp });
+  }
+  stage.append(cables);
+
+  /* box dragging — anywhere on the node that is not a port dot */
+  for (const { el: n } of nodes) {
+    n.addEventListener('pointerdown', ev => {
+      if (ev.target.classList.contains('dot')) return;
+      const p = localPoint(stage, ev);
+      const ox = p.x - n.offsetLeft, oy = p.y - n.offsetTop;
+      n.classList.add('drag');
+      n.setPointerCapture(ev.pointerId);
+      const move = e => {
+        const q = localPoint(stage, e);
+        n.style.left = Math.max(4, Math.min(Number(stage.dataset.w) - n.offsetWidth - 4, q.x - ox)) + 'px';
+        n.style.top = Math.max(4, Math.min(Number(stage.dataset.h) - n.offsetHeight - 4, q.y - oy)) + 'px';
+        redraw();
+      };
+      const up = () => {
+        n.classList.remove('drag');
+        n.removeEventListener('pointermove', move);
+        n.removeEventListener('pointerup', up);
+      };
+      n.addEventListener('pointermove', move);
+      n.addEventListener('pointerup', up);
+      ev.preventDefault();
+    });
+  }
+
+  const api = wireJacks({
+    stage, cables, jacks, links, onChange: syncC, pathFn: flowPath, jackClass: 'dot'
+  });
+  const redraw = api.redraw;
+
+  function syncC() {
+    for (const [key, d] of jacks) d.classList.toggle('filled', links.some(l => l.from === key || l.to === key));
+    for (const { app, lamp } of nodes) {
+      const live = links.some(l => l.to.startsWith(app.id + ':') || l.from.startsWith(app.id + ':'));
+      lamp.classList.toggle('on', live);
+      const mine = links.find(l => l.to.startsWith(app.id + ':') || l.from.startsWith(app.id + ':'));
+      if (mine) lamp.style.color = KIND[mine.kind].css;
+    }
+  }
+  syncC();
+
+  setTimeout(() => {
+    api.connect('dem:dat:out', 'scope:trc:in');
+    api.connect('pd:dac:out', 'scope:sig:in');
+    api.connect('midi:out:out', 'pd:ctl:in');
+  }, 0);
+}
+
+/* =============================================================== study D ==
+   Cables over the desktop. Windows drag, cables follow, and a jack sits in the
+   title bar — one per window, which is the study's own undoing. */
+function buildD(stage) {
+  const desk = el('div', 'desk');
+  const bar = el('div', 'deskbar');
+  bar.append(el('span', 'brandmark', 'ClackOS'), el('span', null, 'File'),
+             el('span', null, 'View'), el('span', null, 'Applications'));
+  desk.append(bar);
+  stage.append(desk);
+
+  const cables = svg('svg', { class: 'cables' });
+  const jacks = new Map();
+  const links = [];
+  const wins = [];
+
+  const cast = [
+    { id: 'term',  title: 'ClackTerm',  kind: 'bytes', x: 28,  y: 52,  w: 258, h: 150, note: 'serial · 115200 8N1' },
+    { id: 'dem',   title: 'ClackDem',   kind: 'audio', x: 330, y: 44,  w: 250, h: 138, note: 'norm · microphone' },
+    { id: 'scope', title: 'ClackScope', kind: 'audio', x: 618, y: 176, w: 300, h: 188, note: 'norm · microphone', scope: true },
+    { id: 'pd',    title: 'Pure Data',  kind: 'audio', x: 132, y: 250, w: 262, h: 148, note: 'norm · microphone' }
+  ];
+
+  for (const c of cast) {
+    const w = el('div', 'win');
+    w.style.cssText = `left:${c.x}px; top:${c.y}px; width:${c.w}px; height:${c.h}px;`;
+    const tb = el('div', 'win-bar');
+    const t = el('span', 't grip', c.title);
+    const tab = el('span', 'tab');
+    tab.style.color = KIND[c.kind].css;
+    tab.dataset.key = c.id + ':port:both';
+    tb.append(t, tab, el('span', 'b'));
+    const body = el('div', 'win-body');
+
+    if (c.scope) {
+      const scr = el('div', 'miniscope');
+      const cv = document.createElement('canvas');
+      cv.width = 268; cv.height = 108;
+      scr.append(cv);
+      body.append(scr);
+      tickers.push(tt => {
+        const live = links.some(l => l.from.startsWith('scope:') || l.to.startsWith('scope:'));
+        drawTrace(cv, live ? 'Pure Data · dac~' : 'microphone', tt, live ? KIND.audio.css : '#5ec98d');
+      });
+    } else {
+      const pad = el('div');
+      pad.style.cssText = 'flex:1; border:1px dashed var(--rule); border-radius:2px;';
+      body.append(pad);
+    }
+    const note = el('div', 'mininote');
+    const lamp = el('span', 'lamp');
+    lamp.style.color = KIND[c.kind].css;
+    note.append(lamp, el('span', null, c.note));
+    body.append(note);
+
+    w.append(tb, body);
+    desk.append(w);
+    jacks.set(tab.dataset.key, tab);
+    wins.push({ c, el: w, lamp, note: note.lastChild });
+
+    /* dragging a window by its title bar, the way the real one works */
+    t.addEventListener('pointerdown', ev => {
+      const p = localPoint(stage, ev);
+      const ox = p.x - w.offsetLeft, oy = p.y - w.offsetTop;
+      t.setPointerCapture(ev.pointerId);
+      w.style.zIndex = '10';
+      const move = e => {
+        const q = localPoint(stage, e);
+        w.style.left = Math.max(2, Math.min(Number(stage.dataset.w) - w.offsetWidth - 2, q.x - ox)) + 'px';
+        w.style.top = Math.max(24, Math.min(Number(stage.dataset.h) - w.offsetHeight - 2, q.y - oy)) + 'px';
+        api.redraw();
+      };
+      const up = () => {
+        w.style.zIndex = '';
+        t.removeEventListener('pointermove', move);
+        t.removeEventListener('pointerup', up);
+      };
+      t.addEventListener('pointermove', move);
+      t.addEventListener('pointerup', up);
+      ev.preventDefault();
+    });
+  }
+
+  desk.append(cables);
+
+  const api = wireJacks({
+    stage, cables, jacks, links, onChange: syncD, pathFn: droopPath, jackClass: 'tab',
+    kindOf: key => (cast.find(c => c.id === key.split(':')[0]) || {}).kind,
+    /* one jack per window means it is both an inlet and an outlet, so the only
+       rule left is "not to itself" — which is precisely the fudge this study is
+       being judged on */
+    compatible: (a, b) => {
+      const ka = a.split(':')[0], kb = b.split(':')[0];
+      if (ka === kb) return false;
+      const ca = cast.find(c => c.id === ka), cb = cast.find(c => c.id === kb);
+      return ca && cb && ca.kind === cb.kind;
+    }
+  });
+
+  function syncD() {
+    for (const [key, j] of jacks) j.classList.toggle('filled', links.some(l => l.from === key || l.to === key));
+    for (const { c, lamp, note } of wins) {
+      const mine = links.filter(l => l.from.startsWith(c.id + ':') || l.to.startsWith(c.id + ':'));
+      lamp.classList.toggle('on', mine.length > 0);
+      if (!mine.length) { note.textContent = c.note; continue; }
+      /* with only one jack per window there is no room to say which port a
+         second lead landed on, so past one cable the window can only report a
+         count — the study's central weakness, showing itself */
+      if (mine.length > 1) { note.textContent = 'patched · ' + mine.length + ' cables'; continue; }
+      const other = mine[0].from.startsWith(c.id + ':') ? mine[0].to : mine[0].from;
+      const oc = cast.find(x => x.id === other.split(':')[0]);
+      note.textContent = 'patched · ' + (oc ? oc.title : '');
+    }
+  }
+  syncD();
+
+  setTimeout(() => api.connect('pd:port:both', 'scope:port:both'), 0);
+}
+
+/* ========================================================== jack wiring ==
+   Drag-to-connect, shared by B, C and D. Given a map of jack elements and a
+   list to keep the connections in, it handles the drag, the compatibility
+   highlighting, the live lead that follows the pointer, and click-to-pull.  */
+function wireJacks(opts) {
+  const { stage, cables, jacks, links, onChange, pathFn, jackClass } = opts;
+  const kindOf = opts.kindOf || (key => {
+    const [appId, portId, dir] = key.split(':');
+    const p = portOf(appId, portId, dir);
+    return p ? p.kind : 'bytes';
+  });
+  const compatible = opts.compatible || ((a, b) => {
+    const [aa, , ad] = a.split(':');
+    const [ba, , bd] = b.split(':');
+    if (aa === ba) return false;            /* an app patching itself is a loop */
+    if (ad === bd) return false;            /* out→out and in→in are not cables */
+    return kindOf(a) === kindOf(b);
+  });
+
+  let live = null;                          /* the lead being dragged */
+
+  function redraw() {
+    for (const l of links) {
+      const a = centreIn(stage, jacks.get(l.from));
+      const b = centreIn(stage, jacks.get(l.to));
+      const d = pathFn(a.x, a.y, b.x, b.y);
+      l.path.setAttribute('d', d);
+      l.hit.setAttribute('d', d);
+    }
+    if (live) {
+      const a = centreIn(stage, jacks.get(live.from));
+      live.path.setAttribute('d', pathFn(a.x, a.y, live.x, live.y));
+    }
+  }
+
+  function connect(from, to) {
+    if (!jacks.has(from) || !jacks.has(to)) return;
+    if (!compatible(from, to)) return;      /* also guards the demo patches below */
+    if (links.some(l => (l.from === from && l.to === to) || (l.from === to && l.to === from))) return;
+    const kind = kindOf(from);
+    const path = svg('path', {
+      stroke: KIND[kind].css, 'stroke-width': jackClass === 'dot' ? 2 : 3.4,
+      opacity: jackClass === 'dot' ? 0.9 : 0.85
+    });
+    const hit = svg('path', { class: 'hit' });
+    const rec = { from, to, kind, path, hit };
+    hit.addEventListener('click', () => {
+      const i = links.indexOf(rec);
+      if (i >= 0) links.splice(i, 1);
+      path.remove(); hit.remove();
+      onChange(); redraw();
+    });
+    cables.append(path, hit);
+    links.push(rec);
+    onChange(); redraw();
+  }
+
+  for (const [key, node] of jacks) {
+    node.addEventListener('pointerdown', ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const p = localPoint(stage, ev);
+      const kind = kindOf(key);
+      const path = svg('path', {
+        stroke: KIND[kind].css, 'stroke-width': jackClass === 'dot' ? 2 : 3.4,
+        opacity: 0.55, 'stroke-dasharray': '5 4'
+      });
+      cables.append(path);
+      live = { from: key, x: p.x, y: p.y, path };
+
+      /* everything that cannot take this lead gets out of the way, so the
+         legal targets are the only bright things on the panel */
+      for (const [k, n] of jacks) {
+        if (k === key) continue;
+        n.classList.toggle('no', !compatible(key, k));
+      }
+      redraw();
+
+      node.setPointerCapture(ev.pointerId);
+      const move = e => {
+        const q = localPoint(stage, e);
+        live.x = q.x; live.y = q.y;
+        for (const [k, n] of jacks) {
+          if (k === key || !compatible(key, k)) continue;
+          const c = centreIn(stage, n);
+          n.classList.toggle('tgt', Math.hypot(c.x - q.x, c.y - q.y) < 26);
+        }
+        redraw();
+      };
+      const up = e => {
+        node.removeEventListener('pointermove', move);
+        node.removeEventListener('pointerup', up);
+        const q = localPoint(stage, e);
+        let best = null, bestD = 30;
+        for (const [k, n] of jacks) {
+          if (k === key || !compatible(key, k)) continue;
+          const c = centreIn(stage, n);
+          const d = Math.hypot(c.x - q.x, c.y - q.y);
+          if (d < bestD) { bestD = d; best = k; }
+        }
+        path.remove();
+        live = null;
+        for (const [, n] of jacks) n.classList.remove('no', 'tgt');
+        if (best) {
+          const [, , dir] = key.split(':');
+          if (dir === 'out') connect(key, best); else connect(best, key);
+        }
+        redraw();
+      };
+      node.addEventListener('pointermove', move);
+      node.addEventListener('pointerup', up);
+    });
+  }
+
+  stage.addEventListener('demo-connect', e => connect(e.detail.from, e.detail.to));
+  return { redraw, connect, links };
+}
+
+/* ------------------------------------------------------------ fit + loop -- */
+function fitStages() {
+  document.querySelectorAll('.stage').forEach(stage => {
+    const wrap = stage.parentElement;
+    const dw = Number(stage.dataset.w), dh = Number(stage.dataset.h);
+    stage.style.width = dw + 'px';
+    stage.style.height = dh + 'px';
+    const s = Math.min(1, wrap.clientWidth / dw);
+    stage.style.transform = `scale(${s})`;
+    wrap.style.height = Math.round(dh * s) + 'px';
+  });
+}
+
+buildA(document.getElementById('stage-a'));
+buildB(document.getElementById('stage-b'));
+buildC(document.getElementById('stage-c'));
+buildD(document.getElementById('stage-d'));
+
+fitStages();
+window.addEventListener('resize', fitStages);
+
+let last = 0;
+function loop(ms) {
+  const now = ms / 1000;
+  /* 40 fps is plenty for four demo panels and keeps a laptop fan out of it */
+  if (now - last > 0.025) {
+    last = now;
+    for (const f of tickers) f(now);
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+document.getElementById('today').textContent =
+  new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+})();
+</script>
+</body>
+</html>
