@@ -6,24 +6,28 @@
 <meta name="color-scheme" content="only light">
 <title>audioGen — ClackOS</title>
 <meta name="robots" content="noindex,follow">
-<meta name="description" content="Generate short music clips locally in your browser with Meta MusicGen and Transformers.js.">
+<meta name="description" content="Generate music and speech locally in your browser with Meta MusicGen, Google Magenta RealTime 2, Supertone Supertonic, Microsoft SpeechT5 and Meta MMS TTS.">
 <link rel="canonical" href="https://clacktronics.co.uk/content/applications/audiogen/index.html">
 <meta property="og:site_name" content="Clacktronics">
 <meta property="og:type" content="website">
 <meta property="og:title" content="audioGen — ClackOS">
 <meta property="og:url" content="https://clacktronics.co.uk/content/applications/audiogen/index.html">
-<meta property="og:description" content="Generate short music clips locally in your browser with Meta MusicGen and Transformers.js.">
+<meta property="og:description" content="Generate music and speech locally in your browser with Meta MusicGen, Google Magenta RealTime 2, Supertone Supertonic, Microsoft SpeechT5 and Meta MMS TTS.">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../../assets/css/app.css">
 <link rel="stylesheet" href="audiogen.css">
+<script src="../../../assets/js/app-menu.js" defer></script>
+<script src="../../../assets/js/app-bar.js" defer></script>
+<script src="../../../assets/js/app-home.js" defer></script>
 </head>
 <body>
 <div class="app">
   <div class="rm-bar">
     <div class="rm"><button type="button">Audio</button><div class="rm-dd">
+      <button type="button" data-action="generate" disabled><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>Generate</button>
       <button type="button" data-action="save" disabled><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save WAV</button>
       <button type="button" data-action="clear" disabled><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear result</button>
       <div class="sep"></div>
@@ -36,97 +40,86 @@
 
   <main class="app-main">
     <header class="ag-hero">
-      <div class="ag-title">
-        <h1>audioGen</h1>
-        <p>Turn a description into a short music clip — generated on your machine.</p>
-      </div>
-      <span class="ag-engine-badge">Transformers.js · local AI</span>
+      <h1>audioGen</h1>
+      <p>Music and speech — made on your own machine.</p>
+      <span class="ag-engine-badge">local AI</span>
     </header>
 
     <div class="ag-layout">
-      <section class="ag-card" aria-labelledby="ag-prompt-title">
-        <div class="ag-card-head">
-          <span class="app-lbl" id="ag-prompt-title">// Describe the sound</span>
-        </div>
-        <div class="ag-field">
-          <label for="ag-prompt">Prompt</label>
-          <textarea class="ag-prompt" id="ag-prompt" maxlength="500" placeholder="Example: Warm analog synth arpeggios, dusty drum machine, slow cinematic build...">Warm analog synth arpeggios, crisp drum machine, hopeful retro-futurist soundtrack, 105 BPM</textarea>
-        </div>
-        <div class="ag-examples" aria-label="Example prompts">
-          <button class="ag-example" type="button" data-prompt="Lo-fi hip hop beat, dusty vinyl, mellow electric piano, relaxed and instrumental">Lo-fi beat</button>
-          <button class="ag-example" type="button" data-prompt="Bright 1980s synthwave, pulsing bass, gated drums, triumphant night drive, 118 BPM">Synthwave</button>
-          <button class="ag-example" type="button" data-prompt="Gentle finger-picked acoustic guitar with soft strings, intimate and reflective, no vocals">Acoustic</button>
-          <button class="ag-example" type="button" data-prompt="Industrial machine rhythm, metallic percussion, tense electronic ambience, cinematic sound design">Industrial</button>
-        </div>
-      </section>
+      <div class="ag-rail">
+        <section class="ag-card" aria-labelledby="ag-model-title">
+          <div class="ag-card-head">
+            <span class="app-lbl" id="ag-model-title">// Model</span>
+            <span class="ag-tag ag-kind"></span>
+          </div>
+          <label class="ag-field" for="ag-model">
+            <span class="ag-control-label">Audio model</span>
+            <select class="ag-model-select" id="ag-model"></select>
+          </label>
+          <label class="ag-field ag-variant" for="ag-variant" hidden>
+            <span class="ag-control-label"></span>
+            <select class="ag-variant-select" id="ag-variant"></select>
+          </label>
+          <p class="ag-model-copy"></p>
+          <div class="ag-model-meta"></div>
+          <button class="btn primary ag-load" type="button" data-action="load"></button>
+          <p class="ag-load-note"></p>
+        </section>
 
-      <section class="ag-card" aria-labelledby="ag-model-title">
-        <div class="ag-card-head">
-          <span class="app-lbl" id="ag-model-title">// Model</span>
-          <span class="ag-tag">extensible catalog</span>
+        <section class="ag-card ag-controls-card" aria-labelledby="ag-controls-title">
+          <div class="ag-card-head">
+            <span class="app-lbl" id="ag-controls-title">// Generation controls</span>
+          </div>
+          <div class="ag-controls"></div>
+        </section>
+
+        <div class="ag-run">
+          <div class="ag-actions">
+            <button class="btn primary" type="button" data-action="generate" disabled><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>Generate audio</button>
+            <button class="btn ghost" type="button" data-action="stop" hidden><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop</button>
+          </div>
+          <div class="ag-progress" role="progressbar" aria-label="Model or generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div>
+          <p class="app-status ag-status" role="status" aria-live="polite"></p>
         </div>
-        <label class="ag-field" for="ag-model">
-          <span class="ag-control-label">Audio model</span>
-          <select class="ag-model-select" id="ag-model"></select>
-        </label>
-        <p class="ag-model-copy"></p>
-        <div class="ag-model-meta"></div>
-        <button class="btn primary" type="button" data-action="load"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Download &amp; load model</button>
-        <p class="ag-load-note"></p>
+      </div>
+
+      <div class="ag-work">
+        <section class="ag-card ag-prompt-card" aria-labelledby="ag-prompt-title">
+          <div class="ag-card-head">
+            <span class="app-lbl ag-prompt-title" id="ag-prompt-title">// Prompt</span>
+          </div>
+          <textarea class="ag-prompt" id="ag-prompt" aria-labelledby="ag-prompt-title"></textarea>
+          <p class="ag-prompt-help"></p>
+          <div class="ag-examples" aria-label="Example prompts"></div>
+        </section>
+
+        <section class="ag-card ag-result" aria-labelledby="ag-result-title">
+          <div class="ag-card-head">
+            <span class="app-lbl" id="ag-result-title">// Output</span>
+            <span class="ag-result-meta"></span>
+          </div>
+          <div class="ag-stage">
+            <canvas class="ag-waveform" aria-label="Waveform of generated audio"></canvas>
+            <p class="ag-empty">Your audio will appear here.</p>
+          </div>
+          <audio class="ag-audio" controls preload="metadata"></audio>
+          <div class="ag-actions">
+            <button class="btn primary" type="button" data-action="save"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save WAV</button>
+            <button class="btn ghost" type="button" data-action="clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear</button>
+          </div>
+        </section>
+      </div>
+
+      <section class="app-panel ag-about" hidden>
+        <h2>About audioGen</h2>
+        <p><b>audioGen</b> is a local-first text-to-audio workspace for ClackOS. The interface is built from a shared model catalog and each model family is implemented by a worker adapter, so two music models and three speech models sit behind one set of controls. Prompts and generated audio stay on this device; model weights are downloaded from the Hugging Face Hub and cached by your browser, so only the first load of a model waits for the network.</p>
+        <p>Everything runs in WebAssembly on the processor, except MusicGen, which uses the graphics adapter where there is one able to take it. A short music clip can take a few minutes; speech takes seconds. Magenta RealTime 2 is the heaviest thing here by some way — about 1.6 GB to fetch once, and roughly twenty seconds of work per second of music.</p>
+        <p>Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js 4.2.0</a> by Hugging Face, <a href="../../../vendor/transformers/LICENSE" target="_blank">Apache-2.0</a> · <a href="https://onnxruntime.ai/docs/tutorials/web/" target="_blank" rel="noopener">ONNX Runtime Web</a> by Microsoft, <a href="../../../vendor/transformers/LICENSE-onnxruntime.txt" target="_blank">MIT</a>, which Magenta RealTime 2 is driven on directly.</p>
+        <div class="ag-actions"><button class="btn ghost" type="button" data-action="about">Close</button></div>
       </section>
     </div>
 
-    <section class="ag-card" aria-labelledby="ag-controls-title">
-      <div class="ag-card-head">
-        <span class="app-lbl" id="ag-controls-title">// Generation controls</span>
-      </div>
-      <div class="ag-controls">
-        <label class="ag-control" for="ag-duration">
-          <span class="ag-control-top"><span class="ag-control-label">Duration</span><output id="ag-duration-value">8s</output></span>
-          <input id="ag-duration" type="range" min="2" max="20" value="8" step="1">
-          <span class="ag-control-help">Longer clips take proportionally longer.</span>
-        </label>
-        <label class="ag-control" for="ag-guidance">
-          <span class="ag-control-top"><span class="ag-control-label">Prompt guidance</span><output id="ag-guidance-value">3.0</output></span>
-          <input id="ag-guidance" type="range" min="1" max="6" value="3" step="0.1">
-          <span class="ag-control-help">Higher values follow the description more closely.</span>
-        </label>
-        <label class="ag-control" for="ag-temperature">
-          <span class="ag-control-top"><span class="ag-control-label">Variation</span><output id="ag-temperature-value">1.0</output></span>
-          <input id="ag-temperature" type="range" min="0.5" max="1.5" value="1" step="0.1">
-          <span class="ag-control-help">Higher values produce less predictable ideas.</span>
-        </label>
-      </div>
-      <div class="ag-actions">
-        <button class="btn primary" type="button" data-action="generate" disabled><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>Generate audio</button>
-        <button class="btn ghost" type="button" data-action="stop" hidden><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop</button>
-      </div>
-      <div class="ag-progress" role="progressbar" aria-label="Model or generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div></div></div>
-      <p class="app-status ag-status" role="status" aria-live="polite"></p>
-    </section>
-
-    <div class="ag-empty">Your generated waveform will appear here.<br>Load a model to begin.</div>
-    <section class="ag-card ag-result" aria-labelledby="ag-result-title">
-      <div class="ag-card-head">
-        <span class="app-lbl" id="ag-result-title">// Generated audio</span>
-        <span class="ag-result-meta"></span>
-      </div>
-      <canvas class="ag-waveform" aria-label="Waveform of generated audio"></canvas>
-      <audio class="ag-audio" controls preload="metadata"></audio>
-      <div class="ag-actions">
-        <button class="btn primary" type="button" data-action="save"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Save WAV</button>
-        <button class="btn ghost" type="button" data-action="clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Clear</button>
-      </div>
-    </section>
-
-    <section class="app-panel ag-about" hidden>
-      <b>audioGen</b> is a local-first text-to-audio workspace for ClackOS. The interface reads from a shared model catalog, while each model family is implemented by a worker adapter, leaving room for future music and sound-effect generators. Prompts and generated audio stay on this device; model weights are downloaded from the Hugging Face Hub and cached by your browser.
-    </section>
-
-    <p class="ag-credit">
-      Model: <a href="https://huggingface.co/facebook/musicgen-small" target="_blank" rel="noopener">MusicGen Small</a> by Meta, Transformers.js conversion by <a href="https://huggingface.co/Xenova/musicgen-small" target="_blank" rel="noopener">Xenova</a> · CC BY-NC 4.0.<br>
-      Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js 4.2.0</a> by Hugging Face, <a href="../../../vendor/transformers/LICENSE" target="_blank">Apache-2.0</a> · ONNX Runtime by Microsoft, <a href="../../../vendor/transformers/LICENSE-onnxruntime.txt" target="_blank">MIT</a>.
-    </p>
+    <p class="ag-credit"></p>
   </main>
 </div>
 <script type="module" src="app.js"></script>

@@ -46,7 +46,8 @@ content/
     calendar/events.csv     ← the upcoming events it shows
     calendar/luma.json      ← mirror of the Luma events (generated)
     video/                  ← browser-only Video Lab app + FFmpeg core
-    audiogen/               ← local Transformers.js + MusicGen audio generator
+    audiogen/               ← local music and speech generation app
+    audiogen/mrt2/          ← Magenta RealTime 2 engine (ONNX Runtime, not Transformers.js)
     about.md
 ```
 
@@ -441,23 +442,71 @@ OpenSCAD, Markdown windows, and desktop actions.
 - `applications/pdf-reader/index.html` — MuPDF.js 1.28.0 reader with lazy
   rendering, search, zoom, passwords, local/website files, and `?file=` URLs.
   MuPDF is vendored under `vendor/mupdf/` (AGPL-3.0).
-- `applications/audiogen/index.html` — local MusicGen text-to-music app;
-  prompts and WAV output stay in the browser. The catalog carries one build per
-  device: a `shader-f16` adapter fetches the GPU build (~640 MB) and decodes on
-  the GPU, anything else fetches the q8/fp32 build (~656 MB) and decodes on the
-  CPU. The 8-bit weights are not sent to the GPU because the WebGPU backend has
-  no integer matmul and widens them on every dispatch. The GPU build is fp16
-  except for two sessions. The decoder is q4: `decoder_model_merged_fp16.onnx`
-  is a bad export that no backend will parse (both If branches return outer
-  scope values directly), and q4 lands on MatMulNBits, which WebGPU has kernels
-  for. `encodec_decode` stays on the CPU at fp32, because it runs once per clip
-  where the decoder above it has run a thousand times — the same reasoning that
-  keeps `prepare_inputs_embeds` on the CPU in the Text to Image worker — and
-  that keeps the build on a file the app has actually run. An
-  adapter can still refuse the model mid-load, so the CPU build is also a
-  retry — and because a half-built session leaves the runtime in a bad way, the
-  retry replaces the worker rather than reloading inside it. The worker reports
-  the device it finished on and the status line names it.
+- `applications/audiogen/index.html` — local text-to-audio workspace; prompts
+  and WAV output stay in the browser. Five models share one interface: **Meta
+  MusicGen Small** (music, 656 MB), **Google Magenta RealTime 2** (music,
+  48 kHz stereo, 1.6 GB), **Supertone Supertonic** (English speech at
+  44.1 kHz, ten voices, 263 MB), **Microsoft SpeechT5** (English speech, seven
+  CMU Arctic voices, 230 MB) and **Meta MMS TTS** (speech in eight languages,
+  109 MB each). Four of the five are everything the vendored Transformers.js
+  implements — its text-to-audio mapping is VITS, MusicGen, Supertonic and
+  SpeechT5. Magenta RealTime 2 is the exception and is described below.
+  `model-catalog.js` is the single source for what the interface shows — the
+  wording around the text box, the preset chips, and every slider and dropdown
+  are built from the selected entry — and `family` picks the worker adapter,
+  which returns planar samples and leaves the resampler, the speech
+  normalisation and the WAV encoder shared. Speech is spoken a sentence at a
+  time and joined up, because SpeechT5 stops partway through anything longer
+  than about seventy characters; the split is also the progress figure.
+  SpeechT5 and MMS have no speed of their own, so their Speed control resamples
+  the finished clip and moves the pitch with it; Supertonic predicts its own
+  durations and is given the speed directly. The layout fills the window
+  instead of scrolling — a rail for the model and its controls, text and
+  waveform on the right — becoming one column below 760 px wide, and dropping
+  the slider captions before the Generate button in a window shorter than
+  640 px.
+
+  **MusicGen** carries one build per device: a `shader-f16` adapter fetches the
+  GPU build (~640 MB) and decodes on the GPU, anything else fetches the q8/fp32
+  build (~656 MB) and decodes on the CPU. The 8-bit weights are not sent to the
+  GPU because the WebGPU backend has no integer matmul and widens them on every
+  dispatch. The GPU build is fp16 except for two sessions. The decoder is q4:
+  `decoder_model_merged_fp16.onnx` is a bad export that no backend will parse
+  (both If branches return outer scope values directly), and q4 lands on
+  MatMulNBits, which WebGPU has kernels for. `encodec_decode` stays on the CPU
+  at fp32, because it runs once per clip where the decoder above it has run a
+  thousand times — the same reasoning that keeps `prepare_inputs_embeds` on the
+  CPU in the Text to Image worker — and that keeps the build on a file the app
+  has actually run. An adapter can still refuse the model mid-load, so the CPU
+  build is also a retry — and because a half-built session leaves the runtime
+  in a bad way, the retry replaces the worker rather than reloading inside it.
+  The worker reports the device it finished on and the status line names it.
+
+  **Magenta RealTime 2** does not go through Transformers.js at all, because it
+  cannot: it is three models in nine ONNX graphs with no HuggingFace config
+  between them, and the loop that carries a windowed KV-cache from one 25 Hz
+  audio frame to the next lives in the host rather than in any graph. So
+  `content/applications/audiogen/mrt2/` is that host — MusicCoCa turning the
+  prompt into twelve style tokens, the Depthformer writing twelve audio tokens
+  per 40 ms frame, and SpectroStream decoding them to 48 kHz stereo — driven on
+  ONNX Runtime directly, vendored for this purpose in `vendor/onnxruntime-web/`
+  (the JavaScript only; it reads its WebAssembly out of `vendor/transformers/`,
+  where the same build already sits). Structure and constants follow the
+  reference runtime published with the ONNX export.
+
+  Three things that runtime does not give you had to be built. MusicCoCa ships
+  Google's `spm.model` protobuf rather than a tokenizer.json, so `mrt2/`
+  parses it and does the SentencePiece Unigram segmentation itself —
+  `scripts/check_musiccoca_tokenizer.py` checks that against Google's own
+  implementation, and should be run after touching it. Its mapper takes a fixed
+  seed-0 noise vector, generated by `scripts/build_mrt2_noise.py` rather than
+  pasted in as a blob. And ONNX Runtime neither reports download progress nor
+  caches anything, which at 1.6 GB is the difference between a usable app and
+  an unusable one, so `mrt2/loader.js` does both — a second visit fetches
+  nothing. Expect roughly twenty seconds of work per second of music on a
+  processor: the graphs are full-precision because the WebAssembly backend has
+  no half-precision kernels and casts the smaller fp16 build on every
+  operation.
 - `applications/files.html` — read-only browser for repository and website
   media, shared by app file pickers. Associations live in
   `content/file-associations.json`. Rebuild the legacy-media catalogue with

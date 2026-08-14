@@ -19,6 +19,10 @@ All three variants are needed: the runtime picks asyncify or jspi at
 startup depending on whether the browser supports JS Promise
 Integration (this applies to the WebGPU backend too, not just CPU).
 
+The `.wasm` files here are also loaded by the standalone ONNX Runtime in
+../onnxruntime-web/, which audioGen's Magenta RealTime 2 engine drives
+directly — the same build, so keep the two directories on one version.
+
 Shared runtime for in-browser ML apps: content/applications/chat.html,
 content/applications/audiogen/,
 ClackPaint's background removal (paint-worker.js, which offers MODNet,
