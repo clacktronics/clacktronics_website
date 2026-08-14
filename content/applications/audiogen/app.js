@@ -1,4 +1,4 @@
-import { MODEL_CATALOG, getModelDefinition } from './model-catalog.js';
+import { MODEL_CATALOG, getModelDefinition, getModelBuild } from './model-catalog.js';
 
 const appRoot = window.ClackOSMountRoot || document;
 const $ = selector => appRoot.querySelector(selector);
@@ -39,6 +39,29 @@ let resultDetails = null;
 
 function selectedModel() {
   return getModelDefinition(modelSelect.value);
+}
+
+/* The worker decides for itself which build to fetch; this is the same question
+ * asked again in the window, and only so the panel can name a download size
+ * before anything is fetched. It stays null until the probe answers, and the
+ * panel shows both figures rather than guessing while it does. */
+let gpuDevice = null;
+let deviceProbed = false;
+function probeDevice() {
+  if (deviceProbed) return;
+  deviceProbed = true;
+  const settle = device => { gpuDevice = device; updateModelCopy(); };
+  if (!('gpu' in navigator)) { settle('wasm'); return; }
+  navigator.gpu.requestAdapter()
+    .then(adapter => settle(adapter?.features.has('shader-f16') ? 'webgpu' : 'wasm'))
+    .catch(() => settle('wasm'));
+}
+
+function describeDownload(model) {
+  if (gpuDevice) return `${getModelBuild(model, gpuDevice).downloadSizeMB} MB`;
+  const gpu = getModelBuild(model, 'webgpu').downloadSizeMB;
+  const cpu = getModelBuild(model, 'wasm').downloadSizeMB;
+  return `${cpu}–${gpu} MB`;
 }
 
 function setStatus(message) {
@@ -84,20 +107,28 @@ function destroyWorker() {
   loadedModelId = null;
 }
 
-function updateModelDetails() {
+/* Everything in the panel that depends on which build we will fetch, split out
+ * so the WebGPU probe can settle late without putting the sliders back to their
+ * defaults under someone who has already moved them. */
+function updateModelCopy() {
   const model = selectedModel();
   modelCopy.textContent = model.description;
   modelMeta.replaceChildren();
-  [model.family, `${model.downloadSizeMB} MB download`, model.license].forEach(text => {
+  [model.family, `${describeDownload(model)} download`, model.license].forEach(text => {
     const tag = document.createElement('span');
     tag.className = 'ag-tag';
     tag.textContent = text;
     modelMeta.appendChild(tag);
   });
-  const cached = localStorage.getItem(`audiogen-cached:${model.id}`) === '1';
+  /* Cached per device as well as per model: the two builds are different files
+   * and having fetched one says nothing about the other. */
+  const cached = !!gpuDevice && localStorage.getItem(`audiogen-cached:${model.id}:${gpuDevice}`) === '1';
   loadButton.innerHTML = `<span class="pixel-icon" data-icon="download" aria-hidden="true"></span>${cached ? 'Load cached model' : 'Download & load model'}`;
+  const memoryNote = gpuDevice
+    ? getModelBuild(model, gpuDevice).memoryNote
+    : getModelBuild(model, 'wasm').memoryNote;
   loadNote.replaceChildren(
-    document.createTextNode(`${model.memoryNote} Weights are fetched from Hugging Face and cached by your browser. `),
+    document.createTextNode(`${memoryNote} Weights are fetched from Hugging Face and cached by your browser. `),
   );
   const link = document.createElement('a');
   link.href = model.modelUrl;
@@ -105,6 +136,12 @@ function updateModelDetails() {
   link.rel = 'noopener';
   link.textContent = 'Model details';
   loadNote.appendChild(link);
+}
+
+function updateModelDetails() {
+  const model = selectedModel();
+  probeDevice();
+  updateModelCopy();
 
   controls.duration.min = model.limits.minDuration;
   controls.duration.max = model.limits.maxDuration;
@@ -131,7 +168,7 @@ function loadModel() {
   const model = selectedModel();
   setPhase('loading');
   setProgress(1);
-  setStatus(`Preparing ${model.label}. The first load downloads about ${model.downloadSizeMB} MB...`);
+  setStatus(`Preparing ${model.label}. The first load downloads about ${describeDownload(model)}...`);
   createWorker().postMessage({ type: 'load', modelId: model.id });
 }
 
@@ -270,13 +307,19 @@ function handleWorkerMessage(event) {
         : 'Downloading model files...');
       break;
     }
-    case 'model-ready':
+    case 'model-ready': {
       loadedModelId = message.modelId;
-      localStorage.setItem(`audiogen-cached:${message.modelId}`, '1');
+      localStorage.setItem(`audiogen-cached:${message.modelId}:${message.device}`, '1');
+      /* The worker has the last word on the device — it may have started on the
+       * adapter and finished on the processor — so take its answer rather than
+       * the probe's, and say which one it landed on. A twenty second clip is
+       * minutes apart between the two and it should not be a mystery why. */
+      if (message.device) gpuDevice = message.device;
       setProgress(100);
-      setStatus(`${selectedModel().label} is ready. Describe a clip and select Generate audio.`);
+      setStatus(`${selectedModel().label} is ready on the ${message.device === 'webgpu' ? 'graphics adapter' : 'processor'}. Describe a clip and select Generate audio.`);
       setPhase('idle');
       break;
+    }
     case 'generation-progress':
       setProgress(message.progress * 100);
       setStatus(`Generating locally: ${Math.round(message.progress * 100)}%...`);
