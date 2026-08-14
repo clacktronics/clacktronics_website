@@ -1397,8 +1397,26 @@ windows, and desktop actions.
   crops the overhang, **Contain** fits inside and leaves the margins as they
   were, **Stretch** squashes it to the area's shape — and the note under the
   chooser gives the actual figure, the percentage cropped or the margin in
-  pixels. **Variety** is the sampler's temperature, defaulting to the 0.7 the
-  model ships with. There is deliberately no guidance control: classifier-free
+  pixels. **Pictures** asks for one, two or four; they are drawn one after
+  another rather than as a batch, because four sequences of key/value cache for
+  a 1.5B model at once can take an adapter past what it will allocate, and
+  because the first picture arriving after a minute beats all four arriving
+  after four. Each appears as it lands, in a row of thumbnails to choose
+  between, and a run cancelled or failed part way keeps whatever already
+  arrived. **Seed** makes a picture repeatable — the runtime's sampler draws
+  through its own Mersenne Twister rather than `Math.random`, and exports it
+  with its `seed()`, so the same words, seed and settings give the same picture
+  again; asking for several numbers the seeds upwards from the one given, and
+  each picture reports its own so it can be asked for on its own later.
+  **Variety** is the sampler's temperature, defaulting to the 0.7 the model
+  ships with, and **Choices** is `top_k`, how many of the likeliest tokens are
+  in the running at each step out of a picture vocabulary of 16,384 — the
+  runtime's default of 50 is a narrow field. Those four, with the prompt, are
+  the whole of what this model exposes. `top_p` is not offered because the
+  runtime defines the warper and never constructs it, so a control for it would
+  do nothing; a negative prompt is not offered because it needs guidance; and
+  the output size is the model's own 384 × 384 rather than a setting. There is
+  deliberately no guidance control either: classifier-free
   guidance is what Janus is tuned for, but the vendored runtime's implementation
   of it for this model is broken — the image masks are not batched up alongside
   the doubled `input_ids`, the unconditional half is handed an all-zero
@@ -1410,11 +1428,12 @@ windows, and desktop actions.
   Unlike every other effect this one
   never paints straight onto the layer: the picture is previewed at the target's
   aspect over a checkerboard, and nothing is touched until Apply. Since the model
-  samples, the same words give a different picture every time, so the one on
-  screen cannot be got back by generating again — closing the dialog keeps it,
-  and reopening finds it still there ready to place, which is what Repeat Last
-  Effect does here rather than spending another minute on a different picture.
-  The prompt and the picture never leave the machine.
+  samples, the same words give a different picture every time unless the seed is
+  held — so the pictures on screen cannot be got back by generating again.
+  Closing the dialog keeps them, and reopening finds them still there ready to
+  place, which is what Repeat Last Effect does here rather than spending another
+  minute on a different picture. The prompt and the pictures never leave the
+  machine.
   **File → Export → As Program Array…** turns the
   picture into something a microcontroller can draw, and **File → Import → From
   Program Array…** reads one back (both described below). File → Set as
