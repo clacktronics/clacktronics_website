@@ -1397,8 +1397,17 @@ windows, and desktop actions.
   crops the overhang, **Contain** fits inside and leaves the margins as they
   were, **Stretch** squashes it to the area's shape — and the note under the
   chooser gives the actual figure, the percentage cropped or the margin in
-  pixels. **Guidance** sets how closely the words are followed and **variety**
-  how adventurously each token is picked. Unlike every other effect this one
+  pixels. **Variety** is the sampler's temperature, defaulting to the 0.7 the
+  model ships with. There is deliberately no guidance control: classifier-free
+  guidance is what Janus is tuned for, but the vendored runtime's implementation
+  of it for this model is broken — the image masks are not batched up alongside
+  the doubled `input_ids`, the unconditional half is handed an all-zero
+  attention mask, and its tokens are all pad where reference Janus keeps the
+  opening BOS and the trailing image_start tag — so the guided logits come back
+  degenerate and the sampler locks onto one token, producing vertical stripes
+  rather than a picture. Hugging Face's own example passes no `guidance_scale`
+  either. See the comment in `paint-text2image-worker.js` before adding one.
+  Unlike every other effect this one
   never paints straight onto the layer: the picture is previewed at the target's
   aspect over a checkerboard, and nothing is touched until Apply. Since the model
   samples, the same words give a different picture every time, so the one on

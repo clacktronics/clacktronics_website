@@ -137,12 +137,26 @@ async function run(msg) {
       end: () => {},
     };
 
+    /* No guidance_scale, deliberately, and it must stay that way until the
+       runtime is fixed. Classifier-free guidance is what Janus is tuned for and
+       turning it on here is one word — but this runtime's implementation of it
+       for Janus is broken three ways over, and the result is not a worse
+       picture, it is vertical stripes. Asking prepare_inputs_for_generation for
+       a guided step shows why: input_ids and attention_mask are doubled to
+       [2, L] for the conditional and unconditional halves, while images_seq_mask
+       and images_emb_mask are left at [1, L]; the unconditional half is given an
+       attention mask of all zeros, so it attends to nothing; and every one of
+       its tokens is the pad id, where reference Janus keeps the opening BOS and
+       the trailing image_start tag. The unconditional logits come back
+       degenerate, cond + w * (cond - uncond) blows up, and the sampler locks
+       onto a single token a couple of rows in. Hugging Face's own Janus example
+       passes no guidance_scale either, and generation_config.json has no such
+       key, so every published run of this model is an unguided one. */
     const [image] = await model.generate_images({
       ...inputs,
       min_new_tokens: total,
       max_new_tokens: total,
       do_sample: true,
-      guidance_scale: msg.guidance,
       temperature: msg.temperature,
       top_p: msg.topP,
       streamer,
