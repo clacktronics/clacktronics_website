@@ -5,10 +5,25 @@ import {
   MusicgenForConditionalGeneration,
   env,
 } from '../../../vendor/transformers/transformers.min.js';
-import { getModelDefinition } from './model-catalog.js';
+import { getModelDefinition, getModelBuild } from './model-catalog.js';
 
 /* Use the repository's pinned ONNX runtime instead of a second CDN download. */
 env.backends.onnx.wasm.wasmPaths = new URL('../../../vendor/transformers/', self.location.href).href;
+
+/* An adapter is only worth having here if it can do half precision. The
+ * catalog's WebGPU build is fp16 throughout, and the full precision weights it
+ * would otherwise need are 1.6 GB for the decoder alone — past the point where
+ * a browser app should be asking. Without shader-f16 the CPU build is the
+ * better answer, so this reports no rather than falling back to fp32. */
+async function pickDevice() {
+  try {
+    if (!('gpu' in navigator)) return 'wasm';
+    const adapter = await navigator.gpu.requestAdapter();
+    return adapter?.features.has('shader-f16') ? 'webgpu' : 'wasm';
+  } catch {
+    return 'wasm';
+  }
+}
 
 class CallbackStreamer extends BaseStreamer {
   constructor(callback) {
@@ -107,14 +122,14 @@ class MusicGenAdapter {
   tokenizer = null;
   model = null;
 
-  async load(definition) {
+  async load(definition, device) {
     const common = { progress_callback: reportDownload };
     [this.tokenizer, this.model] = await Promise.all([
       AutoTokenizer.from_pretrained(definition.repository, common),
       MusicgenForConditionalGeneration.from_pretrained(definition.repository, {
         ...common,
-        device: definition.runtime.device,
-        dtype: definition.runtime.dtype,
+        device,
+        dtype: getModelBuild(definition, device).dtype,
       }),
     ]);
   }
@@ -153,25 +168,44 @@ const ADAPTERS = Object.freeze({
 
 let activeModelId = null;
 let activeAdapter = null;
+let activeDevice = null;
 let generating = false;
 
 async function loadModel(modelId) {
   const definition = getModelDefinition(modelId);
   if (!definition) throw new Error(`Unknown audio model: ${modelId}`);
   if (activeAdapter && activeModelId === modelId) {
-    postMessage({ type: 'model-ready', modelId });
+    postMessage({ type: 'model-ready', modelId, device: activeDevice });
     return;
   }
   const createAdapter = ADAPTERS[definition.family];
   if (!createAdapter) throw new Error(`No adapter is registered for ${definition.family}.`);
 
+  /* An adapter that answers requestAdapter is not an adapter that will hold a
+   * 1.1 GB model — a laptop with a small memory budget refuses somewhere
+   * inside the session build, and there is nothing to inspect beforehand that
+   * would have told us. So the CPU build is a retry rather than a precondition:
+   * a machine that cannot take the fast path still gets working audio, at the
+   * cost of having fetched the wrong weights first. */
+  let device = await pickDevice();
   fileProgress.clear();
   activeAdapter = createAdapter();
   activeModelId = null;
+  activeDevice = null;
   postMessage({ type: 'load-detail', detail: `Preparing ${definition.label}...` });
-  await activeAdapter.load(definition);
+  try {
+    await activeAdapter.load(definition, device);
+  } catch (error) {
+    if (device !== 'webgpu') throw error;
+    device = 'wasm';
+    fileProgress.clear();
+    activeAdapter = createAdapter();
+    postMessage({ type: 'load-detail', detail: 'The graphics adapter refused the model. Falling back to the processor...' });
+    await activeAdapter.load(definition, device);
+  }
   activeModelId = modelId;
-  postMessage({ type: 'model-ready', modelId });
+  activeDevice = device;
+  postMessage({ type: 'model-ready', modelId, device });
 }
 
 async function generate(options) {

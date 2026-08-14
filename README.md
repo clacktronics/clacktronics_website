@@ -441,9 +441,14 @@ OpenSCAD, Markdown windows, and desktop actions.
 - `applications/pdf-reader/index.html` — MuPDF.js 1.28.0 reader with lazy
   rendering, search, zoom, passwords, local/website files, and `?file=` URLs.
   MuPDF is vendored under `vendor/mupdf/` (AGPL-3.0).
-- `applications/audiogen/index.html` — local MusicGen text-to-music app. Its
-  first run downloads about 656 MB of weights; prompts and WAV output stay in
-  the browser.
+- `applications/audiogen/index.html` — local MusicGen text-to-music app;
+  prompts and WAV output stay in the browser. The catalog carries one build per
+  device: a `shader-f16` adapter fetches the fp16 build (~1127 MB) and decodes
+  on the GPU, anything else fetches the q8/fp32 build (~656 MB) and decodes on
+  the CPU. The 8-bit weights are not sent to the GPU because the WebGPU backend
+  has no integer matmul and widens them on every dispatch. An adapter can still
+  refuse a model that size mid-load, so the CPU build is also a retry; the
+  worker reports the device it finished on and the status line names it.
 - `applications/files.html` — read-only browser for repository and website
   media, shared by app file pickers. Associations live in
   `content/file-associations.json`. Rebuild the legacy-media catalogue with
