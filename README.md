@@ -46,7 +46,7 @@ content/
     calendar/events.csv     ← the upcoming events it shows
     calendar/luma.json      ← mirror of the Luma events (generated)
     video/                  ← browser-only Video Lab app + FFmpeg core
-    audiogen/               ← local Transformers.js + MusicGen audio generator
+    audiogen/               ← local music, speech and sound-effect generator
     about.md
 ```
 
@@ -441,14 +441,31 @@ OpenSCAD, Markdown windows, and desktop actions.
 - `applications/pdf-reader/index.html` — MuPDF.js 1.28.0 reader with lazy
   rendering, search, zoom, passwords, local/website files, and `?file=` URLs.
   MuPDF is vendored under `vendor/mupdf/` (AGPL-3.0).
-- `applications/audiogen/index.html` — local MusicGen text-to-music app;
-  prompts and WAV output stay in the browser. The catalog carries one build per
-  device: a `shader-f16` adapter fetches the fp16 build (~1127 MB) and decodes
-  on the GPU, anything else fetches the q8/fp32 build (~656 MB) and decodes on
-  the CPU. The 8-bit weights are not sent to the GPU because the WebGPU backend
-  has no integer matmul and widens them on every dispatch. An adapter can still
-  refuse a model that size mid-load, so the CPU build is also a retry; the
-  worker reports the device it finished on and the status line names it.
+- `applications/audiogen/index.html` — local text-to-audio workspace; prompts
+  and WAV output stay in the browser. Four entries share one interface: **Meta
+  MusicGen Small** (music, 656 MB), **Microsoft SpeechT5** (English speech,
+  seven CMU Arctic voices, 230 MB), **Meta MMS TTS** (speech in eight
+  languages, 109 MB each) and the **ClackSFX Generator** (retro sound effects
+  from the sfxr algorithm, nothing to download). `model-catalog.js` is the
+  single source for what the interface shows — the wording around the text box,
+  the preset chips, and every slider and dropdown are built from the selected
+  entry — and `family` picks the worker adapter, which returns planar samples
+  and leaves the resampler, the speech normalisation and the WAV encoder
+  shared. Transformers.js is imported on demand, so ClackSFX pulls no runtime
+  at all. Speech is spoken a sentence at a time and joined up, because SpeechT5
+  stops partway through anything longer than about seventy characters; the
+  split is also the progress figure. ClackSFX seeds its generator from the
+  words in the prompt box, so the same seed always gives the same sound.
+  MusicGen carries one build per device: a `shader-f16` adapter fetches the
+  fp16 build (~1127 MB) and decodes on the GPU, anything else fetches the
+  q8/fp32 build (~656 MB) and decodes on the CPU. The 8-bit weights are not
+  sent to the GPU because the WebGPU backend has no integer matmul and widens
+  them on every dispatch. An adapter can still refuse a model that size
+  mid-load, so the CPU build is also a retry; the worker reports the device it
+  finished on and the status line names it. The layout fills the window instead
+  of scrolling — a rail for the model and its controls, text and waveform on
+  the right — becoming one column below 760 px wide, and dropping the slider
+  captions before the Generate button in a window shorter than 640 px.
 - `applications/files.html` — read-only browser for repository and website
   media, shared by app file pickers. Associations live in
   `content/file-associations.json`. Rebuild the legacy-media catalogue with

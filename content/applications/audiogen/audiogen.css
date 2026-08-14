@@ -1,100 +1,155 @@
-.app { height: 100%; min-height: 560px; }
+/* audioGen fills its window instead of scrolling inside it.
+ *
+ * Everything above the fold is one screen: the model and its controls in a
+ * left rail, the text and the result on the right. The two columns are the
+ * only things that grow, and each has min-height: 0 so a long model
+ * description or a big waveform shortens the flexible parts rather than
+ * pushing the Generate button off the bottom. The rail keeps an overflow of
+ * its own purely as a safety valve for a window dragged shorter than the
+ * controls of the tallest model. */
+.app { height: 100%; }
 .app [hidden] { display: none !important; }
-.app-main { min-height: 0; padding: 16px 18px 18px; gap: 14px; overflow: auto; }
+.app-main { min-height: 0; padding: 11px 13px 9px; gap: 9px; overflow: hidden; }
 
 .ag-hero {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
-  border-bottom: 1px solid var(--paper-line); padding-bottom: 12px;
+  display: flex; align-items: baseline; gap: 10px;
+  border-bottom: 1px solid var(--paper-line); padding-bottom: 7px;
 }
-.ag-title { display: flex; flex-direction: column; gap: 4px; }
-.ag-title h1 { color: var(--heading); font-size: 24px; line-height: 1; letter-spacing: -0.04em; }
-.ag-title p { color: var(--sage); font-size: 11px; line-height: 1.5; }
+.ag-hero h1 { color: var(--heading); font-size: 17px; line-height: 1; letter-spacing: -0.03em; }
+.ag-hero p {
+  flex: 1; min-width: 0; color: var(--sage); font-size: 10.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .ag-engine-badge {
-  flex: none; border: 1px solid var(--leaf-deep); border-radius: 999px; padding: 5px 9px;
+  flex: none; border: 1px solid var(--leaf-deep); border-radius: 999px; padding: 3px 8px;
   color: var(--leaf-deep); background: color-mix(in srgb, var(--leaf) 12%, var(--paper));
-  font-size: 9.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
 }
 
-.ag-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(250px, .75fr); gap: 14px; }
+.ag-layout {
+  position: relative; flex: 1; min-height: 0;
+  display: grid; grid-template-columns: minmax(238px, .82fr) minmax(0, 1.18fr); gap: 9px;
+}
+.ag-rail, .ag-work { display: flex; flex-direction: column; gap: 9px; min-height: 0; }
+.ag-rail { overflow: auto; scrollbar-width: thin; }
+
 .ag-card {
-  min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 13px;
-  border: 1px solid var(--ink); border-radius: 7px; background: var(--paper-deep);
+  min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px;
+  border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep);
 }
-.ag-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.ag-card-head .app-lbl { white-space: nowrap; }
-.ag-field { display: flex; flex-direction: column; gap: 6px; }
-.ag-field > label, .ag-control-label {
-  color: var(--control-text); font-size: 10.5px; font-weight: 600;
+.ag-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ag-card-head .app-lbl {
+  font-size: 10px; letter-spacing: .14em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.ag-field { display: flex; flex-direction: column; gap: 4px; }
+.ag-control-label { color: var(--control-text); font-size: 10px; font-weight: 600; }
+.ag-model-select, .ag-variant-select { width: 100%; }
+.ag-model-copy { color: var(--sage); font-size: 10px; line-height: 1.5; }
+.ag-model-meta { display: flex; flex-wrap: wrap; gap: 4px; }
+.ag-tag {
+  border: 1px solid var(--paper-line); border-radius: 4px; padding: 2px 5px;
+  color: var(--sage); background: var(--paper); font-size: 9px; white-space: nowrap;
+}
+.ag-load-note { color: var(--sage); font-size: 9.5px; line-height: 1.5; }
+.ag-load-note a, .ag-credit a, .ag-about a { color: var(--leaf-deep); text-decoration: underline; }
+.ag-load-note a:hover, .ag-credit a:hover, .ag-about a:hover { color: var(--leaf); }
+
+.ag-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 8px; }
+.ag-control { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ag-control-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.ag-control output { color: var(--leaf-deep); font-size: 9.5px; font-variant-numeric: tabular-nums; }
+.ag-control input, .ag-control select { width: 100%; }
+.ag-control-help { color: var(--sage); font-size: 8.5px; line-height: 1.35; }
+
+.ag-run { display: flex; flex-direction: column; gap: 6px; }
+.ag-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ag-actions .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 11px; font-size: 12px; }
+.ag-actions .pixel-icon { width: 14px; height: 14px; }
+.btn:disabled { cursor: default; opacity: .48; }
+
+.ag-progress {
+  height: 12px; overflow: hidden; border: 1px solid var(--ink); border-radius: 4px;
+  background: var(--paper);
+}
+.ag-progress > div { width: 0; height: 100%; background: var(--leaf-deep); transition: width .16s linear; }
+/* Two lines' worth, so a status message wrapping does not shuffle the rail. */
+.ag-status { min-height: 30px; font-size: 10.5px; line-height: 1.45; }
+
+.ag-prompt-card { flex: 1 1 42%; min-height: 0; }
+/* A seed is a word or two, not a paragraph: the sound-effect generator gives
+ * the height back to the waveform. */
+.ag-prompt-card.compact { flex: none; }
+.ag-prompt-card.compact .ag-prompt { flex: none; min-height: 0; height: 46px; }
 .ag-prompt {
-  width: 100%; min-height: 104px; resize: vertical; padding: 9px 10px; border: 1px solid var(--ink);
-  border-radius: 6px; background: var(--paper); color: var(--control-text); font: inherit;
-  font-size: 12.5px; line-height: 1.55;
+  flex: 1; min-height: 58px; resize: none; padding: 8px 9px; border: 1px solid var(--ink);
+  border-radius: 5px; background: var(--paper); color: var(--control-text); font: inherit;
+  font-size: 12px; line-height: 1.5;
 }
 .ag-prompt:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
-.ag-examples { display: flex; flex-wrap: wrap; gap: 6px; }
+.ag-prompt-help { color: var(--sage); font-size: 9.5px; line-height: 1.45; }
+.ag-examples { display: flex; flex-wrap: wrap; gap: 5px; }
 .ag-example {
   all: unset; cursor: pointer; border: 1px solid var(--paper-line); border-radius: 999px;
-  padding: 5px 8px; background: var(--paper); color: var(--sage); font-size: 9.5px;
+  padding: 4px 8px; background: var(--paper); color: var(--sage); font-size: 9px;
 }
 .ag-example:hover { border-color: var(--leaf-deep); color: var(--leaf-deep); }
 .ag-example:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
 
-.ag-model-select { width: 100%; }
-.ag-model-copy { min-height: 61px; color: var(--sage); font-size: 10.5px; line-height: 1.6; }
-.ag-model-meta { display: flex; flex-wrap: wrap; gap: 5px; }
-.ag-tag {
-  border: 1px solid var(--paper-line); border-radius: 4px; padding: 3px 6px;
-  color: var(--sage); background: var(--paper); font-size: 9px;
+.ag-result { flex: 1 1 58%; min-height: 0; }
+.ag-stage { position: relative; flex: 1; min-height: 62px; }
+.ag-waveform, .ag-empty {
+  position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 5px;
 }
-.ag-load-note { color: var(--sage); font-size: 10px; line-height: 1.6; }
-.ag-load-note a, .ag-credit a { color: var(--leaf-deep); text-decoration: underline; }
-.ag-load-note a:hover, .ag-credit a:hover { color: var(--leaf); }
-
-.ag-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.ag-control { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.ag-control-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.ag-control output { color: var(--leaf-deep); font-size: 10px; font-variant-numeric: tabular-nums; }
-.ag-control input { width: 100%; }
-.ag-control-help { color: var(--sage); font-size: 8.5px; line-height: 1.4; }
-
-.ag-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.ag-actions .btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; }
-.ag-actions .pixel-icon { width: 15px; height: 15px; }
-.btn:disabled { cursor: default; opacity: .48; }
-
-.ag-progress {
-  height: 15px; overflow: hidden; border: 1px solid var(--ink); border-radius: 5px;
-  background: var(--paper); position: relative;
-}
-.ag-progress > div { width: 0; height: 100%; background: var(--leaf-deep); transition: width .16s linear; }
-.ag-status { min-height: 20px; }
-
-.ag-result { gap: 10px; }
-.ag-waveform {
-  display: block; width: 100%; height: 112px; border: 1px solid var(--ink); border-radius: 6px;
-  background: var(--ink);
-}
-.ag-result audio { width: 100%; height: 34px; }
-.ag-result-meta { color: var(--sage); font-size: 10px; font-variant-numeric: tabular-nums; }
+.ag-waveform { border: 1px solid var(--ink); background: var(--ink); }
 .ag-empty {
-  min-height: 112px; display: grid; place-items: center; border: 1px dashed var(--paper-line);
-  border-radius: 6px; color: var(--sage); font-size: 10.5px; text-align: center; line-height: 1.6;
+  display: grid; place-items: center; border: 1px dashed var(--paper-line);
+  color: var(--sage); font-size: 10px; text-align: center; line-height: 1.6;
 }
-.ag-about { font-size: 11px; line-height: 1.75; }
-.ag-credit {
-  margin-top: auto; padding-top: 10px; border-top: 1px solid var(--paper-line);
-  color: var(--sage); font-size: 9.5px; line-height: 1.6;
+.ag-result audio { width: 100%; height: 30px; }
+.ag-result-meta { color: var(--sage); font-size: 9.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* About is a sheet over the workspace rather than another row in it: the
+ * layout's whole point is that its height never changes. */
+.ag-about {
+  position: absolute; inset: 0; z-index: 5; overflow: auto;
+  display: flex; flex-direction: column; gap: 9px;
+  background: var(--paper); font-size: 11px; line-height: 1.7;
+}
+.ag-about h2 { color: var(--heading); font-size: 13px; }
+.ag-about .ag-actions { margin-top: auto; }
+
+.ag-credit { color: var(--sage); font-size: 9.5px; line-height: 1.5; }
+
+/* In a window dragged short, the rail gives up its explanations before it
+ * gives up the Generate button: the slider captions and the tail of the model
+ * description are the parts a user reads once. */
+@media (max-height: 640px) {
+  .ag-control-help { display: none; }
+  .ag-status { min-height: 0; }
+  .ag-controls { gap: 6px; }
+  .ag-rail, .ag-work { gap: 7px; }
+  .ag-card { padding: 9px; gap: 7px; }
+  .ag-model-copy {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
 }
 
-@media (max-width: 720px) {
+/* Below this the two columns cannot both be useful, so the page becomes one
+ * scrolling column — the ordinary phone layout, where scrolling is expected. */
+@media (max-width: 760px) {
+  .app { height: auto; min-height: 100%; }
+  .app-main { overflow: auto; }
   .ag-layout { grid-template-columns: 1fr; }
-  .ag-model-copy { min-height: 0; }
+  .ag-rail { overflow: visible; }
+  .ag-prompt-card, .ag-result { flex: none; }
+  .ag-prompt { min-height: 92px; }
+  .ag-stage { min-height: 96px; }
+  .ag-about { position: static; }
 }
 
 @media (max-width: 480px) {
-  .app-main { padding: 12px; }
-  .ag-hero { align-items: stretch; flex-direction: column; gap: 8px; }
-  .ag-engine-badge { align-self: flex-start; }
-  .ag-controls { grid-template-columns: 1fr; }
+  .app-main { padding: 10px; }
+  .ag-hero { flex-wrap: wrap; }
+  .ag-hero p { white-space: normal; }
 }

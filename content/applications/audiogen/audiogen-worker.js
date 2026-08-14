@@ -1,42 +1,42 @@
-/* audioGen inference worker: model downloads and generation stay off the UI thread. */
-import {
-  AutoTokenizer,
-  BaseStreamer,
-  MusicgenForConditionalGeneration,
-  env,
-} from '../../../vendor/transformers/transformers.min.js';
-import { getModelDefinition, getModelBuild } from './model-catalog.js';
+/* audioGen inference worker: model downloads and generation stay off the UI thread.
+ *
+ * One adapter per model family, picked from the catalog's `family` field. An
+ * adapter loads whatever it needs and returns planar samples; everything after
+ * that — the tape-speed resampler, the WAV header, the transfer back to the
+ * page — is shared, so a new family is a class and a line in ADAPTERS.
+ *
+ * The Transformers.js bundle is imported on demand rather than at the top of
+ * the file: the sound-effects generator synthesises its audio here in the
+ * worker with no model at all, and should not pay for a megabyte of ONNX
+ * runtime it never calls.
+ */
+import { getModelBuild, getModelDefinition, getRepository, supportsWebGPU } from './model-catalog.js';
+import { synthesise } from './sfx-synth.js';
 
-/* Use the repository's pinned ONNX runtime instead of a second CDN download. */
-env.backends.onnx.wasm.wasmPaths = new URL('../../../vendor/transformers/', self.location.href).href;
+let runtime = null;
 
-/* An adapter is only worth having here if it can do half precision. The
- * catalog's WebGPU build is fp16 throughout, and the full precision weights it
- * would otherwise need are 1.6 GB for the decoder alone — past the point where
- * a browser app should be asking. Without shader-f16 the CPU build is the
- * better answer, so this reports no rather than falling back to fp32. */
-async function pickDevice() {
+async function loadRuntime() {
+  if (!runtime) {
+    runtime = await import('../../../vendor/transformers/transformers.min.js');
+    /* Use the repository's pinned ONNX runtime instead of a second CDN download. */
+    runtime.env.backends.onnx.wasm.wasmPaths =
+      new URL('../../../vendor/transformers/', self.location.href).href;
+  }
+  return runtime;
+}
+
+/* An adapter is only worth having for the models the catalog builds fp16
+ * weights for, and only if it can do half precision: without shader-f16 the
+ * WebGPU backend widens the CPU build on every dispatch and lands slower than
+ * the build it replaced. Everything else runs on the processor. */
+async function pickDevice(definition) {
+  if (!supportsWebGPU(definition)) return 'wasm';
   try {
     if (!('gpu' in navigator)) return 'wasm';
     const adapter = await navigator.gpu.requestAdapter();
     return adapter?.features.has('shader-f16') ? 'webgpu' : 'wasm';
   } catch {
     return 'wasm';
-  }
-}
-
-class CallbackStreamer extends BaseStreamer {
-  constructor(callback) {
-    super();
-    this.callback = callback;
-  }
-
-  put(value) {
-    this.callback(value);
-  }
-
-  end() {
-    this.callback(undefined);
   }
 }
 
@@ -66,6 +66,10 @@ function reportDownload(info) {
     total += progress.total;
   }
   postMessage({ type: 'load-progress', loaded, total });
+}
+
+function reportGeneration(progress) {
+  postMessage({ type: 'generation-progress', progress: Math.max(0, Math.min(1, progress)) });
 }
 
 function encodeWave(samples, sampleRate, channels, frames) {
@@ -103,7 +107,7 @@ function encodeWave(samples, sampleRate, channels, frames) {
   return buffer;
 }
 
-function tensorToWave(audioValues, sampleRate) {
+function tensorToPlanar(audioValues) {
   const samples = audioValues.data;
   const dims = audioValues.dims || [samples.length];
   const frames = Number(dims.at(-1)) || samples.length;
@@ -111,18 +115,117 @@ function tensorToWave(audioValues, sampleRate) {
   const channels = possibleChannels > 0 && possibleChannels * frames <= samples.length
     ? possibleChannels
     : 1;
-  return {
-    buffer: encodeWave(samples, sampleRate, channels, frames),
-    channels,
-    frames,
+  return { samples, channels, frames };
+}
+
+/* The speech models have no speed of their own — the rate is baked into the
+ * weights — so the Speed control is a tape transport: resampling the finished
+ * waveform moves the pitch with it, which is the honest version of the effect
+ * and the one that sounds right on a retro desktop. */
+function resample(result, speed) {
+  const ratio = Number(speed) || 1;
+  if (Math.abs(ratio - 1) < 0.001) return result;
+  const { samples, channels, frames } = result;
+  const outFrames = Math.max(1, Math.round(frames / ratio));
+  const output = new Float32Array(outFrames * channels);
+  for (let channel = 0; channel < channels; channel += 1) {
+    const inOffset = channel * frames;
+    const outOffset = channel * outFrames;
+    for (let frame = 0; frame < outFrames; frame += 1) {
+      const position = frame * ratio;
+      const index = Math.floor(position);
+      const next = Math.min(frames - 1, index + 1);
+      const blend = position - index;
+      output[outOffset + frame] =
+        samples[inOffset + index] * (1 - blend) + samples[inOffset + next] * blend;
+    }
+  }
+  return { ...result, samples: output, frames: outFrames };
+}
+
+/* Both speech models lose the thread on a long passage — SpeechT5 in
+ * particular decides it has finished and stops halfway through a sentence of
+ * more than about seventy characters — so text is spoken a piece at a time and
+ * joined up. Sentences break first, then clauses at commas, and only then
+ * between words, so a cut lands where a reader would draw breath. Doing it
+ * this way also gives generation a real progress figure, which neither model
+ * reports on its own. */
+function splitSentences(text, limit) {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (!clean) return [];
+
+  const chunks = [];
+  let current = '';
+
+  const push = () => {
+    const trimmed = current.trim();
+    if (trimmed) chunks.push(trimmed);
+    current = '';
   };
+
+  const add = (pieces, split) => {
+    for (const piece of pieces) {
+      if ((current + piece).trim().length <= limit) {
+        current += piece;
+      } else if (piece.trim().length <= limit) {
+        push();
+        current = piece;
+      } else if (split) {
+        push();
+        split(piece);
+      } else {
+        push();
+        current = piece;
+        push();
+      }
+    }
+  };
+
+  const byWord = piece => {
+    for (const word of piece.split(' ')) {
+      if ((current + word).length > limit) push();
+      current += `${word} `;
+    }
+    push();
+  };
+  const byClause = piece => add(piece.match(/[^,–—]+[,–—]*\s*/g) || [piece], byWord);
+
+  add(clean.match(/[^.!?;:…]+[.!?;:…]*\s*/g) || [clean], byClause);
+  push();
+  return chunks;
+}
+
+/* SpeechT5 comes out at about a tenth of full scale, which is a quiet clip to
+ * save and play next to everything else the app makes, so speech is lifted to
+ * a common level before it leaves the worker. */
+function normalise(result, target = 0.89) {
+  let peak = 0;
+  for (const sample of result.samples) peak = Math.max(peak, Math.abs(sample));
+  if (peak < 0.0001 || Math.abs(peak - target) < 0.02) return result;
+  const gain = target / peak;
+  const samples = new Float32Array(result.samples.length);
+  for (let i = 0; i < samples.length; i += 1) samples[i] = result.samples[i] * gain;
+  return { ...result, samples };
+}
+
+function joinSpeech(parts, sampleRate) {
+  const gap = Math.round(sampleRate * 0.12);
+  const frames = parts.reduce((total, part) => total + part.length, 0) + gap * Math.max(0, parts.length - 1);
+  const samples = new Float32Array(frames);
+  let offset = 0;
+  for (const part of parts) {
+    samples.set(part, offset);
+    offset += part.length + gap;
+  }
+  return { samples, channels: 1, frames, sampleRate };
 }
 
 class MusicGenAdapter {
   tokenizer = null;
   model = null;
 
-  async load(definition, device) {
+  async load(definition, variantId, device) {
+    const { AutoTokenizer, MusicgenForConditionalGeneration } = await loadRuntime();
     const common = { progress_callback: reportDownload };
     [this.tokenizer, this.model] = await Promise.all([
       AutoTokenizer.from_pretrained(definition.repository, common),
@@ -134,20 +237,24 @@ class MusicGenAdapter {
     ]);
   }
 
-  async generate(options) {
-    const { prompt, duration, guidance, temperature } = options;
+  async generate({ prompt, controls }) {
+    const { BaseStreamer } = await loadRuntime();
+    const { duration, guidance, temperature } = controls;
     const inputs = this.tokenizer(prompt);
     const configuredMaximum = Number(this.model.generation_config.max_length) || 1500;
     /* MusicGen emits about 50 audio tokens per second; four tokens prime the delay mask. */
     const maxLength = Math.min(Math.max(Math.floor(duration * 50), 1) + 4, configuredMaximum);
     let tokens = 0;
-    const streamer = new CallbackStreamer(value => {
-      if (value !== undefined) tokens += 1;
-      postMessage({
-        type: 'generation-progress',
-        progress: value === undefined ? 1 : Math.min(0.99, tokens / maxLength),
-      });
-    });
+    const streamer = new (class extends BaseStreamer {
+      put() {
+        tokens += 1;
+        reportGeneration(Math.min(0.99, tokens / maxLength));
+      }
+
+      end() {
+        reportGeneration(1);
+      }
+    })();
 
     const audioValues = await this.model.generate({
       ...inputs,
@@ -158,24 +265,139 @@ class MusicGenAdapter {
       streamer,
     });
     const sampleRate = Number(this.model.config.audio_encoder.sampling_rate) || 32000;
-    return { ...tensorToWave(audioValues, sampleRate), sampleRate };
+    return { ...tensorToPlanar(audioValues), sampleRate };
+  }
+}
+
+class SpeechT5Adapter {
+  tokenizer = null;
+  processor = null;
+  model = null;
+  vocoder = null;
+  embeddings = new Map();
+
+  async load(definition, variantId, device) {
+    const { AutoTokenizer, AutoProcessor, SpeechT5ForTextToSpeech, SpeechT5HifiGan } = await loadRuntime();
+    const build = getModelBuild(definition, device);
+    const common = { progress_callback: reportDownload };
+    [this.tokenizer, this.processor, this.model, this.vocoder] = await Promise.all([
+      AutoTokenizer.from_pretrained(definition.repository, common),
+      AutoProcessor.from_pretrained(definition.repository, common),
+      SpeechT5ForTextToSpeech.from_pretrained(definition.repository, {
+        ...common,
+        device,
+        dtype: build.dtype,
+      }),
+      SpeechT5HifiGan.from_pretrained(definition.vocoder, {
+        ...common,
+        dtype: build.dtype.vocoder,
+      }),
+    ]);
+  }
+
+  async speaker(definition, voice) {
+    if (!this.embeddings.has(voice)) {
+      const { Tensor } = await loadRuntime();
+      const url = `${definition.speech.speakerEmbeddingBase}${voice}.bin`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Could not fetch the "${voice}" speaker embedding.`);
+      const data = new Float32Array(await response.arrayBuffer());
+      this.embeddings.set(voice, new Tensor('float32', data, [1, data.length]));
+    }
+    return this.embeddings.get(voice);
+  }
+
+  async generate({ definition, prompt, controls }) {
+    const speaker = await this.speaker(definition, controls.voice);
+    const sentences = splitSentences(prompt, definition.speech.sentenceLength);
+    if (!sentences.length) throw new Error('There is nothing to say — type some text first.');
+
+    const parts = [];
+    for (const [index, sentence] of sentences.entries()) {
+      reportGeneration(index / sentences.length);
+      const { input_ids } = this.tokenizer(sentence);
+      const { waveform } = await this.model.generate_speech(input_ids, speaker, { vocoder: this.vocoder });
+      parts.push(waveform.data);
+    }
+    reportGeneration(1);
+    const sampleRate = Number(this.processor?.feature_extractor?.config?.sampling_rate) || 16000;
+    return resample(normalise(joinSpeech(parts, sampleRate)), controls.speed);
+  }
+}
+
+class VitsAdapter {
+  tokenizer = null;
+  model = null;
+
+  async load(definition, variantId, device) {
+    const { AutoTokenizer, VitsModel } = await loadRuntime();
+    const repository = getRepository(definition, variantId);
+    const common = { progress_callback: reportDownload };
+    [this.tokenizer, this.model] = await Promise.all([
+      AutoTokenizer.from_pretrained(repository, common),
+      VitsModel.from_pretrained(repository, {
+        ...common,
+        device,
+        dtype: getModelBuild(definition, device).dtype,
+      }),
+    ]);
+  }
+
+  async generate({ definition, prompt, controls }) {
+    const sentences = splitSentences(prompt, definition.speech.sentenceLength);
+    if (!sentences.length) throw new Error('There is nothing to say — type some text first.');
+
+    const parts = [];
+    for (const [index, sentence] of sentences.entries()) {
+      reportGeneration(index / sentences.length);
+      const { waveform } = await this.model(this.tokenizer(sentence));
+      parts.push(waveform.data);
+    }
+    reportGeneration(1);
+    const sampleRate = Number(this.model.config.sampling_rate) || 16000;
+    return resample(normalise(joinSpeech(parts, sampleRate)), controls.speed);
+  }
+}
+
+class SfxrAdapter {
+  async load() {
+    /* Nothing to fetch: the generator is a couple of hundred lines of DSP. */
+  }
+
+  async generate({ prompt, controls }) {
+    reportGeneration(1);
+    return synthesise(controls.shape, prompt, {
+      pitch: controls.pitch,
+      length: controls.length,
+      brightness: controls.brightness,
+    });
   }
 }
 
 const ADAPTERS = Object.freeze({
   musicgen: () => new MusicGenAdapter(),
+  speecht5: () => new SpeechT5Adapter(),
+  vits: () => new VitsAdapter(),
+  sfxr: () => new SfxrAdapter(),
 });
 
-let activeModelId = null;
+let activeKey = null;
 let activeAdapter = null;
 let activeDevice = null;
 let generating = false;
 
-async function loadModel(modelId) {
+/* A model that ships one repository per language is only loaded once its
+ * variant is known, so what counts as "already loaded" is the pair. */
+function modelKey(modelId, variantId) {
+  return `${modelId}/${variantId || ''}`;
+}
+
+async function loadModel(modelId, variantId) {
   const definition = getModelDefinition(modelId);
   if (!definition) throw new Error(`Unknown audio model: ${modelId}`);
-  if (activeAdapter && activeModelId === modelId) {
-    postMessage({ type: 'model-ready', modelId, device: activeDevice });
+  const key = modelKey(modelId, variantId);
+  if (activeAdapter && activeKey === key) {
+    postMessage({ type: 'model-ready', modelId, variantId, device: activeDevice });
     return;
   }
   const createAdapter = ADAPTERS[definition.family];
@@ -184,45 +406,47 @@ async function loadModel(modelId) {
   /* An adapter that answers requestAdapter is not an adapter that will hold a
    * 1.1 GB model — a laptop with a small memory budget refuses somewhere
    * inside the session build, and there is nothing to inspect beforehand that
-   * would have told us. So the CPU build is a retry rather than a precondition:
-   * a machine that cannot take the fast path still gets working audio, at the
-   * cost of having fetched the wrong weights first. */
-  let device = await pickDevice();
+   * would have told us. So the CPU build is a retry rather than a
+   * precondition: a machine that cannot take the fast path still gets working
+   * audio, at the cost of having fetched the wrong weights first. */
+  let device = await pickDevice(definition);
   fileProgress.clear();
   activeAdapter = createAdapter();
-  activeModelId = null;
+  activeKey = null;
   activeDevice = null;
   postMessage({ type: 'load-detail', detail: `Preparing ${definition.label}...` });
   try {
-    await activeAdapter.load(definition, device);
+    await activeAdapter.load(definition, variantId, device);
   } catch (error) {
     if (device !== 'webgpu') throw error;
     device = 'wasm';
     fileProgress.clear();
     activeAdapter = createAdapter();
     postMessage({ type: 'load-detail', detail: 'The graphics adapter refused the model. Falling back to the processor...' });
-    await activeAdapter.load(definition, device);
+    await activeAdapter.load(definition, variantId, device);
   }
-  activeModelId = modelId;
+  activeKey = key;
   activeDevice = device;
-  postMessage({ type: 'model-ready', modelId, device });
+  postMessage({ type: 'model-ready', modelId, variantId, device });
 }
 
 async function generate(options) {
-  if (!activeAdapter || activeModelId !== options.modelId) {
+  const definition = getModelDefinition(options.modelId);
+  if (!activeAdapter || activeKey !== modelKey(options.modelId, options.variantId)) {
     throw new Error('Load the selected model before generating audio.');
   }
   if (generating) throw new Error('Audio generation is already in progress.');
   generating = true;
   try {
-    const result = await activeAdapter.generate(options);
+    const result = await activeAdapter.generate({ ...options, definition });
+    const buffer = encodeWave(result.samples, result.sampleRate, result.channels, result.frames);
     postMessage({
       type: 'result',
-      buffer: result.buffer,
+      buffer,
       sampleRate: result.sampleRate,
       channels: result.channels,
       frames: result.frames,
-    }, [result.buffer]);
+    }, [buffer]);
   } finally {
     generating = false;
   }
@@ -231,7 +455,7 @@ async function generate(options) {
 self.onmessage = async event => {
   const message = event.data || {};
   try {
-    if (message.type === 'load') await loadModel(message.modelId);
+    if (message.type === 'load') await loadModel(message.modelId, message.variantId);
     if (message.type === 'generate') await generate(message.options);
   } catch (error) {
     postMessage({
