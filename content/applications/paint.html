@@ -1091,11 +1091,6 @@
         <p>DeepSeek's Janus-Pro, drawing on your own machine. It writes a picture the way a language model writes a sentence — one token at a time, 576 of them — and turns the finished sequence into an image at the end, which is why the wait is a count rather than a picture slowly clearing.</p>
         <p id="t2iCost"></p>
       </div>
-      <div data-t2iview="running" hidden>
-        <div class="paint-ai-progress" role="progressbar" aria-label="Generation progress"><div></div></div>
-        <p class="paint-ai-detail">Starting…</p>
-        <p class="paint-dream-note">Nothing is touched until you press Apply.</p>
-      </div>
       <div class="paint-t2i-done" data-t2iview="done" hidden>
         <canvas class="paint-bg-preview" id="t2iPreview" width="336" height="336" aria-label="The generated picture"></canvas>
         <div class="paint-t2i-thumbs" id="t2iThumbs" role="group" aria-label="Choose a picture" hidden></div>
@@ -1108,6 +1103,14 @@
           </select></span></label>
           <p class="paint-dream-note" id="t2iFitNote"></p>
         </div>
+      </div>
+      <!-- The progress block sits after the pictures rather than before them
+           because it outlives the first one: asking for four shows each as it
+           lands, with this still counting underneath for the rest. -->
+      <div data-t2iview="running" hidden>
+        <div class="paint-ai-progress" role="progressbar" aria-label="Generation progress"><div></div></div>
+        <p class="paint-ai-detail">Starting…</p>
+        <p class="paint-dream-note">Nothing is touched until you press Apply.</p>
       </div>
       <div class="paint-dream-fields" data-t2iview="settings">
         <label>Pictures <span><select id="t2iCount">
@@ -7650,8 +7653,15 @@ const t2iImageAt = i => t2iPictures[i]?.canvas || null;
 const t2iImage = () => t2iImageAt(t2iChosen);
 
 const showT2iView = name => t2iViews.forEach(view => {
-  /* the prompt and the sliders belong to every view but the running one */
-  view.hidden = view.dataset.t2iview === 'settings' ? name === 'running' : view.dataset.t2iview !== name;
+  const which = view.dataset.t2iview;
+  /* The sliders belong to every view but the running one. The progress block
+     belongs to the running view and also to the done view for as long as there
+     are more pictures coming: with several asked for, the first arrives while
+     the rest are still being drawn, and a dialog that shows that first picture
+     and then stops counting reads as a hang rather than as work in hand. */
+  if (which === 'settings') view.hidden = name === 'running';
+  else if (which === 'running') view.hidden = name !== 'running' && !t2iRunning;
+  else view.hidden = which !== name;
 });
 
 const t2iTargetRect = () => selection && selection.w >= 1 && selection.h >= 1
@@ -7777,9 +7787,32 @@ const t2iRandomSeed = () => {
   return buffer[0];
 };
 
+/* A page and its worker can disagree about the shape of these messages, and it
+ * is not a theoretical worry: the browser caches the worker script separately
+ * from the page that starts it, so an upgrade can leave a new dialog talking to
+ * an old worker still in the cache. That went wrong exactly once and cost an
+ * afternoon — the finished picture came back under a name the page had stopped
+ * listening for, the switch below dropped it without a word, and the counter sat
+ * at its last number for ever while the progress line read "Picture NaN of 4".
+ *
+ * Two things come of that. The URL carries a version, so changing the protocol
+ * fetches a fresh script rather than trusting the cache to notice; bump it
+ * whenever the messages change. And nothing unrecognised is passed over in
+ * silence — a message this page does not know, or a tick without a picture
+ * number, stops the run and says what happened, because a wrong version that
+ * announces itself costs a reload and one that hangs costs an afternoon. */
+const T2I_PROTOCOL = 2;
+
+function t2iProtocolMismatch(what) {
+  failText2Image(
+    `the worker sent ${what}, which this version does not understand. `
+    + 'A cached copy of it is probably out of step with the page — reload to pick up the matching one'
+  );
+}
+
 function ensureT2iWorker() {
   if (t2iWorker) return t2iWorker;
-  t2iWorker = new Worker(new URL('paint-text2image-worker.js', appUrl), { type: 'module' });
+  t2iWorker = new Worker(new URL(`paint-text2image-worker.js?v=${T2I_PROTOCOL}`, appUrl), { type: 'module' });
   t2iWorker.onerror = event => failText2Image(event.message || 'worker failed to start');
   t2iWorker.onmessage = event => {
     const msg = event.data;
@@ -7798,6 +7831,7 @@ function ensureT2iWorker() {
         setStatus('Drawing the picture…');
         break;
       case 'tick': {
+        if (!Number.isInteger(msg.index)) { t2iProtocolMismatch('progress without a picture number'); break; }
         /* The bar is the whole run rather than the picture in hand, so asking
            for four does not show the same sweep four times over. */
         const done = (msg.index + msg.done / msg.total) / t2iExpected;
@@ -7811,6 +7845,7 @@ function ensureT2iWorker() {
       case 'done': finishText2Image(); break;
       case 'cancelled': break;                    /* the close already said so */
       case 'error': failText2Image(msg.message); break;
+      default: t2iProtocolMismatch(`a "${msg.type}" message`);
     }
   };
   return t2iWorker;
@@ -7853,6 +7888,12 @@ function collectText2Image(msg) {
   renderT2iThumbs(Math.max(t2iExpected, t2iPictures.length));
   syncT2iChosenNote();
   if (msg.index === 0) syncT2iFit();
+  /* The next picture's first token is a minute of model loading away from its
+     first tick, so say what is happening rather than leaving the count of the
+     one just finished sitting there looking stalled. */
+  if (t2iRunning && msg.index + 1 < t2iExpected) {
+    t2iDetail.textContent = `Picture ${msg.index + 2} of ${t2iExpected} — starting…`;
+  }
   setStatus(t2iExpected > 1
     ? `Picture ${msg.index + 1} of ${t2iExpected} ready`
     : 'Picture ready — press Apply to place it');
