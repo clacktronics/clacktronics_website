@@ -443,12 +443,17 @@ OpenSCAD, Markdown windows, and desktop actions.
   MuPDF is vendored under `vendor/mupdf/` (AGPL-3.0).
 - `applications/audiogen/index.html` — local MusicGen text-to-music app;
   prompts and WAV output stay in the browser. The catalog carries one build per
-  device: a `shader-f16` adapter fetches the fp16 build (~1127 MB) and decodes
-  on the GPU, anything else fetches the q8/fp32 build (~656 MB) and decodes on
-  the CPU. The 8-bit weights are not sent to the GPU because the WebGPU backend
-  has no integer matmul and widens them on every dispatch. An adapter can still
-  refuse a model that size mid-load, so the CPU build is also a retry; the
-  worker reports the device it finished on and the status line names it.
+  device: a `shader-f16` adapter fetches the GPU build (~581 MB) and decodes on
+  the GPU, anything else fetches the q8/fp32 build (~656 MB) and decodes on the
+  CPU. The 8-bit weights are not sent to the GPU because the WebGPU backend has
+  no integer matmul and widens them on every dispatch. The GPU build is fp16
+  except for the decoder, which is q4: `decoder_model_merged_fp16.onnx` is a bad
+  export that no backend will parse (both If branches return outer scope values
+  directly), and q4 lands on MatMulNBits, which WebGPU has kernels for. An
+  adapter can still refuse the model mid-load, so the CPU build is also a
+  retry — and because a half-built session leaves the runtime in a bad way, the
+  retry replaces the worker rather than reloading inside it. The worker reports
+  the device it finished on and the status line names it.
 - `applications/files.html` — read-only browser for repository and website
   media, shared by app file pickers. Associations live in
   `content/file-associations.json`. Rebuild the legacy-media catalogue with
