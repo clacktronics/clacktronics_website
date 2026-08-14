@@ -74,7 +74,7 @@ async function fetchGraph(url, cache, onChunk) {
  * `graphs` is [{ key, path, sizeMB }]; the keys become the fields of the
  * returned sessions object, which is what the engine expects.
  */
-export async function loadMrt2Sessions(ort, { baseUrl, graphs, onProgress, onDetail }) {
+export async function loadMrt2Sessions(ort, { baseUrl, graphs, device, onProgress, onDetail }) {
   const cache = await openCache();
   const total = graphs.reduce((sum, graph) => sum + graph.sizeMB * 1048576, 0);
   let loaded = 0;
@@ -88,7 +88,7 @@ export async function loadMrt2Sessions(ort, { baseUrl, graphs, onProgress, onDet
     });
     onDetail?.(`Preparing ${graph.path.split('/').pop()}...`);
     sessions[graph.key] = await ort.InferenceSession.create(bytes, {
-      executionProviders: ['wasm'],
+      executionProviders: [device || 'wasm'],
     });
     /* Nothing else holds this: the weights now live in the wasm heap. */
   }

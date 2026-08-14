@@ -246,13 +246,14 @@ class MusicGenAdapter {
 
   async load(definition, variantId, device) {
     const { AutoTokenizer, MusicgenForConditionalGeneration } = await loadRuntime();
+    const build = getModelBuild(definition, device);
     const common = { progress_callback: reportDownload };
     [this.tokenizer, this.model] = await Promise.all([
       AutoTokenizer.from_pretrained(definition.repository, common),
       MusicgenForConditionalGeneration.from_pretrained(definition.repository, {
         ...common,
-        device,
-        dtype: getModelBuild(definition, device).dtype,
+        device: build.device,
+        dtype: build.dtype,
       }),
     ]);
   }
@@ -276,14 +277,29 @@ class MusicGenAdapter {
       }
     })();
 
-    const audioValues = await this.model.generate({
-      ...inputs,
-      max_length: maxLength,
-      guidance_scale: guidance,
-      temperature,
-      do_sample: true,
-      streamer,
-    });
+    /* generate() is the decoder loop and the waveform decode back to back, and
+     * a failure in either arrives here as one runtime error naming neither. The
+     * token count separates them — a run that produced its tokens and then fell
+     * over was decoding audio, not generating codes — which is the difference
+     * between a problem in the model on the adapter and one in the session
+     * after it. Worth carrying in the message: this is the sort of fault that
+     * only shows up on hardware the person reading the report does not have. */
+    let audioValues;
+    try {
+      audioValues = await this.model.generate({
+        ...inputs,
+        max_length: maxLength,
+        guidance_scale: guidance,
+        temperature,
+        do_sample: true,
+        streamer,
+      });
+    } catch (error) {
+      const stage = tokens >= maxLength - 4
+        ? 'decoding the audio codes into a waveform'
+        : `generating audio codes (stopped at token ${tokens} of ${maxLength})`;
+      throw new Error(`${error?.message || error} — failed while ${stage}`);
+    }
     const sampleRate = Number(this.model.config.audio_encoder.sampling_rate) || 32000;
     return { ...tensorToPlanar(audioValues), sampleRate };
   }
@@ -305,11 +321,12 @@ class SpeechT5Adapter {
       AutoProcessor.from_pretrained(definition.repository, common),
       SpeechT5ForTextToSpeech.from_pretrained(definition.repository, {
         ...common,
-        device,
+        device: build.device,
         dtype: build.dtype,
       }),
       SpeechT5HifiGan.from_pretrained(definition.vocoder, {
         ...common,
+        device: build.device,
         dtype: build.dtype.vocoder,
       }),
     ]);
@@ -351,9 +368,10 @@ class SupertonicAdapter {
 
   async load(definition, variantId, device) {
     const { pipeline } = await loadRuntime();
+    const build = getModelBuild(definition, device);
     this.synthesiser = await pipeline('text-to-speech', definition.repository, {
-      device,
-      dtype: getModelBuild(definition, device).dtype,
+      device: build.device,
+      dtype: build.dtype,
       progress_callback: reportDownload,
     });
   }
@@ -400,13 +418,14 @@ class VitsAdapter {
   async load(definition, variantId, device) {
     const { AutoTokenizer, VitsModel } = await loadRuntime();
     const repository = getRepository(definition, variantId);
+    const build = getModelBuild(definition, device);
     const common = { progress_callback: reportDownload };
     [this.tokenizer, this.model] = await Promise.all([
       AutoTokenizer.from_pretrained(repository, common),
       VitsModel.from_pretrained(repository, {
         ...common,
-        device,
-        dtype: getModelBuild(definition, device).dtype,
+        device: build.device,
+        dtype: build.dtype,
       }),
     ]);
   }
@@ -430,12 +449,13 @@ class VitsAdapter {
 class Mrt2Adapter {
   engine = null;
 
-  async load(definition) {
+  async load(definition, variantId, device) {
     const ort = await loadOnnxRuntime();
     const { baseUrl, graphs, tokenizer } = definition.mrt2;
     const sessions = await loadMrt2Sessions(ort, {
       baseUrl,
       graphs,
+      device: getModelBuild(definition, device).device,
       onProgress: (loaded, total) => postMessage({ type: 'load-progress', loaded, total }),
       onDetail: detail => postMessage({ type: 'load-detail', detail }),
     });
@@ -508,7 +528,7 @@ function modelKey(modelId, variantId) {
   return `${modelId}/${variantId || ''}`;
 }
 
-async function loadModel(modelId, variantId) {
+async function loadModel(modelId, variantId, forcedDevice) {
   const definition = getModelDefinition(modelId);
   if (!definition) throw new Error(`Unknown audio model: ${modelId}`);
   const key = modelKey(modelId, variantId);
@@ -519,13 +539,19 @@ async function loadModel(modelId, variantId) {
   const createAdapter = ADAPTERS[definition.family];
   if (!createAdapter) throw new Error(`No adapter is registered for ${definition.family}.`);
 
-  /* An adapter that answers requestAdapter is not an adapter that will hold a
-   * 1.1 GB model — a laptop with a small memory budget refuses somewhere
-   * inside the session build, and there is nothing to inspect beforehand that
-   * would have told us. So the CPU build is a retry rather than a
-   * precondition: a machine that cannot take the fast path still gets working
-   * audio, at the cost of having fetched the wrong weights first. */
-  let device = await pickDevice(definition);
+  /* An adapter that answers requestAdapter is not an adapter that will hold
+   * the model — a small memory budget refuses somewhere inside the session
+   * build, and there is nothing to inspect beforehand that would have told us.
+   * So the CPU build is a retry as well as a precondition.
+   *
+   * The retry is asked for rather than taken here, because a session that has
+   * failed part way through leaves the runtime holding a device in a bad way
+   * and the next build in this worker inherits it — the same trap the paint
+   * workers call release() to stay out of, except that a model which never
+   * finished constructing has nothing to release. A fresh worker is the only
+   * clean state available, so the window is told to throw this one away and
+   * come back naming the device it wants. */
+  const device = forcedDevice || await pickDevice(definition);
   fileProgress.clear();
   activeAdapter = createAdapter();
   activeKey = null;
@@ -535,11 +561,8 @@ async function loadModel(modelId, variantId) {
     await activeAdapter.load(definition, variantId, device);
   } catch (error) {
     if (device !== 'webgpu') throw error;
-    device = 'wasm';
-    fileProgress.clear();
-    activeAdapter = createAdapter();
-    postMessage({ type: 'load-detail', detail: 'The graphics adapter refused the model. Falling back to the processor...' });
-    await activeAdapter.load(definition, variantId, device);
+    postMessage({ type: 'retry-on-cpu', modelId, variantId, message: String(error?.message || error) });
+    return;
   }
   activeKey = key;
   activeDevice = device;
@@ -571,7 +594,7 @@ async function generate(options) {
 self.onmessage = async event => {
   const message = event.data || {};
   try {
-    if (message.type === 'load') await loadModel(message.modelId, message.variantId);
+    if (message.type === 'load') await loadModel(message.modelId, message.variantId, message.device);
     if (message.type === 'generate') await generate(message.options);
   } catch (error) {
     postMessage({

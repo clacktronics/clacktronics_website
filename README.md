@@ -460,17 +460,27 @@ OpenSCAD, Markdown windows, and desktop actions.
   than about seventy characters; the split is also the progress figure.
   SpeechT5 and MMS have no speed of their own, so their Speed control resamples
   the finished clip and moves the pitch with it; Supertonic predicts its own
-  durations and is given the speed directly. MusicGen carries one build per
-  device: a `shader-f16` adapter fetches the
-  fp16 build (~1127 MB) and decodes on the GPU, anything else fetches the
-  q8/fp32 build (~656 MB) and decodes on the CPU. The 8-bit weights are not
-  sent to the GPU because the WebGPU backend has no integer matmul and widens
-  them on every dispatch. An adapter can still refuse a model that size
-  mid-load, so the CPU build is also a retry; the worker reports the device it
-  finished on and the status line names it. The layout fills the window instead
-  of scrolling — a rail for the model and its controls, text and waveform on
-  the right — becoming one column below 760 px wide, and dropping the slider
-  captions before the Generate button in a window shorter than 640 px.
+  durations and is given the speed directly. The layout fills the window
+  instead of scrolling — a rail for the model and its controls, text and
+  waveform on the right — becoming one column below 760 px wide, and dropping
+  the slider captions before the Generate button in a window shorter than
+  640 px.
+
+  **MusicGen** carries one build per device: a `shader-f16` adapter fetches the
+  GPU build (~640 MB) and decodes on the GPU, anything else fetches the q8/fp32
+  build (~656 MB) and decodes on the CPU. The 8-bit weights are not sent to the
+  GPU because the WebGPU backend has no integer matmul and widens them on every
+  dispatch. The GPU build is fp16 except for two sessions. The decoder is q4:
+  `decoder_model_merged_fp16.onnx` is a bad export that no backend will parse
+  (both If branches return outer scope values directly), and q4 lands on
+  MatMulNBits, which WebGPU has kernels for. `encodec_decode` stays on the CPU
+  at fp32, because it runs once per clip where the decoder above it has run a
+  thousand times — the same reasoning that keeps `prepare_inputs_embeds` on the
+  CPU in the Text to Image worker — and that keeps the build on a file the app
+  has actually run. An adapter can still refuse the model mid-load, so the CPU
+  build is also a retry — and because a half-built session leaves the runtime
+  in a bad way, the retry replaces the worker rather than reloading inside it.
+  The worker reports the device it finished on and the status line names it.
 
   **Magenta RealTime 2** does not go through Transformers.js at all, because it
   cannot: it is three models in nine ONNX graphs with no HuggingFace config

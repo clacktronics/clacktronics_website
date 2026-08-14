@@ -491,6 +491,19 @@ function handleWorkerMessage(event) {
         : 'Downloading model files...');
       break;
     }
+    /* The GPU build did not survive its session build. The worker that tried is
+     * left holding whatever state that failure made, so it is discarded rather
+     * than asked again, and a fresh one is told which device to use. */
+    case 'retry-on-cpu':
+      gpuDevice = 'wasm';
+      updateModelCopy();
+      destroyWorker();
+      setProgress(1);
+      setStatus('The graphics adapter would not take the model. Loading the processor build instead...');
+      createWorker().postMessage({
+        type: 'load', modelId: message.modelId, variantId: message.variantId, device: 'wasm',
+      });
+      break;
     case 'model-ready': {
       loadedKey = `${message.modelId}/${message.variantId || ''}`;
       const model = getModelDefinition(message.modelId);

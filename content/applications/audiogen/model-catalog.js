@@ -139,21 +139,45 @@ export const MODEL_CATALOG = Object.freeze([
      * and is worth putting on an adapter. But the 8-bit weights that make that
      * bearable on a CPU are the wrong ones to send there: the WebGPU backend
      * has no integer matmul, so it widens them back out on every dispatch and
-     * lands slower than the CPU build it replaced. The adapter gets fp16, and
-     * pays for it in download. */
+     * lands slower than the CPU build it replaced.
+     *
+     * The decoder is q4 rather than fp16 for two separate reasons, and either
+     * one alone would decide it. decoder_model_merged_fp16.onnx does not load
+     * at all: both branches of its If node return outer scope values straight
+     * through — logits and all forty-eight cache tensors — which ONNX Runtime
+     * rejects while it is still parsing the graph, on any backend. The export
+     * is wrong rather than unsupported, and no flag here gets round it. And q4
+     * is the better weight regardless, because it lands on MatMulNBits, which
+     * is the block-quantized path the WebGPU backend actually has kernels for.
+     *
+     * encodec_decode stays on the processor, for the same reason
+     * prepare_inputs_embeds does in the Text to Image worker: it turns the
+     * codes into a waveform once per clip, where the decoder above it has just
+     * run a thousand times, so what the adapter would win is a fraction of a
+     * second against one more session's worth of graphics memory held for the
+     * whole generation. Keeping it here also keeps the build on the fp32 file
+     * the CPU path already uses — a file this app has actually run, rather
+     * than the fp16 export, which nothing here has ever exercised. It is
+     * shared between the two builds, so it costs nothing to fetch twice. */
     runtime: Object.freeze({
       webgpu: Object.freeze({
-        downloadSizeMB: 1127,
-        memoryNote: 'Allow roughly 2.5 GB of free graphics memory while generating.',
+        downloadSizeMB: 640,
+        memoryNote: 'Allow roughly 1.5 GB of free memory, most of it on the graphics adapter, while generating.',
+        device: Object.freeze({
+          text_encoder: 'webgpu',
+          decoder_model_merged: 'webgpu',
+          encodec_decode: 'wasm',
+        }),
         dtype: Object.freeze({
           text_encoder: 'fp16',
-          decoder_model_merged: 'fp16',
-          encodec_decode: 'fp16',
+          decoder_model_merged: 'q4',
+          encodec_decode: 'fp32',
         }),
       }),
       wasm: Object.freeze({
         downloadSizeMB: 656,
         memoryNote: 'Allow roughly 1.5 GB of free memory while generating.',
+        device: 'wasm',
         dtype: Object.freeze({
           text_encoder: 'q8',
           decoder_model_merged: 'q8',
@@ -234,6 +258,7 @@ export const MODEL_CATALOG = Object.freeze([
       wasm: Object.freeze({
         downloadSizeMB: 1628,
         memoryNote: 'A big first load — about 1.6 GB, cached afterwards — and roughly 3 GB of free memory while generating.',
+        device: 'wasm',
         /* The full-precision graphs. The repository also publishes fp16 ones,
          * 400 MB smaller, but the WebAssembly backend has no half-precision
          * kernels and casts them on every operation: a smaller download that
@@ -292,6 +317,7 @@ export const MODEL_CATALOG = Object.freeze([
       wasm: Object.freeze({
         downloadSizeMB: 263,
         memoryNote: 'Allow roughly 700 MB of free memory while speaking.',
+        device: 'wasm',
         /* The repository publishes one build, in full precision, with the
          * weights in external data files beside each graph. */
         dtype: 'fp32',
@@ -340,6 +366,7 @@ export const MODEL_CATALOG = Object.freeze([
       wasm: Object.freeze({
         downloadSizeMB: 230,
         memoryNote: 'Allow roughly 600 MB of free memory while speaking.',
+        device: 'wasm',
         dtype: Object.freeze({
           model: 'q8',
           decoder_model_merged: 'q8',
@@ -383,6 +410,7 @@ export const MODEL_CATALOG = Object.freeze([
       wasm: Object.freeze({
         downloadSizeMB: 109,
         memoryNote: 'Allow roughly 400 MB of free memory while speaking. Each language is a separate download.',
+        device: 'wasm',
         dtype: 'fp32',
       }),
     }),
