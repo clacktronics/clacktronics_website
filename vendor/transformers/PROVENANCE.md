@@ -20,8 +20,7 @@ startup depending on whether the browser supports JS Promise
 Integration (this applies to the WebGPU backend too, not just CPU).
 
 Shared runtime for in-browser ML apps (currently
-content/applications/chat.html; intended to also serve future
-transformers.js apps such as image background removal). Workers must set
+content/applications/chat.html and content/applications/audiogen/). Workers must set
 `env.backends.onnx.wasm.wasmPaths` to this directory, otherwise the
 runtime fetches the .wasm from the jsDelivr CDN.
 

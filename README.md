@@ -44,6 +44,7 @@ content/
     calendar/events.csv     ← the upcoming events it shows
     calendar/luma.json      ← mirror of the Luma events (generated)
     video/                  ← browser-only Video Lab app + FFmpeg core
+    audiogen/               ← local Transformers.js + MusicGen audio generator
     about.md
 ```
 
@@ -703,6 +704,12 @@ windows, and desktop actions.
   paths relative to the site root as well as remote HTTP(S) URLs whose servers
   allow cross-origin browser requests. MuPDF.js 1.28.0 is vendored under
   `vendor/mupdf/` (AGPL-3.0; see its LICENSE and PROVENANCE files).
+- `applications/audiogen/index.html` (Applications → Internet → audioGen) — a
+  local-first text-to-music app powered by the vendored Transformers.js runtime
+  and Meta MusicGen Small. Its model catalog and worker adapter boundary leave
+  room for additional audio model families. The first run downloads about
+  656 MB of quantized weights from Hugging Face; prompts and generated WAV audio
+  remain in the browser.
 - `applications/files.html` (Applications → System → File Manager) — a shared,
   read-only faux file manager with two drives. **GitHub** browses the complete
   repository tree with folder navigation; **Website Media** browses legacy
