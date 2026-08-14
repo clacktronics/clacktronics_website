@@ -23,7 +23,10 @@
 <script src="../../assets/js/backgrounds.js"></script>
 <style>
 .appearance-main { gap: 14px; }
-.appearance-preview { height: 86px; border: 1px solid var(--ink); border-radius: 7px; background-color: var(--desktop); }
+.appearance-preview {
+  height: 86px; border: 1px solid var(--ink); border-radius: 7px; background-color: var(--desktop);
+  filter: var(--media-filter);
+}
 .appearance-row { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 12px; }
 .appearance-row label { color: var(--control-text); font-weight: 500; }
 .appearance-row select { width: 100%; }
@@ -31,6 +34,8 @@
 .appearance-actions .app-status { flex: 1; }
 .appearance-buttons { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
 </style>
+<script src="../../assets/js/app-bar.js" defer></script>
+<script src="../../assets/js/app-home.js" defer></script>
 </head>
 <body>
 <div class="app">

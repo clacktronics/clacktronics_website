@@ -107,7 +107,10 @@ pre.code {
   margin: 18px 0; overflow: hidden; border: 1px solid var(--ink); border-radius: 8px;
   background: var(--ink);
 }
-.youtube-embed iframe { display: block; width: 100%; height: 100%; border: 0; }
+.youtube-embed iframe {
+  display: block; width: 100%; height: 100%; border: 0;
+  filter: var(--media-filter);
+}
 .video-embed video { display: block; width: 100%; height: 100%; object-fit: contain; }
 .kicanvas-embed {
   width: 100%; margin: 18px 0; overflow: hidden;
@@ -142,7 +145,7 @@ pre.code {
   position: absolute; inset: auto 0 10px; margin: 0;
   color: var(--sage); font-size: 10.5px; text-align: center;
 }
-.model-embed-status.error { color: #9a3f35; }
+.model-embed-status.error { color: var(--danger); }
 .model-embed-fallback {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   padding: 0 12px; color: var(--leaf-deep); font-size: 11px; text-align: center;

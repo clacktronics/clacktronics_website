@@ -225,7 +225,7 @@
     <lastmod>2026-07-19</lastmod>
   </url>
   <url>
-    <loc>https://clacktronics.co.uk/plain/index.html</loc>
+    <loc>https://clacktronics.co.uk/</loc>
     <lastmod>2026-08-02</lastmod>
   </url>
   <url>
@@ -253,12 +253,18 @@
     <lastmod>2026-08-02</lastmod>
   </url>
   <url>
+    <loc>https://clacktronics.co.uk/content/applications/clackmosh/index.html</loc>
+  </url>
+  <url>
     <loc>https://clacktronics.co.uk/content/applications/eecircuit.html</loc>
     <lastmod>2026-08-02</lastmod>
   </url>
   <url>
     <loc>https://clacktronics.co.uk/content/applications/eurorack-panel.html</loc>
     <lastmod>2026-08-02</lastmod>
+  </url>
+  <url>
+    <loc>https://clacktronics.co.uk/content/applications/gamma-table.html</loc>
   </url>
   <url>
     <loc>https://clacktronics.co.uk/content/applications/graphing-calculator.html</loc>
@@ -273,8 +279,17 @@
     <lastmod>2026-08-02</lastmod>
   </url>
   <url>
+    <loc>https://clacktronics.co.uk/content/applications/midi-console.html</loc>
+  </url>
+  <url>
     <loc>https://clacktronics.co.uk/content/applications/model-viewer.html</loc>
     <lastmod>2026-08-02</lastmod>
+  </url>
+  <url>
+    <loc>https://clacktronics.co.uk/content/applications/modem-rx.html</loc>
+  </url>
+  <url>
+    <loc>https://clacktronics.co.uk/content/applications/modem.html</loc>
   </url>
   <url>
     <loc>https://clacktronics.co.uk/content/applications/openscad.html</loc>
@@ -307,6 +322,12 @@
   <url>
     <loc>https://clacktronics.co.uk/content/applications/resistor.html</loc>
     <lastmod>2026-08-02</lastmod>
+  </url>
+  <url>
+    <loc>https://clacktronics.co.uk/content/applications/scope.html</loc>
+  </url>
+  <url>
+    <loc>https://clacktronics.co.uk/content/applications/serial-console.html</loc>
   </url>
   <url>
     <loc>https://clacktronics.co.uk/content/applications/video/index.html</loc>

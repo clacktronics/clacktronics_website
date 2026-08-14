@@ -22,6 +22,20 @@ name: Deploy to purely.website
 on:
   push:
     branches: [main]
+    # These paths are excluded from the rsync below, so a commit touching only
+    # them cannot change anything the host serves — the run would spend a few
+    # minutes rebuilding the mirror and re-stamping version.json to ship
+    # nothing. `scripts/` is deliberately NOT in this list even though it is
+    # excluded from the upload: the generators run *during* the deploy, so a
+    # fix to build_plain_site.py does change the output and has to reach the
+    # host. Keep this list a subset of the rsync excludes; anything the deploy
+    # actually uploads belongs nowhere near it.
+    paths-ignore:
+      - 'todo.md'
+      - 'README.md'
+      - 'CLAUDE.md'
+      - '.gitignore'
+      - '.github/**'
   workflow_dispatch:            # lets you deploy on demand from the Actions tab
 
 concurrency:                    # never let two deploys overlap
@@ -82,6 +96,14 @@ jobs:
         # the blog until some unrelated push happens to come along. Rebuilding
         # here makes the deploy self-sufficient. Tree-only; nothing is committed.
         run: python3 scripts/build_blog_index.py
+
+      - name: Refresh the applications' schema.org blocks
+        # Same reasoning as the blog index above: the plain-mirror workflow
+        # commits these with the automatic GITHUB_TOKEN, so the checkout for
+        # the push that changed an app description still carries the old block.
+        # Rebuilding here keeps the deployed pages describing themselves
+        # accurately. Tree-only; nothing is committed.
+        run: python3 scripts/build_app_metadata.py
 
       - name: Regenerate plain HTML mirror
         # Build the static plain/ pages from the current content so the deploy
@@ -160,6 +182,15 @@ jobs:
           SSH_PORT: ${{ secrets.SSH_PORT }}
 
       - name: Sync to purely
+        # Everything that lands on the host is a public URL, so the excludes
+        # below are the only thing keeping the repository's own furniture off
+        # the web. The notes (README/todo/CLAUDE) are documentation nobody
+        # browsing the site should be served; .gitignore is worse than it looks
+        # — it names assets/upload-config.php as the upload secret and lists the
+        # host-only media directories, which is a map of the server for anyone
+        # who asks for it. The .gitignore pattern is unanchored on purpose so it
+        # catches the nested copies inside the vendor trees too.
+        #
         # Retried for the same reason as the host key above, and it matters more
         # here: this pushes ~30 MB of gzipped Wasm over a single SSH connection,
         # so it is the step most exposed to a dropped or throttled connection,
@@ -185,6 +216,8 @@ jobs:
                  --exclude 'scripts/' \
                  --exclude 'README.md' \
                  --exclude 'todo.md' \
+                 --exclude 'CLAUDE.md' \
+                 --exclude '.gitignore' \
                  --exclude 'assets/uploads/' \
                  --exclude 'assets/old_assets/' \
                  --exclude 'assets/upload-config.php' \

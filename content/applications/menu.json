@@ -10,9 +10,14 @@
     ] },
     { "type": "submenu", "label": "Multimedia", "icon": "video", "items": [
       { "type": "app", "page": "clackbase.html", "label": "Clackbase MIDI Sequencer", "title": "Clackbase 1.0", "icon": "music", "width": 1120, "height": 760, "multi": true },
+      { "type": "app", "page": "midi-console.html", "label": "MIDIterm MIDI Console", "title": "MIDIterm", "icon": "keyboard-music", "width": 1180, "height": 800, "multi": true, "allow": "midi" },
       { "type": "app", "page": "puredata.html", "label": "Pure Data", "title": "Pure Data", "icon": "keyboard-music", "width": 1080, "height": 740, "multi": true },
       { "type": "app", "page": "video/index.html", "label": "Video Lab", "title": "Video Lab", "icon": "video", "width": 1180, "height": 780, "multi": true },
+      { "type": "app", "page": "clackmosh/index.html", "label": "ClackMosh", "title": "ClackMosh", "icon": "spray-can", "width": 1200, "height": 820, "minHeight": 640, "multi": true },
       { "type": "app", "page": "recorder.html", "label": "Sound Recorder", "title": "Sound Recorder", "icon": "mic", "width": 400, "height": 245, "fixed": true, "multi": true, "integrated": true },
+      { "type": "app", "page": "scope.html", "label": "ClackScope Oscilloscope", "title": "ClackScope", "icon": "analytics", "width": 1020, "height": 660, "minHeight": 480, "multi": true, "allow": "microphone" },
+      { "type": "app", "page": "modem.html", "label": "ClackMo", "title": "ClackMo", "icon": "volume", "width": 1060, "height": 790, "minHeight": 620, "multi": true },
+      { "type": "app", "page": "modem-rx.html", "label": "ClackDem", "title": "ClackDem", "icon": "mic", "width": 1060, "height": 790, "minHeight": 620, "multi": true, "allow": "microphone" },
       { "type": "app", "page": "paint.html", "label": "ClackPaint", "title": "ClackPaint", "icon": "brush", "width": 900, "height": 680, "minHeight": 560, "multi": true, "integrated": true },
       { "type": "app", "page": "graphite.html", "label": "Graphite", "title": "Graphite", "icon": "shapes", "width": 1240, "height": 820, "multi": true },
       { "type": "app", "page": "model-viewer.html", "label": "3D Model Viewer", "title": "3D Model Viewer", "icon": "box", "width": 900, "height": 660, "multi": true }
@@ -29,7 +34,9 @@
       { "type": "app", "page": "kicad.html", "label": "KiCAD Viewer", "title": "KiCAD Viewer", "icon": "cpu", "multi": true },
       { "type": "app", "page": "eurorack-panel.html", "label": "Eurorack Panel Generator", "title": "Eurorack Panel Generator", "icon": "circuit-board", "width": 1180, "height": 760, "multi": true, "integrated": true },
       { "type": "app", "page": "pcb-heater.html", "label": "PCB Heater Designer", "title": "PCB Heater Designer", "icon": "circuit-board", "width": 1180, "height": 760, "multi": true },
-      { "type": "app", "page": "resistor.html", "label": "Resistor Calculator", "title": "Resistor Calculator", "icon": "calculator", "width": 760, "height": 620 }
+      { "type": "app", "page": "resistor.html", "label": "Resistor Calculator", "title": "Resistor Calculator", "icon": "calculator", "width": 760, "height": 620 },
+      { "type": "app", "page": "gamma-table.html", "label": "Gamma Table", "title": "Gamma Table", "icon": "zap", "width": 1120, "height": 760, "multi": true },
+      { "type": "app", "page": "serial-console.html", "label": "ClackTerm Serial Console", "title": "ClackTerm", "icon": "terminal", "width": 1180, "height": 780, "multi": true, "allow": "serial; usb" }
     ] },
     { "type": "submenu", "label": "Internet", "icon": "file-text", "items": [
       { "type": "app", "page": "browser.html", "label": "Web Browser", "title": "Web Browser", "icon": "link", "width": 1100, "height": 760, "multi": true, "plain": false },

@@ -62,8 +62,8 @@
   font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.7;
 }
 .CodeMirror-cursor { border-left: 2px solid var(--leaf-deep) !important; }
-.CodeMirror-selected { background: rgba(79, 174, 125, 0.25) !important; }
-.CodeMirror-focused .CodeMirror-selected { background: rgba(79, 174, 125, 0.35) !important; }
+.CodeMirror-selected { background: color-mix(in srgb, var(--leaf) 25%, transparent) !important; }
+.CodeMirror-focused .CodeMirror-selected { background: color-mix(in srgb, var(--leaf) 35%, transparent) !important; }
 .cm-s-easymde .cm-header { color: var(--heading); }
 .cm-s-easymde .cm-quote { color: var(--sage); font-style: italic; }
 .cm-s-easymde .cm-link, .cm-s-easymde .cm-url { color: var(--leaf-deep); }
@@ -109,7 +109,7 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 /* ---- "open from website" browser ---- */
 .site-modal {
   position: fixed; inset: 0; z-index: 50; display: none;
-  background: rgba(9, 20, 13, 0.35);
+  background: var(--overlay);
   align-items: center; justify-content: center;
 }
 .site-modal.open { display: flex; }
@@ -185,6 +185,9 @@ body.dragging .md-wrap { outline: 3px dashed var(--leaf-deep); outline-offset: -
 }
 .commit-form .snippet code { color: var(--leaf-deep); }
 </style>
+<script src="../../assets/js/app-menu.js" defer></script>
+<script src="../../assets/js/app-bar.js" defer></script>
+<script src="../../assets/js/app-home.js" defer></script>
 </head>
 <body>
 <div class="app">

@@ -33,6 +33,42 @@
   --accent-hover: #6fcf9a;
   --button-text: #f2ecd6;
   --disabled-text: #b3ab8d;
+  /* Status roles. The palette proper had no word for "this went wrong" or
+     "careful", so every app that needed one spelled its own red or amber out in
+     hex and then kept it through a theme change — a swamp-red error over the
+     blood palette, an amber busy lamp glowing on midnight. --ok and --info lean
+     on colours a theme already sets, so even a theme written before these
+     existed moves them; --danger and --warning have no palette equivalent to
+     borrow from and fall back to these until a theme names its own. */
+  --danger: #a04a3a;
+  --warning: #b58b3a;
+  --ok: var(--leaf-deep);
+  --info: #3f66ad;
+  /* Scrims behind modals, dialogs and drop targets. Derived from --shadow
+     rather than stated, so they darken with whatever the theme darkens with
+     instead of laying the default palette's near-black green over a pale one. */
+  --overlay: color-mix(in srgb, var(--shadow) 42%, transparent);
+  --overlay-strong: color-mix(in srgb, var(--shadow) 82%, transparent);
+  /* Plot traces and chart series — the serial and MIDI consoles, the gamma
+     table, the graphing calculator. Six is what the busiest of them draws at
+     once. Deriving them means a new theme gets a matching set of traces
+     without having to know the role exists. */
+  --series-1: var(--leaf-deep);
+  --series-2: var(--danger);
+  --series-3: var(--info);
+  --series-4: var(--warning);
+  --series-5: var(--sage);
+  --series-6: var(--leaf);
+  /* Media treatment is deliberately separate from the interface palette.
+     It affects photographs, video, canvases and the desktop wallpaper without
+     shifting text or control colours. */
+  --media-grayscale: 0%;
+  --media-sepia: 0%;
+  --media-saturate: 100%;
+  --media-hue: 0deg;
+  --media-brightness: 100%;
+  --media-contrast: 100%;
+  --media-filter: none;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; overflow: hidden; }
@@ -217,6 +253,16 @@ body {
   position: fixed; top: 34px; left: 0; right: 0; bottom: 44px;
   background-color: var(--desktop); overflow: hidden;
 }
+#desktop::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image: var(--desktop-wallpaper-image, none);
+  filter: var(--media-filter);
+}
+/* New media inherits these variables, so images and canvases introduced after
+   a theme is applied receive the treatment without JavaScript bookkeeping. */
+:where(img, video, canvas):not([data-media-treatment="none"]) {
+  filter: var(--media-filter);
+}
 .desktop-icon {
   all: unset; box-sizing: border-box; position: absolute; top: 18px; left: 18px;
   z-index: 1; width: 112px; padding: 6px 4px; cursor: default;
@@ -382,9 +428,13 @@ body.win-drag iframe { pointer-events: none; }
 #resource-stats > span { display: inline-flex; align-items: center; gap: 4px; }
 #resource-stats .pixel-icon { width: 12px; height: 12px; color: var(--leaf); }
 #resource-stats strong { color: var(--menu-text); font-weight: 500; }
-#cpu-stat[data-state="fair"] { color: #f0c66a; }
-#cpu-stat[data-state="serious"] { color: #ef9862; }
-#cpu-stat[data-state="critical"] { color: #f06f65; }
+/* The load ramp reads over the chrome bar, not over paper, so each step is
+   lifted towards the menu text before it is used — a theme whose --warning is
+   dark enough to work on a window would otherwise vanish into the taskbar.
+   "Serious" has no role of its own and sits between the two it separates. */
+#cpu-stat[data-state="fair"] { color: color-mix(in oklab, var(--warning) 78%, var(--menu-text)); }
+#cpu-stat[data-state="serious"] { color: color-mix(in oklab, var(--warning) 50%, var(--danger)); }
+#cpu-stat[data-state="critical"] { color: color-mix(in oklab, var(--danger) 74%, var(--menu-text)); }
 #build-stamp-tb {
   display: inline-flex; align-items: center; gap: 5px; flex: none;
   height: 28px; padding-left: 12px;
@@ -429,5 +479,13 @@ button.task.minimised .task-icon { color: var(--menu-text); }
   .page { padding: 24px 20px; }
   #menubar { gap: 0; font-size: 12px; }
   .menu > button { padding: 0 8px; }
-  #resource-stats { gap: 7px; padding-left: 8px; font-size: 9px; }
+  /* Everything to the right of #tasks is flex: none and nowrap, so on a phone
+     the readouts were taking their full width out of a 390px bar and leaving
+     the window switcher — the one control in the taskbar you actually need —
+     23px to sit in. The telemetry and the build stamp are furniture; they go,
+     and the Plain HTML link stays, because the mirror being one tap away is
+     the point of putting it there. */
+  #resource-stats, #build-stamp-tb { display: none; }
+  /* narrower buttons so a second window is still legible in what is left */
+  button.task { min-width: 92px; max-width: 150px; padding: 0 9px; gap: 7px; }
 }

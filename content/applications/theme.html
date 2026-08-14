@@ -33,6 +33,14 @@
 .palette .group-head { grid-column: 1 / -1; margin-top: 6px; }
 .palette .group-head:first-child { margin-top: 0; }
 .sliders { display: grid; gap: 8px; margin-top: 10px; }
+.media-controls {
+  display: grid; gap: 9px; margin-top: 14px; padding: 10px;
+  border: 1px solid var(--paper-line); border-radius: 7px; background: var(--paper);
+}
+.media-controls-head { display: grid; grid-template-columns: 1fr minmax(150px, 1.2fr); gap: 10px; align-items: center; }
+.media-controls-head label { color: var(--control-text); font-size: 11.5px; font-weight: 500; }
+.media-controls-head select { width: 100%; }
+.media-sliders { display: grid; gap: 8px; }
 .slider-row {
   display: grid; grid-template-columns: 1fr auto; gap: 4px 9px; align-items: center;
   padding: 8px 10px; border: 1px solid var(--paper-line); border-radius: 6px; background: var(--paper-deep);
@@ -129,6 +137,13 @@
 .mock-list div { padding: 6px 10px; border-bottom: 1px solid var(--paper-line); }
 .mock-list div:last-child { border-bottom: 0; }
 .mock-body .behind-note { color: var(--sage); font-size: 9.5px; line-height: 1.6; }
+.mock-media {
+  display: grid; grid-template-columns: 64px 1fr; gap: 9px; align-items: center;
+  margin-bottom: 12px; padding: 6px; border: 1px solid var(--paper-line);
+  border-radius: 6px; background: var(--paper-deep);
+}
+.mock-media img { display: block; width: 64px; height: 48px; object-fit: cover; border-radius: 4px; }
+.mock-media span { color: var(--sage); font-size: 9px; line-height: 1.45; }
 .mock-actions { display: flex; gap: 8px; }
 .mock-button { padding: 7px 10px; border: 1px solid var(--ink); border-radius: 5px; background: var(--ink); color: var(--button-text); }
 .mock-button.alt { background: var(--paper-deep); color: var(--control-text); }
@@ -149,12 +164,24 @@
 .commit-form input[type="text"], .commit-form input[type="password"] { width: 100%; }
 .commit-form .checkline { flex-direction: row; align-items: center; }
 .commit-actions { display: flex; gap: 12px; align-items: center; }
+/* Stacked, the two panes stop being their own scrollers and .theme-main becomes
+   the only one. That means undoing the min-height: 0 they carry for the
+   side-by-side layout as well: it is what lets a pane shrink below its content
+   so an inner overflow: auto has something to scroll, and left in place here it
+   let the grid hand the colour list a 378px row to draw 1800px of swatches in.
+   They did not scroll and they did not push the preview down — they painted
+   straight over it. align-content keeps the rows at their content height rather
+   than stretching them to share the container. */
 @media (max-width: 760px) {
-  .theme-main { grid-template-columns: 1fr; overflow: auto; }
+  .theme-main { grid-template-columns: 1fr; align-content: start; overflow: auto; }
+  .theme-controls, .theme-preview-wrap { min-height: auto; }
   .theme-controls { overflow: visible; }
   .mock-desktop { min-height: 390px; }
 }
 </style>
+<script src="../../assets/js/app-menu.js" defer></script>
+<script src="../../assets/js/app-bar.js" defer></script>
+<script src="../../assets/js/app-home.js" defer></script>
 </head>
 <body>
 <div class="app">
@@ -181,6 +208,19 @@
       </div>
       <div class="palette" id="palette"></div>
       <div class="sliders" id="sliders"></div>
+      <section class="media-controls" aria-labelledby="mediaTreatmentLabel">
+        <div class="media-controls-head">
+          <label id="mediaTreatmentLabel" for="mediaPreset">Media treatment</label>
+          <select id="mediaPreset">
+            <option value="none">None</option>
+            <option value="mono">Black &amp; white</option>
+            <option value="warm">Warm tint</option>
+            <option value="orange">Orange monochrome</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="media-sliders" id="mediaSliders"></div>
+      </section>
     </section>
     <section class="theme-preview-wrap">
       <span class="app-lbl">Live preview</span>
@@ -214,6 +254,7 @@
             <p class="eyebrow">// Palette in context</p>
             <p>Change a colour to update this sample. <b>Strong text</b> sits alongside body text.</p>
             <div class="mock-list"><div>Dividers between rows</div><div>Raised surface behind them</div></div>
+            <div class="mock-media"><img id="mockMedia" alt="Media treatment preview"><span>Photos, video, canvases and wallpaper follow this treatment.</span></div>
             <div class="mock-actions"><span class="mock-button">Primary</span><span class="mock-button alt">Secondary</span><span class="mock-button off">Disabled</span></div>
           </div>
         </div>
@@ -281,7 +322,10 @@ const FIELDS = [
   ['--disabled-text', 'Disabled text'],
   'Accents & shadow',
   ['--leaf', 'Accent'], ['--leaf-deep', 'Deep accent'],
-  ['--accent-hover', 'Accent hover'], ['--shadow', 'Drop shadow']
+  ['--accent-hover', 'Accent hover'], ['--shadow', 'Drop shadow'],
+  'Status',
+  ['--danger', 'Error / destructive'], ['--warning', 'Warning'],
+  ['--ok', 'Success'], ['--info', 'Information']
 ];
 const COLOURS = FIELDS.filter(field => Array.isArray(field));
 /* Non-colour theme values, edited with sliders. */
@@ -289,6 +333,21 @@ const SLIDERS = [
   ['--shadow-distance', 'Drop shadow distance', 0, 24, 1, 'px'],
   ['--shadow-alpha', 'Drop shadow opacity', 0, 100, 5, '%']
 ];
+const MEDIA_SLIDERS = [
+  ['--media-grayscale', 'Black & white', 0, 100, 5, '%'],
+  ['--media-sepia', 'Warmth', 0, 100, 5, '%'],
+  ['--media-saturate', 'Colour intensity', 0, 800, 10, '%'],
+  ['--media-hue', 'Tint hue', -180, 180, 5, 'deg'],
+  ['--media-brightness', 'Brightness', 50, 150, 5, '%'],
+  ['--media-contrast', 'Contrast', 50, 150, 5, '%']
+];
+const ALL_SLIDERS = [...SLIDERS, ...MEDIA_SLIDERS];
+const MEDIA_PRESETS = {
+  none: { '--media-grayscale':'0%', '--media-sepia':'0%', '--media-saturate':'100%', '--media-hue':'0deg', '--media-brightness':'100%', '--media-contrast':'100%' },
+  mono: { '--media-grayscale':'100%', '--media-sepia':'0%', '--media-saturate':'100%', '--media-hue':'0deg', '--media-brightness':'100%', '--media-contrast':'105%' },
+  warm: { '--media-grayscale':'0%', '--media-sepia':'30%', '--media-saturate':'110%', '--media-hue':'-5deg', '--media-brightness':'103%', '--media-contrast':'95%' },
+  orange: { '--media-grayscale':'100%', '--media-sepia':'100%', '--media-saturate':'600%', '--media-hue':'-15deg', '--media-brightness':'100%', '--media-contrast':'105%' }
+};
 const DEFAULTS = {
   '--ink':'#09140d', '--heading':'#09140d', '--ink-soft':'#14231a',
   '--control-text':'#09140d', '--strong-text':'#09140d', '--paper':'#f8f2dd',
@@ -300,10 +359,15 @@ const DEFAULTS = {
   '--window-inactive':'#2a3b2f', '--window-border-inactive':'#2a3b2f',
   '--title-text':'#c8e3d2', '--title-text-inactive':'#91a899',
   '--accent-hover':'#6fcf9a', '--button-text':'#f2ecd6',
-  '--disabled-text':'#b3ab8d'
+  '--disabled-text':'#b3ab8d',
+  '--danger':'#a04a3a', '--warning':'#b58b3a',
+  '--ok':'#276b47', '--info':'#3f66ad',
+  ...MEDIA_PRESETS.none, '--media-filter':'none'
 };
 const palette = byId('palette');
 const sliders = byId('sliders');
+const mediaSliders = byId('mediaSliders');
+const mediaPreset = byId('mediaPreset');
 const themeTemplate = byId('themeTemplate');
 const themeName = byId('themeName');
 const status = byId('status');
@@ -318,7 +382,8 @@ let ghToken = '';
    load, loadSeq drops the result of any load that a newer one has superseded. */
 let edited = false;
 let loadSeq = 0;
-const SLIDER_UNITS = Object.fromEntries(SLIDERS.map(([name, , , , , unit]) => [name, unit]));
+const SLIDER_UNITS = Object.fromEntries(ALL_SLIDERS.map(([name, , , , , unit]) => [name, unit]));
+byId('mockMedia').src = new URL('../../assets/backgrounds/Shoe-Throwing-Clown-4.JPG', appBaseUrl).href;
 
 /* Apply, save and commit read the controls rather than trusting the cached
    palette, so what leaves the editor is always what is on screen. */
@@ -328,7 +393,15 @@ function readControls() {
     if (!Object.hasOwn(values, name)) continue;
     values[name] = input.type === 'range' ? `${input.value}${SLIDER_UNITS[name]}` : input.value;
   }
+  values['--media-filter'] = makeMediaFilter();
   return { ...values };
+}
+
+function makeMediaFilter() {
+  if (Object.entries(MEDIA_PRESETS.none).every(([name, value]) => values[name] === value)) return 'none';
+  return `grayscale(${values['--media-grayscale']}) sepia(${values['--media-sepia']}) ` +
+    `saturate(${values['--media-saturate']}) hue-rotate(${values['--media-hue']}) ` +
+    `brightness(${values['--media-brightness']}) contrast(${values['--media-contrast']})`;
 }
 
 function safeName(value) {
@@ -386,9 +459,9 @@ function renderPalette() {
   }
 }
 
-function renderSliders() {
-  sliders.textContent = '';
-  for (const [variable, label, min, max, step, unit] of SLIDERS) {
+function renderSliderSet(container, fields, media = false) {
+  container.textContent = '';
+  for (const [variable, label, min, max, step, unit] of fields) {
     const row = document.createElement('div');
     row.className = 'slider-row';
     const title = document.createElement('label'); title.textContent = label;
@@ -402,16 +475,29 @@ function renderSliders() {
     const edit = () => {
       values[variable] = `${input.value}${unit}`;
       edited = true;
+      if (media) mediaPreset.value = matchingMediaPreset();
       show(); updateLivePreview();
     };
     input.addEventListener('input', edit);
     input.addEventListener('change', edit);
     show();
-    row.append(title, code, input); sliders.appendChild(row);
+    row.append(title, code, input); container.appendChild(row);
   }
 }
 
+function matchingMediaPreset() {
+  return Object.entries(MEDIA_PRESETS).find(([, preset]) =>
+    Object.entries(preset).every(([name, value]) => values[name] === value))?.[0] || 'custom';
+}
+
+function renderSliders() {
+  renderSliderSet(sliders, SLIDERS);
+  mediaPreset.value = matchingMediaPreset();
+  renderSliderSet(mediaSliders, MEDIA_SLIDERS, true);
+}
+
 function updateLivePreview() {
+  values['--media-filter'] = makeMediaFilter();
   for (const [name, value] of Object.entries(values)) mockDesktop.style.setProperty(name, value);
   status.textContent = `${safeName(themeName.value)} — previewing locally`;
 }
@@ -428,14 +514,15 @@ function applyToDesktop() {
 
 function restoreDesktopTheme() {
   if (appRoot === document && window.parent === window) {
-    for (const [name] of [...COLOURS, ...SLIDERS]) document.documentElement.style.removeProperty(name);
+    for (const [name] of [...COLOURS, ...ALL_SLIDERS, ['--media-filter']]) document.documentElement.style.removeProperty(name);
   } else sendToClackOS({ type: 'clackos-theme-preview', variables: null });
   status.textContent = 'Desktop restored to its active theme.';
 }
 
 function makeCss() {
   const current = readControls();
-  const lines = [...COLOURS, ...SLIDERS].map(([name]) => `  ${name}: ${current[name]};`);
+  const lines = [...COLOURS, ...ALL_SLIDERS].map(([name]) => `  ${name}: ${current[name]};`);
+  lines.push(`  --media-filter: ${current['--media-filter']};`);
   return `/* ${safeName(themeName.value)} — generated by the ClackOS Theme Editor */\n:root {\n${lines.join('\n')}\n}\n`;
 }
 
@@ -448,8 +535,8 @@ function loadCss(css, name) {
       seen.add(match[1]);
     }
   }
-  for (const [name, , min, max, , unit] of SLIDERS) {
-    const match = new RegExp(`${name}\\s*:\\s*(-?[0-9.]+)\\s*${unit === '%' ? '%' : 'px'}`, 'i').exec(css);
+  for (const [name, , min, max, , unit] of ALL_SLIDERS) {
+    const match = new RegExp(`${name}\\s*:\\s*(-?[0-9.]+)\\s*${unit}`, 'i').exec(css);
     if (!match) continue;
     next[name] = `${Math.min(max, Math.max(min, parseFloat(match[1])))}${unit}`;
     seen.add(name);
@@ -465,7 +552,15 @@ function loadCss(css, name) {
   if (!seen.has('--window-border-inactive')) next['--window-border-inactive'] = next['--window-inactive'];
   /* Title text used to be one colour for active and inactive windows. */
   if (!seen.has('--title-text-inactive')) next['--title-text-inactive'] = next['--title-text'];
-  values = next; themeName.value = safeName(name);
+  /* Success and information had no role of their own, so a theme that predates
+     them opens showing the accent it would have been painted with rather than
+     the default palette's green — which on a red or blue theme would look like
+     the editor had lost the file's colours. */
+  if (!seen.has('--ok')) next['--ok'] = next['--leaf-deep'];
+  if (!seen.has('--info')) next['--info'] = next['--sage'];
+  values = next;
+  values['--media-filter'] = makeMediaFilter();
+  themeName.value = safeName(name);
   themeTemplate.value = [...themeTemplate.options].some(option => option.value === themeName.value) ? themeName.value : '';
   edited = false;
   renderPalette(); renderSliders(); updateLivePreview();
@@ -597,6 +692,14 @@ async function commitTheme() {
 }
 
 palette.addEventListener('change', updateLivePreview);
+mediaPreset.addEventListener('change', () => {
+  const preset = MEDIA_PRESETS[mediaPreset.value];
+  if (!preset) return;
+  Object.assign(values, preset); edited = true;
+  renderSliderSet(mediaSliders, MEDIA_SLIDERS, true);
+  mediaPreset.value = matchingMediaPreset();
+  updateLivePreview();
+});
 themeTemplate.addEventListener('change', async () => {
   if (!themeTemplate.value) return;
   try { await loadWebsiteTheme(themeTemplate.value); }

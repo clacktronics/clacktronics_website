@@ -24,10 +24,22 @@ const THEME_VARS = [
   '--leaf', '--leaf-deep', '--menu-text', '--menu-dim', '--desktop',
   '--titlebar', '--window-border', '--window-inactive', '--window-border-inactive',
   '--title-text', '--title-text-inactive', '--accent-hover', '--button-text',
-  '--disabled-text'
+  '--disabled-text', '--danger', '--warning', '--ok', '--info'
 ];
-/* Colours are hex; the two drop-shadow controls are a length and a percentage. */
-const THEME_UNIT_VARS = { '--shadow-distance': /^\d{1,2}(\.\d+)?px$/, '--shadow-alpha': /^\d{1,3}(\.\d+)?%$/ };
+/* Non-colour controls are validated before an editor preview can put them into
+ * another document's inline style. */
+const THEME_UNIT_VARS = {
+  '--shadow-distance': /^\d{1,2}(\.\d+)?px$/,
+  '--shadow-alpha': /^\d{1,3}(\.\d+)?%$/,
+  '--media-grayscale': /^\d{1,3}(\.\d+)?%$/,
+  '--media-sepia': /^\d{1,3}(\.\d+)?%$/,
+  '--media-saturate': /^\d{1,3}(\.\d+)?%$/,
+  '--media-hue': /^-?\d{1,3}(\.\d+)?deg$/,
+  '--media-brightness': /^\d{1,3}(\.\d+)?%$/,
+  '--media-contrast': /^\d{1,3}(\.\d+)?%$/
+};
+const THEME_FILTER_VAR = '--media-filter';
+const THEME_FILTER_PATTERN = /^(?:none|grayscale\(\d{1,3}(?:\.\d+)?%\) sepia\(\d{1,3}(?:\.\d+)?%\) saturate\(\d{1,3}(?:\.\d+)?%\) hue-rotate\(-?\d{1,3}(?:\.\d+)?deg\) brightness\(\d{1,3}(?:\.\d+)?%\) contrast\(\d{1,3}(?:\.\d+)?%\))$/;
 let activeTheme = 'clackos.css';
 let themePreview = null;
 let availableThemes = new Set(['clackos.css']);
@@ -67,6 +79,10 @@ function setPreviewOnDocument(doc, variables) {
     else
       doc.documentElement.style.removeProperty(name);
   }
+  if (variables && THEME_FILTER_PATTERN.test(String(variables[THEME_FILTER_VAR] || '').trim()))
+    doc.documentElement.style.setProperty(THEME_FILTER_VAR, String(variables[THEME_FILTER_VAR]).trim());
+  else
+    doc.documentElement.style.removeProperty(THEME_FILTER_VAR);
 }
 
 function revealThemedFrame(frame, link) {
@@ -80,7 +96,7 @@ function revealThemedFrame(frame, link) {
 
 function themeVariablesForDocument(doc) {
   const styles = doc.defaultView.getComputedStyle(doc.documentElement);
-  return Object.fromEntries([...THEME_VARS, ...Object.keys(THEME_UNIT_VARS)]
+  return Object.fromEntries([...THEME_VARS, ...Object.keys(THEME_UNIT_VARS), THEME_FILTER_VAR]
     .map(name => [name, styles.getPropertyValue(name).trim()]));
 }
 
@@ -372,7 +388,8 @@ function applyWallpaper(name) {
    * transparent pattern layer, otherwise this inline colour would override
    * --desktop and make Theme Editor changes appear not to work. */
   desktop.style.removeProperty('background-color');
-  desktop.style.backgroundImage = wp.image;
+  desktop.style.removeProperty('background-image');
+  desktop.style.setProperty('--desktop-wallpaper-image', wp.image);
   wallpaperDropdowns.forEach(buildWallpaperMenu);
 }
 
@@ -441,133 +458,19 @@ function rememberWindowBox(rec) {
  * shell's wallpaper, palette or window contents) and would do nothing opened
  * on their own, so they are skipped here exactly as the plain mirror skips
  * them. Every other app gets the item, including the full-window ones with no
- * menu bar of their own — those are given a bar to hold it. */
+ * menu bar of their own — those are given a bar to hold it.
+ *
+ * The bar itself, and the File menu the item goes in, come from
+ * assets/js/app-bar.js: the same code makes the bar for the link an app opened
+ * on its own puts back the other way, to the desktop. */
 const STANDALONE_LINK_CLASS = 'rm-standalone-link';
-
-/* Menu bar styling for apps that do not load assets/css/app.css (the
- * full-window vendor wrappers style themselves). Written with the same values
- * app.css uses, so an app that does load it looks no different. */
-const STANDALONE_BAR_CSS = `
-.rm-standalone-bar {
-  flex: none; display: flex; gap: 2px; padding: 0 8px;
-  background: var(--paper-deep, #e7e2d4); border-bottom: 1px solid var(--paper-line, #c9c2ae);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-}
-.rm-standalone-bar .rm { position: relative; }
-.rm-standalone-bar .rm > button {
-  all: unset; cursor: pointer; padding: 8px 12px; font: inherit; font-size: 12px;
-  color: var(--control-text, #2f2a1f);
-}
-.rm-standalone-bar .rm > button:hover, .rm-standalone-bar .rm.open > button {
-  background: var(--ink, #2f2a1f); color: var(--menu-text, #f6f2e6);
-}
-.rm-standalone-bar .rm-dd {
-  position: absolute; top: 100%; left: 0; min-width: 240px; z-index: 2147483000;
-  background: var(--paper, #f6f2e6); border: 2px solid var(--ink, #2f2a1f);
-  border-radius: 0 0 8px 8px; display: none; padding: 6px 2px;
-}
-.rm-standalone-bar .rm.open > .rm-dd { display: block; }
-.rm-standalone-bar .rm-dd a {
-  all: unset; box-sizing: border-box; display: flex; align-items: center; width: 100%;
-  cursor: pointer; gap: 8px; padding: 7px 14px; font: inherit; font-size: 12px;
-  color: var(--control-text, #2f2a1f); white-space: nowrap;
-}
-.rm-standalone-bar .rm-dd a:hover { background: var(--ink, #2f2a1f); color: var(--menu-text, #f6f2e6); }
-.rm-standalone-bar .rm-dd a:focus-visible { outline: 2px solid var(--leaf, #4c7a4c); outline-offset: -2px; }
-/* the icon, for an app that does not load assets/css/icons.css either */
-.rm-standalone-bar .rm-dd .pixel-icon {
-  display: inline-block; flex: none; width: 16px; height: 16px;
-  background-color: currentColor;
-  -webkit-mask: var(--standalone-icon) center / contain no-repeat;
-  mask: var(--standalone-icon) center / contain no-repeat;
-}
-/* the app's shell keeps whatever layout the app had; the bar sits above it */
-.rm-standalone-shell { flex: 1 1 auto; min-height: 0; min-width: 0; }
-`;
-
-/* The bar an app gets when it has none: everything the app already had moves
- * into a shell below it, laid out the way the app laid itself out, so a
- * full-window canvas, iframe or sidebar still fills what is left. */
-function createMenuBar(root) {
-  const doc = root.ownerDocument || root;
-  const view = doc.defaultView;
-  const container = root.body || root;              /* iframe document, or shadow root */
-  const layoutSource = root.body || root.host;
-  if (!container || !view || !layoutSource) return null;
-
-  const style = doc.createElement('style');
-  const iconUrl = new URL('assets/icons/pixelarticons/open.svg', location.href).href;
-  style.textContent = `.rm-standalone-bar { --standalone-icon: url('${iconUrl}'); }` + STANDALONE_BAR_CSS;
-  (root.head || root).appendChild(style);
-
-  const box = view.getComputedStyle(layoutSource);
-  const shell = doc.createElement('div');
-  shell.className = 'rm-standalone-shell';
-  shell.style.display = box.display === 'inline' ? 'block' : box.display;
-  shell.style.flexDirection = box.flexDirection;
-  shell.style.alignItems = box.alignItems;
-  /* stylesheets and scripts stay where they are — only what the app renders
-   * moves, and moving a script node would run it a second time */
-  for (const node of [...container.childNodes]) {
-    if (['STYLE', 'LINK', 'SCRIPT'].includes(node.nodeName)) continue;
-    shell.appendChild(node);
-  }
-
-  const bar = doc.createElement('nav');
-  bar.className = 'rm-bar rm-standalone-bar';
-  bar.setAttribute('aria-label', 'App menu');
-  container.append(bar, shell);
-  if (root.body) {
-    root.body.style.display = 'flex';
-    root.body.style.flexDirection = 'column';
-    root.body.style.alignItems = 'stretch';
-    if (!root.documentElement.style.height) root.body.style.minHeight = '100vh';
-  } else {
-    const hostStyle = doc.createElement('style');
-    hostStyle.textContent = ':host { display: flex !important; flex-direction: column; }';
-    root.appendChild(hostStyle);
-  }
-  return bar;
-}
-
-/* The app's own File menu if it has one, otherwise a new one at the head of
- * the menu bar, wired to open and close like the app's other menus. Apps bind
- * their menu toggles at load over the menus that existed then, so a menu added
- * afterwards brings its own behaviour. */
-function ensureFileMenu(root, bar) {
-  const doc = root.ownerDocument || root;
-  const label = menu => (menu.querySelector(':scope > button')?.textContent || '').trim().toLowerCase();
-  const menus = [...bar.querySelectorAll(':scope > .rm')];
-  const existing = menus.find(menu => label(menu) === 'file');
-  if (existing) return existing;
-
-  const menu = doc.createElement('div');
-  menu.className = 'rm';
-  menu.innerHTML = '<button>File</button><div class="rm-dd"></div>';
-  bar.prepend(menu);
-
-  menu.querySelector(':scope > button').addEventListener('click', event => {
-    event.stopPropagation();
-    const opening = !menu.classList.contains('open');
-    bar.querySelectorAll('.rm.open').forEach(other => other.classList.remove('open'));
-    if (opening) menu.classList.add('open');
-  });
-  /* another menu in the bar opening closes this one: the app's own handler
-   * only knows about the menus it captured at load. Capture, so it runs
-   * before that handler opens the menu that was clicked. */
-  bar.addEventListener('click', event => {
-    if (!menu.contains(event.target)) menu.classList.remove('open');
-  }, true);
-  doc.addEventListener('click', () => menu.classList.remove('open'));
-  return menu;
-}
 
 function addStandaloneAppLink(root, pageUrl, def) {
   if (!root || def?.plain === false) return;
   if (root.querySelector('.' + STANDALONE_LINK_CLASS)) return;
-  const bar = root.querySelector('.rm-bar') || createMenuBar(root);
+  const bar = window.ClackOSAppBar?.ensureBar(root);
   if (!bar) return;
-  const dd = ensureFileMenu(root, bar).querySelector(':scope > .rm-dd');
+  const dd = window.ClackOSAppBar.ensureFileMenu(root, bar).querySelector(':scope > .rm-dd');
   if (!dd) return;
 
   const doc = root.ownerDocument || root;
@@ -694,6 +597,10 @@ async function mountIntegratedApp(body, launchPage, title, onClose) {
     onClose(() => menuObserver.disconnect());
     syncMenuOverflow();
 
+    /* menus opening on hover, listening on this root rather than the document
+     * (see assets/js/app-menu.js) */
+    window.ClackOSMenus?.install(root);
+
     bindWebLinkRouting(root);
     addStandaloneAppLink(root, sourceUrl.href, appDefs.get(launchPage.split(/[?#]/)[0]));
   } catch (error) {
@@ -744,7 +651,11 @@ async function openWindow(id, restore = null) {
       f.className = 'appframe theme-loading';
       f.src = 'content/' + launchPage;
       f.title = meta.title;
-      if (page === 'applications/clackbase.html') f.allow = 'midi';
+      /* device access is delegated to the frame only where a menu entry asks
+       * for it: an app that talks to hardware (MIDI, serial) names the
+       * permissions it needs in menu.json rather than having them assumed */
+      if (def.allow) f.allow = def.allow;
+      else if (page === 'applications/clackbase.html') f.allow = 'midi';
       /* clicks inside the app should still raise its window */
       f.addEventListener('load', () => {
         try {
@@ -754,6 +665,7 @@ async function openWindow(id, restore = null) {
           /* clicking into an app also hands it the keyboard: apps that render
            * to a canvas (emulators) never take focus on their own */
           f.contentDocument.addEventListener('pointerdown', () => {
+            closeMenus();          /* clicking into an app is "outside" the desktop menus */
             focusWindow(el);
             try { f.contentWindow.focus(); } catch {}
           });
@@ -1955,6 +1867,15 @@ function buildMenu(folder, def) {
 document.addEventListener('click', closeMenus);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
 
+/* The other half of that: a click on the desktop is "outside" for an app
+ * running in an iframe too, but its document never sees the click, so the menu
+ * it left open is closed from here (assets/js/app-menu.js, loaded by the app). */
+document.addEventListener('pointerdown', () => {
+  document.querySelectorAll('iframe.appframe').forEach(frame => {
+    try { frame.contentWindow?.ClackOSCloseAppMenus?.(); } catch {}
+  });
+});
+
 /* ---------------- Actions ---------------- */
 function runAction(action) {
   if (action.startsWith('open:')) { openWindow(action.slice(5)); return; }
@@ -2320,6 +2241,12 @@ function handleAppMessage(data, source) {
     /* an app asking for the state it was restored with */
     const rec = windows.get(windowIdFor(source));
     if (rec) deliverAppState(rec, source);
+  } else if (data?.type === 'clackos-focus-window') {
+    /* an app asking for its window to come to the front — ClackPaint does this
+     * when a dialog opens or closes, since a dialog dragged out of the window
+     * sits on the desktop and must not be left behind another window */
+    const rec = windows.get(windowIdFor(source));
+    if (rec) focusWindow(rec.el);
   } else if (data?.type === 'clackos-close-window') {
     /* apps that can quit on their own (QBasic's File > Exit) close their window */
     const id = windowIdFor(source);

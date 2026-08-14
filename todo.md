@@ -3,7 +3,6 @@
 ### Aesthetic Tweaks and experience improvements
 
 * Make entire site downloadable
-* Consistent theme in in apps
 
 ### Non working features and bugs
 
@@ -27,7 +26,7 @@
 * Midi controllable, downloadable, mono synth.
 * Waveacity
 * SSTV encoder and decoder
-* AFSK encoder and decoder
+* ClackMo: decoders for V.22 DQPSK and multi-channel CW — the other thirteen modes read back in ClackDem
 * Falstad2KiCAD vise versa
 * Falstad2Spice vise versa
 

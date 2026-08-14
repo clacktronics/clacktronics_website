@@ -53,7 +53,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   display: none; padding: 6px 2px;
   box-shadow: 6px 6px 0 color-mix(in srgb, var(--shadow) 20%, transparent);
 }
-.rm.open .rm-dd { display: block; }
+/* a child selector, so the Export fly-out is not dragged open with the File
+   menu that contains it */
+.rm.open > .rm-dd { display: block; }
 .rm-dd button {
   all: unset; box-sizing: border-box; display: flex; justify-content: space-between; gap: 18px;
   width: 100%; cursor: pointer; padding: 7px 14px; font: inherit; font-size: 12px;
@@ -62,6 +64,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .rm-dd button:hover:not(:disabled) { background: var(--ink); color: var(--menu-text); }
 .rm-dd .pixel-icon { width: 16px; height: 16px; }
 .rm-dd .sep { height: 1px; background: var(--paper-line); margin: 6px 0; }
+
+/* File → Export fly-out. It sits beside its parent on a desktop and drops
+   underneath the item on a phone, where there is no room to the side. */
+.rm-sub { position: relative; }
+.rm-sub-arrow { margin-left: auto; font-size: 10px; }
+.rm-sub-dd { top: -6px; left: 100%; min-width: 220px; border-radius: 0 8px 8px 8px; }
+.rm-sub.open > .rm-sub-dd { display: block; }
+.rm-sub.open > .rm-sub-open { background: var(--ink); color: var(--menu-text); }
 kbd { font: inherit; color: var(--sage); }
 .rm-dd button:hover kbd { color: var(--leaf); }
 .engine-state {
@@ -79,7 +89,7 @@ kbd { font: inherit; color: var(--sage); }
 }
 .viewer::before {
   content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .15;
-  background-image: linear-gradient(rgba(79,174,125,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(79,174,125,.18) 1px, transparent 1px);
+  background-image: linear-gradient(color-mix(in srgb, var(--leaf) 18%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--leaf) 18%, transparent) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 .viewer.dragging { outline: 3px solid var(--leaf); outline-offset: -6px; }
@@ -88,7 +98,7 @@ kbd { font: inherit; color: var(--sage); }
   position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 10px; color: var(--menu-text); text-align: center;
 }
-.empty-state span { color: #8fcaa8; }
+.empty-state span { color: var(--menu-dim); }
 .empty-icon {
   display: grid; place-items: center; width: 54px; height: 54px; margin-bottom: 4px;
   border: 1px solid var(--leaf); border-radius: 8px; color: var(--leaf) !important; font-size: 22px;
@@ -96,7 +106,7 @@ kbd { font: inherit; color: var(--sage); }
 .empty-icon .pixel-icon { width: 32px; height: 32px; }
 .viewer-badge, .drop-hint {
   position: absolute; z-index: 3; top: 10px; padding: 5px 8px; border: 1px solid var(--leaf);
-  color: var(--leaf); background: rgba(9,20,13,.82); font-size: 10px; letter-spacing: .08em;
+  color: var(--leaf); background: var(--overlay-strong); font-size: 10px; letter-spacing: .08em;
 }
 .viewer-badge { left: 10px; max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .drop-hint { right: 10px; display: none; }
@@ -121,7 +131,7 @@ kbd { font: inherit; color: var(--sage); }
   min-width: 34px; height: 31px; border: 1px solid var(--ink); border-radius: 5px;
   background: var(--paper); color: var(--ink); font-weight: 600;
 }
-.icon-btn:hover, .toggle-btn:hover { background: #e9e1c3; }
+.icon-btn:hover, .toggle-btn:hover { background: color-mix(in srgb, var(--paper-deep) 84%, var(--ink)); }
 .icon-btn .pixel-icon { width: 18px; height: 18px; }
 .pause-bars { position: relative; display: inline-block; width: 15px; height: 17px; }
 .pause-bars::before, .pause-bars::after {
@@ -149,7 +159,7 @@ kbd { font: inherit; color: var(--sage); }
   padding: 9px 10px; overflow: hidden; border-right: 1px solid var(--ink); background: var(--paper);
 }
 .clip-segment:last-of-type { border-right: 0; }
-.clip-segment:hover, .clip-segment.active { background: #e5efd8; }
+.clip-segment:hover, .clip-segment.active { background: color-mix(in srgb, var(--leaf) 22%, var(--paper)); }
 .clip-segment.active::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--leaf-deep); }
 .clip-segment b, .clip-segment span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .clip-segment b { color: var(--ink); font-size: 11px; font-weight: 600; }
@@ -179,6 +189,8 @@ input[type="text"], select {
   background: var(--paper); color: var(--ink); font-size: 11.5px;
 }
 .export-check { margin: 2px 0 11px; color: var(--ink); font-size: 10.5px; }
+.estimate { margin: 0 0 10px; color: var(--sage); font-size: 10.5px; line-height: 1.6; }
+.estimate.heavy { color: var(--danger); }
 .export-btn { width: 100%; text-align: center; }
 .cancel-btn { width: 100%; margin-top: 8px; text-align: center; color: var(--danger) !important; }
 .progress-wrap { display: flex; flex-direction: column; gap: 6px; margin-top: 11px; color: var(--sage); font-size: 10px; }
@@ -196,7 +208,7 @@ input[type="text"], select {
 }
 .btn.primary { background: var(--ink); color: var(--menu-text); }
 .btn.primary:hover { background: var(--leaf-deep); border-color: var(--leaf-deep); }
-.btn.ghost:hover { background: #e9e1c3; }
+.btn.ghost:hover { background: color-mix(in srgb, var(--paper-deep) 84%, var(--ink)); }
 .btn:disabled { opacity: .45; cursor: default; }
 
 .statusbar { display: flex; align-items: center; gap: 8px; min-height: 27px; padding: 5px 9px; border: 1px solid var(--paper-line); border-radius: 5px; color: var(--sage); background: var(--paper-deep); font-size: 10.5px; }
@@ -206,7 +218,7 @@ input[type="text"], select {
 @keyframes pulse { 50% { opacity: .25; } }
 
 dialog { width: min(540px, calc(100% - 28px)); border: 0; padding: 0; background: transparent; color: var(--ink-soft); }
-dialog::backdrop { background: rgba(9, 20, 13, .55); }
+dialog::backdrop { background: var(--overlay); }
 .dialog-card { border: 2px solid var(--ink); border-radius: 8px; padding: 16px; background: var(--paper); box-shadow: 8px 8px 0 color-mix(in srgb, var(--shadow) 25%, transparent); }
 .dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
 .dialog-close { all: unset; cursor: pointer; color: var(--ink); font-size: 24px; line-height: 1; }
@@ -223,9 +235,17 @@ dialog::backdrop { background: rgba(9, 20, 13, .55); }
 }
 @media (max-width: 600px) {
   .app-main { padding: 10px; }
-  .rm-bar { overflow-x: auto; }
+  /* The bar used to scroll sideways, which made it a clipping box: every
+     dropdown was cut off at the 33px bar and none of the items could be
+     tapped. It wraps to a second row instead, so the menus hang free. */
+  .rm-bar { flex-wrap: wrap; padding-inline: 4px; }
   .rm > button { padding-inline: 9px; }
   .engine-state { display: none; }
+  /* Left-anchored 260px menus ran off the right edge of a phone. They are
+     free to size themselves and are nudged back on screen by positionMenu(). */
+  .rm-dd { min-width: 200px; max-width: calc(100vw - 12px); }
+  .rm-dd button { white-space: normal; gap: 10px; }
+  .rm-sub-dd { position: static; margin: 2px 0 2px 12px; max-width: none; border-radius: 6px; }
   .control-column { display: flex; }
   .viewer { min-height: 220px; }
   .time-row { grid-template-columns: 1fr 1fr; }
@@ -233,8 +253,26 @@ dialog::backdrop { background: rgba(9, 20, 13, .55); }
   .time-row .timecode:last-child { text-align: right; }
   .transport-buttons { width: 100%; justify-content: space-between; margin-right: 0; }
   .icon-btn { flex: 1; }
+  .transport-row .toggle-btn { flex: 1 1 0; }
+  .compact-field { width: 100%; }
+  .compact-field select { flex: 1; }
   .edit-row .spacer { display: none; }
   .edit-row .btn { flex: 1 1 40%; text-align: center; }
+}
+
+/* Touch targets. A 13px checkbox and a 16px slider are fine under a mouse and
+   nearly unhittable under a thumb, so anything tapped grows on a touchscreen. */
+@media (pointer: coarse) {
+  .rm > button { padding-block: 11px; }
+  .rm-dd button { padding: 12px 14px; }
+  .rm-dd .sep { margin: 4px 0; }
+  .icon-btn, .toggle-btn, .btn { min-height: 40px; }
+  .btn { padding-block: 10px; }
+  .text-btn { padding: 6px 0; }
+  input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; }
+  input[type="range"] { height: 30px; }
+  .seek-stack input { height: 34px; }
+  select, input[type="text"] { min-height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }

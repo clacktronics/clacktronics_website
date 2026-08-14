@@ -31,6 +31,28 @@
   --accent-hover: #6fcf9a;
   --button-text: #f2ecd6;
   --disabled-text: #b3ab8d;
+  /* Status, scrim and series roles — see clackos.css for what each is for.
+     Repeated here because a standalone app page never loads clackos.css and
+     would otherwise have no fallback before the desktop injects a theme. */
+  --danger: #a04a3a;
+  --warning: #b58b3a;
+  --ok: var(--leaf-deep);
+  --info: #3f66ad;
+  --overlay: color-mix(in srgb, var(--shadow) 42%, transparent);
+  --overlay-strong: color-mix(in srgb, var(--shadow) 82%, transparent);
+  --series-1: var(--leaf-deep);
+  --series-2: var(--danger);
+  --series-3: var(--info);
+  --series-4: var(--warning);
+  --series-5: var(--sage);
+  --series-6: var(--leaf);
+  --media-grayscale: 0%;
+  --media-sepia: 0%;
+  --media-saturate: 100%;
+  --media-hue: 0deg;
+  --media-brightness: 100%;
+  --media-contrast: 100%;
+  --media-filter: none;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; }
@@ -39,6 +61,9 @@ body {
   font-size: 12.5px;
   color: var(--ink-soft);
   background: var(--paper);
+}
+:where(img, video, canvas):not([data-media-treatment="none"]) {
+  filter: var(--media-filter);
 }
 .app { display: flex; flex-direction: column; min-height: 100%; }
 .app-main { padding: 20px 26px; display: flex; flex-direction: column; gap: 16px; flex: 1; }
@@ -65,8 +90,14 @@ input[type="text"]:focus-visible, select:focus-visible {
 input[type="range"] { accent-color: var(--leaf-deep); }
 
 /* ---- in-app menu bar ---- */
+/* The bar wraps rather than running off the side. A phone-width window is
+   narrower than most apps' bars — ClackPaint loses Image and Effects, Pure Data
+   loses everything past Put — and a flex row that does not wrap gives no way
+   back to those menus: they are not scrolled off, they are simply gone. Wrapping
+   costs a second row only when there was no room for one, so nothing about the
+   bar changes on a desktop. */
 .rm-bar {
-  display: flex; gap: 2px; padding: 0 8px;
+  display: flex; flex-wrap: wrap; gap: 2px; padding: 0 8px;
   background: var(--paper-deep); border-bottom: 1px solid var(--paper-line);
 }
 .rm { position: relative; }
@@ -75,8 +106,13 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 }
 .rm > button:hover, .rm.open > button { background: var(--ink); color: var(--menu-text); }
 .rm > button:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+/* A dropdown opens under its own button, so a menu far along the bar would hang
+   off the right of a phone screen — assets/js/app-menu.js shifts an open one
+   back inside the bar. The max-width is the floor under that: a dropdown wider
+   than the screen cannot be shifted anywhere useful, so it is narrowed instead. */
 .rm-dd {
   position: absolute; top: 100%; left: 0; min-width: 240px; z-index: 20;
+  max-width: calc(100vw - 16px);
   background: var(--paper); border: 2px solid var(--ink); border-radius: 0 0 8px 8px;
   display: none; padding: 6px 2px;
 }
@@ -118,7 +154,7 @@ input[type="range"] { accent-color: var(--leaf-deep); }
 .rec-seek { width: 100%; }
 .rec-btns { display: flex; flex-wrap: wrap; gap: 10px; }
 .rec-btns .pixel-icon { width: 17px; height: 17px; }
-.rec-record { color: #a04a3a; }
+.rec-record { color: var(--danger); }
 
 /* ---- paint ---- */
 .paint-app { height: 100%; min-height: 0; }

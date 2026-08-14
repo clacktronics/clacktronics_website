@@ -18,6 +18,7 @@ assets/
   js/model-scene.js         ← three.js viewer core (app + inline @[model])
   js/app-state.js           ← opt-in state persistence for application pages
   js/events.js              ← shared events reader (Calendar app + menu-bar pull-down)
+  js/midi-bytes.js          ← MIDI messages in words (ClackTerm + MIDIterm)
 content/
   site.json                 ← menu order + which windows open at boot
   file/                     ← FILE menu
@@ -40,6 +41,7 @@ content/
     appearance.html         ← background + theme chooser
     paint.html              ← ClackPaint app
     recorder.html           ← Sound Recorder app
+    scope.html              ← ClackScope oscilloscope app
     calendar.html           ← Calendar app
     calendar/events.csv     ← the upcoming events it shows
     calendar/luma.json      ← mirror of the Luma events (generated)
@@ -62,6 +64,49 @@ gives a bar to the full-window apps that have none. Apps marked
 itself — so they get no such link, the same ones the plain mirror leaves out
 of its Applications menu.
 
+An app opened on its own offers the way back the other way: **ClackOS**, the
+first item in its menu bar, linking to the desktop (`assets/js/app-home.js`,
+loaded by every app page). It appears only when the app *is* the page — inside
+a ClackOS window the desktop is already there — and full-window apps with no
+bar are given one for it. Both links build their bar with
+`assets/js/app-bar.js`.
+
+### The app menu bar on a phone
+
+A window on a 390px phone is about 366px wide, which is narrower than most
+apps' menu bars. Two things in `assets/css/app.css` keep the menus reachable
+there, and both apply to `.rm-standalone-bar` too (the copy of the same rules
+inside `assets/js/app-bar.js`, for apps that style themselves):
+
+- **`.rm-bar` wraps.** A flex row that does not wrap has no scrollbar and no
+  second line, so a menu past the right edge is not scrolled off, it is gone —
+  ClackPaint lost Image and Effects, Pure Data lost everything past Put. A
+  wrapped bar takes a second row only when there was no room for one, so
+  nothing changes on a desktop. Scrolling the bar sideways was the other
+  option and is the worse one: it makes the bar a clipping box, and then the
+  dropdowns are cut off at the bar's own height instead (Video Lab tried it
+  that way first — see the comment in `content/applications/video/styles.css`).
+- **Dropdowns are nudged back inside.** `.rm-dd` is anchored under its own
+  button, so on a narrow bar each successive menu opens further off the right
+  edge. `place()` in `assets/js/app-menu.js` measures an opening dropdown and
+  shifts it left until it fits, stopping at the left edge of the bar; the
+  `max-width` in the CSS narrows one too wide to be shifted anywhere useful.
+  It measures against **the bar, not the viewport**, because an integrated app
+  draws its menus in the desktop document, where the viewport is the whole
+  screen and the app is only as wide as its window. This is the same clamp the
+  desktop's own menus have always applied in `assets/js/clackos.js`; the app
+  bar is a separate implementation that needed its own.
+
+A non-wrapping bar was also what pushed several app pages wider than the
+screen: a `nowrap` flex row sets a min-content width the document has to
+honour, so the bar alone was making Python, Pure Data and the 3D Model Viewer
+scroll sideways. With it wrapping, every app page fits a 320px screen.
+
+Video Lab and ClackMosh keep private copies of the menu chrome rather than
+loading `app.css`, so a change here needs the matching change in
+`content/applications/video/styles.css` and
+`content/applications/clackmosh/styles.css`.
+
 There is **no build step**: the browser fetches `site.json`, each folder's
 `menu.json`, and the markdown files at runtime. Edit a `.md` file, refresh,
 done. Hosted on GitHub Pages (or any static host).
@@ -79,7 +124,12 @@ and the list shown in the editor are configured in `content/site.json`:
 ```
 
 Open **Applications → Theme Editor…** to change the palette with colour
-pickers and preview it live across the website. Its Template file dropdown is
+pickers and preview it live across the website. The Media treatment section
+can leave media untouched, make it black and white, add a warm cast, create an
+orange monochrome treatment, or tune the grayscale, warmth, hue, saturation,
+brightness and contrast manually. The treatment follows photos, video,
+canvas-rendered tools and the desktop wallpaper while leaving interface text
+and controls on their explicit theme colours. Its Template file dropdown is
 populated from the CSS themes registered in `content/site.json`, while the
 separate Theme file field keeps Save As and new-theme workflows available.
 The File menu can open a theme
@@ -92,6 +142,50 @@ the Markdown editor; the token is kept only in memory for that editor window.
 Theme filenames are restricted to letters, numbers, dots, underscores and
 hyphens and must end in `.css`. This keeps every template self-contained in the
 theme folder and prevents the editor from writing elsewhere in the repository.
+
+### Status, scrim and series roles
+
+The palette proper describes surfaces, text and one accent. It has no word for
+"this went wrong" or "careful", so for a long time every app that needed one
+wrote its own red or amber out in hex — and then kept it through a theme
+change. Four roles close that gap, and the Theme Editor offers them under
+**Status**:
+
+| Variable | Used for |
+| --- | --- |
+| `--danger` | errors, destructive actions, recording, a mine going off |
+| `--warning` | cautions, a busy lamp, a hot level meter, code `[!CAUTION]` |
+| `--ok` | success and confirmation; defaults to `--leaf-deep` |
+| `--info` | informational text and secondary data; defaults to `--sage` in the editor |
+
+Three more groups are **derived in the base stylesheet rather than set by a
+theme**, so a palette written before they existed — or by someone who has never
+heard of them — still moves them:
+
+- `--overlay` and `--overlay-strong` are the scrims behind modals, dialogs and
+  drop targets, mixed out of `--shadow`. They used to be written as
+  `rgba(9, 20, 13, …)`, which is the *default* theme's ink, so every modal on
+  the website laid a swamp-green veil over whatever palette was actually
+  chosen.
+- `--series-1` … `--series-6` are plot traces and chart series, used by the
+  serial and MIDI consoles, the graphing calculator and Clacksweeper's
+  neighbour counts. They are derived from the palette, so a new theme gets a
+  matching set of traces without naming them.
+
+Because the derived roles are built from variables the theme *does* set, only
+the four status colours need adding when writing a palette by hand.
+
+**What is deliberately left alone.** Some colours on the site carry meaning
+rather than style, and a theme must not move them: the resistor colour code,
+the PCB layer colours in the panel and heater tools, CircuitJS1's green
+positive and red negative voltage, ClackPaint's transparency checkerboard and
+default swatches, the RGB channel traces in the gamma table, and the two-tone
+selection outlines that have to read over arbitrary artwork. The graphing
+calculator's Oscilloscope and Blueprint surfaces keep their own fixed palettes
+too — those are drawing surfaces the reader picks, not the theme showing
+through. On the `monochrome` theme the series roles collapse to near-identical
+greys, which is that palette working as intended; the tools that use them all
+carry a label or a digit as the primary cue.
 
 ### Syntax highlighting
 
@@ -576,6 +670,23 @@ are part of the shell rather than content:
 Menus are inserted before `#menubar-right`, so they always fill the bar from
 the left however many there are.
 
+### The taskbar, and what it drops on a phone
+
+The taskbar holds the window buttons in `#tasks`, then three fixtures: the
+**Plain HTML** link to the mirror, the **CPU/RAM** readouts (browser telemetry
+— CPU is a pressure state, not a percentage; RAM is this page's JS heap), and
+the **build stamp** naming the deployed commit.
+
+`#tasks` is the only flexible one; everything after it is `flex: none` and
+`white-space: nowrap`. On a 390px phone those three were taking 292px of the
+bar between them and leaving the window switcher 23px to sit in — one open
+window's button wants 120px minimum, so it was unreadable and the control you
+most need on a small screen was the one squeezed out. Below 640px the
+telemetry and the build stamp are therefore hidden and the task buttons
+narrow, which gives `#tasks` about 243px and room for two legible windows.
+The Plain HTML link stays: the mirror being one tap away is the reason it is
+in the taskbar at all.
+
 ### Menu items (`menu.json`)
 
 ```json
@@ -608,6 +719,10 @@ reserved for in-desktop system utilities; all other app entries remain iframe
 loadable. `plain: false` keeps an entry out of the [plain HTML
 mirror](#plain-html-mirror)'s Applications menu — for apps that only mean
 anything inside the desktop, like the wallpaper and palette editors.
+`allow` is handed to the app's iframe as its permission policy, so an app that
+talks to hardware asks for what it needs by name — `"allow": "serial; usb"` for
+ClackTerm, `"allow": "midi"` for MIDIterm — and every other app is loaded
+without it.
 
 An app that knows its own natural size can make the window wrap around it
 instead of taking the `width`/`height` from `menu.json` as final: dispatch a
@@ -652,6 +767,118 @@ windows, and desktop actions.
   BroadcastChannel), Insert/Mix with File, Delete Before/After Current
   Position. Effects: Increase/Decrease Volume, Increase/Decrease Speed
   (pitch shifts, like the original), Add Echo, Reverse. Multi-instance.
+- `applications/modem.html` (Applications → Multimedia → ClackMo) — a faux
+  modem that turns typed text into real audio modulation, plays it and saves it
+  as a 16-bit mono `.wav`. Fifteen protocols in five families: DTMF and MF R1
+  signalling; Bell 202 AFSK (raw async or a genuine AX.25 UI frame, with bit
+  stuffing, NRZI and an X.25 frame check sequence), Bell 103, V.21, V.23, RTTY,
+  Morse and multi-channel CW (a line per channel, each with its own tone, speed
+  and start time, keyed at once and summed); the Kansas City Standard, ZX
+  Spectrum and Commodore 64 cassette formats; SMPTE linear timecode; and PSK31
+  and Bell 212A/V.22 DQPSK. Every
+  parameter that defines a mode — baud, mark and space frequencies, pulse
+  lengths, callsigns — is editable, and the signal is redrawn as a spectrogram
+  and waveform as it changes. Send a signal to Sound Recorder through the shared
+  audio clipboard to edit it there. The modulators live in
+  `applications/modem-protocols.js`, one `encode` per protocol over a single
+  Writer that owns sample timing and phase; the framing helpers are kept
+  separate from the tone generation so the decoders could be written beside
+  them. Signals are capped at three minutes.
+- `applications/modem-rx.html` (Applications → Multimedia → ClackDem) — the
+  other half: it takes audio and reads it back into text.
+  Thirteen of the fifteen modes decode (V.22 DQPSK and multi-channel CW are
+  encode-only so far). Audio comes from a WAV or other file the browser can
+  decode, from a drop onto the window, from the shared audio clipboard, or live
+  from the microphone, where the waterfall scrolls and characters appear as
+  they arrive. The parameters are the tuning controls — mark and space
+  frequencies, baud, framing — and what the demodulator actually measured is
+  shown beneath them along with a lock lamp, which is the quickest way to tell
+  a mistuned parameter from a bad recording. Output can be read as text or as a
+  timestamped event log carrying frame boundaries, callsigns and checksum
+  results. Because both windows are ordinary apps, putting the encoder and the
+  receiver side by side and pressing Play in one while the other listens
+  decodes the signal acoustically, out of the speakers and back in through the
+  microphone.
+- `applications/modem-decoders.js` — the demodulators, in four front ends: a
+  Goertzel tone bank for DTMF and MF R1; a quadrature correlator pair feeding
+  asynchronous framing for Bell 202, Bell 103, V.21, V.23, RTTY and the Kansas
+  City Standard, and a bit-clock recovery loop with NRZI, bit destuffing and a
+  verified frame check sequence for AX.25; zero-crossing interval timing for
+  the ZX Spectrum and C64 tape formats and SMPTE timecode, checksums verified;
+  and a differential detector with the varicode alphabet for PSK31. Morse is
+  read from the envelope of the keyed tone. Every decoder is a state machine
+  fed by `push()`, so the same code runs over a whole file and over a
+  microphone delivering a few thousand samples at a time. The alphabets and
+  tone plans are read back out of `modem-protocols.js` through its `tables`
+  export rather than copied, so an encoder's alphabet cannot change without its
+  decoder following.
+- `applications/scope.html` (Applications → Multimedia → ClackScope
+  Oscilloscope) — an oscilloscope for audio, laid out the way a bench
+  instrument is: a screen carrying the numbers that change while you watch, and
+  a column of settings beside it. Input is the soundcard (needs HTTPS +
+  permission; the browser's echo cancellation, noise suppression and automatic
+  gain are all turned off, since they gate and filter exactly the signal the
+  instrument exists to show), an audio file opened or dropped on the screen and
+  played through the speakers, or a built-in test tone with a waveform, a
+  frequency and a channel ratio — the tone is what the app opens with, so it
+  draws something before any permission has been granted. One volt on the
+  graticule is digital full scale.
+
+  Four displays, all off the same pair of `AnalyserNode`s (32768 points, so a
+  node gives both the newest 0.7 s of samples and their spectrum, which is a
+  timebase and an FFT for the price of one node per channel):
+
+  - **Sweep** — a triggered Y-T trace. The trigger hunts the level crossing
+    inside the captured block rather than trusting the clock, with hysteresis so
+    noise cannot arm it, and takes the most recent crossing so the picture is as
+    fresh as the buffer allows. Rising or falling, either channel as the source,
+    and Auto / Normal / Single: Auto sweeps anyway and says `AUTO`, Normal holds
+    the last triggered picture until an edge arrives, Single freezes on the
+    first one. Fast sweeps are drawn sample by sample and slow ones as one
+    min/max column per pixel, which is what a real timebase does at its two
+    extremes.
+  - **Roll** — the envelope, scrolling. A screen at 100 ms/div is twelve times
+    longer than the analyser holds, so the newest samples are reduced to
+    min/max pairs two milliseconds wide and pushed into a ring buffer: peak
+    detect, which is what a bench instrument switches to when a pixel is worth
+    more than a cycle. Sweep and roll are two ends of one timebase — stepping
+    past 50 ms/div moves into roll and back out again — but each remembers where
+    it was left.
+  - **X-Y** — right channel across, left channel up, for stereo. Its divisions
+    are kept square whatever shape the window is, or a circle comes out an
+    ellipse and the figure stops meaning anything.
+  - **FFT** — the spectrum on a log frequency axis from 20 Hz to Nyquist, 10 dB
+    a division, with its own decade graticule. The peak bin is refined by the
+    parabola through its neighbours, and that same reading feeds the `Freq`
+    measurement in every mode.
+
+  Volts and time per division are 1-2-5 steppers (also the wheel over the
+  screen, Shift for time, and the arrow keys); each channel has a vertical
+  position, drawn as a ground marker at the left edge the way a DSO draws it,
+  and the trigger level rides its own source channel's position rather than the
+  middle of the screen. AC coupling is the instrument's, not the browser's: the
+  offset is measured off the captured block and subtracted on the way to the
+  screen, never taken out of what is heard. Persistence is a phosphor: the trace
+  layer is eaten away a little each frame instead of cleared, off / short /
+  long. Measurements are Vpp, Vrms, peak in dBFS and frequency, with a peak
+  hold; **Measure → Copy Readings** puts them on the clipboard and
+  **File → Save Screen as PNG** saves the screen. `Space` runs and stops — STOP
+  freezes the picture rather than the maths, so what is on the phosphor when it
+  stops is what stays there.
+
+  The canvas cannot resolve `var()`, and the palettes are not all dark-on-light
+  — `blood` paints white ink on red paper, `tasteless` mint on tan — so rather
+  than assume `--ink` is the dark one, the screen takes whichever of the two
+  grounds is darker and picks its trace colours from the theme by contrast
+  against it, falling back to plain white or black for the readouts when no
+  theme colour clears a contrast ratio of 4. State (mode, both scales, trigger,
+  positions, persistence) is saved with the desktop through
+  [app state](#letting-an-app-remember-its-own-state); the input is deliberately
+  not, so a restored session cannot reopen the microphone by itself.
+- `applications/modem-ui.js` — what the two share: the waterfall and waveform
+  scope (including its live scrolling mode, one column per FFT hop), the
+  parameter form, the protocol menus, the 16-bit WAV container, file reading
+  and resampling, the shared audio clipboard and the transport.
 - `applications/clacksweeper.html` (Applications → Games → Clacksweeper) — a
   classic minesweeper game with Beginner, Intermediate, Expert and
   custom boards; safe first reveal; flags and question marks; number chording;
@@ -781,6 +1008,103 @@ windows, and desktop actions.
   `circuit.html?circuit=<name>.txt` — the wrapper compresses it into the
   simulator's `ctz` parameter. `?ctz=` links exported from the simulator
   itself (File → Export as Link) pass straight through.
+- `applications/gamma-table.html` (Applications → Electronics → Gamma Table) —
+  builds the gamma-correction lookup table an LED needs to fade the way the eye
+  expects. Mono or RGB (a curve and a gamma per channel, linked by default), any
+  table length from 2 to 4096 steps, and an output range of 8, 10, 12 or 16 bits
+  or a maximum of your own. The gamma sets the shape and the handles on the
+  graph adjust it: drag one to bend the response, double-click the graph to add
+  another, shift-click or right-click one to take it away. A handle holds its
+  distance from the plain gamma curve rather than an absolute height, so the
+  shaping survives moving the gamma slider, and Reset handles puts every one of
+  them back on the curve. Between the handles the curve is a monotone cubic, so
+  it never overshoots into a dip the LED would show as a flicker. Underneath,
+  two strips preview the ramp — the corrected one against the same number of
+  uncorrected steps — with the linear duty cycle sRGB-encoded, since a screen
+  and an LED do not share a response. The table comes out as an Arduino/C header
+  (`uint8_t`/`uint16_t`/`uint32_t` to suit the range, optionally `PROGMEM`), a
+  MicroPython `array` module, or CSV, each ready to copy or download, and the
+  panel beside the graph counts the distinct levels, the steps stuck at zero and
+  the memory the table will take. Everything it holds is remembered by the
+  desktop through `assets/js/app-state.js`.
+- `applications/serial-console.html` (Applications → Electronics → ClackTerm) —
+  a serial console. It talks to a USB serial port over **Web Serial** — baud
+  rate including a custom one, 7 or 8 data bits, parity, stop bits, RTS/CTS,
+  DTR and RTS as outputs, CTS/DSR/DCD/RI shown as they arrive, a break, and a
+  DTR pulse for the reset an Arduino expects — and to a **demo device** that
+  pretends to be a GPS receiver, an Arduino printing telemetry, a Modbus slave,
+  a modem, a GRBL controller, a DIN MIDI keyboard or an echo, which is what
+  makes the app worth opening in Firefox and Safari, where Web Serial does not
+  exist. Both can be open at once and every row says which it came from.
+
+  What arrives is put through one of ten interpreters: plain text (carriage
+  returns, backspaces and ANSI escapes behave as a terminal's would, so a
+  MicroPython REPL reads properly), a hex dump, NMEA 0183 with the checksum
+  verified and the fix, position, speed and satellites named, Modbus RTU cut
+  into frames on the idle gap with the CRC checked and the function and any
+  exception in words, MIDI bytes with running status and SysEx (DIN MIDI on a
+  UART at 31250 baud), SLIP (RFC 1055) and COBS framing, AT commands with the
+  final result codes classified and signal strength converted to dBm, GRBL
+  replies with the error and alarm numbers spelled out and the `?` status
+  report split up, and telemetry — `temp:23.4,rh:41` or plain comma-separated
+  numbers — which feeds a strip-chart plotter that autoscales, fits each line
+  to its own range on request and hides a line when its legend entry is
+  clicked.
+
+  Sending is by typed text with the line ending of your choice, by bytes in hex
+  (`1B 5B 41`, `0x0D` and `"text\r\n"` all read the same), by six editable
+  macros, by file, or by repeating what is in the box on an interval. Send →
+  keystrokes straight out turns the console into a real terminal — control
+  keys, arrows as ANSI sequences, no local echo, so what you see typed is the
+  device echoing it back. The console filters on text or a regex, timestamps by
+  clock, by delta or since connecting, holds still while you read, and saves as
+  text, as the raw received bytes, or as the plotted numbers in CSV. Everything
+  but the connection itself is remembered by the desktop through
+  `assets/js/app-state.js`.
+
+  Link → the two bridge entries hand DIN MIDI to **MIDIterm** in another
+  window, and take MIDI back the other way, over a `BroadcastChannel` named
+  `clackos-midi-bridge` — a serial port with a MIDI adapter on it therefore
+  reaches a real MIDI output without either app taking on the other's job. The
+  menu entry carries `"allow": "serial; usb"`, which is how ClackOS knows to
+  delegate device access to that app's frame and no other.
+- `applications/midi-console.html` (Applications → Multimedia → MIDIterm) — a
+  MIDI monitor and console over **Web MIDI**. Every message is decoded in
+  words by `assets/js/midi-bytes.js`, the parser ClackTerm uses for DIN MIDI —
+  notes with their names, controllers with theirs, program changes, pitch bend
+  as a signed number, aftertouch, channel mode messages, system common, the
+  realtime bytes, and SysEx named by manufacturer, with the universal messages
+  (identity request and reply, GM on) called what they are.
+
+  It can listen to one input or to every input at once, which is how you find
+  out which cable is which. Message types and channels filter separately, and
+  clock and active sensing start hidden because they bury everything else —
+  the tempo is still read off the incoming clock and shown in beats per minute
+  whether or not the messages are on show. A lane per channel lights as
+  traffic arrives and counts what is sounding, and the plotter draws every
+  controller, bend, aftertouch and note velocity that comes in, one line per
+  channel and controller.
+
+  Under the log sits the keyboard, the width of the window, with the channel,
+  velocity, octave, CC, program, bend and clock controls in a row above it. It
+  plays, and it shows the notes held at the input, so you can watch what a
+  controller is sending. How many octaves it spans follows the width — keys
+  keep their proportions rather than stretching into planks on a wide desktop
+  — every C is named, and keys a high bottom octave would push past note 127
+  grey out. View → Keyboard and controls puts the whole strip away.
+
+  Sending covers notes, CC (with a slider that sends as it moves), program
+  changes, pitch bend that springs back to centre, raw bytes in hex, panic and
+  reset-controllers on all sixteen channels, and a clock at a tempo you set —
+  aimed at absolute times rather than `setInterval`, which rounds 20.833 ms
+  down to 20 and turns 120 bpm into 125. SysEx gets a librarian: dumps are
+  captured as they arrive and save as a `.syx` file, and a `.syx` file sends
+  back a message at a time with a gap old instruments need. Thru passes the
+  input to the output untouched, and the same `clackos-midi-bridge` channel
+  carries messages to and from ClackTerm. The log saves as text or as CSV, one
+  row per message. A demo instrument — an arpeggiating synth, a controller, a
+  clocked sequencer, or a synth that answers an identity request — drives the
+  whole app without hardware. The menu entry carries `"allow": "midi"`.
 - `applications/kicad.html` (Applications → KiCAD Viewer…) — views KiCAD
   schematics and boards using KiCanvas (vendored under `vendor/kicanvas/`,
   MIT — see LICENSE.md and PROVENANCE.md there). KiCanvas compiles its
@@ -939,7 +1263,13 @@ windows, and desktop actions.
   stamp, soft blur, line, rectangle (outline/filled), ellipse and rectangular
   selection tools; a full Effects menu (see below); the
   classic 28-colour box with left/right-click foreground/background
-  colours; arbitrary bitmap dimensions up to 8192 × 8192; undo/redo; local or
+  colours; arbitrary bitmap dimensions up to 8192 × 8192; undo/redo with a
+  Photoshop-style History panel under the layers (every state named after the
+  action that made it, click one to step back or forward, ⌫ clears the states
+  to release their memory, Layer → Minimise History Panel folds it away). The
+  rail holding both panels starts folded to its edge tab so a fresh window gives
+  the canvas the width; open it from the tab or with Layer → Minimise Layers
+  Panel and that choice is remembered from then on. Local or
   website background opening; PNG saving and uploading straight to the web host
   (File → Upload to website…); image-size resampling, anchored
   canvas resizing, crop selection, flip, invert and clear. Transparent pixels
@@ -947,9 +1277,20 @@ windows, and desktop actions.
   reorderable layer stack with visibility, rename, duplicate, delete and merge
   controls; File → Open as Layer… (and its website equivalent) drops a picture
   onto a new layer, centred and scaled to fit, without disturbing the document
-  size. Rectangular, freehand-lasso and edge-snapping magnetic-lasso
+  size. File → Open → As Raw Data… opens a file that is not a picture at all —
+  a framebuffer dump, a sensor capture, anything — by guessing its width and
+  letting you scrub the offset until it lines up. Rectangular, freehand-lasso and edge-snapping magnetic-lasso
   selections crawl with animated marching ants, and can be copied or cut
-  directly to a new layer from the canvas right-click menu. A selection confines
+  directly to a new layer from the canvas right-click menu. **Select Object**
+  joins them: click the thing you want and SlimSAM — Meta's Segment Anything,
+  pruned, run in a worker through the vendored Transformers.js — works out where
+  it ends. Where the magic wand asks what else is this colour, this asks what
+  this thing is, so a cat in front of a sofa comes out as one object across a
+  dozen colours. The model looks at the picture once and answers each click
+  against that one look, so shift-clicking to add a point and Alt-clicking to
+  mark where the object stops both come back in a fraction of a second; the
+  options bar chooses between the whole object, a part of it and a detail, or
+  takes whichever the model is surest of. It is fetched once (≈40 MB) and cached. A selection confines
   every filter and effect — adjustments, every entry in the Effects menu,
   dithering, background removal, invert, flip and clear all stop at its exact
   outline, not just its bounding box — and each one applies to the active layer
@@ -984,17 +1325,58 @@ windows, and desktop actions.
   jobs are cancelled so dragging stays responsive. The exact-size dialog remains
   available alongside it. The final full-resolution worker pass shrinks or
   enlarges every layer along shared low-detail paths, optionally protecting the
-  current selection. The zoom tool
+  current selection. Image → Image Size… offers five Swin2SR super-resolution
+  models in the same box as its resampling filters, for an enlargement that
+  invents the edge rather than spreading the one it has (see "Resampling").
+  Every setting the armed tool has lives in one options bar
+  under the menus, the way a photo editor arranges it: the tool's name, its size
+  where size means anything, its own controls (the brush's Softness, a healing
+  brush's Hardness, liquify's warp mode) and a line of help, with the canvas
+  zoom parked on the right beside 1:1 and Fit buttons. The zoom tool
   supports 12.5%–800% views, and brush-based tools show their live footprint
-  over the canvas. A non-destructive
-  50% X/Y offset checkbox below Tool Size animates into a wrapped, fully
-  editable seam-checking view. A second checkbox mirrors new paint strokes
-  across the Y axis. The two effects that need a neural network share an
-  **Effects → AI** submenu, and both run in a Web Worker so a download or a long
-  inference never freezes the painting. **Remove Background** cuts the subject
-  out onto transparency using the MODNet model (Apache-2.0) with the vendored
-  Transformers.js — the picture never leaves the browser, and the ≈13 MB model
-  is fetched from the Hugging Face Hub once and cached. **DeepDream** is
+  over the canvas. The View menu holds Zoom In/Out, Actual Size, Fit to Screen,
+  Fit to Width and a grid toggle; the same three zoom levels are on the canvas
+  right-click menu while the zoom tool is armed. The grid draws over the picture
+  without touching the pixels, doubling its cell size as the view zooms out so
+  the lines never crowd, with every eighth line drawn stronger. A non-destructive
+  50% X/Y offset (Image → Check Seams) animates into a wrapped, fully
+  editable seam-checking view. Effects → Mirror Paint mirrors new paint strokes
+  across either axis or both. The three effects that can call on a neural network
+  share an **Effects → AI** submenu, and each runs in a Web Worker so a download
+  or a long inference never freezes the painting. **Remove Background** offers
+  twelve ways of cutting the subject out, all behind one set of sliders. Seven
+  are classic algorithms that download nothing and answer at once: a **chroma
+  key** working in Cb/Cr, so the shadow falling on the screen goes with the
+  screen; a **colour range** that opens on the picture's own corner colour; a
+  **flood in from the frame edges**, which spares a patch of sky-blue shirt
+  because the shirt is not joined to the sky; a **brightness threshold** for
+  scans and line art; **difference matting** against a second layer holding the
+  empty plate; **GrowCut** (Vezhnevets & Konouchine, 2005), a cellular automaton
+  grown out of a rough selection; and **frequency-tuned saliency** (Achanta et
+  al., 2009). Five are neural models run through the vendored Transformers.js,
+  each fetched from the Hugging Face Hub once and then cached by the browser:
+  **MODNet** (Apache-2.0, ≈13 MB, quick), **Open RMBG** (Apache-2.0), **BiRefNet
+  lite** and the full **BiRefNet** (MIT), and **BEN2** (MIT), which cuts the
+  cleanest edge of the five. Each takes the half-precision build where the
+  browser offers WebGPU and falls back to a precision that actually runs on the
+  CPU otherwise — on that path a heavy model takes a minute or two rather than
+  seconds. Whichever method runs, the picture never leaves the browser, and what
+  the worker sends back is the matte, not a finished cut-out: one coverage byte
+  per pixel, with hair, fur and glass left in the middle ground. Every judgement about that matte is
+  then made in the dialog, against a live preview over a checkerboard that can
+  also be flipped to the matte itself or the picture before. **Cutoff** says
+  where along the fuzz the subject begins and **edge softness** how wide that
+  crossing is, **grow / shrink** pulls the edge in or pushes it out by up to
+  eight pixels, **feather** blurs it, and two tidying switches throw away the
+  specks found off in the background and close the holes left inside the
+  subject. A last switch swaps subject for background. The **Output** box then
+  decides what the cut-out is for: erasing the background in place, cutting or
+  copying the subject to a layer of its own, filling the background with the
+  second colour, putting the matte on a layer as a black-and-white mask, or
+  making the subject the selection and touching no pixels at all. Since the
+  shaping is arithmetic rather than inference, nothing needs the network twice
+  — the settings move under the slider, and reopening the dialog on the same
+  layer reuses the matte it already has. **DeepDream** is
   Google's 2015 original: gradient ascent on one layer of `inception5h`, the
   ImageNet GoogLeNet it was first done with, which is why what grows out of the
   picture is dogs, birds and eyes. Six layers are offered from fur and weave up
@@ -1004,8 +1386,215 @@ windows, and desktop actions.
   seconds on a GPU and minutes without one — so the worker sends the picture
   back after every octave, and cancelling (or Escape) puts the original back
   untouched. Nothing is uploaded: TensorFlow.js and the ≈12 MB network are both
-  served from this site. File → Set as background tile stores a PNG tile in the
-  browser and applies it to the desktop. Multi-instance.
+  served from this site. **Text to Image** draws a picture from a description,
+  using DeepSeek's **Janus-Pro-1B** through the vendored Transformers.js.
+  Janus is the only text-to-image model that fits here, because it is the only
+  one that does not diffuse: it emits 576 image tokens autoregressively, exactly
+  as a language model emits words, and decodes them in one pass at the end, so
+  it runs through the same generate loop as every other causal model and needs
+  no scheduler, no VAE and no second inference runtime. What that costs is the
+  download — about 2 GB of weights even at four bits, fetched from the Hugging
+  Face Hub once and cached by the browser afterwards — and WebGPU, which is
+  required rather than preferred: 576 forward passes on the WASM backend is not
+  a slow version of this feature but a ten-minute wait ending in the same
+  picture, so the dialog says the figure and the requirement before the button
+  is pressed and refuses cleanly where there is no adapter. The model always
+  draws 384 × 384 and has no say in where it goes. **With something selected the
+  picture lands in the selection's bounds and is then confined to its actual
+  shape, so a lasso, a magic wand or a Select Object mask crops it as exactly as
+  a rectangle does; with nothing selected it fills the frame.** How it meets that
+  area is a decision taken with the result on screen — **Cover** fills it and
+  crops the overhang, **Contain** fits inside and leaves the margins as they
+  were, **Stretch** squashes it to the area's shape — and the note under the
+  chooser gives the actual figure, the percentage cropped or the margin in
+  pixels. **Pictures** asks for one, two or four; they are drawn one after
+  another rather than as a batch, because four sequences of key/value cache for
+  a 1.5B model at once can take an adapter past what it will allocate, and
+  because the first picture arriving after a minute beats all four arriving
+  after four. Each appears as it lands, in a row of thumbnails to choose
+  between, with the count carrying on underneath for the ones still coming, and
+  a run cancelled or failed part way keeps whatever already arrived. The worker
+  is loaded through a URL carrying a protocol version, and the dialog stops on
+  any message it does not recognise rather than ignoring it: the browser caches
+  the worker script separately from the page that starts it, so an upgrade can
+  otherwise leave a new dialog waiting for ever on an old worker's answer. **Seed** makes a picture repeatable — the runtime's sampler draws
+  through its own Mersenne Twister rather than `Math.random`, and exports it
+  with its `seed()`, so the same words, seed and settings give the same picture
+  again; asking for several numbers the seeds upwards from the one given, and
+  each picture reports its own so it can be asked for on its own later.
+  **Variety** is the sampler's temperature, defaulting to the 0.7 the model
+  ships with, and **Choices** is `top_k`, how many of the likeliest tokens are
+  in the running at each step out of a picture vocabulary of 16,384 — the
+  runtime's default of 50 is a narrow field. Those four, with the prompt, are
+  the whole of what this model exposes. `top_p` is not offered because the
+  runtime defines the warper and never constructs it, so a control for it would
+  do nothing; a negative prompt is not offered because it needs guidance; and
+  the output size is the model's own 384 × 384 rather than a setting. There is
+  deliberately no guidance control either: classifier-free
+  guidance is what Janus is tuned for, but the vendored runtime's implementation
+  of it for this model is broken — the image masks are not batched up alongside
+  the doubled `input_ids`, the unconditional half is handed an all-zero
+  attention mask, and its tokens are all pad where reference Janus keeps the
+  opening BOS and the trailing image_start tag — so the guided logits come back
+  degenerate and the sampler locks onto one token, producing vertical stripes
+  rather than a picture. Hugging Face's own example passes no `guidance_scale`
+  either. See the comment in `paint-text2image-worker.js` before adding one.
+  Unlike every other effect this one
+  never paints straight onto the layer: the picture is previewed at the target's
+  aspect over a checkerboard, and nothing is touched until Apply. Since the model
+  samples, the same words give a different picture every time unless the seed is
+  held — so the pictures on screen cannot be got back by generating again.
+  Closing the dialog keeps them, and reopening finds them still there ready to
+  place, which is what Repeat Last Effect does here rather than spending another
+  minute on a different picture. The prompt and the pictures never leave the
+  machine.
+  **File → Export → As Program Array…** turns the
+  picture into something a microcontroller can draw, and **File → Import → From
+  Program Array…** reads one back (both described below). File → Set as
+  background tile stores a PNG tile in the browser and applies it to the
+  desktop. Multi-instance.
+
+#### Exporting a picture as a program array
+
+`File → Export → As Program Array…` writes the canvas out as source code: a C
+array for the Arduino toolchain, a MicroPython `bytearray`, the bare numbers,
+or a `.bin` of the bytes themselves. The dialog is two panels — the settings,
+and what they produce — and the preview on the right is the **encoded bytes
+decoded back into a picture**, not the picture that went in, so a bit order or
+an endianness that does not match the display shows up here rather than on the
+bench.
+
+It opens at the picture's own size, with the pixel format guessed from the
+picture: two-tone artwork arrives as a 1-bit array, a photograph as RGB565.
+Everything after that is a choice:
+
+- **Output size.** Native by default, a custom width and height, or a **display
+  preset** — SSD1306 and SH1106 OLEDs, ST7735, ST7789 and ILI9341 TFTs, a 2.9"
+  e-paper panel, 8 × 8 and 16 × 16 WS2812 matrices, the Sense HAT — which sets
+  the size, the pixel format, the bit order and the scan its controller reads,
+  all in one go. Where the shapes do not match, the picture can be **fitted
+  inside with bars** down the sides, **filled to the screen and clipped**,
+  **stretched**, **centred at actual size** or **tiled**; the bars take the
+  background colour set beside them. Rotation by quarter turns and flips are
+  there too, because a panel is usually mounted the wrong way round.
+- **Pixel format.** 1/2/4/8-bit greyscale; indexed colour with a palette built
+  by median cut from the picture itself (or the ClackPaint box, the web-safe
+  216, an even grey ramp, or the two current colours) and 1/2/4/8-bit indices;
+  packed RGB332, RGB565, BGR565, RGB666, RGB888, BGR888, RGBA8888 or ARGB8888;
+  or YUV 4:2:2 as YUYV or UYVY, BT.601 or BT.709, full or studio range. Bytes
+  run along rows, down columns, or in the vertical pages of 8 an SSD1306
+  addresses, either bit order, with lines optionally padded to a whole byte —
+  and a **serpentine** option that reverses every other line, the way an LED
+  matrix is actually wired. A 1-bit transparency mask can come out alongside,
+  for the sprite calls that take an image and a mask.
+- **Dithering.** The whole of the Effects → Dithering menu is available here,
+  driven headlessly: error diffusion, ordered and halftone screens, noise,
+  pattern, dot diffusion, Riemersma and thresholding, with their own controls.
+  What it dithers *to* is decided by the pixel format rather than chosen
+  separately, so RGB565 is dithered against the 32/64/32 levels it can really
+  store rather than against a palette it cannot.
+- **Output.** Arduino/C with optional `PROGMEM`, MicroPython, or raw numbers;
+  hex or decimal; the array's name and how many numbers to a line. Naming the
+  **library** fills in the fiddly half — Adafruit_GFX `drawBitmap` and
+  `drawRGBBitmap`, U8g2's XBM, TFT_eSPI `pushImage`, LVGL, FastLED,
+  MicroPython's `framebuf` (with the right `MONO_HLSB`/`MONO_VLSB`/`GS4_HMSB`
+  constant worked out for the settings) and CircuitPython's `displayio` — and
+  writes the matching usage line into the comment.
+
+A **memory budget** panel puts the size in proportion: what the array costs as
+a percentage of the flash on an ATtiny85, an Uno, a Mega, a Blue Pill, an
+ESP8266 or ESP32, a Pico, a micro:bit v2 and a Teensy 4.0, and whether it would
+also fit in that part's RAM. Settings are remembered between sessions.
+
+`File → Import → From Program Array…` runs the same decoders the other way.
+Paste a C array or a Python `bytes` literal — or read a `.h`, `.py`, `.txt` or
+`.bin` file — and it comes back as a picture, opened as a new document or
+dropped onto a layer. Width, height and format are read out of the text where
+they are written down (`#define`s, a `framebuf` constant, a `drawXBMP` call, an
+`RGB565` mention); where they are not, it offers the sizes that would use
+exactly that many bytes, likeliest first. An indexed array takes its palette
+from a second box.
+
+The pixel work lives in `content/applications/paint-export.js`, which is pure —
+ImageData and options in, bytes and text out — so the same routines serve the
+live preview, the Copy button and the importer's decoder.
+
+#### Opening a file as raw data
+
+`File → Open → As Raw Data…` opens *any* file as a picture — a framebuffer
+dumped off a device, a sensor capture, a font, a recording, a program — by
+being told nothing about it and working the rest out. The picker has no accept
+list at all; a file that is not a picture opens just the same. Everything
+GIMP's raw loader offers is here: a byte offset, width and height, and its list
+of image types — 1 to 8-bit greyscale, 16-bit greyscale, indexed, packed RGB
+and RGBA in eight packings, planar RGB, YUV 4:2:2 — with a palette read from a
+`.pal`, `.gpl`, `.act` or raw triples file, in either channel order.
+
+What it adds is the part that makes the hunt bearable. The preview redraws
+while the offset slider is dragged, so a picture can be *scrubbed* into
+alignment rather than arrived at by arithmetic; ±1 byte and ±1 pixel nudges sit
+beside it, along with page buttons that step a whole screenful of bytes through
+a long file. **Guess size** takes the width from the data itself — lines of a
+picture resemble the line above them and nothing else does, so the byte spacing
+that minimises that difference is a line, with the pattern-repeat traps that
+catches ruled out by comparing against how badly an unrelated spacing scores.
+The file's first bytes are shown in hex and ASCII from the current offset, so
+the header being skipped is visible rather than counted. A file that turns out
+to be an ordinary PNG or JPEG says so and offers to open properly instead;
+BMP and uncompressed Targa fill the whole dialog in from their headers,
+padding and bottom-up rows included; a file whose length can only be an SRTM
+elevation tile is read as signed big-endian 16-bit and shaded with a terrain
+ramp. Row stride is separate from width, for framebuffers padded to a 4-byte
+boundary, and there are flips for the formats that count from the bottom.
+Settings are remembered between sessions; the result opens as a new document or
+as a layer.
+
+The dialog lives in `paint-raw.js`; the decoding is `paint-export.js`'s, run
+backwards, so anything ClackPaint wrote as a `.bin` reopens here byte for byte.
+Only the shapes the exporter has no use for — planar RGB and 16-bit samples —
+are implemented in the raw module itself.
+
+#### Resampling
+
+`Image → Image Size…` chooses how the picture is resampled: **nearest
+neighbour** for pixel art, **box**, **bilinear**, **Mitchell**, **bicubic
+(Catmull–Rom)** or **Lanczos 3**, which is the default. The filter widens as
+the picture shrinks, so every source pixel lands in some destination pixel
+rather than being sampled past — the difference between a legible 128-pixel
+version of a photograph and an aliased one. Resampling runs on premultiplied
+alpha, so a transparent edge cannot bleed its colour, and optionally in linear
+light. The resampler lives in `paint-retouch.js` and is shared with the
+exporter's output-size box.
+
+The same box also offers five **Swin2SR** super-resolution models, run through
+the vendored Transformers.js in `paint-upscale-worker.js` and fetched from the
+Hugging Face Hub on first use: a **×2 lightweight** (7 MB, about four times the
+speed of the others and within a fifth of a decibel of the full ×2), a general
+**×2** and **×4**, a **×4 trained on real-world degradation** for photographs
+that have already been through a resize and a sharpen, and a **×4 trained on
+compressed input**, which is the only one that mends JPEG blocking rather than
+sharpening it — on a picture saved at quality 20 it measured 19.1 dB against
+the general ×4's 17.1, and on a clean picture it is the worst of the five.
+Swin2SR is the one super-resolution architecture Transformers.js can build,
+which is what settles the list. Choosing a model fills the width and height in
+with its own multiple; any other size is reached by resampling its output with
+the filter chosen last, and a model picked for a picture that is not getting
+bigger — or one whose output would be past the sixteen megapixels the worker
+can assemble — is quietly not run at all, with the note saying so. Each model
+is fetched as its 8-bit build on the processor path, which measured 28.11 dB
+against full precision's 28.32 for a third of the download, and as the full
+build on WebGPU, where 8-bit weights would mean dynamic quantisation nodes
+dropping back to the processor mid-graph; the half-precision builds cannot open
+a session on the WASM backend at all. The picture goes through in 192-pixel
+tiles overlapping by 32 — attention is quadratic in the window count and the
+WASM heap is 32-bit — blended back together with a raised cosine across the
+overlap, which measured 48 dB against the same picture done in one pass, with
+no error at the tile boundaries. Every layer goes through separately at its own
+size, and a layer with transparency is handed to the model over black and
+divided back out of the enlarged alpha afterwards, so a soft edge cannot be
+sharpened into whatever colour happened to be stored under it. Nothing is
+uploaded; closing the dialog abandons the run but leaves the weights loaded for
+the next attempt.
 
 The committed PNG tiles are generated by `scripts/build_background_tiles.py`
 (Pillow is required only when regenerating them). The runtime never loads SVG
@@ -1108,7 +1697,8 @@ to settings and documents rather than bitmaps or audio.
 Opening an app page directly, outside the desktop, is a no-op: there is nobody
 to report to and nothing to restore, so the standalone entry points behave
 exactly as before. Apps wired up so far are the PCB Heater Designer (its whole
-control panel) and the Text Editor (its document, name and caret); apps
+control panel), the Text Editor (its document, name and caret) and the Gamma
+Table (its settings and every curve handle, which are not form controls); apps
 launched with a query string — the Markdown Editor's `?open=`, for example —
 already come back with the right file because that query is part of the
 window's id.
@@ -1209,6 +1799,37 @@ second list to keep in step. Their canonical links are hardcoded to the live
 origin (unlike the mirror's, which follow `SITE_URL`) — if the domain ever
 changes, they need a find-and-replace.
 
+What those tags could not say is *what kind of thing the page is*. Most apps
+render nothing at all until JavaScript has run — `circuit.html` is a bare
+`<iframe>`, so a crawler that doesn't get as far as executing the page finds an
+empty body and a sentence of description. `scripts/build_app_metadata.py` gives
+each indexed app a `WebApplication` block in `<head>` saying it is a free,
+browser-based tool of a particular category, which stands on its own without
+anything being rendered:
+
+```sh
+python3 scripts/build_app_metadata.py          # rewrite the blocks
+python3 scripts/build_app_metadata.py --check  # verify without writing
+```
+
+Every field is derived from something the repo already states — the name and
+the `applicationCategory` from the app's entry in
+`content/applications/menu.json` (the submenu it sits in picks the category,
+so moving an app between submenus moves its category with it), the description
+and URL from the page's own `<meta>` tags. **So the way to change what a
+crawler is told about an app is to edit that app's
+`<meta name="description">` and re-run the script** — the block is generated
+between markers and hand edits to it are overwritten. Apps carrying `noindex`
+get no block at all; the script applies the same two tests as the sitemap
+builder, so the two can't disagree about an app. The `publisher` node shares
+the `#organization` `@id` the mirror's home page uses, which is what ties the
+apps and the site together as one publisher rather than two organisations with
+the same name.
+
+Both the mirror workflow and the deploy workflow run the script, for the same
+reason they rebuild the blog index — a bot push doesn't re-trigger them, so the
+tree they check out can still hold the previous block.
+
 ### The 404 page
 
 Two websites came before this one and their URLs are still linked from other
@@ -1218,10 +1839,32 @@ with `ErrorDocument 404 /404.html` — a server-root path, so it tracks `SUBDIR`
 in the deploy workflow. It is `noindex`: a soft 404 in the index is worse than
 no page at all.
 
-`index.html` carries a relative `<link rel="canonical" href="plain/index.html">`
-so the empty desktop shell doesn't compete with the mirror's copy of the same
-page — the shell serves the desktop to every device, so the canonical link is
-the only thing pointing crawlers at the mirror.
+### Which URL is the home page
+
+The desktop boots `content/file/home.md` into a window, so the site root and
+`plain/index.html` render the same page and only one of them should be indexed.
+It is the root: it is what people link to, it reads properly in a search result,
+and it is the desktop the site is actually for. `index.html` therefore carries
+`<link rel="canonical" href="./">`, and `build_plain_site.py` points the
+mirror's home page back at the root rather than at itself.
+
+`./` rather than a self-referencing absolute URL because it resolves to the site
+root from `/index.html` and from `/index.html?desktop=1` — the link back from
+every mirror page's footer — as well as from `/`, folding all three addresses
+into one; and because staying relative keeps it right under `SUBDIR`. The
+shell's `<title>` and description are home.md's `seoTitle:` and `description:`,
+the same pair the mirror's copy carries, so the two agree in a search result;
+they are hand-written in `index.html` and need keeping in step if that
+frontmatter changes.
+
+This is the one place a mirror page's canonical link is not its own address, so
+`build_plain_site.py` keeps the two ideas apart: `page_url()` is where a page is
+served from and stays the base for resolving its relative links (og:image would
+break otherwise), while `canonical_url()` is the address crawlers are given and
+special-cases the home page. The sitemap lists the root and not
+`plain/index.html`. Every other mirror page is the only URL its content has and
+keeps its own self-canonical — the desktop's deep links are fragments, which
+never become separate URLs.
 
 The description is taken from `description:` in the frontmatter, else
 `tagline:`, else the first real paragraph, trimmed to ~155 characters. Blog
@@ -1250,9 +1893,42 @@ GitHub stays the source of truth; a GitHub Action copies the built site to the
 web host so everything is served from one origin. `.github/workflows/deploy-purely.yml`
 runs on every push to `main` (and can be run by hand from the Actions tab) and
 `rsync`s the repo to the host over SSH. It uploads only changed files, never
-deletes on the host, and excludes VCS/CI files, `scripts/`, the notes, and the
-upload folders. It publishes to the web root; set `SUBDIR` in the workflow to a
-folder name to stage a build in a subfolder instead.
+deletes on the host, and excludes VCS/CI files, `scripts/`, the notes
+(`README.md`, `todo.md`, `CLAUDE.md`), `.gitignore`, and the upload folders. It
+publishes to the web root; set `SUBDIR` in the workflow to a folder name to
+stage a build in a subfolder instead.
+
+Those excludes are the only thing keeping the repository's own furniture off the
+web, because the host serves the deploy directory straight out: whatever is
+rsynced up has a public URL. The notes are documentation nobody browsing the
+site should be handed. `.gitignore` is the one that reads harmlessly and is not
+— it names `assets/upload-config.php` as the upload secret and lists the
+host-only media directories, so it hands anyone who asks a map of the parts of
+the server that are not in Git.
+
+**Adding a file to the excludes does not take an already-uploaded copy down.**
+The deploy runs without `--delete`, so a file that shipped before it was
+excluded stays on the host until it is removed there. `CLAUDE.md` and
+`.gitignore` were both live before they were added to the list; clearing them is
+a one-off on the host:
+
+```sh
+rm public_html/CLAUDE.md public_html/.gitignore
+```
+
+Apache refuses `.htaccess` itself (its built-in `^\.ht` rule, not anything in
+this repo), and `upload.php` answers a bare `GET` with `405`, so neither needs
+an exclude.
+
+A `paths-ignore` on the trigger skips the run entirely for commits that touch
+only `todo.md`, `README.md`, `CLAUDE.md`, `.gitignore` or `.github/` — all of
+them excluded from the rsync, so the deploy could not have changed what the host
+serves anyway. `scripts/` is
+excluded from the upload but *not* from the trigger, because the generators run
+during the deploy: a fix to `build_plain_site.py` changes the mirror that gets
+shipped even though the script itself never leaves the repository. Editing the
+deploy workflow no longer deploys as a side effect either — use **Actions →
+Deploy to purely.website → Run workflow** to try a change out.
 
 ### The move from `/temp/` to the root
 
