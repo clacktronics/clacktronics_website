@@ -23,9 +23,12 @@ Shared runtime for in-browser ML apps: content/applications/chat.html,
 ClackPaint's background removal (paint-worker.js, which offers MODNet,
 Open RMBG, BiRefNet, BiRefNet lite and BEN2 behind one image-segmentation
 pipeline), ClackPaint's Select Object tool (paint-sam-worker.js,
-SlimSAM) and ClackPaint's Text to Image (paint-text2image-worker.js,
+SlimSAM), ClackPaint's Text to Image (paint-text2image-worker.js,
 Janus-Pro-1B — an autoregressive image model rather than a diffusion one,
-which is what lets it run on this runtime at all). Workers must set
+which is what lets it run on this runtime at all) and ClackPaint's Image Size
+dialog (paint-upscale-worker.js, which offers all five published Swin2SR
+checkpoints behind one image-to-image pipeline — the only super-resolution
+architecture this runtime implements). Workers must set
 `env.backends.onnx.wasm.wasmPaths` to this directory, otherwise the
 runtime fetches the .wasm from the jsDelivr CDN.
 
