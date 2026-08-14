@@ -163,6 +163,86 @@ export const MODEL_CATALOG = Object.freeze([
     }),
   }),
 
+  /* Magenta RealTime 2 is not a Transformers.js model and cannot be made into
+   * one: nine graphs, no config tying them together, and a host-side loop
+   * between them. It runs on ONNX Runtime directly — see mrt2/ — which is why
+   * this entry carries a list of graph files where the others carry a
+   * repository and a dtype. */
+  Object.freeze({
+    id: 'google-magenta-rt2',
+    label: 'Google Magenta RealTime 2',
+    kind: 'music',
+    family: 'mrt2',
+    repository: 'blanchon/magenta-realtime-2-onnx',
+    originalRepository: 'google/magenta-realtime-2',
+    author: 'Google DeepMind',
+    credit: Object.freeze({ name: 'Magenta RealTime 2', author: 'Google DeepMind', url: 'https://huggingface.co/google/magenta-realtime-2' }),
+    conversion: Object.freeze({ label: 'blanchon', url: 'https://huggingface.co/blanchon/magenta-realtime-2-onnx' }),
+    description: 'Google DeepMind’s live music model: a style embedding of your prompt drives a transformer that writes 48 kHz stereo audio 40 milliseconds at a time. Bigger and slower than MusicGen, and it improvises rather than composing.',
+    license: 'CC BY 4.0',
+    licenseUrl: 'https://huggingface.co/google/magenta-realtime-2',
+    modelUrl: 'https://huggingface.co/blanchon/magenta-realtime-2-onnx',
+    prompt: Object.freeze({
+      label: 'Describe the sound',
+      maxLength: 500,
+      placeholder: 'Example: Driving techno, four on the floor kick, acid bassline, 130 BPM...',
+      value: 'Driving techno, four on the floor kick, rolling acid bassline, 130 BPM',
+      presets: Object.freeze([
+        Object.freeze({ label: 'Techno', text: 'Driving techno, four on the floor kick, rolling acid bassline, 130 BPM' }),
+        Object.freeze({ label: 'Jazz trio', text: 'Live jazz trio, brushed drums, walking upright bass, warm piano chords' }),
+        Object.freeze({ label: 'Shoegaze', text: 'Shoegaze guitars, thick reverb, slow dreamy drums, wall of sound' }),
+        Object.freeze({ label: 'Gamelan', text: 'Balinese gamelan ensemble, interlocking metallophones, bright shimmering bells' }),
+        Object.freeze({ label: 'Ambient', text: 'Slow ambient synth pads, no drums, gentle tape wobble, deep and still' }),
+      ]),
+    }),
+    controls: Object.freeze([
+      Object.freeze({
+        id: 'duration', type: 'range', label: 'Duration',
+        min: 2, max: 15, step: 1, value: 6, decimals: 0, suffix: 's',
+        help: 'Generated at 25 frames a second, each frame a pass through the model.',
+      }),
+      Object.freeze({
+        id: 'guidance', type: 'range', label: 'Prompt guidance',
+        min: 0, max: 4, step: 0.2, value: 1.6, decimals: 1,
+        help: 'How closely the style is followed. The reference default is 1.6.',
+      }),
+      Object.freeze({
+        id: 'temperature', type: 'range', label: 'Variation',
+        min: 0.5, max: 2, step: 0.1, value: 1.3, decimals: 1,
+        help: 'Higher values wander further. The reference default is 1.3.',
+      }),
+    ]),
+    /* Text to music needs seven of the repository's graphs: MusicCoCa's text
+     * tower, mapper and quantizer for the style tokens, the Depthformer's four
+     * graphs for the audio tokens, and SpectroStream's decoder for the audio.
+     * The sizes drive the progress bar, so they are the real ones. */
+    mrt2: Object.freeze({
+      baseUrl: 'https://huggingface.co/blanchon/magenta-realtime-2-onnx/resolve/main/',
+      tokenizer: 'musiccoca/spm.model',
+      graphs: Object.freeze([
+        Object.freeze({ key: 'textEncoder', path: 'musiccoca/text_encoder.onnx', sizeMB: 400 }),
+        Object.freeze({ key: 'mapper', path: 'musiccoca/mapper.onnx', sizeMB: 82 }),
+        Object.freeze({ key: 'quantizer', path: 'musiccoca/pretrained_vector_quantizer.onnx', sizeMB: 69 }),
+        Object.freeze({ key: 'encoder', path: 'mrt2_small/onnx/encoder.onnx', sizeMB: 39 }),
+        Object.freeze({ key: 'temporal', path: 'mrt2_small/onnx/temporal_step.onnx', sizeMB: 745 }),
+        Object.freeze({ key: 'depth', path: 'mrt2_small/onnx/depth_step.onnx', sizeMB: 93 }),
+        Object.freeze({ key: 'embed', path: 'mrt2_small/onnx/embed.onnx', sizeMB: 48 }),
+        Object.freeze({ key: 'decoder', path: 'spectrostream/decoder.onnx', sizeMB: 152 }),
+      ]),
+    }),
+    runtime: Object.freeze({
+      wasm: Object.freeze({
+        downloadSizeMB: 1628,
+        memoryNote: 'A big first load — about 1.6 GB, cached afterwards — and roughly 3 GB of free memory while generating.',
+        /* The full-precision graphs. The repository also publishes fp16 ones,
+         * 400 MB smaller, but the WebAssembly backend has no half-precision
+         * kernels and casts them on every operation: a smaller download that
+         * generates about half as fast again. */
+        dtype: 'fp32',
+      }),
+    }),
+  }),
+
   Object.freeze({
     id: 'supertone-supertonic',
     label: 'Supertone Supertonic',

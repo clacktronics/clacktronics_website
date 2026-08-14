@@ -6,13 +6,13 @@
 <meta name="color-scheme" content="only light">
 <title>audioGen — ClackOS</title>
 <meta name="robots" content="noindex,follow">
-<meta name="description" content="Generate music and speech locally in your browser with Meta MusicGen, Supertone Supertonic, Microsoft SpeechT5 and Meta MMS TTS.">
+<meta name="description" content="Generate music and speech locally in your browser with Meta MusicGen, Google Magenta RealTime 2, Supertone Supertonic, Microsoft SpeechT5 and Meta MMS TTS.">
 <link rel="canonical" href="https://clacktronics.co.uk/content/applications/audiogen/index.html">
 <meta property="og:site_name" content="Clacktronics">
 <meta property="og:type" content="website">
 <meta property="og:title" content="audioGen — ClackOS">
 <meta property="og:url" content="https://clacktronics.co.uk/content/applications/audiogen/index.html">
-<meta property="og:description" content="Generate music and speech locally in your browser with Meta MusicGen, Supertone Supertonic, Microsoft SpeechT5 and Meta MMS TTS.">
+<meta property="og:description" content="Generate music and speech locally in your browser with Meta MusicGen, Google Magenta RealTime 2, Supertone Supertonic, Microsoft SpeechT5 and Meta MMS TTS.">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -112,9 +112,9 @@
 
       <section class="app-panel ag-about" hidden>
         <h2>About audioGen</h2>
-        <p><b>audioGen</b> is a local-first text-to-audio workspace for ClackOS. The interface is built from a shared model catalog and each model family is implemented by a worker adapter, so a music model and three speech models sit behind one set of controls. Prompts and generated audio stay on this device; model weights are downloaded from the Hugging Face Hub and cached by your browser, so only the first load of a model waits for the network.</p>
-        <p>Everything runs in WebAssembly on the processor, except MusicGen, which uses the graphics adapter where there is one able to take it. A short music clip can take a few minutes; speech takes seconds.</p>
-        <p>Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js 4.2.0</a> by Hugging Face, <a href="../../../vendor/transformers/LICENSE" target="_blank">Apache-2.0</a> · ONNX Runtime by Microsoft, <a href="../../../vendor/transformers/LICENSE-onnxruntime.txt" target="_blank">MIT</a>.</p>
+        <p><b>audioGen</b> is a local-first text-to-audio workspace for ClackOS. The interface is built from a shared model catalog and each model family is implemented by a worker adapter, so two music models and three speech models sit behind one set of controls. Prompts and generated audio stay on this device; model weights are downloaded from the Hugging Face Hub and cached by your browser, so only the first load of a model waits for the network.</p>
+        <p>Everything runs in WebAssembly on the processor, except MusicGen, which uses the graphics adapter where there is one able to take it. A short music clip can take a few minutes; speech takes seconds. Magenta RealTime 2 is the heaviest thing here by some way — about 1.6 GB to fetch once, and roughly twenty seconds of work per second of music.</p>
+        <p>Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js 4.2.0</a> by Hugging Face, <a href="../../../vendor/transformers/LICENSE" target="_blank">Apache-2.0</a> · <a href="https://onnxruntime.ai/docs/tutorials/web/" target="_blank" rel="noopener">ONNX Runtime Web</a> by Microsoft, <a href="../../../vendor/transformers/LICENSE-onnxruntime.txt" target="_blank">MIT</a>, which Magenta RealTime 2 is driven on directly.</p>
         <div class="ag-actions"><button class="btn ghost" type="button" data-action="about">Close</button></div>
       </section>
     </div>

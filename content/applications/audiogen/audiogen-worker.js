@@ -10,8 +10,30 @@
  * without loading one does not pay for a megabyte of ONNX runtime.
  */
 import { getModelBuild, getModelDefinition, getRepository, supportsWebGPU } from './model-catalog.js';
+import {
+  CFG_DEFAULTS,
+  Mrt2Engine,
+  SAMPLE_RATE as MRT2_SAMPLE_RATE,
+  StreamingDecoder,
+} from './mrt2/engine.js';
+import { fetchBytes, loadMrt2Sessions } from './mrt2/loader.js';
+import { MAPPER_NOISE } from './mrt2/mapper-noise.js';
+import { loadSentencePiece } from './mrt2/sentencepiece.js';
 
 let runtime = null;
+let onnxRuntime = null;
+
+/* Magenta RealTime 2 skips Transformers.js entirely and drives ONNX Runtime
+ * itself, so it loads the runtime's own bundle — the same build, from
+ * vendor/onnxruntime-web, reading its WebAssembly out of vendor/transformers
+ * where that build's .wasm files already live. */
+async function loadOnnxRuntime() {
+  if (!onnxRuntime) {
+    onnxRuntime = await import('../../../vendor/onnxruntime-web/ort.webgpu.min.mjs');
+    onnxRuntime.env.wasm.wasmPaths = new URL('../../../vendor/transformers/', self.location.href).href;
+  }
+  return onnxRuntime;
+}
 
 async function loadRuntime() {
   if (!runtime) {
@@ -405,11 +427,74 @@ class VitsAdapter {
   }
 }
 
+class Mrt2Adapter {
+  engine = null;
+
+  async load(definition) {
+    const ort = await loadOnnxRuntime();
+    const { baseUrl, graphs, tokenizer } = definition.mrt2;
+    const sessions = await loadMrt2Sessions(ort, {
+      baseUrl,
+      graphs,
+      onProgress: (loaded, total) => postMessage({ type: 'load-progress', loaded, total }),
+      onDetail: detail => postMessage({ type: 'load-detail', detail }),
+    });
+    const spm = await fetchBytes(`${baseUrl}${tokenizer}`);
+    this.engine = new Mrt2Engine(ort, sessions, loadSentencePiece(spm), MAPPER_NOISE);
+  }
+
+  async generate({ definition, prompt, controls }) {
+    const frames = Math.max(1, Math.round(controls.duration * 25));
+
+    postMessage({ type: 'load-detail', detail: 'Reading the prompt...' });
+    const style = await this.engine.styleTokens([{ text: prompt, weight: 1 }]);
+
+    const state = await this.engine.startStream(style, {
+      cfg: { ...CFG_DEFAULTS, musiccoca: controls.guidance },
+    });
+    /* The last frame carries no audio of its own — the decoder emits
+     * (frames - 1) windows — so one extra is generated for the tail. */
+    const decoder = new StreamingDecoder(this.engine);
+    for (let frame = 0; frame <= frames; frame += 1) {
+      decoder.push([await this.engine.step(state, controls.temperature, 40)]);
+      /* Decoding costs about as much as generating, so it is reported as the
+       * last fifth of the bar rather than pretending it is instant. */
+      reportGeneration((frame / frames) * 0.8);
+    }
+
+    postMessage({ type: 'load-detail', detail: 'Decoding audio...' });
+    const parts = [];
+    for (;;) {
+      const chunk = await decoder.pull(true);
+      if (!chunk) break;
+      parts.push(chunk);
+    }
+    reportGeneration(1);
+
+    /* Interleaved stereo out of SpectroStream; the WAV encoder wants the
+     * channels one after the other. */
+    let interleaved = 0;
+    for (const part of parts) interleaved += part.length;
+    const frameCount = interleaved / 2;
+    const samples = new Float32Array(interleaved);
+    let at = 0;
+    for (const part of parts) {
+      for (let i = 0; i < part.length; i += 2) {
+        samples[at] = part[i];
+        samples[frameCount + at] = part[i + 1];
+        at += 1;
+      }
+    }
+    return normalise({ samples, channels: 2, frames: frameCount, sampleRate: MRT2_SAMPLE_RATE });
+  }
+}
+
 const ADAPTERS = Object.freeze({
   musicgen: () => new MusicGenAdapter(),
   speecht5: () => new SpeechT5Adapter(),
   supertonic: () => new SupertonicAdapter(),
   vits: () => new VitsAdapter(),
+  mrt2: () => new Mrt2Adapter(),
 });
 
 let activeKey = null;
