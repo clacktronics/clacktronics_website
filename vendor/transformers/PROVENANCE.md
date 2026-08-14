@@ -20,6 +20,7 @@ startup depending on whether the browser supports JS Promise
 Integration (this applies to the WebGPU backend too, not just CPU).
 
 Shared runtime for in-browser ML apps: content/applications/chat.html,
+content/applications/audiogen/,
 ClackPaint's background removal (paint-worker.js, which offers MODNet,
 Open RMBG, BiRefNet, BiRefNet lite and BEN2 behind one image-segmentation
 pipeline), ClackPaint's Select Object tool (paint-sam-worker.js,
