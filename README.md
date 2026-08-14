@@ -443,13 +443,17 @@ OpenSCAD, Markdown windows, and desktop actions.
   MuPDF is vendored under `vendor/mupdf/` (AGPL-3.0).
 - `applications/audiogen/index.html` — local MusicGen text-to-music app;
   prompts and WAV output stay in the browser. The catalog carries one build per
-  device: a `shader-f16` adapter fetches the GPU build (~581 MB) and decodes on
+  device: a `shader-f16` adapter fetches the GPU build (~640 MB) and decodes on
   the GPU, anything else fetches the q8/fp32 build (~656 MB) and decodes on the
   CPU. The 8-bit weights are not sent to the GPU because the WebGPU backend has
   no integer matmul and widens them on every dispatch. The GPU build is fp16
-  except for the decoder, which is q4: `decoder_model_merged_fp16.onnx` is a bad
-  export that no backend will parse (both If branches return outer scope values
-  directly), and q4 lands on MatMulNBits, which WebGPU has kernels for. An
+  except for two sessions. The decoder is q4: `decoder_model_merged_fp16.onnx`
+  is a bad export that no backend will parse (both If branches return outer
+  scope values directly), and q4 lands on MatMulNBits, which WebGPU has kernels
+  for. `encodec_decode` stays on the CPU at fp32, because it runs once per clip
+  where the decoder above it has run a thousand times — the same reasoning that
+  keeps `prepare_inputs_embeds` on the CPU in the Text to Image worker — and
+  that keeps the build on a file the app has actually run. An
   adapter can still refuse the model mid-load, so the CPU build is also a
   retry — and because a half-built session leaves the runtime in a bad way, the
   retry replaces the worker rather than reloading inside it. The worker reports

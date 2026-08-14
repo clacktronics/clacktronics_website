@@ -123,13 +123,14 @@ class MusicGenAdapter {
   model = null;
 
   async load(definition, device) {
+    const build = getModelBuild(definition, device);
     const common = { progress_callback: reportDownload };
     [this.tokenizer, this.model] = await Promise.all([
       AutoTokenizer.from_pretrained(definition.repository, common),
       MusicgenForConditionalGeneration.from_pretrained(definition.repository, {
         ...common,
-        device,
-        dtype: getModelBuild(definition, device).dtype,
+        device: build.device,
+        dtype: build.dtype,
       }),
     ]);
   }
@@ -149,14 +150,29 @@ class MusicGenAdapter {
       });
     });
 
-    const audioValues = await this.model.generate({
-      ...inputs,
-      max_length: maxLength,
-      guidance_scale: guidance,
-      temperature,
-      do_sample: true,
-      streamer,
-    });
+    /* generate() is the decoder loop and the waveform decode back to back, and
+     * a failure in either arrives here as one runtime error naming neither. The
+     * token count separates them — a run that produced its tokens and then fell
+     * over was decoding audio, not generating codes — which is the difference
+     * between a problem in the model on the adapter and one in the session
+     * after it. Worth carrying in the message: this is the sort of fault that
+     * only shows up on hardware the person reading the report does not have. */
+    let audioValues;
+    try {
+      audioValues = await this.model.generate({
+        ...inputs,
+        max_length: maxLength,
+        guidance_scale: guidance,
+        temperature,
+        do_sample: true,
+        streamer,
+      });
+    } catch (error) {
+      const stage = tokens >= maxLength - 4
+        ? 'decoding the audio codes into a waveform'
+        : `generating audio codes (stopped at token ${tokens} of ${maxLength})`;
+      throw new Error(`${error?.message || error} — failed while ${stage}`);
+    }
     const sampleRate = Number(this.model.config.audio_encoder.sampling_rate) || 32000;
     return { ...tensorToWave(audioValues, sampleRate), sampleRate };
   }

@@ -34,20 +34,35 @@ export const MODEL_CATALOG = Object.freeze([
      * is wrong rather than unsupported, and no flag here gets round it. And q4
      * is the better weight regardless, because it lands on MatMulNBits, which
      * is the block-quantized path the WebGPU backend actually has kernels for.
-     * The other two files have no subgraphs and their fp16 exports are fine. */
+     *
+     * encodec_decode stays on the processor, for the same reason
+     * prepare_inputs_embeds does in the Text to Image worker: it turns the
+     * codes into a waveform once per clip, where the decoder above it has just
+     * run a thousand times, so what the adapter would win is a fraction of a
+     * second against one more session's worth of graphics memory held for the
+     * whole generation. Keeping it here also keeps the build on the fp32 file
+     * the CPU path already uses — a file this app has actually run, rather
+     * than the fp16 export, which nothing here has ever exercised. It is
+     * shared between the two builds, so it costs nothing to fetch twice. */
     runtime: Object.freeze({
       webgpu: Object.freeze({
-        downloadSizeMB: 581,
-        memoryNote: 'Allow roughly 1.5 GB of free graphics memory while generating.',
+        downloadSizeMB: 640,
+        memoryNote: 'Allow roughly 1.5 GB of free memory, most of it on the graphics adapter, while generating.',
+        device: Object.freeze({
+          text_encoder: 'webgpu',
+          decoder_model_merged: 'webgpu',
+          encodec_decode: 'wasm',
+        }),
         dtype: Object.freeze({
           text_encoder: 'fp16',
           decoder_model_merged: 'q4',
-          encodec_decode: 'fp16',
+          encodec_decode: 'fp32',
         }),
       }),
       wasm: Object.freeze({
         downloadSizeMB: 656,
         memoryNote: 'Allow roughly 1.5 GB of free memory while generating.',
+        device: 'wasm',
         dtype: Object.freeze({
           text_encoder: 'q8',
           decoder_model_merged: 'q8',
