@@ -49,6 +49,24 @@
   font-family: inherit; font-size: 11.5px; line-height: 1.5; resize: vertical;
 }
 .paint-t2i-done { display: flex; flex-direction: column; gap: 10px; }
+/* The seed is a number to be read and typed back, not scrubbed, so it gets a
+   field rather than a slider, wide enough for all ten digits of a 32-bit one. */
+.paint-dream-fields input[type="number"] { width: 11ch; box-sizing: border-box; padding: 3px 6px; border: 1px solid var(--ink); border-radius: 4px; background: var(--paper-deep); color: var(--control-text); font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+.paint-dream-fields .btn { min-height: 22px; padding: 2px 8px; font-size: 10px; white-space: nowrap; }
+/* Asking for several pictures gives a row to choose from. The chosen one is
+   marked rather than merely hovered, because the big preview above it is the
+   only other thing saying which is about to be applied. */
+.paint-t2i-thumbs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.paint-t2i-thumbs[hidden] { display: none; }
+.paint-t2i-thumbs button { all: unset; box-sizing: border-box; display: block; cursor: pointer; border: 2px solid transparent; border-radius: 5px; line-height: 0; }
+.paint-t2i-thumbs button:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.paint-t2i-thumbs button[aria-pressed="true"] { border-color: var(--leaf-deep); }
+.paint-t2i-thumbs canvas { width: 56px; height: 56px; border-radius: 3px; display: block; }
+/* A slot whose picture has not been drawn yet reads as pending rather than as
+   an empty result: the run fills them one at a time and the row is built up
+   front so the wait has a shape. */
+.paint-t2i-thumbs button.pending { border-style: dashed; border-color: var(--paper-line); cursor: default; }
+.paint-t2i-thumbs button.pending canvas { background: var(--paper-deep); opacity: .5; }
 /* The preview is drawn at the target's shape, so it is only as wide as the
    target is wide — a tall selection gives a narrow one. Centring it keeps that
    reading as the shape of the area rather than as a picture stuck to the left
@@ -1080,6 +1098,8 @@
       </div>
       <div class="paint-t2i-done" data-t2iview="done" hidden>
         <canvas class="paint-bg-preview" id="t2iPreview" width="336" height="336" aria-label="The generated picture"></canvas>
+        <div class="paint-t2i-thumbs" id="t2iThumbs" role="group" aria-label="Choose a picture" hidden></div>
+        <p class="paint-dream-note" id="t2iChosenNote"></p>
         <div class="paint-dream-fields">
           <label>Fit <span><select id="t2iFit">
             <option value="cover">Cover — fill the area, crop the overhang</option>
@@ -1090,10 +1110,20 @@
         </div>
       </div>
       <div class="paint-dream-fields" data-t2iview="settings">
+        <label>Pictures <span><select id="t2iCount">
+          <option value="1" selected>1 — about a minute</option>
+          <option value="2">2 — about two minutes</option>
+          <option value="4">4 — about four minutes</option>
+        </select></span></label>
+        <label>Seed <span>
+          <input id="t2iSeed" type="number" min="0" max="4294967295" step="1" value="0" aria-label="Seed">
+          <button type="button" class="btn ghost" id="t2iSeedNew" title="Pick a new seed"><span class="pixel-icon" data-icon="reload" aria-hidden="true"></span>New</button>
+        </span></label>
         <label>Variety <span><input id="t2iTemperature" type="range" min="0.1" max="1.4" step="0.05" value="0.7"><output id="t2iTemperatureValue">0.70</output></span></label>
-        <p class="paint-dream-note">How adventurously each token is picked. Low sticks to the obvious reading of the words and repeats itself; high wanders. 0.7 is what the model ships with.</p>
+        <label>Choices <span><input id="t2iTopK" type="range" min="1" max="600" step="1" value="50"><output id="t2iTopKValue">50</output></span></label>
+        <p class="paint-dream-note">The <b>seed</b> makes a picture repeatable: the same words, seed and settings give the same picture again, and asking for several numbers them upwards from it. <b>Variety</b> is the sampler's temperature — low sticks to the obvious reading of the words and repeats itself, high wanders; 0.7 is what the model ships with. <b>Choices</b> is how many of the likeliest tokens are in the running at each step, out of a picture vocabulary of 16,384; the runtime's default of 50 is a narrow field, and opening it up loosens the picture.</p>
       </div>
-      <p class="paint-ai-credit">Model: <a href="https://huggingface.co/onnx-community/Janus-Pro-1B-ONNX" target="_blank" rel="noopener">Janus-Pro-1B</a> · DeepSeek licence · Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a></p>
+      <p class="paint-ai-credit">Model: <a href="https://huggingface.co/onnx-community/Janus-Pro-1B-ONNX" target="_blank" rel="noopener">Janus-Pro-1B</a> · <a href="https://github.com/deepseek-ai/Janus/blob/main/LICENSE-MODEL" target="_blank" rel="noopener">DeepSeek Model Licence</a> · Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a></p>
       <div class="paint-dialog-actions">
         <button type="button" class="btn ghost" data-close="text2ImageModal">Cancel</button>
         <button type="button" class="btn" id="t2iAgain" hidden>Generate Again</button>
@@ -7610,7 +7640,14 @@ const t2iAgainBtn = appRoot.querySelector('#t2iAgain');
 const t2iApplyBtn = appRoot.querySelector('#t2iApply');
 const t2iFitSelect = appRoot.querySelector('#t2iFit');
 const t2iPreviewCanvas = appRoot.querySelector('#t2iPreview');
-let t2iWorker = null, t2iToken = 0, t2iRunning = false, t2iImage = null;
+const t2iThumbs = appRoot.querySelector('#t2iThumbs');
+const t2iSeedField = appRoot.querySelector('#t2iSeed');
+/* Pictures asked for in this run, in the order they arrive, each with the seed
+   that made it. t2iChosen indexes the one the preview and Apply are about. */
+let t2iWorker = null, t2iToken = 0, t2iRunning = false;
+let t2iPictures = [], t2iChosen = 0, t2iExpected = 1, t2iSeedTouched = false;
+const t2iImageAt = i => t2iPictures[i]?.canvas || null;
+const t2iImage = () => t2iImageAt(t2iChosen);
 
 const showT2iView = name => t2iViews.forEach(view => {
   /* the prompt and the sliders belong to every view but the running one */
@@ -7652,10 +7689,11 @@ function syncT2iTarget() {
 /* What the chosen fit will actually do to this target, in the numbers that
    matter — how much is lost, or how much is left untouched. */
 function syncT2iFit() {
-  if (!t2iImage) return;
+  const image = t2iImage();
+  if (!image) return;
   const rect = t2iTargetRect();
   const mode = t2iFitSelect.value;
-  const place = t2iPlacement(rect, t2iImage.width, t2iImage.height, mode);
+  const place = t2iPlacement(rect, image.width, image.height, mode);
   const note = appRoot.querySelector('#t2iFitNote');
   if (mode === 'stretch') {
     const ratio = rect.w / rect.h;
@@ -7663,8 +7701,8 @@ function syncT2iFit() {
       ? 'The area is square, so nothing is distorted.'
       : `The area is ${ratio > 1 ? 'wider' : 'taller'} than it is ${ratio > 1 ? 'tall' : 'wide'}, so the picture is squashed to match.`;
   } else if (mode === 'cover') {
-    const lostX = Math.round((1 - place.sw / t2iImage.width) * 100);
-    const lostY = Math.round((1 - place.sh / t2iImage.height) * 100);
+    const lostX = Math.round((1 - place.sw / image.width) * 100);
+    const lostY = Math.round((1 - place.sh / image.height) * 100);
     note.textContent = lostX + lostY === 0
       ? 'The area is square, so the whole picture fits with nothing cropped.'
       : `${Math.max(lostX, lostY)}% of the picture is cropped ${lostX > lostY ? 'off the sides' : 'off the top and bottom'}.`;
@@ -7680,14 +7718,64 @@ function syncT2iFit() {
 /* The preview is the target's shape, not the model's: what is worth looking at
    before Apply is the crop, and a square thumbnail hides exactly that. */
 function drawT2iPreview(rect, place) {
+  const image = t2iImage();
+  if (!image) return;
   const scale = 280 / Math.max(rect.w, rect.h);
   const w = Math.max(1, Math.round(rect.w * scale)), h = Math.max(1, Math.round(rect.h * scale));
   t2iPreviewCanvas.width = w; t2iPreviewCanvas.height = h;
   const context = t2iPreviewCanvas.getContext('2d');
-  const scaled = t2iPlacement({ x: 0, y: 0, w, h }, t2iImage.width, t2iImage.height, t2iFitSelect.value);
+  const scaled = t2iPlacement({ x: 0, y: 0, w, h }, image.width, image.height, t2iFitSelect.value);
   context.imageSmoothingQuality = 'high';
-  context.drawImage(t2iImage, scaled.sx, scaled.sy, scaled.sw, scaled.sh, scaled.dx, scaled.dy, scaled.dw, scaled.dh);
+  context.drawImage(image, scaled.sx, scaled.sy, scaled.sw, scaled.sh, scaled.dx, scaled.dy, scaled.dw, scaled.dh);
 }
+
+/* The row of pictures to choose between. It is laid out the moment the run
+   starts, with a dashed slot standing in for each picture still to come, so the
+   wait shows how much of it is left rather than appearing to do nothing. A
+   single picture needs no row at all. */
+function renderT2iThumbs(expected = t2iPictures.length) {
+  t2iThumbs.hidden = expected < 2;
+  if (t2iThumbs.hidden) { t2iThumbs.replaceChildren(); return; }
+  const buttons = [];
+  for (let i = 0; i < expected; i++) {
+    const picture = t2iPictures[i];
+    const button = document.createElement('button');
+    button.type = 'button';
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 56;
+    if (picture) {
+      const context = canvas.getContext('2d');
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(picture.canvas, 0, 0, 56, 56);
+      button.setAttribute('aria-pressed', String(i === t2iChosen));
+      button.setAttribute('aria-label', `Picture ${i + 1}, seed ${picture.seed}`);
+      button.title = `Seed ${picture.seed}`;
+      button.addEventListener('click', () => { t2iChosen = i; renderT2iThumbs(); syncT2iFit(); syncT2iChosenNote(); });
+    } else {
+      button.className = 'pending';
+      button.disabled = true;
+      button.setAttribute('aria-label', `Picture ${i + 1}, still drawing`);
+    }
+    button.append(canvas);
+    buttons.push(button);
+  }
+  t2iThumbs.replaceChildren(...buttons);
+}
+
+function syncT2iChosenNote() {
+  const picture = t2iPictures[t2iChosen];
+  const note = appRoot.querySelector('#t2iChosenNote');
+  if (!picture) { note.textContent = ''; return; }
+  note.textContent = t2iPictures.length > 1
+    ? `Picture ${t2iChosen + 1} of ${t2iPictures.length}, seed ${picture.seed}. Type that seed to draw it again.`
+    : `Seed ${picture.seed}. Type it back to draw this picture again.`;
+}
+
+const t2iRandomSeed = () => {
+  const buffer = new Uint32Array(1);
+  crypto.getRandomValues(buffer);
+  return buffer[0];
+};
 
 function ensureT2iWorker() {
   if (t2iWorker) return t2iWorker;
@@ -7709,11 +7797,18 @@ function ensureT2iWorker() {
         t2iDetail.textContent = 'Drawing…';
         setStatus('Drawing the picture…');
         break;
-      case 'tick':
-        t2iBar.style.width = (msg.done / msg.total * 100).toFixed(1) + '%';
-        t2iDetail.textContent = `${msg.done} of ${msg.total} image tokens`;
+      case 'tick': {
+        /* The bar is the whole run rather than the picture in hand, so asking
+           for four does not show the same sweep four times over. */
+        const done = (msg.index + msg.done / msg.total) / t2iExpected;
+        t2iBar.style.width = (done * 100).toFixed(1) + '%';
+        t2iDetail.textContent = t2iExpected > 1
+          ? `Picture ${msg.index + 1} of ${t2iExpected} — ${msg.done} of ${msg.total} image tokens`
+          : `${msg.done} of ${msg.total} image tokens`;
         break;
-      case 'result': finishText2Image(msg); break;
+      }
+      case 'image': collectText2Image(msg); break;
+      case 'done': finishText2Image(); break;
       case 'cancelled': break;                    /* the close already said so */
       case 'error': failText2Image(msg.message); break;
     }
@@ -7729,27 +7824,48 @@ function startText2Image() {
     return;
   }
   const token = ++t2iToken;
+  const seed = Number(t2iSeedField.value) >>> 0;
+  t2iExpected = Number(appRoot.querySelector('#t2iCount').value) || 1;
   t2iRunning = true;
+  t2iPictures = []; t2iChosen = 0;
   showT2iView('running');
   t2iStartBtn.hidden = true; t2iAgainBtn.hidden = true; t2iApplyBtn.hidden = true;
   t2iBar.style.width = '0%';
   t2iDetail.textContent = 'Starting…';
   setStatus('Fetching the Text to Image model…');
   ensureT2iWorker().postMessage({
-    type: 'run', token, prompt,
+    type: 'run', token, prompt, seed,
+    count: t2iExpected,
     temperature: Number(appRoot.querySelector('#t2iTemperature').value),
-    topP: 0.95,
+    topK: Number(appRoot.querySelector('#t2iTopK').value),
   });
 }
 
-function finishText2Image(msg) {
-  t2iRunning = false;
+/* One picture of the run has arrived. Asking for several shows each as it
+   lands rather than holding them all back: the first is often the one wanted,
+   and four minutes of a blank dialog is a long time to find that out. */
+function collectText2Image(msg) {
   const canvas = document.createElement('canvas');
   canvas.width = msg.width; canvas.height = msg.height;
   canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(msg.data), msg.width, msg.height), 0, 0);
-  t2iImage = canvas;
+  t2iPictures[msg.index] = { canvas, seed: msg.seed };
+  if (msg.index === 0) showT2iDone();
+  renderT2iThumbs(Math.max(t2iExpected, t2iPictures.length));
+  syncT2iChosenNote();
+  if (msg.index === 0) syncT2iFit();
+  setStatus(t2iExpected > 1
+    ? `Picture ${msg.index + 1} of ${t2iExpected} ready`
+    : 'Picture ready — press Apply to place it');
+}
+
+function finishText2Image() {
+  t2iRunning = false;
   showT2iDone();
-  setStatus('Picture ready — press Apply to place it');
+  renderT2iThumbs();
+  syncT2iChosenNote();
+  setStatus(t2iPictures.length > 1
+    ? `${t2iPictures.length} pictures ready — pick one and press Apply`
+    : 'Picture ready — press Apply to place it');
 }
 
 function showT2iDone() {
@@ -7762,12 +7878,13 @@ function showT2iDone() {
 }
 
 function applyText2Image() {
-  if (!t2iImage) return;
+  const image = t2iImage();
+  if (!image) return;
   const rect = t2iTargetRect();
-  const place = t2iPlacement(rect, t2iImage.width, t2iImage.height, t2iFitSelect.value);
+  const place = t2iPlacement(rect, image.width, image.height, t2iFitSelect.value);
   const before = bx.getImageData(0, 0, width(), height());
   pushUndo('Text to Image');
-  bx.drawImage(t2iImage, place.sx, place.sy, place.sw, place.sh, place.dx, place.dy, place.dw, place.dh);
+  bx.drawImage(image, place.sx, place.sy, place.sw, place.sh, place.dx, place.dy, place.dw, place.dh);
   confineToSelection(before);
   hideModal('text2ImageModal');
   /* Repeating this cannot mean drawing it again — the model samples, so the
@@ -7780,10 +7897,16 @@ function applyText2Image() {
 function failText2Image(message) {
   t2iToken++;
   t2iRunning = false;
-  showT2iView(t2iImage ? 'done' : 'intro');
-  t2iStartBtn.hidden = !!t2iImage;
-  t2iAgainBtn.hidden = !t2iImage;
-  t2iApplyBtn.hidden = !t2iImage;
+  /* Pictures already drawn in this run survive the failure of a later one:
+     three good ones and a fourth that fell over is still three good ones. */
+  t2iPictures = t2iPictures.filter(Boolean);
+  t2iChosen = Math.min(t2iChosen, Math.max(0, t2iPictures.length - 1));
+  const has = t2iPictures.length > 0;
+  showT2iView(has ? 'done' : 'intro');
+  t2iStartBtn.hidden = has;
+  t2iAgainBtn.hidden = !has;
+  t2iApplyBtn.hidden = !has;
+  if (has) { renderT2iThumbs(); syncT2iChosenNote(); syncT2iFit(); }
   t2iDetail.textContent = '';
   t2iBar.style.width = '0%';
   setStatus(`Text to Image failed: ${message}`);
@@ -7797,6 +7920,9 @@ function closeText2Image() {
     t2iWorker?.postMessage({ type: 'cancel', token: t2iToken });
     t2iToken++;
     t2iRunning = false;
+    /* Whatever finished before the cancellation is still worth keeping. */
+    t2iPictures = t2iPictures.filter(Boolean);
+    t2iChosen = Math.min(t2iChosen, Math.max(0, t2iPictures.length - 1));
   }
   hideModal('text2ImageModal');
   if (running) setStatus('Text to Image cancelled');
@@ -7806,19 +7932,29 @@ function openText2Image() {
   t2iBar.style.width = '0%';
   t2iDetail.textContent = '';
   syncT2iTarget();
-  if (t2iImage) {
+  if (t2iPictures.length) {
     showT2iDone();
+    renderT2iThumbs();
+    syncT2iChosenNote();
   } else {
     showT2iView('intro');
     t2iStartBtn.hidden = false; t2iAgainBtn.hidden = true; t2iApplyBtn.hidden = true;
+    /* A seed nobody has chosen is a fresh one, so the first run of a session is
+       not the same picture for everybody who types the same words. */
+    if (!t2iSeedTouched) t2iSeedField.value = String(t2iRandomSeed());
   }
   showModal('text2ImageModal');
-  if (!t2iImage) t2iPromptBox.focus();
+  if (!t2iPictures.length) t2iPromptBox.focus();
 }
 
-[['t2iTemperature', 2]].forEach(([id, places]) => {
+[['t2iTemperature', 2], ['t2iTopK', 0]].forEach(([id, places]) => {
   const input = appRoot.querySelector(`#${id}`), readout = appRoot.querySelector(`#${id}Value`);
   input.addEventListener('input', () => { readout.textContent = Number(input.value).toFixed(places); });
+});
+t2iSeedField.addEventListener('input', () => { t2iSeedTouched = true; });
+appRoot.querySelector('#t2iSeedNew').addEventListener('click', () => {
+  t2iSeedField.value = String(t2iRandomSeed());
+  t2iSeedTouched = true;
 });
 t2iFitSelect.addEventListener('change', syncT2iFit);
 t2iStartBtn.addEventListener('click', startText2Image);
