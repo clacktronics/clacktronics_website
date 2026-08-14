@@ -77,10 +77,6 @@
 .ag-status { min-height: 30px; font-size: 10.5px; line-height: 1.45; }
 
 .ag-prompt-card { flex: 1 1 42%; min-height: 0; }
-/* A seed is a word or two, not a paragraph: the sound-effect generator gives
- * the height back to the waveform. */
-.ag-prompt-card.compact { flex: none; }
-.ag-prompt-card.compact .ag-prompt { flex: none; min-height: 0; height: 46px; }
 .ag-prompt {
   flex: 1; min-height: 58px; resize: none; padding: 8px 9px; border: 1px solid var(--ink);
   border-radius: 5px; background: var(--paper); color: var(--control-text); font: inherit;
@@ -127,7 +123,8 @@
 @media (max-height: 640px) {
   .ag-control-help { display: none; }
   .ag-status { min-height: 0; }
-  .ag-controls { gap: 6px; }
+  /* Narrower columns so three controls sit in two rows rather than three. */
+  .ag-controls { gap: 6px; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); }
   .ag-rail, .ag-work { gap: 7px; }
   .ag-card { padding: 9px; gap: 7px; }
   .ag-model-copy {

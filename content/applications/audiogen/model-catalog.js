@@ -10,13 +10,11 @@
  * with a new branch in app.js.
  *
  * Fields:
- *   kind         groups the model dropdown: music, speech or effects.
+ *   kind         groups the model dropdown: music or speech.
  *   family       picks the worker adapter.
  *   repository   Hugging Face repo, or omit it and give `variants`, a list of
  *                repositories the same adapter can load (MMS ships one model
  *                per language). Loading is keyed on model *and* variant.
- *   local        true for a generator that synthesises audio here and now,
- *                with nothing to download.
  *   prompt       wording for the text box, and the preset chips under it.
  *   controls     range and select controls; their values reach the adapter as
  *                options.controls, keyed by id.
@@ -57,7 +55,26 @@ const MMS_LANGUAGES = [
   { id: 'yor', label: 'Yoruba', repository: 'Xenova/mms-tts-yor' },
 ];
 
-const SPEED_CONTROL = {
+/* Supertonic ships its voices as 50 KB style vectors beside the weights, and
+ * gives them no names beyond a letter and a number. */
+const SUPERTONIC_VOICES = [
+  { value: 'F1', label: 'Female 1' },
+  { value: 'F2', label: 'Female 2' },
+  { value: 'F3', label: 'Female 3' },
+  { value: 'F4', label: 'Female 4' },
+  { value: 'F5', label: 'Female 5' },
+  { value: 'M1', label: 'Male 1' },
+  { value: 'M2', label: 'Male 2' },
+  { value: 'M3', label: 'Male 3' },
+  { value: 'M4', label: 'Male 4' },
+  { value: 'M5', label: 'Male 5' },
+];
+
+/* SpeechT5 and VITS have no speed of their own — the rate is baked into the
+ * weights — so for those two this is a tape transport, applied to the finished
+ * waveform by the worker. Supertonic predicts its own durations and takes a
+ * speed directly, so it declares its own control rather than sharing this. */
+const RESAMPLE_SPEED_CONTROL = {
   id: 'speed',
   type: 'range',
   label: 'Speed',
@@ -147,6 +164,62 @@ export const MODEL_CATALOG = Object.freeze([
   }),
 
   Object.freeze({
+    id: 'supertone-supertonic',
+    label: 'Supertone Supertonic',
+    kind: 'speech',
+    family: 'supertonic',
+    repository: 'onnx-community/Supertonic-TTS-ONNX',
+    originalRepository: 'Supertone/supertonic',
+    author: 'Supertone',
+    credit: Object.freeze({ name: 'Supertonic', author: 'Supertone', url: 'https://huggingface.co/Supertone/supertonic' }),
+    conversion: Object.freeze({ label: 'onnx-community', url: 'https://huggingface.co/onnx-community/Supertonic-TTS-ONNX' }),
+    description: 'The best English voice here, and the only one that comes out at 44.1 kHz. It predicts its own timing, so the speed control changes the delivery rather than the pitch.',
+    license: 'OpenRAIL',
+    licenseUrl: 'https://huggingface.co/Supertone/supertonic',
+    modelUrl: 'https://huggingface.co/onnx-community/Supertonic-TTS-ONNX',
+    prompt: Object.freeze({
+      label: 'Text to speak',
+      maxLength: 1000,
+      placeholder: 'Type the words you want spoken...',
+      value: 'Good afternoon. ClackOS is running the whole speech engine inside this browser tab, so nothing you type here leaves the machine.',
+      presets: Object.freeze([
+        Object.freeze({ label: 'Greeting', text: 'Good afternoon, and welcome to Clacktronics.' }),
+        Object.freeze({ label: 'Announcement', text: 'The next demonstration will begin in five minutes. Please take your seats.' }),
+        Object.freeze({ label: 'Countdown', text: 'Five. Four. Three. Two. One. Ignition.' }),
+        Object.freeze({ label: 'Robot', text: 'System check complete. All subsystems nominal. Awaiting further instructions.' }),
+      ]),
+    }),
+    controls: Object.freeze([
+      Object.freeze({
+        id: 'voice', type: 'select', label: 'Voice',
+        value: SUPERTONIC_VOICES[0].value,
+        options: Object.freeze(SUPERTONIC_VOICES.map(voice => Object.freeze(voice))),
+        help: 'Ten style vectors published with the weights, fetched on demand.',
+      }),
+      Object.freeze({
+        id: 'speed', type: 'range', label: 'Speed',
+        min: 0.7, max: 1.5, step: 0.05, value: 1.05, decimals: 2, suffix: '×',
+        help: 'Given to the model, which stretches the delivery and leaves the pitch alone.',
+      }),
+      Object.freeze({
+        id: 'steps', type: 'range', label: 'Refinement',
+        min: 2, max: 12, step: 1, value: 5, decimals: 0,
+        help: 'Passes through the latent denoiser. Above five buys little.',
+      }),
+    ]),
+    speech: Object.freeze({ voiceBase: 'https://huggingface.co/onnx-community/Supertonic-TTS-ONNX/resolve/main/voices/', sentenceLength: 300 }),
+    runtime: Object.freeze({
+      wasm: Object.freeze({
+        downloadSizeMB: 263,
+        memoryNote: 'Allow roughly 700 MB of free memory while speaking.',
+        /* The repository publishes one build, in full precision, with the
+         * weights in external data files beside each graph. */
+        dtype: 'fp32',
+      }),
+    }),
+  }),
+
+  Object.freeze({
     id: 'microsoft-speecht5',
     label: 'Microsoft SpeechT5',
     kind: 'speech',
@@ -179,7 +252,7 @@ export const MODEL_CATALOG = Object.freeze([
         options: Object.freeze(SPEECHT5_VOICES.map(voice => Object.freeze(voice))),
         help: 'Each voice is a 2 KB speaker embedding, fetched on demand.',
       }),
-      Object.freeze(SPEED_CONTROL),
+      Object.freeze(RESAMPLE_SPEED_CONTROL),
     ]),
     speech: Object.freeze({ speakerEmbeddingBase: SPEAKER_EMBEDDING_BASE, sentenceLength: 70 }),
     vocoder: 'Xenova/speecht5_hifigan',
@@ -224,7 +297,7 @@ export const MODEL_CATALOG = Object.freeze([
         Object.freeze({ label: 'Numbers', text: 'One, two, three, four, five, six, seven, eight, nine, ten.' }),
       ]),
     }),
-    controls: Object.freeze([Object.freeze(SPEED_CONTROL)]),
+    controls: Object.freeze([Object.freeze(RESAMPLE_SPEED_CONTROL)]),
     speech: Object.freeze({ sentenceLength: 180 }),
     runtime: Object.freeze({
       wasm: Object.freeze({
@@ -235,73 +308,11 @@ export const MODEL_CATALOG = Object.freeze([
     }),
   }),
 
-  Object.freeze({
-    id: 'clack-sfx',
-    label: 'ClackSFX Generator',
-    kind: 'effects',
-    family: 'sfxr',
-    local: true,
-    author: 'DrPetter',
-    credit: Object.freeze({ name: 'sfxr', author: 'DrPetter', url: 'https://www.drpetter.se/project_sfxr.html' }),
-    description: 'Retro game sound effects, synthesised here in about a millisecond. Not a model and not AI: it is the classic sfxr algorithm, so there is nothing to download and nothing to wait for.',
-    license: 'MIT',
-    licenseUrl: 'https://github.com/grumdrig/jsfxr',
-    modelUrl: 'https://www.drpetter.se/project_sfxr.html',
-    prompt: Object.freeze({
-      label: 'Seed words',
-      compact: true,
-      maxLength: 120,
-      placeholder: 'Leave empty for a new sound every time...',
-      value: 'clack',
-      help: 'The words are the random seed, not a description — the same words always give the same sound. Empty means a fresh one each press.',
-      presets: Object.freeze([
-        Object.freeze({ label: 'clack', text: 'clack' }),
-        Object.freeze({ label: 'zap', text: 'zap' }),
-        Object.freeze({ label: 'kaboom', text: 'kaboom' }),
-        Object.freeze({ label: 'ding', text: 'ding' }),
-        Object.freeze({ label: 'surprise me', text: '' }),
-      ]),
-    }),
-    controls: Object.freeze([
-      Object.freeze({
-        id: 'shape', type: 'select', label: 'Effect',
-        value: 'laserShoot',
-        options: Object.freeze([
-          Object.freeze({ value: 'pickupCoin', label: 'Pickup / coin' }),
-          Object.freeze({ value: 'laserShoot', label: 'Laser / shoot' }),
-          Object.freeze({ value: 'explosion', label: 'Explosion' }),
-          Object.freeze({ value: 'powerUp', label: 'Power up' }),
-          Object.freeze({ value: 'hitHurt', label: 'Hit / hurt' }),
-          Object.freeze({ value: 'jump', label: 'Jump' }),
-          Object.freeze({ value: 'blipSelect', label: 'Blip / select' }),
-          Object.freeze({ value: 'tone', label: 'Pure tone' }),
-          Object.freeze({ value: 'random', label: 'Anything at all' }),
-        ]),
-        help: 'The sfxr generator the seed is fed through.',
-      }),
-      Object.freeze({
-        id: 'pitch', type: 'range', label: 'Pitch',
-        min: 0.4, max: 2.2, step: 0.05, value: 1, decimals: 2, suffix: '×',
-        help: 'Scales the base frequency.',
-      }),
-      Object.freeze({
-        id: 'length', type: 'range', label: 'Length',
-        min: 0.4, max: 2.5, step: 0.05, value: 1, decimals: 2, suffix: '×',
-        help: 'Stretches the sustain and decay stages.',
-      }),
-      Object.freeze({
-        id: 'brightness', type: 'range', label: 'Tone',
-        min: 0.15, max: 1, step: 0.05, value: 1, decimals: 2, suffix: '×',
-        help: 'Closes the low-pass filter for a duller sound.',
-      }),
-    ]),
-  }),
 ]);
 
 export const MODEL_KINDS = Object.freeze([
   Object.freeze({ id: 'music', label: 'Music' }),
   Object.freeze({ id: 'speech', label: 'Speech' }),
-  Object.freeze({ id: 'effects', label: 'Sound effects' }),
 ]);
 
 /* Which weights this model would fetch for a given device, and what that costs

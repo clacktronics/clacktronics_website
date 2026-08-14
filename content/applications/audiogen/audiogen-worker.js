@@ -6,12 +6,10 @@
  * page — is shared, so a new family is a class and a line in ADAPTERS.
  *
  * The Transformers.js bundle is imported on demand rather than at the top of
- * the file: the sound-effects generator synthesises its audio here in the
- * worker with no model at all, and should not pay for a megabyte of ONNX
- * runtime it never calls.
+ * the file, so a session that opens the app and reads the model descriptions
+ * without loading one does not pay for a megabyte of ONNX runtime.
  */
 import { getModelBuild, getModelDefinition, getRepository, supportsWebGPU } from './model-catalog.js';
-import { synthesise } from './sfx-synth.js';
 
 let runtime = null;
 
@@ -325,6 +323,54 @@ class SpeechT5Adapter {
   }
 }
 
+class SupertonicAdapter {
+  synthesiser = null;
+  voices = new Map();
+
+  async load(definition, variantId, device) {
+    const { pipeline } = await loadRuntime();
+    this.synthesiser = await pipeline('text-to-speech', definition.repository, {
+      device,
+      dtype: getModelBuild(definition, device).dtype,
+      progress_callback: reportDownload,
+    });
+  }
+
+  /* The pipeline will fetch a style vector from a URL itself, but it does that
+   * on every call; holding the fetched buffer means only the first clip in a
+   * voice waits for the network. */
+  async voice(definition, name) {
+    if (!this.voices.has(name)) {
+      const response = await fetch(`${definition.speech.voiceBase}${name}.bin`);
+      if (!response.ok) throw new Error(`Could not fetch the "${name}" voice.`);
+      this.voices.set(name, new Float32Array(await response.arrayBuffer()));
+    }
+    return this.voices.get(name);
+  }
+
+  async generate({ definition, prompt, controls }) {
+    const style = await this.voice(definition, controls.voice);
+    const sentences = splitSentences(prompt, definition.speech.sentenceLength);
+    if (!sentences.length) throw new Error('There is nothing to say — type some text first.');
+
+    const parts = [];
+    let sampleRate = 44100;
+    for (const [index, sentence] of sentences.entries()) {
+      reportGeneration(index / sentences.length);
+      const spoken = await this.synthesiser(sentence, {
+        speaker_embeddings: style,
+        num_inference_steps: controls.steps,
+        speed: controls.speed,
+      });
+      parts.push(spoken.audio);
+      sampleRate = Number(spoken.sampling_rate) || sampleRate;
+    }
+    reportGeneration(1);
+    /* Speed is the model's own, so there is nothing to resample afterwards. */
+    return normalise(joinSpeech(parts, sampleRate));
+  }
+}
+
 class VitsAdapter {
   tokenizer = null;
   model = null;
@@ -359,26 +405,11 @@ class VitsAdapter {
   }
 }
 
-class SfxrAdapter {
-  async load() {
-    /* Nothing to fetch: the generator is a couple of hundred lines of DSP. */
-  }
-
-  async generate({ prompt, controls }) {
-    reportGeneration(1);
-    return synthesise(controls.shape, prompt, {
-      pitch: controls.pitch,
-      length: controls.length,
-      brightness: controls.brightness,
-    });
-  }
-}
-
 const ADAPTERS = Object.freeze({
   musicgen: () => new MusicGenAdapter(),
   speecht5: () => new SpeechT5Adapter(),
+  supertonic: () => new SupertonicAdapter(),
   vits: () => new VitsAdapter(),
-  sfxr: () => new SfxrAdapter(),
 });
 
 let activeKey = null;

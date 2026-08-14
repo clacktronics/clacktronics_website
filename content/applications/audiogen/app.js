@@ -13,7 +13,6 @@ const $ = selector => appRoot.querySelector(selector);
 const $$ = selector => [...appRoot.querySelectorAll(selector)];
 
 const promptInput = $('.ag-prompt');
-const promptCard = $('.ag-prompt-card');
 const promptTitle = $('.ag-prompt-title');
 const promptHelp = $('.ag-prompt-help');
 const examples = $('.ag-examples');
@@ -129,11 +128,9 @@ function setPhase(nextPhase) {
   const model = selectedModel();
   modelSelect.disabled = busy;
   variantSelect.disabled = busy;
-  if (!model.local) {
-    const cached = Boolean(buildFor(model))
-      && localStorage.getItem(cacheKey(model, selectedVariantId())) === '1';
-    setLoadLabel(ready ? 'Model loaded' : cached ? 'Load cached model' : 'Download & load model');
-  }
+  const cached = Boolean(buildFor(model))
+    && localStorage.getItem(cacheKey(model, selectedVariantId())) === '1';
+  setLoadLabel(ready ? 'Model loaded' : cached ? 'Load cached model' : 'Download & load model');
   loadButton.disabled = busy || ready;
   generateButtons.forEach(button => { button.disabled = busy || !ready; });
   stopButtons.forEach(button => { button.hidden = !busy; });
@@ -222,7 +219,6 @@ function buildControls(model) {
 
 function buildPrompt(model) {
   const draft = drafts.get(model.id);
-  promptCard.classList.toggle('compact', Boolean(model.prompt.compact));
   promptTitle.textContent = `// ${model.prompt.label}`;
   promptInput.maxLength = model.prompt.maxLength;
   promptInput.placeholder = model.prompt.placeholder;
@@ -267,7 +263,7 @@ function cacheKey(model, variantId, device) {
 
 function buildCredit(model) {
   const source = model.credit || { name: model.label, author: model.author, url: model.modelUrl };
-  credit.replaceChildren(document.createTextNode(model.local ? 'Algorithm: ' : 'Model: '));
+  credit.replaceChildren(document.createTextNode('Model: '));
 
   const link = document.createElement('a');
   link.href = source.url;
@@ -303,10 +299,7 @@ function updateModelCopy() {
   modelKind.textContent = MODEL_KINDS.find(kind => kind.id === model.kind)?.label || model.kind;
   modelCopy.textContent = model.description;
   modelMeta.replaceChildren();
-  const tags = [
-    model.local ? 'no download' : `${describeDownload(model)} download`,
-    model.license,
-  ];
+  const tags = [`${describeDownload(model)} download`, model.license];
   for (const text of tags) {
     const tag = document.createElement('span');
     tag.className = 'ag-tag';
@@ -314,8 +307,6 @@ function updateModelCopy() {
     modelMeta.appendChild(tag);
   }
 
-  loadButton.hidden = Boolean(model.local);
-  loadNote.hidden = Boolean(model.local);
   loadNote.replaceChildren(document.createTextNode(
     `${(buildFor(model) || getModelBuild(model, 'wasm'))?.memoryNote || ''} `,
   ));
@@ -331,7 +322,7 @@ function updateModelDetails({ keepInputs = false } = {}) {
   const model = selectedModel();
   const variantId = selectedVariantId();
 
-  if (!model.local) probeDevice();
+  probeDevice();
   updateModelCopy();
   buildCredit(model);
   if (!keepInputs) {
@@ -341,12 +332,7 @@ function updateModelDetails({ keepInputs = false } = {}) {
 
   if (loadedKey !== selectionKey()) {
     destroyWorker();
-    if (model.local) {
-      /* Nothing to fetch, so the generator announces itself ready. */
-      createWorker().postMessage({ type: 'load', modelId: model.id, variantId });
-    } else {
-      setStatus('Load the model when you are ready. Your text stays on this device.');
-    }
+    setStatus('Load the model when you are ready. Your text stays on this device.');
   }
   setProgress(0, false);
   setPhase('idle');
@@ -364,8 +350,7 @@ function loadModel() {
 function generate() {
   const model = selectedModel();
   const prompt = promptInput.value.trim();
-  /* The sound-effect generator treats an empty prompt as "surprise me". */
-  if (!prompt && !model.local) {
+  if (!prompt) {
     setStatus(model.kind === 'speech'
       ? 'Type the text you want spoken first.'
       : 'Describe the audio you want to create first.');
@@ -509,18 +494,14 @@ function handleWorkerMessage(event) {
     case 'model-ready': {
       loadedKey = `${message.modelId}/${message.variantId || ''}`;
       const model = getModelDefinition(message.modelId);
-      if (model.local) {
-        setStatus('Ready. Nothing to download — the sound is synthesised as you press Generate.');
-      } else {
-        localStorage.setItem(cacheKey(model, message.variantId, message.device), '1');
-        /* The worker has the last word on the device — it may have started on
-         * the adapter and finished on the processor — so take its answer
-         * rather than the probe's, and say which one it landed on. Minutes
-         * separate the two and it should not be a mystery why. */
-        if (message.device) gpuDevice = message.device;
-        setProgress(100);
-        setStatus(`${model.label} is ready on the ${message.device === 'webgpu' ? 'graphics adapter' : 'processor'}. Select Generate audio when you are.`);
-      }
+      localStorage.setItem(cacheKey(model, message.variantId, message.device), '1');
+      /* The worker has the last word on the device — it may have started on
+       * the adapter and finished on the processor — so take its answer rather
+       * than the probe's, and say which one it landed on. Minutes separate the
+       * two and it should not be a mystery why. */
+      if (message.device) gpuDevice = message.device;
+      setProgress(100);
+      setStatus(`${model.label} is ready on the ${message.device === 'webgpu' ? 'graphics adapter' : 'processor'}. Select Generate audio when you are.`);
       setPhase('idle');
       break;
     }
