@@ -24,15 +24,24 @@ export const MODEL_CATALOG = Object.freeze([
      * and is worth putting on an adapter. But the 8-bit weights that make that
      * bearable on a CPU are the wrong ones to send there: the WebGPU backend
      * has no integer matmul, so it widens them back out on every dispatch and
-     * lands slower than the CPU build it replaced. The adapter gets fp16, and
-     * pays for it in download. */
+     * lands slower than the CPU build it replaced.
+     *
+     * The decoder is q4 rather than fp16 for two separate reasons, and either
+     * one alone would decide it. decoder_model_merged_fp16.onnx does not load
+     * at all: both branches of its If node return outer scope values straight
+     * through — logits and all forty-eight cache tensors — which ONNX Runtime
+     * rejects while it is still parsing the graph, on any backend. The export
+     * is wrong rather than unsupported, and no flag here gets round it. And q4
+     * is the better weight regardless, because it lands on MatMulNBits, which
+     * is the block-quantized path the WebGPU backend actually has kernels for.
+     * The other two files have no subgraphs and their fp16 exports are fine. */
     runtime: Object.freeze({
       webgpu: Object.freeze({
-        downloadSizeMB: 1127,
-        memoryNote: 'Allow roughly 2.5 GB of free graphics memory while generating.',
+        downloadSizeMB: 581,
+        memoryNote: 'Allow roughly 1.5 GB of free graphics memory while generating.',
         dtype: Object.freeze({
           text_encoder: 'fp16',
-          decoder_model_merged: 'fp16',
+          decoder_model_merged: 'q4',
           encodec_decode: 'fp16',
         }),
       }),

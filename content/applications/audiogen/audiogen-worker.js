@@ -171,7 +171,7 @@ let activeAdapter = null;
 let activeDevice = null;
 let generating = false;
 
-async function loadModel(modelId) {
+async function loadModel(modelId, forcedDevice) {
   const definition = getModelDefinition(modelId);
   if (!definition) throw new Error(`Unknown audio model: ${modelId}`);
   if (activeAdapter && activeModelId === modelId) {
@@ -181,13 +181,19 @@ async function loadModel(modelId) {
   const createAdapter = ADAPTERS[definition.family];
   if (!createAdapter) throw new Error(`No adapter is registered for ${definition.family}.`);
 
-  /* An adapter that answers requestAdapter is not an adapter that will hold a
-   * 1.1 GB model — a laptop with a small memory budget refuses somewhere
-   * inside the session build, and there is nothing to inspect beforehand that
-   * would have told us. So the CPU build is a retry rather than a precondition:
-   * a machine that cannot take the fast path still gets working audio, at the
-   * cost of having fetched the wrong weights first. */
-  let device = await pickDevice();
+  /* An adapter that answers requestAdapter is not an adapter that will hold
+   * the model — a small memory budget refuses somewhere inside the session
+   * build, and there is nothing to inspect beforehand that would have told us.
+   * So the CPU build is a retry as well as a precondition.
+   *
+   * The retry is asked for rather than taken here, because a session that has
+   * failed part way through leaves the runtime holding a device in a bad way
+   * and the next build in this worker inherits it — the same trap the paint
+   * workers call release() to stay out of, except that a model which never
+   * finished constructing has nothing to release. A fresh worker is the only
+   * clean state available, so the window is told to throw this one away and
+   * come back naming the device it wants. */
+  const device = forcedDevice || await pickDevice();
   fileProgress.clear();
   activeAdapter = createAdapter();
   activeModelId = null;
@@ -197,11 +203,8 @@ async function loadModel(modelId) {
     await activeAdapter.load(definition, device);
   } catch (error) {
     if (device !== 'webgpu') throw error;
-    device = 'wasm';
-    fileProgress.clear();
-    activeAdapter = createAdapter();
-    postMessage({ type: 'load-detail', detail: 'The graphics adapter refused the model. Falling back to the processor...' });
-    await activeAdapter.load(definition, device);
+    postMessage({ type: 'retry-on-cpu', modelId, message: String(error?.message || error) });
+    return;
   }
   activeModelId = modelId;
   activeDevice = device;
@@ -231,7 +234,7 @@ async function generate(options) {
 self.onmessage = async event => {
   const message = event.data || {};
   try {
-    if (message.type === 'load') await loadModel(message.modelId);
+    if (message.type === 'load') await loadModel(message.modelId, message.device);
     if (message.type === 'generate') await generate(message.options);
   } catch (error) {
     postMessage({
