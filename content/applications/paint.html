@@ -394,8 +394,9 @@
 .paint-context-menu .sep { margin: 4px 2px; }
 .paint-progress { height: 17px; overflow: hidden; border: 1px solid var(--ink); border-radius: 5px; background: var(--paper-deep); }
 .paint-progress > div { width: 0; height: 100%; background: var(--leaf-deep); }
-.paint-dialog-body [data-caview="form"] { display: flex; flex-direction: column; gap: 12px; }
-.paint-dialog-body [data-caview="form"] > label:not(.paint-check) { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.paint-dialog-body [data-caview="form"], .paint-dialog-body [data-sizeview="form"] { display: flex; flex-direction: column; gap: 12px; }
+.paint-dialog-body [data-caview="form"] > label:not(.paint-check),
+.paint-dialog-body [data-sizeview="form"] > label:not(.paint-check) { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 /* Transparency reads as a checkerboard, the way every other bitmap editor
    shows it. The stack sits under every layer canvas, so it shows through
    wherever the pixels are see-through. */
@@ -861,13 +862,20 @@
   <form class="paint-modal-box paint-dialog" id="imageSizeForm">
     <header><span id="imageSizeTitle">Image Size</span><button type="button" data-close="imageSizeModal" aria-label="Close">×</button></header>
     <div class="paint-dialog-body">
-      <label>Width <span><input id="imageWidth" type="number" min="1" max="8192" required> px</span></label>
-      <label>Height <span><input id="imageHeight" type="number" min="1" max="8192" required> px</span></label>
-      <label class="paint-check"><input id="keepAspect" type="checkbox" checked> Preserve aspect ratio</label>
-      <label>Resampling <span><select id="imageFilter"></select></span></label>
-      <label class="paint-check"><input id="imageLinear" type="checkbox" checked> Resample in linear light</label>
-      <p class="app-status" id="imageSizeNote">Resamples the image to the new pixel dimensions.</p>
-      <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="imageSizeModal">Cancel</button><button class="btn primary">Resize</button></div>
+      <div data-sizeview="form">
+        <label>Width <span><input id="imageWidth" type="number" min="1" max="8192" required> px</span></label>
+        <label>Height <span><input id="imageHeight" type="number" min="1" max="8192" required> px</span></label>
+        <label class="paint-check"><input id="keepAspect" type="checkbox" checked> Preserve aspect ratio</label>
+        <label>Resampling <span><select id="imageFilter"></select></span></label>
+        <label class="paint-check"><input id="imageLinear" type="checkbox" checked> Resample in linear light</label>
+        <p class="app-status" id="imageSizeNote">Resamples the image to the new pixel dimensions.</p>
+        <p class="paint-dream-note" id="imageSizeModelNote" hidden></p>
+      </div>
+      <div data-sizeview="progress" hidden>
+        <div class="paint-progress" role="progressbar" aria-label="Upscaling progress"><div></div></div>
+        <p class="paint-ai-detail">Starting…</p>
+      </div>
+      <div class="paint-dialog-actions"><button type="button" class="btn ghost" data-close="imageSizeModal">Cancel</button><button class="btn primary" id="imageSizeApply">Resize</button></div>
     </div>
   </form>
 </div>
@@ -3720,11 +3728,30 @@ function validDimension(value) {
    hard. So the resampler in paint-retouch.js does it instead, with the filter
    named in the dialog, and drawImage stays as the fallback for a page where
    that file did not load. */
+/* The one box in the dialog now names either a filter or a model, and a model
+   still needs a filter behind it — to carry its fixed multiple the rest of the
+   way to the size asked for, and to take the alpha it never saw. That is what
+   the last filter chosen is for. */
 function resampleOptions() {
+  const chosen = appRoot.querySelector('#imageFilter')?.value;
   return {
-    filter: appRoot.querySelector('#imageFilter')?.value || 'lanczos3',
+    filter: chosen && !UPSCALE_MODELS[chosen] ? chosen : resampleFilter,
     linear: appRoot.querySelector('#imageLinear')?.checked !== false
   };
+}
+
+function resampleImage(image, w, h, options) {
+  const retouch = window.ClackRetouch;
+  if (retouch?.resample) return retouch.resample(image, w, h, options);
+  const from = document.createElement('canvas');
+  from.width = image.width; from.height = image.height;
+  from.getContext('2d').putImageData(image, 0, 0);
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const context = out.getContext('2d');
+  context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+  context.drawImage(from, 0, 0, w, h);
+  return context.getImageData(0, 0, w, h);
 }
 
 function resampleCanvas(source, w, h, options) {
@@ -5616,6 +5643,9 @@ const showModal = id => {
 const hideModal = id => {
   if (id === 'gaussianBlurModal') cancelGaussianPreview();
   if (id === 'effectModal') endEffectPreview(true);
+  /* every way out of the Image Size dialog — its buttons, the backdrop, Escape
+     — abandons an upscale it has running, so the hook belongs here */
+  if (id === 'imageSizeModal') cancelUpscale();
   modals.get(id).classList.remove('open');
   tellClackOS({ type: 'clackos-focus-window' });
   lockBehindDialog();
@@ -5775,33 +5805,83 @@ const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '
    shrinking is what this dialog is mostly used for. Nearest is there for
    pixel art, where every filter that averages is wrong. */
 const RESAMPLE_KEY = 'clackpaint-resample-filter';
+let resampleFilter = 'lanczos3';
 function fillResampleFilters() {
   const select = appRoot.querySelector('#imageFilter');
   if (!select || select.options.length) return;
   const filters = window.ClackRetouch?.RESAMPLE_FILTERS;
-  if (!filters) { select.closest('label').hidden = true; appRoot.querySelector('#imageLinear').closest('label').hidden = true; return; }
-  for (const [id, filter] of Object.entries(filters)) {
-    const option = document.createElement('option');
-    option.value = id; option.textContent = filter.label;
-    select.append(option);
+  if (filters) {
+    const group = document.createElement('optgroup');
+    group.label = 'Filters — arithmetic on the pixels, and instant';
+    for (const [id, filter] of Object.entries(filters)) {
+      const option = document.createElement('option');
+      option.value = id; option.textContent = filter.label;
+      group.append(option);
+    }
+    select.append(group);
+    let saved = null;
+    try { saved = localStorage.getItem(RESAMPLE_KEY); } catch { /* private browsing */ }
+    if (saved && filters[saved]) resampleFilter = saved;
+    select.value = resampleFilter;
+  } else {
+    /* without paint-retouch.js there are no filters to offer and the linear
+       light switch has nothing to act on, but the models still work */
+    appRoot.querySelector('#imageLinear').closest('label').hidden = true;
   }
-  let saved = null;
-  try { saved = localStorage.getItem(RESAMPLE_KEY); } catch { /* private browsing */ }
-  select.value = saved && filters[saved] ? saved : 'lanczos3';
+  const models = document.createElement('optgroup');
+  models.label = 'Models — fetched once, then cached by your browser';
+  for (const [id, model] of Object.entries(UPSCALE_MODELS)) {
+    const option = document.createElement('option');
+    option.value = id; option.textContent = model.label;
+    models.append(option);
+  }
+  select.append(models);
   select.addEventListener('change', () => {
-    try { localStorage.setItem(RESAMPLE_KEY, select.value); } catch { /* private browsing */ }
+    /* Only a filter is remembered. A model is a deliberate choice costing a
+       download and minutes of inference, and finding it still armed on some
+       later resize — halfway through a session, on a dialog opened to shrink
+       something — would be a nasty surprise. */
+    if (!UPSCALE_MODELS[select.value]) {
+      resampleFilter = select.value;
+      try { localStorage.setItem(RESAMPLE_KEY, select.value); } catch { /* private browsing */ }
+    } else {
+      snapToModelSize(UPSCALE_MODELS[select.value]);
+      checkWebGPU();
+    }
     updateImageSizeNote();
   });
   appRoot.querySelector('#imageLinear').addEventListener('change', updateImageSizeNote);
 }
 
-function updateImageSizeNote() {
-  const note = appRoot.querySelector('#imageSizeNote');
+/* Choosing a model is asking for its own multiple, so the boxes are filled in
+   with it — unless a larger size has already been typed, which is a number
+   somebody wanted and the model can still be resampled to. */
+function snapToModelSize(model) {
   const w = validDimension(appRoot.querySelector('#imageWidth').value);
   const h = validDimension(appRoot.querySelector('#imageHeight').value);
+  if (w > width() || h > height()) return;
+  appRoot.querySelector('#imageWidth').value = Math.min(MAX_DIMENSION, width() * model.scale);
+  appRoot.querySelector('#imageHeight').value = Math.min(MAX_DIMENSION, height() * model.scale);
+}
+
+function updateImageSizeNote() {
+  const note = appRoot.querySelector('#imageSizeNote');
+  const modelNote = appRoot.querySelector('#imageSizeModelNote');
+  const w = validDimension(appRoot.querySelector('#imageWidth').value);
+  const h = validDimension(appRoot.querySelector('#imageHeight').value);
+  const chosen = appRoot.querySelector('#imageFilter')?.value;
+  const model = UPSCALE_MODELS[chosen];
+  if (model) {
+    modelNote.hidden = false;
+    modelNote.textContent = model.note;
+    note.textContent = describeUpscale(model, w, h);
+    note.classList.toggle('paint-bg-warn', !upscaleSuits(model, w, h));
+    return;
+  }
+  modelNote.hidden = true;
+  note.classList.remove('paint-bg-warn');
   const shrinking = w && h && (w < width() || h < height());
-  const nearest = appRoot.querySelector('#imageFilter')?.value === 'nearest';
-  note.textContent = nearest
+  note.textContent = chosen === 'nearest'
     ? 'Nearest neighbour copies whole pixels — no averaging, no new colours.'
     : shrinking
       ? 'The filter widens as it shrinks, so every pixel is looked at rather than sampled past.'
@@ -5813,6 +5893,8 @@ function openImageSize() {
   appRoot.querySelector('#imageWidth').value = width();
   appRoot.querySelector('#imageHeight').value = height();
   appRoot.querySelector('#imageSizeForm').dataset.aspect = width() / height();
+  showUpscaleProgress(false);
+  if (UPSCALE_MODELS[appRoot.querySelector('#imageFilter').value]) checkWebGPU();
   updateImageSizeNote();
   showModal('imageSizeModal'); appRoot.querySelector('#imageWidth').focus();
 }
@@ -5837,8 +5919,16 @@ imageHeight.addEventListener('input', () => {
   updateImageSizeNote();
 });
 appRoot.querySelector('#imageSizeForm').addEventListener('submit', event => {
-  event.preventDefault(); const w = validDimension(imageWidth.value), h = validDimension(imageHeight.value);
-  if (!w || !h) return; hideModal('imageSizeModal'); resizeImage(w, h);
+  event.preventDefault();
+  if (upscaleJob) return;                    /* a model is already running in it */
+  const w = validDimension(imageWidth.value), h = validDimension(imageHeight.value);
+  if (!w || !h) return;
+  const method = appRoot.querySelector('#imageFilter').value;
+  /* A model that has been chosen but cannot help — the picture is being made
+     smaller, or no bigger — is quietly not run, and the filter behind it does
+     the resize the dialog said it would. */
+  if (UPSCALE_MODELS[method] && upscaleSuits(UPSCALE_MODELS[method], w, h)) { startUpscale(method, w, h); return; }
+  hideModal('imageSizeModal'); resizeImage(w, h);
 });
 appRoot.querySelector('#canvasSizeForm').addEventListener('submit', event => {
   event.preventDefault();
@@ -6265,6 +6355,284 @@ appRoot.querySelector('#formDetectingForm').addEventListener('submit', event => 
 
 contentModal.addEventListener('click', event => { if (event.target.closest('[data-close]') && contentJob) stopFormDetecting(true); });
 
+/* ---- Image Size with a model behind it ----
+ * A resampling filter is exact about what it does and cannot do the one thing
+ * an enlargement wants: it has no idea what an edge is, so a picture blown up
+ * with the best filter here is the same picture with its detail spread thinner.
+ * A super-resolution model has seen a great many photographs both large and
+ * small, and puts back the edge it expects to have been lost. That is a guess
+ * rather than a measurement, which is why it lives in the same box as the
+ * filters rather than in place of them: it is the right answer for enlarging a
+ * photograph and the wrong one for everything else this dialog is used for.
+ *
+ * Swin2SR is the only super-resolution architecture the vendored Transformers.js
+ * can build, and these are the five checkpoints published for it. Each enlarges
+ * by a fixed factor with no say in the matter, so whatever is typed in the
+ * boxes is reached by resampling the model's own output the rest of the way.
+ *
+ * The download figures are the 8-bit build the processor path takes and the
+ * full one used on a GPU; the reasoning behind that pair is in the worker. */
+const UPSCALE_MODELS = {
+  'swin2sr-x2-light': {
+    label: 'Swin2SR ×2 lightweight — quick', scale: 2, size: { cpu: 7, gpu: 8 },
+    note: 'A quarter of the weights of the model below and about four times the speed, for a result within a fifth of a decibel of it. The one to try first, and on a phone the only one worth trying.',
+    credit: ['Swin2SR lightweight ×2', 'https://huggingface.co/Xenova/swin2SR-lightweight-x2-64', 'Apache-2.0'],
+  },
+  'swin2sr-x2': {
+    label: 'Swin2SR ×2 — general', scale: 2, size: { cpu: 21, gpu: 54 },
+    note: 'The full network, trained on clean photographs shrunk by two. On the test picture it beat a Lanczos enlargement by about three decibels — roughly, an edge that looks drawn rather than blurred.',
+    credit: ['Swin2SR classical ×2', 'https://huggingface.co/Xenova/swin2SR-classical-sr-x2-64', 'Apache-2.0'],
+  },
+  'swin2sr-x4': {
+    label: 'Swin2SR ×4 — general', scale: 4, size: { cpu: 22, gpu: 55 },
+    note: 'Four times up in one pass, which is a great deal more invention than twice: what comes back is convincing rather than true. Trained on clean downscales, like the ×2 above.',
+    credit: ['Swin2SR classical ×4', 'https://huggingface.co/Xenova/swin2SR-classical-sr-x4-64', 'Apache-2.0'],
+  },
+  'swin2sr-x4-real': {
+    label: 'Swin2SR ×4 — photographs as found', scale: 4, size: { cpu: 21, gpu: 53 },
+    note: 'Trained on the mess a photograph arrives with — noise, sharpening, a resize on the way — rather than on a clean downscale. Slightly softer on a pristine picture and steadier on a downloaded one.',
+    credit: ['Swin2SR real-world ×4', 'https://huggingface.co/Xenova/swin2SR-realworld-sr-x4-64-bsrgan-psnr', 'Apache-2.0'],
+  },
+  'swin2sr-x4-jpeg': {
+    label: 'Swin2SR ×4 — JPEG damage', scale: 4, size: { cpu: 22, gpu: 55 },
+    note: 'The only one here that mends blocking instead of sharpening it: on a picture saved at quality 20 it measured 19.1 dB where the general ×4 managed 17.1. On a clean picture it is the worst of the five, so choose it only when the damage is visible.',
+    credit: ['Swin2SR compressed ×4', 'https://huggingface.co/Xenova/swin2SR-compressed-sr-x4-48', 'Apache-2.0'],
+  },
+};
+
+/* The worker holds the whole enlargement in floats while the tiles land in it,
+   which is twelve bytes a pixel. Sixteen megapixels of output is where that
+   stops being a large allocation and starts being one the browser refuses, so
+   past it the dialog says so rather than letting the tab die. */
+const MAX_UPSCALE_PIXELS = 16000000;
+
+const upscaleNatural = model => ({ w: width() * model.scale, h: height() * model.scale });
+const upscaleFits = model => {
+  const natural = upscaleNatural(model);
+  return natural.w * natural.h <= MAX_UPSCALE_PIXELS;
+};
+const upscaleSuits = (model, w, h) => !!(w && h) && (w > width() || h > height()) && upscaleFits(model);
+const upscaleName = model => model.label.split(' — ')[0];
+const filterName = () => (window.ClackRetouch?.RESAMPLE_FILTERS?.[resampleFilter]?.label || 'Lanczos 3').split(' (')[0];
+
+function describeUpscale(model, w, h) {
+  const natural = upscaleNatural(model);
+  const name = upscaleName(model);
+  if (!upscaleFits(model)) {
+    return `${name} would have to make a ${natural.w} × ${natural.h} picture, which is more than can be held while it is assembled. ${filterName()} does this resize instead.`;
+  }
+  if (!upscaleSuits(model, w, h)) {
+    return `A model can only put back detail that a larger picture would have had, so at a size no bigger than this one it is not run at all: ${filterName()} does the resize.`;
+  }
+  const size = hasWebGPU === null ? `${model.size.cpu}–${model.size.gpu} MB` : `${hasWebGPU ? model.size.gpu : model.size.cpu} MB`;
+  const fetching = `The first run fetches about ${size} from the Hugging Face Hub and caches it; the picture is never uploaded.`;
+  const slow = hasWebGPU === false
+    ? ' This browser has no WebGPU, so it runs on the processor — minutes rather than seconds, and the progress bar counts the tiles.'
+    : '';
+  const reach = w === natural.w && h === natural.h
+    ? `${name} enlarges ×${model.scale}, which is exactly the ${w} × ${h} asked for.`
+    : `${name} enlarges ×${model.scale} to ${natural.w} × ${natural.h}, and ${filterName()} takes that to the ${w} × ${h} asked for.`;
+  return `${reach} ${fetching}${slow}`;
+}
+
+const imageSizeModal = appRoot.querySelector('#imageSizeModal');
+const imageSizeFormView = imageSizeModal.querySelector('[data-sizeview="form"]');
+const imageSizeProgressView = imageSizeModal.querySelector('[data-sizeview="progress"]');
+const imageSizeBar = imageSizeProgressView.querySelector('.paint-progress > div');
+const imageSizeDetail = imageSizeProgressView.querySelector('.paint-ai-detail');
+const imageSizeApply = appRoot.querySelector('#imageSizeApply');
+/* thrown to unwind the layer loop when the dialog is closed mid-run; not a fault */
+const UPSCALE_CANCELLED = Symbol('upscale cancelled');
+let upscaleWorker = null, upscaleToken = 0, upscaleJob = null, upscalePending = null;
+
+function showUpscaleProgress(running) {
+  imageSizeFormView.hidden = running;
+  imageSizeProgressView.hidden = !running;
+  imageSizeApply.hidden = running;
+  if (running) imageSizeBar.style.width = '0%';
+}
+
+function handleUpscaleError(message) {
+  const pending = upscalePending;
+  upscalePending = null;
+  if (pending) pending.reject(new Error(message));
+  else failUpscale(message);
+}
+
+function ensureUpscaleWorker() {
+  if (upscaleWorker) return upscaleWorker;
+  upscaleWorker = new Worker(new URL('paint-upscale-worker.js', appUrl), { type: 'module' });
+  upscaleWorker.onerror = event => handleUpscaleError(event.message || 'worker failed to start');
+  upscaleWorker.onmessage = event => {
+    const msg = event.data;
+    if (msg.token !== undefined && msg.token !== upscaleToken) return;   /* a run we walked away from */
+    switch (msg.type) {
+      case 'loading': imageSizeDetail.textContent = msg.detail; break;
+      case 'progress': {
+        if (!msg.total) break;
+        imageSizeBar.style.width = Math.min(100, msg.loaded / msg.total * 100).toFixed(1) + '%';
+        imageSizeDetail.textContent = `Fetching the model — ${(msg.loaded / 1048576).toFixed(1)} / ${(msg.total / 1048576).toFixed(1)} MB (cached for next time)`;
+        break;
+      }
+      case 'ready':
+        imageSizeBar.style.width = '0%';
+        imageSizeDetail.textContent = 'Enlarging…';
+        break;
+      case 'tile': {
+        imageSizeBar.style.width = (msg.done / msg.total * 100).toFixed(1) + '%';
+        const tile = `tile ${msg.done + 1} of ${msg.total}`;
+        imageSizeDetail.textContent = upscaleJob && upscaleJob.layers > 1
+          ? `Layer ${upscaleJob.layer + 1} of ${upscaleJob.layers} — ${tile}`
+          : tile[0].toUpperCase() + tile.slice(1);
+        break;
+      }
+      case 'result': {
+        const pending = upscalePending;
+        upscalePending = null;
+        pending?.resolve(msg);
+        break;
+      }
+      case 'error': handleUpscaleError(msg.message); break;
+    }
+  };
+  return upscaleWorker;
+}
+
+function upscaleOnce(token, method, data, w, h) {
+  return new Promise((resolve, reject) => {
+    upscalePending = { resolve, reject };
+    ensureUpscaleWorker().postMessage({ type: 'run', token, method, width: w, height: h, data: data.buffer }, [data.buffer]);
+  });
+}
+
+const isOpaque = pixels => {
+  for (let at = 3; at < pixels.length; at += 4) if (pixels[at] !== 255) return false;
+  return true;
+};
+
+/* The colour stored under a fully transparent pixel is arbitrary, and a model
+   asked to sharpen an edge would sharpen that arbitrary colour into it. So a
+   layer with any transparency goes over black first, which is the one colour
+   that costs nothing to divide back out afterwards. */
+function premultiplied(image) {
+  const out = new Uint8ClampedArray(image.data.length);
+  for (let at = 0; at < out.length; at += 4) {
+    const alpha = image.data[at + 3] / 255;
+    out[at] = image.data[at] * alpha;
+    out[at + 1] = image.data[at + 1] * alpha;
+    out[at + 2] = image.data[at + 2] * alpha;
+    out[at + 3] = 255;
+  }
+  return out;
+}
+
+/* The model hands back three bytes a pixel at its own multiple of the original.
+   The alpha it never saw is enlarged with the filter instead — a matte has no
+   texture to invent — and the colour is divided back out of it. */
+function assembleUpscaledLayer(result, source, opaque, targetW, targetH, options) {
+  const rgb = result.data;
+  const model = new ImageData(result.width, result.height);
+  const out = model.data;
+  const count = result.width * result.height;
+  if (opaque) {
+    for (let i = 0; i < count; i++) {
+      out[i * 4] = rgb[i * 3]; out[i * 4 + 1] = rgb[i * 3 + 1]; out[i * 4 + 2] = rgb[i * 3 + 2];
+      out[i * 4 + 3] = 255;
+    }
+  } else {
+    const matte = resampleImage(source, result.width, result.height, options);
+    for (let i = 0; i < count; i++) {
+      const alpha = matte.data[i * 4 + 3];
+      out[i * 4 + 3] = alpha;
+      if (!alpha) continue;
+      const undo = 255 / alpha;
+      out[i * 4] = rgb[i * 3] * undo;
+      out[i * 4 + 1] = rgb[i * 3 + 1] * undo;
+      out[i * 4 + 2] = rgb[i * 3 + 2] * undo;
+    }
+  }
+  return result.width === targetW && result.height === targetH
+    ? model
+    : resampleImage(model, targetW, targetH, options);
+}
+
+/* Every layer goes through separately, at the size it is stored at, because
+   that is what the resize does to them and flattening the picture to save a
+   pass would be the one thing a layered document cannot forgive. */
+async function startUpscale(method, targetW, targetH) {
+  const model = UPSCALE_MODELS[method];
+  const options = resampleOptions();
+  const sourceW = width(), sourceH = height();
+  const token = ++upscaleToken;
+  /* the seam view is a shifted copy of the picture; the model is given the
+     picture itself, exactly as the form-detecting resize does */
+  const originalSeam = { x: seamAppliedX, y: seamAppliedY };
+  canonicaliseSeam();
+  const sources = layers.map(layer => layer.canvas.getContext('2d').getImageData(0, 0, sourceW, sourceH));
+  if (originalSeam.x || originalSeam.y) reapplySeam();
+
+  upscaleJob = {
+    token, width: sourceW, height: sourceH, revision: documentRevision,
+    layerIds: layers.map(layer => layer.id), layer: 0, layers: sources.length,
+  };
+  showUpscaleProgress(true);
+  imageSizeDetail.textContent = 'Starting…';
+  setStatus(`Upscaling with ${upscaleName(model)}…`);
+
+  const finished = [];
+  try {
+    for (let index = 0; index < sources.length; index++) {
+      upscaleJob.layer = index;
+      const image = sources[index];
+      const opaque = isOpaque(image.data);
+      const result = await upscaleOnce(token, method, opaque ? image.data : premultiplied(image), sourceW, sourceH);
+      finished.push(assembleUpscaledLayer(result, image, opaque, targetW, targetH, options));
+    }
+  } catch (err) {
+    if (err !== UPSCALE_CANCELLED) failUpscale(String(err?.message || err));
+    return;
+  }
+  if (token !== upscaleToken) return;
+
+  const unchanged = width() === upscaleJob.width && height() === upscaleJob.height &&
+    documentRevision === upscaleJob.revision && layers.length === upscaleJob.layerIds.length &&
+    layers.every((layer, index) => layer.id === upscaleJob.layerIds[index]);
+  upscaleJob = null;
+  if (!unchanged) { failUpscale('the document changed while it was running'); return; }
+
+  pushUndo('Image Size'); canonicaliseSeam();
+  resizeSurfaces(targetW, targetH);
+  layers.forEach((layer, index) => layer.canvas.getContext('2d').putImageData(finished[index], 0, 0));
+  reapplySeam();
+  renderLayerPanel();
+  showUpscaleProgress(false);
+  hideModal('imageSizeModal');
+  setStatus(`Image resized with ${upscaleName(model)}`);
+}
+
+/* Closing the dialog abandons the run. The worker is left alive with its
+   weights loaded, and only the token moves, so trying again costs the
+   inference and not the download. */
+function cancelUpscale() {
+  if (!upscaleJob) return;
+  upscaleToken++;
+  upscaleJob = null;
+  upscaleWorker?.postMessage({ type: 'cancel' });
+  const pending = upscalePending;
+  upscalePending = null;
+  pending?.reject(UPSCALE_CANCELLED);
+  showUpscaleProgress(false);
+  setStatus('Upscaling cancelled');
+}
+
+function failUpscale(message) {
+  upscaleToken++;
+  upscaleJob = null;
+  upscalePending = null;
+  showUpscaleProgress(false);
+  setStatus(`Upscaling failed: ${message}`);
+}
+
 async function animateRequestedSeamView(message) {
   const requestedX = seamXButton.getAttribute('aria-pressed') === 'true';
   const requestedY = seamYButton.getAttribute('aria-pressed') === 'true';
@@ -6605,16 +6973,18 @@ function sampleBgCorners() {
 
 /* Whether this browser can put the models on the GPU decides both how big the
    download is and whether the heavier ones are a wait or an afternoon, so it is
-   asked once and remembered. Until the answer arrives the dialog says nothing
-   about it rather than guessing. */
-let bgHasWebGPU = null;
-function checkBgWebGPU() {
-  if (bgHasWebGPU !== null) return;
-  bgHasWebGPU = false;
+   asked once and remembered — by every dialog that has a model behind it, since
+   it is one question about the machine rather than about the feature. Until the
+   answer arrives they say nothing about it rather than guessing. */
+let hasWebGPU = null;
+function checkWebGPU() {
+  if (hasWebGPU !== null) return;
+  hasWebGPU = false;
   if (!('gpu' in navigator)) return;
   navigator.gpu.requestAdapter().then(adapter => {
-    bgHasWebGPU = !!adapter;
+    hasWebGPU = !!adapter;
     if (bgModal.classList.contains('open')) syncBgMethod();
+    if (imageSizeModal.classList.contains('open')) updateImageSizeNote();
   }).catch(() => { /* leave it at no */ });
 }
 
@@ -6622,7 +6992,7 @@ function syncBgMethod() {
   const method = bgMethod();
   const spec = BG_METHODS[method];
   renderBgMethodFields();
-  const slow = spec.heavyOnCpu && bgHasWebGPU === false
+  const slow = spec.heavyOnCpu && hasWebGPU === false
     ? 'This browser has no WebGPU, so this model runs on the processor: expect a minute or two on a picture this size. MODNet, or any of the classic methods, answers at once.'
     : '';
   bgMethodNote.textContent = [spec.note, slow].filter(Boolean).join(' ');
@@ -7240,7 +7610,7 @@ function openBgRemoval() {
   bgProgressBar.style.width = '0%';
   showBgView('intro');
   showModal('bgRemoveModal');
-  checkBgWebGPU();
+  checkWebGPU();
   /* the colour methods open on the picture's own backdrop rather than on white:
      for most photographs that is the answer, or one nudge away from it */
   const sampled = sampleBgCorners();
@@ -7968,6 +8338,7 @@ const disconnect = () => {
   if (bgWorker) { bgWorker.terminate(); bgWorker = null; }
   if (dreamWorker) { dreamWorker.terminate(); dreamWorker = null; }
   if (t2iWorker) { t2iWorker.terminate(); t2iWorker = null; }
+  if (upscaleWorker) { upscaleWorker.terminate(); upscaleWorker = null; }
   if (contentWorker) { contentWorker.terminate(); contentWorker = null; }
   cancelLiveContentPreview(true);
   if (appRoot.querySelector('#adjustModal').classList.contains('open')) closeAdjustment(true);
