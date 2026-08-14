@@ -1405,8 +1405,12 @@ windows, and desktop actions.
   a 1.5B model at once can take an adapter past what it will allocate, and
   because the first picture arriving after a minute beats all four arriving
   after four. Each appears as it lands, in a row of thumbnails to choose
-  between, and a run cancelled or failed part way keeps whatever already
-  arrived. **Seed** makes a picture repeatable — the runtime's sampler draws
+  between, with the count carrying on underneath for the ones still coming, and
+  a run cancelled or failed part way keeps whatever already arrived. The worker
+  is loaded through a URL carrying a protocol version, and the dialog stops on
+  any message it does not recognise rather than ignoring it: the browser caches
+  the worker script separately from the page that starts it, so an upgrade can
+  otherwise leave a new dialog waiting for ever on an old worker's answer. **Seed** makes a picture repeatable — the runtime's sampler draws
   through its own Mersenne Twister rather than `Math.random`, and exports it
   with its `seed()`, so the same words, seed and settings give the same picture
   again; asking for several numbers the seeds upwards from the one given, and
