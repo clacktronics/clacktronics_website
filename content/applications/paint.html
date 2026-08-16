@@ -4594,7 +4594,7 @@ function pixelChannelValues(src, kind) {
    along that line. Walking x in the direction of the angle's cosine and y in
    the direction of its sine meets the pixels of any one line end to end, so a
    line comes out in order without having to be sorted into it. */
-function pixelSortLines(w, h, angle) {
+function pixelSortParallelLines(w, h, angle) {
   const turn = angle * Math.PI / 180, cos = Math.cos(turn), sin = Math.sin(turn);
   let low = Infinity, high = -Infinity;
   for (const [x, y] of [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]]) {
@@ -4621,6 +4621,71 @@ function pixelSortLines(w, h, angle) {
   }
   return { order, starts, count };
 }
+
+/* Rings and rays, the sorting counterparts of a spin blur and a zoom blur — the
+   same two the Radial Blur dialog offers, and named after them for that reason.
+   Nothing about the sort itself changes: a line is still a list of pixels in the
+   order something travels along it, and the spans, the methods and the channels
+   all work on it exactly as they do on a straight line.
+
+   These lines cannot be walked in scan order the way parallel ones can, so the
+   pixels are put in order along their line first — by radius for a ray, by angle
+   round the centre for a ring — with a counting sort, and then filed into their
+   lines in that order. Two linear passes rather than a comparison sort per line,
+   and no pixel is resampled on the way. */
+function pixelSortPolarLines(w, h, v) {
+  const TURN = Math.PI * 2, total = w * h;
+  const centreX = w * v.centreX / 100, centreY = h * v.centreY / 100;
+  const rings = v.path === 'spin';
+  let far = 0;
+  for (const [x, y] of [[0, 0], [w, 0], [0, h], [w, h]]) far = Math.max(far, Math.hypot(x - centreX, y - centreY));
+  /* One ray per pixel of the outermost circle, so the rays arrive about a pixel
+     apart where the picture is widest, the way a zoom blur's streaks do. */
+  const rays = Math.max(8, Math.round(TURN * far)), radii = Math.max(1, Math.round(far) + 1);
+  const count = rings ? radii : rays;
+  /* Where a ring is cut. A sorted ring has to start somewhere, and this is the
+     one thing the angle control still means when the lines are circles. */
+  const seam = ((v.angle % 360) + 360) % 360 * Math.PI / 180;
+  /* The line a pixel belongs to is rounded to the pixel — rings a pixel apart,
+     rays about a pixel apart at the rim. Its place along that line is kept to a
+     quarter of one, so that two pixels the counting sort cannot separate are at
+     worst a quarter of a pixel out of order rather than a whole one. */
+  const step = 4;
+  const line = new Int32Array(total), along = new Int32Array(total);
+  let alongMax = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const dx = x + .5 - centreX, dy = y + .5 - centreY;
+    const distance = Math.hypot(dx, dy);
+    const turn = Math.atan2(dy, dx) - seam;
+    const round = ((turn % TURN) + TURN) % TURN / TURN;
+    const pixel = y * w + x;
+    line[pixel] = rings
+      ? Math.min(radii - 1, Math.round(distance))
+      : Math.min(rays - 1, Math.floor(round * rays));
+    along[pixel] = rings
+      ? Math.min(rays * step - 1, Math.floor(round * rays * step))
+      : Math.min((radii - 1) * step, Math.round(distance * step));
+    if (along[pixel] > alongMax) alongMax = along[pixel];
+  }
+  const places = new Int32Array(alongMax + 2);
+  for (let pixel = 0; pixel < total; pixel++) places[along[pixel] + 1]++;
+  for (let step = 0; step <= alongMax; step++) places[step + 1] += places[step];
+  const walked = new Int32Array(total);
+  for (let pixel = 0; pixel < total; pixel++) walked[places[along[pixel]]++] = pixel;
+  const starts = new Int32Array(count + 1);
+  for (let pixel = 0; pixel < total; pixel++) starts[line[pixel] + 1]++;
+  for (let index = 0; index < count; index++) starts[index + 1] += starts[index];
+  const cursor = starts.slice(0, count), order = new Int32Array(total);
+  for (let step = 0; step < total; step++) {
+    const pixel = walked[step];
+    order[cursor[line[pixel]]++] = pixel;
+  }
+  return { order, starts, count };
+}
+
+const pixelSortLines = (w, h, v) => v.path === 'spin' || v.path === 'zoom'
+  ? pixelSortPolarLines(w, h, v)
+  : pixelSortParallelLines(w, h, v.angle);
 
 /* Which algorithm does the sorting only matters if it is not allowed to finish:
    run to completion, quicksort and mergesort and heapsort all leave a span in
@@ -4954,7 +5019,7 @@ function pixelSortImage(src, v) {
     ? parts.separate.map((kind, index) => [parts.offsets[index], keysFor(kind)])
     : [[-1, keysFor(v.sort)]];
   const pickValues = pixelChannelValues(src, v.select);
-  const { order, starts, count } = pixelSortLines(w, h, v.angle);
+  const { order, starts, count } = pixelSortLines(w, h, v);
   const lower = Math.min(v.lower, v.upper) / 100, upper = Math.max(v.lower, v.upper) / 100;
   const mode = v.intervals, invert = !!v.invert, keepClear = !!v.transparent;
   const edge = v.edge / 100, length = Math.max(1, Math.round(v.length));
@@ -5256,7 +5321,7 @@ const EFFECTS = {
   'pixel-sort': {
     title: 'Pixel Sorting',
     livePixels: 400_000,
-    help: 'Reorders the pixels along straight lines. Spans decides what the picture is broken into, and everything in a span is rearranged by the channel it is sorted on. Move chooses what travels — whole pixels, one colour channel while the rest stay put, or all three sorted apart from each other. Method picks the algorithm that does the rearranging: most of them are sorts stopped before they finish, which is where they stop agreeing with each other.',
+    help: 'Reorders the pixels along straight lines. Spans decides what the picture is broken into, and everything in a span is rearranged by the channel it is sorted on. Move chooses what travels — whole pixels, one colour channel while the rest stay put, or all three sorted apart from each other. Method picks the algorithm that does the rearranging: most of them are sorts stopped before they finish, which is where they stop agreeing with each other. Lines can run straight across the picture, round a centre or out of one, which are the sorting versions of a spin and a zoom blur.',
     fields: [
       {
         id: 'intervals', label: 'Spans', type: 'select', value: 'threshold',
@@ -5302,7 +5367,13 @@ const EFFECTS = {
       { id: 'flips', label: 'Flips', type: 'range', min: 1, max: 200, value: 20, step: 1, when: v => pixelSortUses(v.method, 'flips') },
       { id: 'levels', label: 'Levels', type: 'range', min: 2, max: 64, value: 8, step: 1, when: v => pixelSortUses(v.method, 'levels') },
       { id: 'bits', label: 'Bits kept', type: 'range', min: 1, max: 7, value: 3, step: 1, when: v => pixelSortUses(v.method, 'bits') },
-      { id: 'angle', label: 'Angle', type: 'range', min: 0, max: 360, value: 0, step: 1, unit: '°' },
+      {
+        id: 'path', label: 'Lines', type: 'select', value: 'parallel',
+        options: [['parallel', 'Parallel'], ['spin', 'Spin — rings'], ['zoom', 'Zoom — rays']]
+      },
+      { id: 'angle', label: v => v.path === 'spin' ? 'Ring cut' : 'Angle', type: 'range', min: 0, max: 360, value: 0, step: 1, unit: '°', when: v => v.path !== 'zoom' },
+      { id: 'centreX', label: 'Centre X', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%', when: v => v.path !== 'parallel' },
+      { id: 'centreY', label: 'Centre Y', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%', when: v => v.path !== 'parallel' },
       { id: 'skip', label: 'Leave spans alone', type: 'range', min: 0, max: 100, value: 0, step: 1, unit: '%' },
       {
         id: 'seed', label: 'Seed', type: 'range', min: 0, max: 999, value: 1, step: 1,
@@ -5702,25 +5773,35 @@ function renderCustomMatrix(container, size) {
   });
 }
 
-/* A field may declare when() it applies. Pixel Sorting is what asked for it:
-   its five ways of choosing spans each want different numbers, and a panel
-   showing all of them at once buries the three or four the current choice is
-   actually listening to. The rows stay in the form either way, so a field that
-   goes away keeps what it was set to and comes back with it. */
+/* A field may declare when() it applies, and may take its label from the other
+   settings rather than fixing it. Pixel Sorting is what asked for both: its five
+   ways of choosing spans each want different numbers, and a panel showing all of
+   them at once buries the three or four the current choice is actually listening
+   to; and its one angle control genuinely names two different things depending
+   on whether the lines are straight or circles. The rows stay in the form when
+   they go away, so a hidden field keeps what it was set to and comes back
+   with it. */
 function syncEffectFields() {
   if (!activeEffect || !effectRows.length) return;
   const values = effectValues();
-  effectRows.forEach(([field, row]) => { row.hidden = !!field.when && !field.when(values); });
+  effectRows.forEach(([field, row]) => {
+    row.hidden = !!field.when && !field.when(values);
+    if (typeof field.label === 'function') row.firstElementChild.textContent = field.label(values);
+  });
 }
 
 function buildEffectFields(config) {
   const fields = appRoot.querySelector('#effectFields');
   fields.replaceChildren();
   effectRows = [];
+  /* The fields are not in the form yet, so a label that reads the other
+     settings gets the defaults here and its real answer from the sync below. */
+  const defaults = Object.fromEntries(config.fields.map(field => [field.id, field.value]));
   config.fields.forEach(field => {
     const row = document.createElement('label');
     effectRows.push([field, row]);
-    const name = document.createElement('span'); name.textContent = field.label;
+    const name = document.createElement('span');
+    name.textContent = typeof field.label === 'function' ? field.label(defaults) : field.label;
     row.append(name);
     if (field.type === 'check') {
       const input = document.createElement('input');
