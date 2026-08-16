@@ -4921,16 +4921,39 @@ function pixelSortSeed(seed, span) {
 
 const pixelSortUses = (method, control) => !!PIXEL_SORT_METHODS[method]?.uses.includes(control);
 
+/* What a span rearranges. Moving whole pixels is a sort of the picture; moving
+   one channel and leaving the rest where they are is a sort of one separation,
+   and the colours come apart wherever the spans run. Sorting all three that way
+   in one pass, each by its own values, is the loudest of them — every pixel
+   ends up holding a red from one place, a green from another and a blue from a
+   third, so the picture keeps its overall tone and loses its colour edges. */
+const PIXEL_SORT_PARTS = {
+  all: { label: 'All — whole pixels', offsets: [0, 1, 2, 3] },
+  red: { label: 'Red only', offsets: [0] },
+  green: { label: 'Green only', offsets: [1] },
+  blue: { label: 'Blue only', offsets: [2] },
+  alpha: { label: 'Alpha only', offsets: [3] },
+  separate: { label: 'Each channel by itself', offsets: [0, 1, 2], separate: ['red', 'green', 'blue'] }
+};
+
 function pixelSortImage(src, v) {
   const w = src.width, h = src.height, data = src.data;
   const out = copyImage(src), result = out.data;
   const method = PIXEL_SORT_METHODS[v.method] || PIXEL_SORT_METHODS.full;
-  let sortValues = pixelChannelValues(src, v.sort);
-  const pickValues = v.select === v.sort ? sortValues : pixelChannelValues(src, v.select);
+  const parts = PIXEL_SORT_PARTS[v.channels] || PIXEL_SORT_PARTS.all;
   /* Every method sorts upwards; descending is the same run over a flipped key,
      which keeps one implementation of each algorithm rather than two. */
-  if (v.order === 'descending') sortValues = sortValues.map(value => 1 - value);
-  if (method.keys) sortValues = method.keys(sortValues, v);
+  const keysFor = kind => {
+    let values = pixelChannelValues(src, kind);
+    if (v.order === 'descending') values = values.map(value => 1 - value);
+    return method.keys ? method.keys(values, v) : values;
+  };
+  /* Each channel sorted by itself needs a key array per channel; everything
+     else sorts on the one channel chosen in the dialog. */
+  const passes = parts.separate
+    ? parts.separate.map((kind, index) => [parts.offsets[index], keysFor(kind)])
+    : [[-1, keysFor(v.sort)]];
+  const pickValues = pixelChannelValues(src, v.select);
   const { order, starts, count } = pixelSortLines(w, h, v.angle);
   const lower = Math.min(v.lower, v.upper) / 100, upper = Math.max(v.lower, v.upper) / 100;
   const mode = v.intervals, invert = !!v.invert, keepClear = !!v.transparent;
@@ -4944,13 +4967,23 @@ function pixelSortImage(src, v) {
     if (!run.length) return;
     const chance = hashNoise(spans++, seed, 13);
     if (run.length > 1 && chance >= skip) {
-      const sorted = run.slice();
-      method.arrange(sorted, sortValues, v, pixelSortSeed(seed, spans));
-      for (let k = 0; k < run.length; k++) {
-        const to = run[k] * 4, from = sorted[k] * 4;
-        result[to] = data[from]; result[to + 1] = data[from + 1];
-        result[to + 2] = data[from + 2]; result[to + 3] = data[from + 3];
-      }
+      passes.forEach(([only, keys], pass) => {
+        const sorted = run.slice();
+        /* A different stream per channel, or a shuffle would move all three the
+           same way and come out as whole pixels again. */
+        method.arrange(sorted, keys, v, pixelSortSeed(seed, spans * 4 + pass));
+        const offsets = only < 0 ? parts.offsets : [only];
+        if (offsets.length === 4) {
+          for (let k = 0; k < run.length; k++) {
+            const to = run[k] * 4, from = sorted[k] * 4;
+            result[to] = data[from]; result[to + 1] = data[from + 1];
+            result[to + 2] = data[from + 2]; result[to + 3] = data[from + 3];
+          }
+        } else {
+          const offset = offsets[0];
+          for (let k = 0; k < run.length; k++) result[run[k] * 4 + offset] = data[sorted[k] * 4 + offset];
+        }
+      });
     }
     run.length = 0;
   };
@@ -5222,7 +5255,8 @@ const EFFECTS = {
   },
   'pixel-sort': {
     title: 'Pixel Sorting',
-    help: 'Reorders the pixels along straight lines. Spans decides what the picture is broken into, and everything in a span is rearranged by the channel it is sorted on. Method picks the algorithm that does the rearranging — most of them are sorts stopped before they finish, which is where they stop agreeing with each other.',
+    livePixels: 400_000,
+    help: 'Reorders the pixels along straight lines. Spans decides what the picture is broken into, and everything in a span is rearranged by the channel it is sorted on. Move chooses what travels — whole pixels, one colour channel while the rest stay put, or all three sorted apart from each other. Method picks the algorithm that does the rearranging: most of them are sorts stopped before they finish, which is where they stop agreeing with each other.',
     fields: [
       {
         id: 'intervals', label: 'Spans', type: 'select', value: 'threshold',
@@ -5243,7 +5277,14 @@ const EFFECTS = {
         id: 'length', label: 'Span length', type: 'range', min: 2, max: 400, value: 60, step: 1, unit: ' px',
         when: v => v.intervals === 'random' || v.intervals === 'waves'
       },
-      { id: 'sort', label: 'Sort by', type: 'select', value: 'luminance', options: PIXEL_SORT_CHANNELS },
+      {
+        id: 'channels', label: 'Move', type: 'select', value: 'all',
+        options: Object.entries(PIXEL_SORT_PARTS).map(([value, part]) => [value, part.label])
+      },
+      {
+        id: 'sort', label: 'Sort by', type: 'select', value: 'luminance', options: PIXEL_SORT_CHANNELS,
+        when: v => v.channels !== 'separate'
+      },
       { id: 'order', label: 'Order', type: 'select', value: 'ascending', options: [['ascending', 'Ascending'], ['descending', 'Descending']] },
       {
         id: 'method', label: 'Method', type: 'select', value: 'full',
@@ -5614,7 +5655,10 @@ function selectiveImage(src, values) {
 }
 
 /* Beyond this size a filter takes long enough that chasing the slider would
-   stutter, so the preview waits for the control to be let go instead. */
+   stutter, so the preview waits for the control to be let go instead. A filter
+   whose own cost is far from the usual — Pixel Sorting runs an algorithm over
+   every span and can be asked to run it hundreds of times — sets its own
+   livePixels rather than dragging this number down for the other thirty. */
 const EFFECT_LIVE_PIXELS = 1_500_000;
 const CUSTOM_KERNELS = {
   3: [0, 0, 0, 0, 1, 0, 0, 0, 0],
@@ -5771,7 +5815,8 @@ function openEffect(kind) {
   if (!config) return;
   if (effectOriginal) endEffectPreview(true, false);
   effectOriginal = { layerId: activeLayer.id, pixels: bx.getImageData(0, 0, width(), height()), mask: selectionCoverage() };
-  activeEffect = kind; effectPreviewing = true; effectLive = width() * height() <= EFFECT_LIVE_PIXELS;
+  activeEffect = kind; effectPreviewing = true;
+  effectLive = width() * height() <= (config.livePixels || EFFECT_LIVE_PIXELS);
   stack.classList.add('adjust-busy');
   appRoot.querySelector('#effectTitle').textContent = config.title;
   buildEffectFields(config);
