@@ -627,8 +627,14 @@
           <button data-cmd="effect-mosaic"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Mosaic…</button>
           <button data-cmd="effect-halftone"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Colour Halftone…</button>
           <button data-cmd="effect-crystallize"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span>Crystallize…</button>
+        </div>
+      </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="bug" aria-hidden="true"></span><span class="rm-item">Digital Degradation</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
           <button data-cmd="effect-jpeg"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>JPEG Artifacts…</button>
           <button data-cmd="effect-pixel-sort"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Pixel Sorting…</button>
+          <button data-cmd="effect-sonify"><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>Sonification…</button>
         </div>
       </div>
       <div class="rm-sub">
@@ -5110,6 +5116,150 @@ function pixelSortImage(src, v) {
   return out;
 }
 
+/* Sonification — the picture handed to an effects unit as though it were a
+   tape. A row of pixels is a run of numbers arriving one after another, which
+   is exactly what a sampled waveform is, so a filter written for audio will run
+   over it unmodified; what it does to a sound it does to the picture, and the
+   only thing that changes is that the result is looked at rather than listened
+   to. Nothing here resamples or averages a neighbourhood the way a blur does:
+   every pixel is the arithmetic of the pixels the reading head has already
+   passed, so the marks all trail behind the thing that made them.
+
+   The reading order is the whole character of it. Row by row, the unit is torn
+   down and rebuilt at the start of every line, so nothing an echo carries ever
+   crosses from one line into the next. Snaking, the head never lifts — it runs
+   left to right, drops a line, runs back — and the picture becomes one signal
+   several hundred thousand samples long, so a tail thrown off the right-hand
+   edge arrives at the right-hand edge of the row below and the smear leans the
+   way a raster scan does. */
+const SONIFY_SCANS = {
+  rows: { label: 'Rows', down: false, snake: false },
+  'rows-snake': { label: 'Rows, snaking', down: false, snake: true },
+  columns: { label: 'Columns', down: true, snake: false },
+  'columns-snake': { label: 'Columns, snaking', down: true, snake: true }
+};
+
+/* Each pass over the picture is a list of runs: where the head lands, how far
+   it steps between samples, and how many samples the run holds. Everything the
+   scan order decides is settled here, so the filters downstream only ever see a
+   stream. */
+function sonifyRuns(w, h, scan) {
+  const { down, snake } = SONIFY_SCANS[scan] || SONIFY_SCANS.rows;
+  const runs = [], lines = down ? w : h, length = down ? h : w;
+  const step = down ? w : 1;
+  for (let line = 0; line < lines; line++) {
+    const back = snake && (line & 1);
+    const first = down ? line : line * w;
+    runs.push({ start: back ? first + step * (length - 1) : first, step: back ? -step : step, length });
+  }
+  return runs;
+}
+
+/* Freeverb's delay lengths, kept as ratios of the shortest rather than as the
+   sample counts Jezar tuned for 44.1 kHz. Holding the ratios is what lets Depth
+   scale the whole room: the delays stay near enough mutually prime at any size,
+   so the six combs never line up into one flat repeat, and a small room is the
+   same reverb heard closer rather than a different one. */
+const REVERB_COMBS = [1, 1.0645, 1.1443, 1.2151, 1.2742, 1.3361];
+const REVERB_ALLPASS = [.4982, .3952, .3056];
+
+/* Six comb filters in parallel make the tail — each one an echo feeding itself,
+   with a one-pole lowpass in the loop so the repeats lose their edges the way a
+   real room's do — and three allpasses in series scramble what comes out into
+   something dense enough not to read as a row of copies.
+
+   The combs are scaled by 1 − feedback so the whole unit passes a steady level
+   through unchanged. Without that, feedback would double as a brightness
+   control: a comb left to itself has a gain of 1/(1 − feedback), and a long
+   tail would flare the picture to white before it showed any echoes at all.
+
+   `level` is the one place this parts company with a reverb meant for sound. A
+   sound sits either side of zero and starts from silence, so an empty delay
+   line is the honest state to begin in; a picture sits entirely above zero, and
+   starting empty means the unit spends its first few hundred pixels climbing
+   from black up to the brightness it was handed. At any useful feedback that
+   climb is longer than the row it is happening in, so every line would arrive
+   with a dark ramp burnt down its leading edge and a flat grey picture would
+   come back as a gradient. Filling the delays with the steady state for the
+   level the head is about to meet starts the unit already in the room: a run of
+   unchanging pixels comes through untouched, and only what changes rings. */
+function makeReverb(depth, feedback, damping, level) {
+  const size = ratio => new Float32Array(Math.max(1, Math.round(depth * ratio)));
+  const settled = level / (1 - feedback);
+  const combs = REVERB_COMBS.map(ratio => ({ buffer: size(ratio).fill(settled), at: 0, store: settled }));
+  const allpasses = REVERB_ALLPASS.map(ratio => ({ buffer: size(ratio).fill(level * 2), at: 0 }));
+  const keep = 1 - damping, scale = (1 - feedback) / combs.length;
+  return sample => {
+    let wet = 0;
+    for (const comb of combs) {
+      const delayed = comb.buffer[comb.at];
+      wet += delayed;
+      comb.store = delayed * keep + comb.store * damping;
+      comb.buffer[comb.at] = sample + comb.store * feedback;
+      if (++comb.at >= comb.buffer.length) comb.at = 0;
+    }
+    wet *= scale;
+    for (const allpass of allpasses) {
+      const delayed = allpass.buffer[allpass.at];
+      allpass.buffer[allpass.at] = wet + delayed * .5;
+      wet = delayed - wet;
+      if (++allpass.at >= allpass.buffer.length) allpass.at = 0;
+    }
+    return wet;
+  };
+}
+
+/* The rack. One entry for now; the dialog reads its controls out of `uses` so
+   adding a delay or a bitcrusher later is a matter of writing the voice and
+   naming the sliders it listens to. `voice` is handed the channel it is being
+   built for, so a unit can detune itself per colour, and the level the reading
+   head is about to meet, so it can start settled rather than empty. */
+const SONIFY_EFFECTS = {
+  reverb: {
+    label: 'Reverb',
+    uses: ['depth', 'feedback', 'damping', 'spread'],
+    /* The three colours go through three separate units, and Colour spread
+       pulls their rooms to slightly different sizes. Identical rooms echo grey
+       — every channel repeats at the same distance and the copy is the same
+       colour as the original. Pull them apart and each repeat lands at its own
+       offset, so the tail splits into the colour fringes that are the whole
+       reason for doing this to a picture rather than to a sound. */
+    voice: (v, channel, level) => {
+      const spread = 1 + (channel - 1) * (v.spread / 100) * .35;
+      return makeReverb(Math.max(1, v.depth * spread), v.feedback / 100, v.damping / 100, level);
+    }
+  }
+};
+
+const sonifyUses = (effect, control) => !!SONIFY_EFFECTS[effect]?.uses.includes(control);
+
+function sonifyImage(src, v) {
+  const w = src.width, h = src.height, out = copyImage(src), data = out.data, source = src.data;
+  const unit = SONIFY_EFFECTS[v.effect] || SONIFY_EFFECTS.reverb;
+  const snake = !!(SONIFY_SCANS[v.scan] || SONIFY_SCANS.rows).snake;
+  const runs = sonifyRuns(w, h, v.scan);
+  const mix = v.mix / 100, channels = v.alpha ? 4 : 3, backwards = !!v.reverse;
+  for (let channel = 0; channel < channels; channel++) {
+    let voice = null;
+    for (let index = 0; index < runs.length; index++) {
+      const run = runs[backwards ? runs.length - 1 - index : index];
+      /* Read backwards and the echoes arrive before the edge that threw them,
+         which is the swell in front of the note that reverse reverb is for. */
+      const step = backwards ? -run.step : run.step;
+      let at = backwards ? run.start + run.step * (run.length - 1) : run.start;
+      /* A snaking read is one signal, so the unit is built once and carries its
+         tail across the turns; anything else starts each line fresh, settled on
+         whatever that line opens with. */
+      if (!snake || !voice) voice = unit.voice(v, channel, source[at * 4 + channel]);
+      for (let sample = 0; sample < run.length; sample++, at += step) {
+        const i = at * 4 + channel, dry = source[i];
+        data[i] = clampByte(dry + (voice(dry) - dry) * mix);
+      }
+    }
+  }
+  return out;
+}
+
 /* Tileable value noise: the lattice wraps at the image edge, so Clouds over a
    tile still meets itself cleanly. */
 function cloudField(w, h, cells, octaves, roughness, seed) {
@@ -5428,6 +5578,29 @@ const EFFECTS = {
       { id: 'transparent', label: 'Leave transparent pixels', type: 'check', value: true }
     ],
     run: (src, v) => pixelSortImage(src, v)
+  },
+  sonify: {
+    title: 'Sonification',
+    livePixels: 400_000,
+    help: 'Plays the layer through an audio effect. A line of pixels is a run of numbers arriving in order, which is what a sampled waveform is, so a filter written for sound runs over it untouched — and it leaves the same marks, trailing behind whatever made them. Reverb builds a tail out of six echoes feeding themselves: Depth is how far apart they land, Feedback how long they take to die away, Damping how quickly they lose their edges. Read decides what counts as one signal — a line at a time, or snaking across the whole picture without lifting the head. Colour spread detunes the three colours against each other, which is what turns a grey smear into fringes.',
+    fields: [
+      {
+        id: 'effect', label: 'Effect', type: 'select', value: 'reverb',
+        options: Object.entries(SONIFY_EFFECTS).map(([value, unit]) => [value, unit.label])
+      },
+      { id: 'depth', label: 'Depth', type: 'range', min: 1, max: 400, value: 40, step: 1, unit: ' px', when: v => sonifyUses(v.effect, 'depth') },
+      { id: 'feedback', label: 'Feedback', type: 'range', min: 0, max: 98, value: 80, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'feedback') },
+      { id: 'damping', label: 'Damping', type: 'range', min: 0, max: 99, value: 40, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'damping') },
+      { id: 'spread', label: 'Colour spread', type: 'range', min: 0, max: 100, value: 25, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'spread') },
+      { id: 'mix', label: 'Mix', type: 'range', min: 0, max: 100, value: 70, step: 1, unit: '%' },
+      {
+        id: 'scan', label: 'Read', type: 'select', value: 'rows-snake',
+        options: Object.entries(SONIFY_SCANS).map(([value, scan]) => [value, scan.label])
+      },
+      { id: 'reverse', label: 'Play backwards', type: 'check', value: false },
+      { id: 'alpha', label: 'Sound the alpha channel too', type: 'check', value: false }
+    ],
+    run: (src, v) => sonifyImage(src, v)
   },
   twirl: {
     title: 'Twirl',
