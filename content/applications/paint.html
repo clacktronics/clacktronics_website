@@ -252,6 +252,7 @@
    sliders take the middle and the readout, everything else spans both. */
 #effectFields label.paint-effect-block { grid-template-columns: 1fr; }
 .paint-effect-select, .paint-effect-number { grid-column: 2 / span 2; width: 100%; min-width: 0; box-sizing: border-box; height: 22px; padding: 0 4px; border: 1px solid var(--ink); border-radius: 4px; background: var(--paper-deep); color: var(--control-text); font: 11px/1 'IBM Plex Mono', monospace; }
+#effectFields label[hidden] { display: none; }
 #effectFields label.paint-effect-switch { grid-template-columns: minmax(105px,1fr) auto; justify-content: start; }
 #effectFields label.paint-effect-switch input { justify-self: start; }
 .paint-effect-matrix { display: grid; gap: 4px; margin-top: 4px; padding: 6px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); }
@@ -627,6 +628,7 @@
           <button data-cmd="effect-halftone"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Colour Halftone…</button>
           <button data-cmd="effect-crystallize"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span>Crystallize…</button>
           <button data-cmd="effect-jpeg"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>JPEG Artifacts…</button>
+          <button data-cmd="effect-pixel-sort"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Pixel Sorting…</button>
         </div>
       </div>
       <div class="rm-sub">
@@ -3890,8 +3892,9 @@ const wrapIndex = (value, limit) => ((value % limit) + limit) % limit;
 const edgeIndex = (value, limit, wrap) => wrap ? wrapIndex(value, limit) : value < 0 ? 0 : value >= limit ? limit - 1 : value;
 const smoothStep = t => t * t * (3 - 2 * t);
 
-/* A small integer hash — the seed for the noise lattice and for the jittered
-   cell centres in Crystallize, both of which must be repeatable. */
+/* A small integer hash — the seed for the noise lattice, for the jittered cell
+   centres in Crystallize and for the span lengths in Pixel Sorting, all of
+   which must be repeatable. */
 function hashNoise(x, y, seed) {
   let n = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(seed | 0, 1442695041);
   n = Math.imul(n ^ (n >>> 13), 1274126177);
@@ -4527,6 +4530,150 @@ function jpegImage(src, quality, block, chroma, chromaQuality, ringing, passes, 
   return out;
 }
 
+/* Pixel sorting — the glitch Kim Asendorf's 2010 script made a genre of. The
+   layer is walked in straight lines, each line is broken into spans, and the
+   pixels inside a span are reordered by whatever is being sorted on. Nothing is
+   averaged or resampled: a span is a permutation of the pixels that were
+   already lying there, which is why the streaks still read as the photograph
+   they came out of however far they run.
+
+   Everything that reads a pixel — what picks the spans, what sorts them — draws
+   on the same list of channels, normalised to 0…1 so one pair of threshold
+   sliders means the same thing whichever one is chosen. Hue is the odd one: it
+   wraps, so sorting by it leaves red at both ends of a span. */
+const PIXEL_SORT_CHANNELS = [
+  ['luminance', 'Luminance'],
+  ['lightness', 'Lightness (HSL)'],
+  ['brightness', 'Brightness (max)'],
+  ['intensity', 'Intensity (R+G+B)'],
+  ['minimum', 'Darkest channel'],
+  ['hue', 'Hue'],
+  ['saturation', 'Saturation'],
+  ['red', 'Red'],
+  ['green', 'Green'],
+  ['blue', 'Blue'],
+  ['alpha', 'Alpha']
+];
+
+function pixelChannelReader(kind) {
+  switch (kind) {
+    case 'lightness': return (r, g, b) => (Math.max(r, g, b) + Math.min(r, g, b)) / 510;
+    case 'brightness': return (r, g, b) => Math.max(r, g, b) / 255;
+    case 'intensity': return (r, g, b) => (r + g + b) / 765;
+    case 'minimum': return (r, g, b) => Math.min(r, g, b) / 255;
+    case 'hue': return (r, g, b) => {
+      const max = Math.max(r, g, b), delta = max - Math.min(r, g, b);
+      if (!delta) return 0;
+      const hue = max === r ? (g - b) / delta + (g < b ? 6 : 0) : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+      return hue / 6;
+    };
+    case 'saturation': return (r, g, b) => {
+      const max = Math.max(r, g, b), min = Math.min(r, g, b), delta = max - min;
+      return delta ? (max + min > 255 ? delta / (510 - max - min) : delta / (max + min)) : 0;
+    };
+    case 'red': return r => r / 255;
+    case 'green': return (r, g) => g / 255;
+    case 'blue': return (r, g, b) => b / 255;
+    case 'alpha': return (r, g, b, a) => a / 255;
+    default: return (r, g, b) => (r * .2126 + g * .7152 + b * .0722) / 255;
+  }
+}
+
+function pixelChannelValues(src, kind) {
+  const data = src.data, values = new Float32Array(src.width * src.height), read = pixelChannelReader(kind);
+  for (let pixel = 0, i = 0; pixel < values.length; pixel++, i += 4) {
+    values[pixel] = read(data[i], data[i + 1], data[i + 2], data[i + 3]);
+  }
+  return values;
+}
+
+/* The lines a sort runs along. Rotating the layer to the angle and rotating the
+   result back would resample every pixel twice and soften exactly the hard
+   streaks the effect exists to make, so instead each pixel is filed under the
+   line it sits on — its distance across the lines, rounded — and read back out
+   along that line. Walking x in the direction of the angle's cosine and y in
+   the direction of its sine meets the pixels of any one line end to end, so a
+   line comes out in order without having to be sorted into it. */
+function pixelSortLines(w, h, angle) {
+  const turn = angle * Math.PI / 180, cos = Math.cos(turn), sin = Math.sin(turn);
+  let low = Infinity, high = -Infinity;
+  for (const [x, y] of [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]]) {
+    const across = y * cos - x * sin;
+    if (across < low) low = across;
+    if (across > high) high = across;
+  }
+  const count = Math.round(high - low) + 1, starts = new Int32Array(count + 1);
+  const lineAt = (x, y) => Math.max(0, Math.min(count - 1, Math.round(y * cos - x * sin - low)));
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) starts[lineAt(x, y) + 1]++;
+  for (let index = 0; index < count; index++) starts[index + 1] += starts[index];
+  const cursor = starts.slice(0, count), order = new Int32Array(w * h);
+  const xFrom = cos >= 0 ? 0 : w - 1, xStep = cos >= 0 ? 1 : -1;
+  const yFrom = sin >= 0 ? 0 : h - 1, yStep = sin >= 0 ? 1 : -1;
+  const file = (x, y) => { order[cursor[lineAt(x, y)]++] = y * w + x; };
+  if (Math.abs(cos) >= Math.abs(sin)) {
+    for (let column = 0, x = xFrom; column < w; column++, x += xStep) {
+      for (let row = 0, y = yFrom; row < h; row++, y += yStep) file(x, y);
+    }
+  } else {
+    for (let row = 0, y = yFrom; row < h; row++, y += yStep) {
+      for (let column = 0, x = xFrom; column < w; column++, x += xStep) file(x, y);
+    }
+  }
+  return { order, starts, count };
+}
+
+function pixelSortImage(src, v) {
+  const w = src.width, h = src.height, data = src.data;
+  const out = copyImage(src), result = out.data;
+  const sortValues = pixelChannelValues(src, v.sort);
+  const pickValues = v.select === v.sort ? sortValues : pixelChannelValues(src, v.select);
+  const { order, starts, count } = pixelSortLines(w, h, v.angle);
+  const lower = Math.min(v.lower, v.upper) / 100, upper = Math.max(v.lower, v.upper) / 100;
+  const mode = v.intervals, invert = !!v.invert, keepClear = !!v.transparent;
+  const edge = v.edge / 100, length = Math.max(1, Math.round(v.length));
+  const skip = v.skip / 100, seed = v.seed | 0;
+  const compare = v.order === 'descending'
+    ? (a, b) => sortValues[b] - sortValues[a]
+    : (a, b) => sortValues[a] - sortValues[b];
+  /* A span is gathered as the positions it covers, in the order the line meets
+     them; the same list sorted is what goes back into those positions. */
+  const run = [];
+  let spans = 0;
+  const flush = () => {
+    if (!run.length) return;
+    const chance = hashNoise(spans++, seed, 13);
+    if (run.length > 1 && chance >= skip) {
+      const sorted = run.slice().sort(compare);
+      for (let k = 0; k < run.length; k++) {
+        const to = run[k] * 4, from = sorted[k] * 4;
+        result[to] = data[from]; result[to + 1] = data[from + 1];
+        result[to + 2] = data[from + 2]; result[to + 3] = data[from + 3];
+      }
+    }
+    run.length = 0;
+  };
+  for (let index = 0; index < count; index++) {
+    const from = starts[index], to = starts[index + 1];
+    let previous = -1, limit = 0;
+    for (let at = from; at < to; at++) {
+      const pixel = order[at];
+      if (keepClear && !data[pixel * 4 + 3]) { flush(); previous = -1; continue; }
+      if (mode === 'threshold') {
+        const inside = (pickValues[pixel] >= lower && pickValues[pixel] <= upper) !== invert;
+        if (!inside) { flush(); previous = -1; continue; }
+      } else if (mode === 'edges') {
+        if (previous >= 0 && Math.abs(pickValues[pixel] - pickValues[previous]) > edge) flush();
+      } else if ((mode === 'random' || mode === 'waves') && !run.length) {
+        limit = mode === 'waves' ? length : Math.max(1, Math.round(length * (.25 + 1.5 * hashNoise(spans, seed, 29))));
+      }
+      run.push(pixel); previous = pixel;
+      if (limit && run.length >= limit) flush();
+    }
+    flush();
+  }
+  return out;
+}
+
 /* Tileable value noise: the lattice wraps at the image edge, so Clouds over a
    tile still meets itself cleanly. */
 function cloudField(w, h, cells, octaves, roughness, seed) {
@@ -4770,6 +4917,38 @@ const EFFECTS = {
       { id: 'wrap', label: 'Wrap tile edges', type: 'check', value: true }
     ],
     run: (src, v) => jpegImage(src, v.quality, v.block, v.chroma, v.chromaQuality, v.ringing, v.passes, v.drift, v.wrap)
+  },
+  'pixel-sort': {
+    title: 'Pixel Sorting',
+    help: 'Reorders the pixels along straight lines. Spans decides what the picture is broken into, and everything in a span is rearranged by the channel it is sorted on.',
+    fields: [
+      {
+        id: 'intervals', label: 'Spans', type: 'select', value: 'threshold',
+        options: [
+          ['threshold', 'Threshold range'], ['edges', 'Edges'], ['random', 'Random lengths'],
+          ['waves', 'Fixed lengths'], ['none', 'Whole line']
+        ]
+      },
+      {
+        id: 'select', label: 'Select by', type: 'select', value: 'luminance', options: PIXEL_SORT_CHANNELS,
+        when: v => v.intervals === 'threshold' || v.intervals === 'edges'
+      },
+      { id: 'lower', label: 'Lower threshold', type: 'range', min: 0, max: 100, value: 25, step: 1, unit: '%', when: v => v.intervals === 'threshold' },
+      { id: 'upper', label: 'Upper threshold', type: 'range', min: 0, max: 100, value: 80, step: 1, unit: '%', when: v => v.intervals === 'threshold' },
+      { id: 'invert', label: 'Sort outside the range', type: 'check', value: false, when: v => v.intervals === 'threshold' },
+      { id: 'edge', label: 'Edge threshold', type: 'range', min: 1, max: 100, value: 12, step: 1, unit: '%', when: v => v.intervals === 'edges' },
+      {
+        id: 'length', label: 'Span length', type: 'range', min: 2, max: 400, value: 60, step: 1, unit: ' px',
+        when: v => v.intervals === 'random' || v.intervals === 'waves'
+      },
+      { id: 'sort', label: 'Sort by', type: 'select', value: 'luminance', options: PIXEL_SORT_CHANNELS },
+      { id: 'order', label: 'Order', type: 'select', value: 'ascending', options: [['ascending', 'Ascending'], ['descending', 'Descending']] },
+      { id: 'angle', label: 'Angle', type: 'range', min: 0, max: 360, value: 0, step: 1, unit: '°' },
+      { id: 'skip', label: 'Leave spans alone', type: 'range', min: 0, max: 100, value: 0, step: 1, unit: '%' },
+      { id: 'seed', label: 'Seed', type: 'range', min: 0, max: 999, value: 1, step: 1, when: v => v.intervals === 'random' || v.skip > 0 },
+      { id: 'transparent', label: 'Leave transparent pixels', type: 'check', value: true }
+    ],
+    run: (src, v) => pixelSortImage(src, v)
   },
   twirl: {
     title: 'Twirl',
@@ -5121,6 +5300,7 @@ const CUSTOM_KERNELS = {
   5: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 };
 let activeEffect = null, effectOriginal = null, effectTimer = 0, effectLive = true, lastEffect = null;
+let effectRows = [];
 
 const effectFieldElement = id => appRoot.querySelector(`#effectFields [data-effect-id="${id}"]`);
 
@@ -5157,11 +5337,24 @@ function renderCustomMatrix(container, size) {
   });
 }
 
+/* A field may declare when() it applies. Pixel Sorting is what asked for it:
+   its five ways of choosing spans each want different numbers, and a panel
+   showing all of them at once buries the three or four the current choice is
+   actually listening to. The rows stay in the form either way, so a field that
+   goes away keeps what it was set to and comes back with it. */
+function syncEffectFields() {
+  if (!activeEffect || !effectRows.length) return;
+  const values = effectValues();
+  effectRows.forEach(([field, row]) => { row.hidden = !!field.when && !field.when(values); });
+}
+
 function buildEffectFields(config) {
   const fields = appRoot.querySelector('#effectFields');
   fields.replaceChildren();
+  effectRows = [];
   config.fields.forEach(field => {
     const row = document.createElement('label');
+    effectRows.push([field, row]);
     const name = document.createElement('span'); name.textContent = field.label;
     row.append(name);
     if (field.type === 'check') {
@@ -5237,6 +5430,7 @@ function renderEffectPreview() {
 }
 
 function scheduleEffectPreview() {
+  syncEffectFields();
   if (!effectPreviewing || !activeEffect) return;
   clearTimeout(effectTimer);
   effectTimer = setTimeout(() => { effectTimer = 0; renderEffectPreview(); }, 60);
@@ -5260,6 +5454,7 @@ function openEffect(kind) {
   stack.classList.add('adjust-busy');
   appRoot.querySelector('#effectTitle').textContent = config.title;
   buildEffectFields(config);
+  syncEffectFields();
   appRoot.querySelector('#effectHelp').textContent = `${config.help}${selection ? ' Only the selected area changes.' : ''}${effectLive ? '' : ' The picture is large, so the preview updates when you let a slider go.'}`;
   showModal('effectModal');
   appRoot.querySelector('#effectFields input, #effectFields select')?.focus();
