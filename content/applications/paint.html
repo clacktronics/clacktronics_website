@@ -627,8 +627,14 @@
           <button data-cmd="effect-mosaic"><span class="pixel-icon" data-icon="grid-3x3" aria-hidden="true"></span>Mosaic…</button>
           <button data-cmd="effect-halftone"><span class="pixel-icon" data-icon="circle" aria-hidden="true"></span>Colour Halftone…</button>
           <button data-cmd="effect-crystallize"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span>Crystallize…</button>
+        </div>
+      </div>
+      <div class="rm-sub">
+        <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="pixel-icon" data-icon="bug" aria-hidden="true"></span><span class="rm-item">Digital Degradation</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+        <div class="rm-dd rm-sub-dd compact">
           <button data-cmd="effect-jpeg"><span class="pixel-icon" data-icon="image" aria-hidden="true"></span>JPEG Artifacts…</button>
           <button data-cmd="effect-pixel-sort"><span class="pixel-icon" data-icon="analytics" aria-hidden="true"></span>Pixel Sorting…</button>
+          <button data-cmd="effect-sonify"><span class="pixel-icon" data-icon="music" aria-hidden="true"></span>Sonification…</button>
         </div>
       </div>
       <div class="rm-sub">
@@ -5110,6 +5116,452 @@ function pixelSortImage(src, v) {
   return out;
 }
 
+/* Sonification — the picture handed to an effects unit as though it were a
+   tape. A row of pixels is a run of numbers arriving one after another, which
+   is exactly what a sampled waveform is, so a filter written for audio will run
+   over it unmodified; what it does to a sound it does to the picture, and the
+   only thing that changes is that the result is looked at rather than listened
+   to. Nothing here resamples or averages a neighbourhood the way a blur does:
+   every pixel is the arithmetic of the pixels the reading head has already
+   passed, so the marks all trail behind the thing that made them.
+
+   The reading order is the whole character of it, and it is three decisions
+   rather than one. Read says which way the head travels, across the rows or
+   down the columns. One stream says whether the unit is torn down and rebuilt
+   at the start of every line — echoes then live and die inside the line that
+   threw them — or kept running from the first pixel to the last, which makes
+   the picture one signal several hundred thousand samples long and lets a tail
+   thrown off the end of a line arrive at the start of the next one. Turn at the
+   ends says whether the head lifts to get back: left it alone it snakes, so the
+   tail carries on at the same edge it went off and the smear leans the way a
+   raster scan does, and turned off the head flies back and the tail crosses the
+   whole picture to reappear on the far side. */
+const SONIFY_SCANS = {
+  rows: { label: 'Rows', down: false },
+  columns: { label: 'Columns', down: true }
+};
+
+/* Each trip over the picture is a list of runs: where the head lands, how far
+   it steps between samples, and how many samples the run holds. Everything the
+   reading order decides is settled here, so the filters downstream only ever
+   see a stream. */
+function sonifyRuns(w, h, scan, snake) {
+  const down = !!(SONIFY_SCANS[scan] || SONIFY_SCANS.rows).down;
+  const runs = [], lines = down ? w : h, length = down ? h : w;
+  const step = down ? w : 1;
+  for (let line = 0; line < lines; line++) {
+    const back = snake && (line & 1);
+    const first = down ? line : line * w;
+    runs.push({ start: back ? first + step * (length - 1) : first, step: back ? -step : step, length });
+  }
+  return runs;
+}
+
+/* One shape for everything in the rack that sweeps or multiplies. The phase is
+   carried in samples, so an oscillator's period is a distance across the
+   picture rather than a frequency — the natural unit here, since what a slow
+   oscillator writes on a picture is a stripe you can measure with a ruler. */
+const SONIFY_WAVES = {
+  sine: { label: 'Sine', at: phase => Math.sin(phase * Math.PI * 2) },
+  triangle: { label: 'Triangle', at: phase => 4 * Math.abs(phase - .5) - 1 },
+  square: { label: 'Square', at: phase => phase < .5 ? 1 : -1 },
+  saw: { label: 'Sawtooth', at: phase => phase * 2 - 1 }
+};
+
+function makeOscillator(period, wave) {
+  const shape = (SONIFY_WAVES[wave] || SONIFY_WAVES.sine).at;
+  const step = 1 / Math.max(2, period);
+  let phase = 0;
+  return () => { const value = shape(phase); phase += step; if (phase >= 1) phase -= 1; return value; };
+}
+
+/* Two rules every unit in the rack that remembers anything has to keep, both of
+   them consequences of a picture being a signal that never goes negative.
+
+   A steady level in must give the same steady level out. An echo feeding itself
+   has a gain of 1/(1 − feedback) at DC, and a picture is nearly all DC, so a
+   unit left unnormalised would use its feedback control as a brightness control
+   and flare the whole frame to white before it showed a single repeat. Anything
+   with a feedback path is scaled by 1 − feedback to undo that.
+
+   And the delay lines start filled, not empty. A sound sits either side of zero
+   and starts from silence, so an empty line is the honest state to begin in; a
+   picture sits entirely above zero, and an empty unit spends its first few
+   hundred pixels climbing from black to the brightness it was handed. At any
+   useful feedback that climb is longer than the line it happens in, so every
+   row would arrive with a dark ramp burnt down its leading edge and a flat grey
+   picture would come back as a gradient. Every maker below takes the level the
+   reading head is about to meet and fills its state with the steady state for
+   it, so unchanging pixels pass through untouched and only what changes rings.
+
+   Three units are exempt, and honestly so. Ring modulation and clipping are
+   both meant to rewrite the level rather than hold it — that is what they are
+   for. The bitcrusher holds one only as far as its own resolution allows: a
+   steady level comes back as the nearest step it has left to describe it with,
+   which at three bits can be a good way off. */
+
+/* Freeverb's delay lengths, kept as ratios of the shortest rather than as the
+   sample counts Jezar tuned for 44.1 kHz. Holding the ratios is what lets Depth
+   scale the whole room: the delays stay near enough mutually prime at any size,
+   so the six combs never line up into one flat repeat, and a small room is the
+   same reverb heard closer rather than a different one. */
+const REVERB_COMBS = [1, 1.0645, 1.1443, 1.2151, 1.2742, 1.3361];
+const REVERB_ALLPASS = [.4982, .3952, .3056];
+
+/* Six comb filters in parallel make the tail — each one an echo feeding itself,
+   with a one-pole lowpass in the loop so the repeats lose their edges the way a
+   real room's do — and three allpasses in series scramble what comes out into
+   something dense enough not to read as a row of copies. */
+function makeReverb(depth, feedback, damping, level) {
+  const size = ratio => new Float32Array(Math.max(1, Math.round(depth * ratio)));
+  const settled = level / (1 - feedback);
+  const combs = REVERB_COMBS.map(ratio => ({ buffer: size(ratio).fill(settled), at: 0, store: settled }));
+  const allpasses = REVERB_ALLPASS.map(ratio => ({ buffer: size(ratio).fill(level * 2), at: 0 }));
+  const keep = 1 - damping, scale = (1 - feedback) / combs.length;
+  return sample => {
+    let wet = 0;
+    for (const comb of combs) {
+      const delayed = comb.buffer[comb.at];
+      wet += delayed;
+      comb.store = delayed * keep + comb.store * damping;
+      comb.buffer[comb.at] = sample + comb.store * feedback;
+      if (++comb.at >= comb.buffer.length) comb.at = 0;
+    }
+    wet *= scale;
+    for (const allpass of allpasses) {
+      const delayed = allpass.buffer[allpass.at];
+      allpass.buffer[allpass.at] = wet + delayed * .5;
+      wet = delayed - wet;
+      if (++allpass.at >= allpass.buffer.length) allpass.at = 0;
+    }
+    return wet;
+  };
+}
+
+/* One delay line feeding itself: the reverb's comb without the five others or
+   the allpasses, which is the whole difference between a room and a repeat. The
+   dry signal is kept in the line rather than added around it, so unlike the
+   reverb the output is not shifted — the picture stays where it was and the
+   copies pile up behind it at Delay, twice Delay, three times Delay. */
+function makeEcho(time, feedback, damping, level) {
+  const settled = level / (1 - feedback);
+  const buffer = new Float32Array(Math.max(1, Math.round(time))).fill(settled);
+  const keep = 1 - damping, scale = 1 - feedback;
+  let at = 0, store = settled;
+  return sample => {
+    const delayed = buffer[at];
+    store = delayed * keep + store * damping;
+    const wet = sample + store * feedback;
+    buffer[at] = wet;
+    if (++at >= buffer.length) at = 0;
+    return wet * scale;
+  };
+}
+
+/* The same delay line, short and moving. Sweeping where it reads from drags a
+   copy of the picture back and forth across the original, and where the two
+   agree or disagree changes with the sweep, so the comb the two of them make
+   together slides — the bands are the audible flange written down. The read
+   point lands between samples, so it is interpolated; rounding it instead would
+   step the sweep and draw the staircase rather than the wave. */
+function makeFlanger(time, period, wave, range, feedback, level) {
+  const base = Math.max(1, time), swing = base * range;
+  const size = Math.ceil(base + swing) + 2;
+  const settled = level / (1 - feedback);
+  const buffer = new Float32Array(size).fill(settled);
+  const osc = makeOscillator(period, wave);
+  const scale = 1 - feedback;
+  let at = 0;
+  return sample => {
+    const delay = Math.min(size - 2, Math.max(1, base + swing * osc()));
+    const back = at - delay, first = Math.floor(back), fraction = back - first;
+    const a = buffer[(first % size + size) % size], b = buffer[((first + 1) % size + size) % size];
+    const wet = sample + (a + (b - a) * fraction) * feedback;
+    buffer[at] = wet;
+    if (++at >= size) at = 0;
+    return wet * scale;
+  };
+}
+
+/* A phaser is not a delay at all: a chain of allpass filters passes everything
+   through at full strength and only shifts where each detail sits, and it is
+   adding that back to the untouched signal that turns the shift into notches
+   where the two cancel. Sweeping the allpass corner walks the notches along the
+   scan, which on a picture is a set of soft dark bands that drift. Feedback
+   round the chain sharpens them into something much more metallic. */
+function makePhaser(stages, period, wave, range, feedback, level) {
+  const count = Math.max(1, Math.round(stages)), settled = level / (1 - feedback);
+  const ins = new Float32Array(count).fill(settled), outs = new Float32Array(count).fill(settled);
+  const osc = makeOscillator(period, wave);
+  const scale = 1 - feedback;
+  let last = settled;
+  return sample => {
+    const coefficient = .5 + .45 * range * osc();
+    let value = sample + last * feedback;
+    for (let stage = 0; stage < count; stage++) {
+      const out = -coefficient * value + ins[stage] + coefficient * outs[stage];
+      ins[stage] = value; outs[stage] = out; value = out;
+    }
+    last = value;
+    return (sample + value * scale) * .5;
+  };
+}
+
+/* The shapes a distorted signal is bent to. Each takes the detail already
+   normalised to ±1 and hands back the same range, so Drive decides how hard the
+   signal is pushed into the shape rather than how loud what comes out is. Soft
+   is divided by its own value at full drive, which is what keeps the edges
+   growing towards a square as drive goes up instead of quietly shrinking. */
+const SONIFY_CURVES = {
+  soft: { label: 'Soft — saturate', at: (value, drive) => Math.tanh(value * drive) / Math.tanh(drive) },
+  hard: { label: 'Hard — clip', at: (value, drive) => Math.max(-1, Math.min(1, value * drive)) },
+  fold: {
+    label: 'Fold back',
+    at: (value, drive) => {
+      const turn = (value * drive + 1) % 4, wrapped = turn < 0 ? turn + 4 : turn;
+      return (wrapped < 2 ? wrapped : 4 - wrapped) - 1;
+    }
+  },
+  rectify: { label: 'Rectify', at: (value, drive) => Math.min(1, Math.abs(value * drive)) }
+};
+
+/* Distortion is the one effect that would do nothing interesting taken
+   literally. A waveshaper has no memory: run one straight over pixel values and
+   every pixel of a given brightness comes out the same brightness whatever it
+   sits next to, which is a tone curve — the app already has four of those under
+   Image ▸ Adjustments, and none of them care which way the picture is read.
+
+   What makes an amplifier interesting is that it is fed an AC signal, so the
+   bending happens either side of where the music is sitting rather than either
+   side of some fixed level. The same split does it here: a one-pole tracker
+   follows the body of the picture, the shape is applied to what is left over,
+   and the body goes back on afterwards. Now a lit wall and a dark wall both
+   distort around themselves, texture is what gets driven into the shape, and
+   Tone decides how fine a detail has to be to count as detail at all. */
+function makeDistortion(drive, tone, curve, level) {
+  const shape = (SONIFY_CURVES[curve] || SONIFY_CURVES.soft).at;
+  const follow = tone * tone * .5 + .002;
+  let body = level;
+  return sample => {
+    body += (sample - body) * follow;
+    return body + shape((sample - body) / 255, drive) * 255;
+  };
+}
+
+/* What a signal does when it runs out of headroom, which in a fixed-point
+   machine depends entirely on what the arithmetic was told to do about it.
+   Clipping is the well-behaved answer and the one that sounds like a loud
+   record; folding is what a modular synth's rectifier does; and wrapping is the
+   famous one, the overflow nobody checked for, where one more unit of
+   brightness takes a highlight all the way back to black. Wrap is why a bad
+   sample rate turns a photograph into contour bands.
+
+   This is the only unit in the rack with no memory, so the reading order
+   controls have nothing to bite on and the dialog hides them. */
+function makeClip(gain, ceiling, beyond) {
+  const top = Math.max(1, ceiling), turn = top * 2;
+  return sample => {
+    const driven = sample * gain;
+    if (driven <= top) return driven;
+    if (beyond === 'clip') return top;
+    if (beyond === 'wrap') return driven % top;
+    const folded = driven % turn;
+    return folded <= top ? folded : turn - folded;
+  };
+}
+
+/* Multiplying the picture by an oscillator rather than adding one to it. At
+   full depth the carrier swings negative and takes the picture with it, and
+   everything that lands below zero is clipped away black, which is the hard
+   banding a ring modulator is known for; backed off, the carrier stays positive
+   and it softens into tremolo, the same stripes drawn in shadow rather than cut
+   out. Nothing here preserves a steady level and nothing should — rewriting the
+   level in step with the oscillator is the entire effect. */
+function makeRing(period, wave, depth) {
+  const osc = makeOscillator(period, wave);
+  return sample => sample * (1 - depth + depth * osc());
+}
+
+/* Both halves of what a cheap sampler does to a sound: fewer bits to say how
+   loud with, and fewer chances per second to say it. The bits show up as
+   banding, and the hold as steps drawn along whichever way the picture is being
+   read — which is what separates it from Mosaic, whose blocks are square
+   because it has no reading order to be stretched along. */
+function makeCrush(bits, hold, level) {
+  const steps = Math.max(1, Math.pow(2, bits) - 1), span = Math.max(1, Math.round(hold));
+  let held = level, left = 0;
+  return sample => {
+    if (left <= 0) { held = Math.round(sample / 255 * steps) / steps * 255; left = span; }
+    left--;
+    return held;
+  };
+}
+
+/* A Chamberlin state variable filter, which gives all four outputs off one set
+   of arithmetic and, more to the point, has a resonance control. That is what
+   earns it a place next to the app's existing blurs: a lowpass with the
+   resonance up does not smooth an edge, it overshoots and rings past it, and
+   because this runs one way along the scan the ringing trails the edge instead
+   of sitting symmetrically around it the way a convolution's would.
+
+   The coefficient has to be capped short of where the filter falls apart, and
+   where that is depends on the resonance — which is the opposite way round from
+   the way it feels. Writing the two state updates as a matrix and asking when
+   its eigenvalues stay inside the unit circle gives f² + 2fq < 4, so the safe
+   ceiling on f is √(q² + 4) − q: at full resonance, where q is nearly nothing,
+   that is comfortably above anything a picture can ask for, and it is the
+   *unresonant* filter, with q at 2, that is pinned down to 0.83. Capping f at a
+   flat 0.9 and thinking the resonant end was the dangerous one is exactly the
+   way to get a filter that runs away to infinity with the resonance at zero.
+   A tenth is kept back off the limit, and the two outputs that throw away the
+   picture's average are lifted to mid grey so they read as an image. */
+function makeFilter(period, resonance, mode, level) {
+  const damping = Math.max(.03, 2 - 2 * resonance);
+  const limit = Math.min(.9, .9 * (Math.sqrt(damping * damping + 4) - damping));
+  const coefficient = Math.min(limit, 2 * Math.sin(Math.PI / Math.max(4, period)));
+  let low = level, band = 0;
+  return sample => {
+    low += coefficient * band;
+    const high = sample - low - damping * band;
+    band += coefficient * high;
+    if (mode === 'low') return low;
+    if (mode === 'notch') return low + high;
+    return (mode === 'high' ? high : band) + 128;
+  };
+}
+
+/* Colour spread pulls each channel's unit slightly out of step with the other
+   two, applied to whatever length or period gives that unit its character.
+   Identical settings echo grey — every channel repeats at the same distance and
+   the copy comes back the same colour as the original. Pull them apart and each
+   repeat lands at its own offset, so the marks split into the colour fringes
+   that are the whole reason for doing this to a picture rather than to a sound.
+   Alpha, when it is being sounded, rides with blue rather than being flung
+   further out than any colour goes. */
+const sonifySpread = (v, channel) => 1 + (Math.min(channel, 2) - 1) * (v.spread / 100) * .35;
+
+/* The rack. The dialog reads each unit's controls out of `uses`, so every
+   slider in the panel belongs to whichever unit is selected and the rest go
+   away; `ordered: false` marks the one unit with no memory, whose output cannot
+   depend on which way the picture was read. `voice` is handed the channel it is
+   being built for, so a unit can detune itself per colour, and the level the
+   reading head is about to meet, so it can start settled rather than empty. */
+const SONIFY_EFFECTS = {
+  reverb: {
+    label: 'Reverb',
+    help: 'Reverb builds a tail out of six echoes feeding themselves: Depth is how far apart they land, Feedback how long they take to die away, Damping how quickly the repeats lose their edges.',
+    uses: ['depth', 'feedback', 'damping'],
+    voice: (v, channel, level) =>
+      makeReverb(Math.max(1, v.depth * sonifySpread(v, channel)), v.feedback / 100, v.damping / 100, level)
+  },
+  echo: {
+    label: 'Echo',
+    help: 'Echo is one delay line rather than a roomful, so the copies stay countable: Delay is how far behind the first one lands, Feedback how many follow it, Damping how much softer each one is than the last.',
+    uses: ['time', 'feedback', 'damping'],
+    voice: (v, channel, level) =>
+      makeEcho(Math.max(1, v.time * sonifySpread(v, channel)), v.feedback / 100, v.damping / 100, level)
+  },
+  distortion: {
+    label: 'Distortion',
+    help: 'Distortion drives the picture into a shape it will not fit and lets the corners round off or break. It works on detail rather than on absolute brightness — Tone sets how fine a mark has to be to count as detail — so a lit wall and a dark one each distort around themselves instead of one going white and the other staying put.',
+    uses: ['drive', 'tone', 'curve'],
+    voice: (v, channel, level) => makeDistortion(v.drive / 100, v.tone / 100 / sonifySpread(v, channel), v.curve, level)
+  },
+  clip: {
+    label: 'Clipping',
+    help: 'Clipping is what happens when the signal runs out of room at the top. Gain decides how much of the picture gets there and Ceiling where the roof is; past it the level can flatten off, fold back down, or wrap around to black, which is the overflow that turns a photograph into contour bands.',
+    uses: ['gain', 'ceiling', 'beyond'],
+    ordered: false,
+    voice: (v, channel) => makeClip(v.gain / 100, v.ceiling * sonifySpread(v, channel), v.beyond)
+  },
+  phaser: {
+    label: 'Phaser',
+    help: 'Phaser shifts the picture against itself and adds the two together, so they cancel in bands. Sweep walks those bands along the scan and Sweep width says how far they travel; more Stages puts down more bands, and Feedback sharpens them from soft shadows into hard metallic stripes.',
+    uses: ['stages', 'sweep', 'range', 'feedback', 'wave'],
+    voice: (v, channel, level) => makePhaser(v.stages, Math.max(2, v.sweep * sonifySpread(v, channel)),
+      v.wave, v.range / 100, v.feedback / 100, level)
+  },
+  flanger: {
+    label: 'Flanger',
+    help: 'Flanger drags a copy of the picture back and forth across the original a few pixels away. Delay is how far off it starts, Sweep how long the journey takes and Sweep width how far it goes; the interference between the two draws the moving bands, and Feedback deepens them.',
+    uses: ['flange', 'sweep', 'range', 'feedback', 'wave'],
+    voice: (v, channel, level) => makeFlanger(Math.max(1, v.flange * sonifySpread(v, channel)),
+      Math.max(2, v.sweep), v.wave, v.range / 100, v.feedback / 100, level)
+  },
+  ring: {
+    label: 'Ring modulator',
+    help: 'Ring modulation multiplies the picture by an oscillator instead of adding one to it. At full Depth the carrier swings below zero and cuts hard black stripes out of the picture; backed off it stays positive and softens into tremolo, the same stripes drawn as shadow. Frequency is the stripe spacing.',
+    uses: ['frequency', 'ringDepth', 'wave'],
+    voice: (v, channel) => makeRing(Math.max(2, v.frequency * sonifySpread(v, channel)), v.wave, v.ringDepth / 100)
+  },
+  crush: {
+    label: 'Bitcrusher',
+    help: 'Bitcrusher is a cheap sampler: Bits is how many levels are left to describe a brightness with, and Hold how many pixels go by before it bothers to look again. The bits give banding and the hold gives steps drawn along whichever way the picture is being read, which is what makes it something other than Mosaic.',
+    uses: ['bits', 'hold'],
+    voice: (v, channel, level) => makeCrush(v.bits, Math.max(1, v.hold * sonifySpread(v, channel)), level)
+  },
+  filter: {
+    label: 'Resonant filter',
+    help: 'A filter with its resonance up does not smooth an edge, it overshoots and rings past it — and because this runs one way along the scan, the ringing trails the edge rather than sitting evenly around it. Cutoff is the finest detail that survives a lowpass; the other three modes keep what a lowpass throws away.',
+    uses: ['cutoff', 'resonance', 'filterMode'],
+    voice: (v, channel, level) =>
+      makeFilter(Math.max(4, v.cutoff * sonifySpread(v, channel)), v.resonance / 100, v.filterMode, level)
+  }
+};
+
+const sonifyUses = (effect, control) => !!SONIFY_EFFECTS[effect]?.uses.includes(control);
+const sonifyOrdered = effect => SONIFY_EFFECTS[effect]?.ordered !== false;
+
+function sonifyPass(src, v) {
+  const w = src.width, h = src.height, out = copyImage(src), data = out.data, source = src.data;
+  const unit = SONIFY_EFFECTS[v.effect] || SONIFY_EFFECTS.reverb;
+  const runs = sonifyRuns(w, h, v.scan, !!v.snake);
+  const stream = !!v.continuous;
+  const channels = v.alpha ? 4 : 3, backwards = !!v.reverse;
+  for (let channel = 0; channel < channels; channel++) {
+    let voice = null;
+    for (let index = 0; index < runs.length; index++) {
+      const run = runs[backwards ? runs.length - 1 - index : index];
+      /* Read backwards and the echoes arrive before the edge that threw them,
+         which is the swell in front of the note that reverse reverb is for. */
+      const step = backwards ? -run.step : run.step;
+      let at = backwards ? run.start + run.step * (run.length - 1) : run.start;
+      /* One stream builds the unit once and lets it run the whole picture;
+         line by line, each line gets a unit of its own, settled on whatever
+         that line opens with. */
+      if (!stream || !voice) voice = unit.voice(v, channel, source[at * 4 + channel]);
+      for (let sample = 0; sample < run.length; sample++, at += step) {
+        const i = at * 4 + channel;
+        data[i] = clampByte(voice(source[i]));
+      }
+    }
+  }
+  return out;
+}
+
+/* Passes is the picture fed back into the unit — the take played out and
+   recorded again, not the same take with a longer tail. Each trip works on what
+   the last one left, so echoes get echoes of their own and the smear reaches
+   further than winding Depth or Feedback up could take it, while every trip on
+   its own stays a plausible room rather than a runaway. The unit is rebuilt
+   each time round: carrying its delays over would be a second, silent feedback
+   path on top of the one the slider names.
+
+   Mix is held back until the end and settled once against the picture as it
+   arrived, rather than being applied on every trip. Mixed in each time it stops
+   being a wet/dry control and turns into a second decay: at 70% the original is
+   down to a fifth of itself by the fourth pass and gone by the sixth, so most
+   of a twenty-stop slider would be the same wash and Mix would mean something
+   different at every stop. Kept to the end it means one thing — how much of the
+   picture survives — and the passes decide only how far the echoes reach. */
+function sonifyImage(src, v) {
+  let out = src;
+  for (let pass = 0, passes = Math.max(1, Math.round(v.passes)); pass < passes; pass++) out = sonifyPass(out, v);
+  const mix = v.mix / 100, data = out.data, source = src.data;
+  for (let i = 0; i < data.length; i++) data[i] = clampByte(source[i] + (data[i] - source[i]) * mix);
+  return out;
+}
+
 /* Tileable value noise: the lattice wraps at the image edge, so Clouds over a
    tile still meets itself cleanly. */
 function cloudField(w, h, cells, octaves, roughness, seed) {
@@ -5428,6 +5880,70 @@ const EFFECTS = {
       { id: 'transparent', label: 'Leave transparent pixels', type: 'check', value: true }
     ],
     run: (src, v) => pixelSortImage(src, v)
+  },
+  sonify: {
+    title: 'Sonification',
+    livePixels: v => 400_000 / Math.max(1, v.passes),
+    help: v => 'Plays the layer through an audio effect. A line of pixels is a run of numbers arriving in order, which is what a sampled waveform is, so a filter written for sound runs over it untouched — and it leaves the same marks, trailing behind whatever made them. '
+      + `${(SONIFY_EFFECTS[v.effect] || SONIFY_EFFECTS.reverb).help} `
+      + 'One stream keeps the unit running from the first pixel of the picture to the last so what it carries crosses between lines; without it every line is played on its own. Turn at the ends snakes the reading head back instead of flying it home, which decides whether a mark carries on at the edge it went off or reappears on the far side. Passes plays the result back through again, and Colour spread detunes the three colours against each other, which is what turns a grey smear into fringes.',
+    fields: [
+      {
+        id: 'effect', label: 'Effect', type: 'select', value: 'reverb',
+        options: Object.entries(SONIFY_EFFECTS).map(([value, unit]) => [value, unit.label])
+      },
+      { id: 'depth', label: 'Depth', type: 'range', min: 1, max: 400, value: 40, step: 1, unit: ' px', when: v => sonifyUses(v.effect, 'depth') },
+      { id: 'time', label: 'Delay', type: 'range', min: 2, max: 800, value: 120, step: 1, unit: ' px', when: v => sonifyUses(v.effect, 'time') },
+      { id: 'flange', label: 'Delay', type: 'range', min: 1, max: 120, value: 10, step: 1, unit: ' px', when: v => sonifyUses(v.effect, 'flange') },
+      { id: 'feedback', label: 'Feedback', type: 'range', min: 0, max: 98, value: 80, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'feedback') },
+      { id: 'damping', label: 'Damping', type: 'range', min: 0, max: 99, value: 40, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'damping') },
+      { id: 'drive', label: 'Drive', type: 'range', min: 100, max: 2000, value: 500, step: 10, unit: '%', when: v => sonifyUses(v.effect, 'drive') },
+      { id: 'tone', label: 'Tone', type: 'range', min: 1, max: 100, value: 40, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'tone') },
+      {
+        id: 'curve', label: 'Shape', type: 'select', value: 'soft',
+        options: Object.entries(SONIFY_CURVES).map(([value, curve]) => [value, curve.label]),
+        when: v => sonifyUses(v.effect, 'curve')
+      },
+      { id: 'gain', label: 'Gain', type: 'range', min: 100, max: 1000, value: 250, step: 5, unit: '%', when: v => sonifyUses(v.effect, 'gain') },
+      { id: 'ceiling', label: 'Ceiling', type: 'range', min: 8, max: 255, value: 200, step: 1, when: v => sonifyUses(v.effect, 'ceiling') },
+      {
+        id: 'beyond', label: 'Past the ceiling', type: 'select', value: 'wrap',
+        options: [['clip', 'Flatten off'], ['fold', 'Fold back down'], ['wrap', 'Wrap round to black']],
+        when: v => sonifyUses(v.effect, 'beyond')
+      },
+      { id: 'stages', label: 'Stages', type: 'range', min: 1, max: 12, value: 4, step: 1, when: v => sonifyUses(v.effect, 'stages') },
+      { id: 'sweep', label: 'Sweep', type: 'range', min: 8, max: 4000, value: 600, step: 8, unit: ' px', when: v => sonifyUses(v.effect, 'sweep') },
+      { id: 'range', label: 'Sweep width', type: 'range', min: 0, max: 100, value: 80, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'range') },
+      { id: 'frequency', label: 'Frequency', type: 'range', min: 2, max: 400, value: 24, step: 1, unit: ' px', when: v => sonifyUses(v.effect, 'frequency') },
+      { id: 'ringDepth', label: 'Depth', type: 'range', min: 0, max: 100, value: 100, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'ringDepth') },
+      {
+        id: 'wave', label: 'Wave', type: 'select', value: 'sine',
+        options: Object.entries(SONIFY_WAVES).map(([value, wave]) => [value, wave.label]),
+        when: v => sonifyUses(v.effect, 'wave')
+      },
+      { id: 'bits', label: 'Bits', type: 'range', min: 1, max: 8, value: 3, step: 1, when: v => sonifyUses(v.effect, 'bits') },
+      { id: 'hold', label: 'Hold', type: 'range', min: 1, max: 64, value: 4, step: 1, unit: ' px', when: v => sonifyUses(v.effect, 'hold') },
+      { id: 'cutoff', label: 'Cutoff', type: 'range', min: 4, max: 400, value: 20, step: 1, unit: ' px', when: v => sonifyUses(v.effect, 'cutoff') },
+      { id: 'resonance', label: 'Resonance', type: 'range', min: 0, max: 99, value: 80, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'resonance') },
+      {
+        id: 'filterMode', label: 'Keep', type: 'select', value: 'low',
+        options: [['low', 'Low — the broad shapes'], ['high', 'High — the fine detail'], ['band', 'Band — the ringing only'], ['notch', 'Notch — all but the ringing']],
+        when: v => sonifyUses(v.effect, 'filterMode')
+      },
+      { id: 'spread', label: 'Colour spread', type: 'range', min: 0, max: 100, value: 25, step: 1, unit: '%' },
+      { id: 'mix', label: 'Mix', type: 'range', min: 0, max: 100, value: 70, step: 1, unit: '%' },
+      { id: 'passes', label: 'Passes', type: 'range', min: 1, max: 20, value: 1, step: 1 },
+      {
+        id: 'scan', label: 'Read', type: 'select', value: 'rows',
+        options: Object.entries(SONIFY_SCANS).map(([value, scan]) => [value, scan.label]),
+        when: v => sonifyOrdered(v.effect)
+      },
+      { id: 'continuous', label: 'Run the picture as one stream', type: 'check', value: true, when: v => sonifyOrdered(v.effect) },
+      { id: 'snake', label: 'Turn at the ends, don’t fly back', type: 'check', value: true, when: v => sonifyOrdered(v.effect) },
+      { id: 'reverse', label: 'Play backwards', type: 'check', value: false, when: v => sonifyOrdered(v.effect) },
+      { id: 'alpha', label: 'Sound the alpha channel too', type: 'check', value: false }
+    ],
+    run: (src, v) => sonifyImage(src, v)
   },
   twirl: {
     title: 'Twirl',
@@ -5775,8 +6291,17 @@ function selectiveImage(src, values) {
    stutter, so the preview waits for the control to be let go instead. A filter
    whose own cost is far from the usual — Pixel Sorting runs an algorithm over
    every span and can be asked to run it hundreds of times — sets its own
-   livePixels rather than dragging this number down for the other thirty. */
+   livePixels rather than dragging this number down for the other thirty.
+
+   A filter may also give livePixels as a function of its own settings, for the
+   case where one of the sliders is a multiplier on the whole job: Sonification
+   asked to play the picture through twenty times costs twenty times what one
+   pass costs, and a budget fixed when the dialog opened would either forbid a
+   live preview that is perfectly affordable at one pass or promise one it
+   cannot keep at twenty. Those are re-read whenever a control moves. */
 const EFFECT_LIVE_PIXELS = 1_500_000;
+const effectBudget = (config, values) =>
+  (typeof config.livePixels === 'function' ? config.livePixels(values) : config.livePixels) || EFFECT_LIVE_PIXELS;
 const CUSTOM_KERNELS = {
   3: [0, 0, 0, 0, 1, 0, 0, 0, 0],
   5: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -5829,11 +6354,28 @@ function renderCustomMatrix(container, size) {
    with it. */
 function syncEffectFields() {
   if (!activeEffect || !effectRows.length) return;
-  const values = effectValues();
+  const config = EFFECTS[activeEffect], values = effectValues();
   effectRows.forEach(([field, row]) => {
     row.hidden = !!field.when && !field.when(values);
     if (typeof field.label === 'function') row.firstElementChild.textContent = field.label(values);
   });
+  const live = width() * height() <= effectBudget(config, values);
+  const changed = live !== effectLive;
+  effectLive = live;
+  if (changed || typeof config.help === 'function') renderEffectHelp(config, values);
+}
+
+/* The help line carries the two things about this run of the filter that are
+   not in the dialog anywhere else: that a selection is narrowing it, and that
+   the preview has stopped chasing the sliders. Both can change while the dialog
+   is open, and so can the description itself — Sonification is nine different
+   effects behind one title and a paragraph about reverb is no use to somebody
+   who has picked the bitcrusher — so an effect may write its help from its own
+   settings, and it is rendered from here rather than once on the way in. */
+function renderEffectHelp(config, values) {
+  const help = typeof config.help === 'function' ? config.help(values) : config.help;
+  appRoot.querySelector('#effectHelp').textContent = `${help}${selection ? ' Only the selected area changes.' : ''}`
+    + `${effectLive ? '' : ' This is slow enough at this size to be worth not chasing, so the preview updates when you let a slider go.'}`;
 }
 
 function buildEffectFields(config) {
@@ -5943,12 +6485,16 @@ function openEffect(kind) {
   if (effectOriginal) endEffectPreview(true, false);
   effectOriginal = { layerId: activeLayer.id, pixels: bx.getImageData(0, 0, width(), height()), mask: selectionCoverage() };
   activeEffect = kind; effectPreviewing = true;
-  effectLive = width() * height() <= (config.livePixels || EFFECT_LIVE_PIXELS);
   stack.classList.add('adjust-busy');
   appRoot.querySelector('#effectTitle').textContent = config.title;
   buildEffectFields(config);
+  /* Set from the defaults before the sync runs, so a filter that opens already
+     too slow to chase says so rather than sitting on whatever the last one left
+     behind — the sync only rewrites the line when the answer changes. */
+  const defaults = Object.fromEntries(config.fields.map(field => [field.id, field.value]));
+  effectLive = width() * height() <= effectBudget(config, defaults);
+  renderEffectHelp(config, defaults);
   syncEffectFields();
-  appRoot.querySelector('#effectHelp').textContent = `${config.help}${selection ? ' Only the selected area changes.' : ''}${effectLive ? '' : ' The picture is large, so the preview updates when you let a slider go.'}`;
   showModal('effectModal');
   appRoot.querySelector('#effectFields input, #effectFields select')?.focus();
   renderEffectPreview();
