@@ -4628,23 +4628,35 @@ function pixelSortParallelLines(w, h, angle) {
    order something travels along it, and the spans, the methods and the channels
    all work on it exactly as they do on a straight line.
 
+   A spiral is the third of the family and sits between the other two: one line
+   is one turn of an Archimedean spiral, so the sort winds outwards instead of
+   closing on itself.
+
    These lines cannot be walked in scan order the way parallel ones can, so the
    pixels are put in order along their line first — by radius for a ray, by angle
-   round the centre for a ring — with a counting sort, and then filed into their
-   lines in that order. Two linear passes rather than a comparison sort per line,
-   and no pixel is resampled on the way. */
+   round the centre for a ring or a spiral — with a counting sort, and then filed
+   into their lines in that order. Two linear passes rather than a comparison
+   sort per line, and no pixel is resampled on the way. */
 function pixelSortPolarLines(w, h, v) {
   const TURN = Math.PI * 2, total = w * h;
   const centreX = w * v.centreX / 100, centreY = h * v.centreY / 100;
-  const rings = v.path === 'spin';
+  const winding = v.path !== 'zoom';
   let far = 0;
   for (const [x, y] of [[0, 0], [w, 0], [0, h], [w, h]]) far = Math.max(far, Math.hypot(x - centreX, y - centreY));
   /* One ray per pixel of the outermost circle, so the rays arrive about a pixel
      apart where the picture is widest, the way a zoom blur's streaks do. */
   const rays = Math.max(8, Math.round(TURN * far)), radii = Math.max(1, Math.round(far) + 1);
-  const count = rings ? radii : rays;
-  /* Where a ring is cut. A sorted ring has to start somewhere, and this is the
-     one thing the angle control still means when the lines are circles. */
+  /* A spiral is a ring whose radius climbs as it goes round, so one line is one
+     whole turn and the next starts a pixel further out. Twist is how far out a
+     turn travels, which makes a ring the spiral with no twist in it and a wide
+     twist an arm that crosses most of the picture before it comes round. Its
+     lines can start inside the centre or finish beyond the rim, so the numbering
+     is shifted far enough to keep them all positive. */
+  const twist = v.path === 'spiral' ? v.twist : 0;
+  const shift = twist ? Math.ceil(Math.abs(twist)) + 1 : 0;
+  const count = winding ? radii + shift * 2 : rays;
+  /* Where a ring or a spiral is cut. A sorted circle has to start somewhere, and
+     this is the one thing the angle control still means when lines curve. */
   const seam = ((v.angle % 360) + 360) % 360 * Math.PI / 180;
   /* The line a pixel belongs to is rounded to the pixel — rings a pixel apart,
      rays about a pixel apart at the rim. Its place along that line is kept to a
@@ -4659,10 +4671,10 @@ function pixelSortPolarLines(w, h, v) {
     const turn = Math.atan2(dy, dx) - seam;
     const round = ((turn % TURN) + TURN) % TURN / TURN;
     const pixel = y * w + x;
-    line[pixel] = rings
-      ? Math.min(radii - 1, Math.round(distance))
+    line[pixel] = winding
+      ? Math.max(0, Math.min(count - 1, Math.round(distance - twist * round) + shift))
       : Math.min(rays - 1, Math.floor(round * rays));
-    along[pixel] = rings
+    along[pixel] = winding
       ? Math.min(rays * step - 1, Math.floor(round * rays * step))
       : Math.min((radii - 1) * step, Math.round(distance * step));
     if (along[pixel] > alongMax) alongMax = along[pixel];
@@ -4683,9 +4695,9 @@ function pixelSortPolarLines(w, h, v) {
   return { order, starts, count };
 }
 
-const pixelSortLines = (w, h, v) => v.path === 'spin' || v.path === 'zoom'
-  ? pixelSortPolarLines(w, h, v)
-  : pixelSortParallelLines(w, h, v.angle);
+const pixelSortLines = (w, h, v) => v.path === 'parallel' || !v.path
+  ? pixelSortParallelLines(w, h, v.angle)
+  : pixelSortPolarLines(w, h, v);
 
 /* Which algorithm does the sorting only matters if it is not allowed to finish:
    run to completion, quicksort and mergesort and heapsort all leave a span in
@@ -5321,7 +5333,7 @@ const EFFECTS = {
   'pixel-sort': {
     title: 'Pixel Sorting',
     livePixels: 400_000,
-    help: 'Reorders the pixels along straight lines. Spans decides what the picture is broken into, and everything in a span is rearranged by the channel it is sorted on. Move chooses what travels — whole pixels, one colour channel while the rest stay put, or all three sorted apart from each other. Method picks the algorithm that does the rearranging: most of them are sorts stopped before they finish, which is where they stop agreeing with each other. Lines can run straight across the picture, round a centre or out of one, which are the sorting versions of a spin and a zoom blur.',
+    help: 'Reorders the pixels along straight lines. Spans decides what the picture is broken into, and everything in a span is rearranged by the channel it is sorted on. Move chooses what travels — whole pixels, one colour channel while the rest stay put, or all three sorted apart from each other. Method picks the algorithm that does the rearranging: most of them are sorts stopped before they finish, which is where they stop agreeing with each other. Lines can run straight across the picture, round a centre, out of one, or winding out of one a turn at a time — the first two of those are the sorting versions of a spin and a zoom blur.',
     fields: [
       {
         id: 'intervals', label: 'Spans', type: 'select', value: 'threshold',
@@ -5369,9 +5381,14 @@ const EFFECTS = {
       { id: 'bits', label: 'Bits kept', type: 'range', min: 1, max: 7, value: 3, step: 1, when: v => pixelSortUses(v.method, 'bits') },
       {
         id: 'path', label: 'Lines', type: 'select', value: 'parallel',
-        options: [['parallel', 'Parallel'], ['spin', 'Spin — rings'], ['zoom', 'Zoom — rays']]
+        options: [['parallel', 'Parallel'], ['spin', 'Spin — rings'], ['zoom', 'Zoom — rays'], ['spiral', 'Spiral — turns']]
       },
-      { id: 'angle', label: v => v.path === 'spin' ? 'Ring cut' : 'Angle', type: 'range', min: 0, max: 360, value: 0, step: 1, unit: '°', when: v => v.path !== 'zoom' },
+      {
+        id: 'angle', type: 'range', min: 0, max: 360, value: 0, step: 1, unit: '°',
+        label: v => v.path === 'spin' ? 'Ring cut' : v.path === 'spiral' ? 'Spiral cut' : 'Angle',
+        when: v => v.path !== 'zoom'
+      },
+      { id: 'twist', label: 'Twist', type: 'range', min: -300, max: 300, value: 24, step: 1, unit: ' px/turn', when: v => v.path === 'spiral' },
       { id: 'centreX', label: 'Centre X', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%', when: v => v.path !== 'parallel' },
       { id: 'centreY', label: 'Centre Y', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%', when: v => v.path !== 'parallel' },
       { id: 'skip', label: 'Leave spans alone', type: 'range', min: 0, max: 100, value: 0, step: 1, unit: '%' },
