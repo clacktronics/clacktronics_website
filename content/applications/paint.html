@@ -4637,6 +4637,26 @@ function pixelSortParallelLines(w, h, angle) {
    round the centre for a ring or a spiral — with a counting sort, and then filed
    into their lines in that order. Two linear passes rather than a comparison
    sort per line, and no pixel is resampled on the way. */
+/* Where each ring or turn is cut. Cutting them all at the same angle leaves the
+   join in plain sight — every ring's darkest pixel against every ring's
+   brightest, down one straight line out of the centre — so the cut can be given
+   a wander instead. Not a fresh angle per line, which would leave every ring
+   starting its gradient somewhere unrelated to its neighbours and lose the
+   swirl altogether, but a smooth drift over the lattice: neighbours stay roughly
+   in step and the join becomes a curve that wanders through the picture rather
+   than a straight edge across it. */
+function pixelSortCuts(count, seed, scatter, turnSteps) {
+  const cuts = new Int32Array(count);
+  if (!scatter) return cuts;
+  const span = 24;
+  for (let line = 0; line < count; line++) {
+    const at = line / span, cell = Math.floor(at), blend = smoothStep(at - cell);
+    const drift = hashNoise(cell, 0, seed) * (1 - blend) + hashNoise(cell + 1, 0, seed) * blend;
+    cuts[line] = Math.round(drift * scatter * turnSteps);
+  }
+  return cuts;
+}
+
 function pixelSortPolarLines(w, h, v) {
   const TURN = Math.PI * 2, total = w * h;
   const centreX = w * v.centreX / 100, centreY = h * v.centreY / 100;
@@ -4662,7 +4682,8 @@ function pixelSortPolarLines(w, h, v) {
      rays about a pixel apart at the rim. Its place along that line is kept to a
      quarter of one, so that two pixels the counting sort cannot separate are at
      worst a quarter of a pixel out of order rather than a whole one. */
-  const step = 4;
+  const step = 4, turnSteps = rays * step;
+  const cuts = winding ? pixelSortCuts(count, v.seed | 0, v.scatter / 100, turnSteps) : null;
   const line = new Int32Array(total), along = new Int32Array(total);
   let alongMax = 0;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -4671,11 +4692,14 @@ function pixelSortPolarLines(w, h, v) {
     const turn = Math.atan2(dy, dx) - seam;
     const round = ((turn % TURN) + TURN) % TURN / TURN;
     const pixel = y * w + x;
-    line[pixel] = winding
+    const on = winding
       ? Math.max(0, Math.min(count - 1, Math.round(distance - twist * round) + shift))
       : Math.min(rays - 1, Math.floor(round * rays));
+    line[pixel] = on;
+    /* Moving a line's cut is moving where its pixels are read from: the same
+       ring, started at a different angle and wrapped round to meet itself. */
     along[pixel] = winding
-      ? Math.min(rays * step - 1, Math.floor(round * rays * step))
+      ? (Math.min(turnSteps - 1, Math.floor(round * turnSteps)) + cuts[on]) % turnSteps
       : Math.min((radii - 1) * step, Math.round(distance * step));
     if (along[pixel] > alongMax) alongMax = along[pixel];
   }
@@ -5389,12 +5413,17 @@ const EFFECTS = {
         when: v => v.path !== 'zoom'
       },
       { id: 'twist', label: 'Twist', type: 'range', min: -300, max: 300, value: 24, step: 1, unit: ' px/turn', when: v => v.path === 'spiral' },
+      {
+        id: 'scatter', label: 'Wander the cut', type: 'range', min: 0, max: 100, value: 30, step: 1, unit: '%',
+        when: v => v.path === 'spin' || v.path === 'spiral'
+      },
       { id: 'centreX', label: 'Centre X', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%', when: v => v.path !== 'parallel' },
       { id: 'centreY', label: 'Centre Y', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%', when: v => v.path !== 'parallel' },
       { id: 'skip', label: 'Leave spans alone', type: 'range', min: 0, max: 100, value: 0, step: 1, unit: '%' },
       {
         id: 'seed', label: 'Seed', type: 'range', min: 0, max: 999, value: 1, step: 1,
         when: v => v.intervals === 'random' || v.skip > 0 || pixelSortUses(v.method, 'seed')
+          || (v.scatter > 0 && (v.path === 'spin' || v.path === 'spiral'))
       },
       { id: 'transparent', label: 'Leave transparent pixels', type: 'check', value: true }
     ],
