@@ -5449,60 +5449,51 @@ const sonifySpread = (v, channel) => 1 + (Math.min(channel, 2) - 1) * (v.spread 
 const SONIFY_EFFECTS = {
   reverb: {
     label: 'Reverb',
-    help: 'Reverb builds a tail out of six echoes feeding themselves: Depth is how far apart they land, Feedback how long they take to die away, Damping how quickly the repeats lose their edges.',
     uses: ['depth', 'feedback', 'damping'],
     voice: (v, channel, level) =>
       makeReverb(Math.max(1, v.depth * sonifySpread(v, channel)), v.feedback / 100, v.damping / 100, level)
   },
   echo: {
     label: 'Echo',
-    help: 'Echo is one delay line rather than a roomful, so the copies stay countable: Delay is how far behind the first one lands, Feedback how many follow it, Damping how much softer each one is than the last.',
     uses: ['time', 'feedback', 'damping'],
     voice: (v, channel, level) =>
       makeEcho(Math.max(1, v.time * sonifySpread(v, channel)), v.feedback / 100, v.damping / 100, level)
   },
   distortion: {
     label: 'Distortion',
-    help: 'Distortion drives the picture into a shape it will not fit and lets the corners round off or break. It works on detail rather than on absolute brightness — Tone sets how fine a mark has to be to count as detail — so a lit wall and a dark one each distort around themselves instead of one going white and the other staying put.',
     uses: ['drive', 'tone', 'curve'],
     voice: (v, channel, level) => makeDistortion(v.drive / 100, v.tone / 100 / sonifySpread(v, channel), v.curve, level)
   },
   clip: {
     label: 'Clipping',
-    help: 'Clipping is what happens when the signal runs out of room at the top. Gain decides how much of the picture gets there and Ceiling where the roof is; past it the level can flatten off, fold back down, or wrap around to black, which is the overflow that turns a photograph into contour bands.',
     uses: ['gain', 'ceiling', 'beyond'],
     ordered: false,
     voice: (v, channel) => makeClip(v.gain / 100, v.ceiling * sonifySpread(v, channel), v.beyond)
   },
   phaser: {
     label: 'Phaser',
-    help: 'Phaser shifts the picture against itself and adds the two together, so they cancel in bands. Sweep walks those bands along the scan and Sweep width says how far they travel; more Stages puts down more bands, and Feedback sharpens them from soft shadows into hard metallic stripes.',
     uses: ['stages', 'sweep', 'range', 'feedback', 'wave'],
     voice: (v, channel, level) => makePhaser(v.stages, Math.max(2, v.sweep * sonifySpread(v, channel)),
       v.wave, v.range / 100, v.feedback / 100, level)
   },
   flanger: {
     label: 'Flanger',
-    help: 'Flanger drags a copy of the picture back and forth across the original a few pixels away. Delay is how far off it starts, Sweep how long the journey takes and Sweep width how far it goes; the interference between the two draws the moving bands, and Feedback deepens them.',
     uses: ['flange', 'sweep', 'range', 'feedback', 'wave'],
     voice: (v, channel, level) => makeFlanger(Math.max(1, v.flange * sonifySpread(v, channel)),
       Math.max(2, v.sweep), v.wave, v.range / 100, v.feedback / 100, level)
   },
   ring: {
     label: 'Ring modulator',
-    help: 'Ring modulation multiplies the picture by an oscillator instead of adding one to it. At full Depth the carrier swings below zero and cuts hard black stripes out of the picture; backed off it stays positive and softens into tremolo, the same stripes drawn as shadow. Frequency is the stripe spacing.',
     uses: ['frequency', 'ringDepth', 'wave'],
     voice: (v, channel) => makeRing(Math.max(2, v.frequency * sonifySpread(v, channel)), v.wave, v.ringDepth / 100)
   },
   crush: {
     label: 'Bitcrusher',
-    help: 'Bitcrusher is a cheap sampler: Bits is how many levels are left to describe a brightness with, and Hold how many pixels go by before it bothers to look again. The bits give banding and the hold gives steps drawn along whichever way the picture is being read, which is what makes it something other than Mosaic.',
     uses: ['bits', 'hold'],
     voice: (v, channel, level) => makeCrush(v.bits, Math.max(1, v.hold * sonifySpread(v, channel)), level)
   },
   filter: {
     label: 'Resonant filter',
-    help: 'A filter with its resonance up does not smooth an edge, it overshoots and rings past it — and because this runs one way along the scan, the ringing trails the edge rather than sitting evenly around it. Cutoff is the finest detail that survives a lowpass; the other three modes keep what a lowpass throws away.',
     uses: ['cutoff', 'resonance', 'filterMode'],
     voice: (v, channel, level) =>
       makeFilter(Math.max(4, v.cutoff * sonifySpread(v, channel)), v.resonance / 100, v.filterMode, level)
@@ -5809,7 +5800,6 @@ const EFFECTS = {
   'pixel-sort': {
     title: 'Pixel Sorting',
     livePixels: 400_000,
-    help: 'Reorders the pixels along straight lines. Spans decides what the picture is broken into, and everything in a span is rearranged by the channel it is sorted on. Move chooses what travels — whole pixels, one colour channel while the rest stay put, or all three sorted apart from each other. Method picks the algorithm that does the rearranging: most of them are sorts stopped before they finish, which is where they stop agreeing with each other. Lines can run straight across the picture, round a centre, out of one, or winding out of one a turn at a time — the first two of those are the sorting versions of a spin and a zoom blur.',
     fields: [
       {
         id: 'intervals', label: 'Spans', type: 'select', value: 'threshold',
@@ -5884,9 +5874,6 @@ const EFFECTS = {
   sonify: {
     title: 'Sonification',
     livePixels: v => 400_000 / Math.max(1, v.passes),
-    help: v => 'Plays the layer through an audio effect. A line of pixels is a run of numbers arriving in order, which is what a sampled waveform is, so a filter written for sound runs over it untouched — and it leaves the same marks, trailing behind whatever made them. '
-      + `${(SONIFY_EFFECTS[v.effect] || SONIFY_EFFECTS.reverb).help} `
-      + 'One stream keeps the unit running from the first pixel of the picture to the last so what it carries crosses between lines; without it every line is played on its own. Turn at the ends snakes the reading head back instead of flying it home, which decides whether a mark carries on at the edge it went off or reappears on the far side. Passes plays the result back through again, and Colour spread detunes the three colours against each other, which is what turns a grey smear into fringes.',
     fields: [
       {
         id: 'effect', label: 'Effect', type: 'select', value: 'reverb',
@@ -6368,14 +6355,19 @@ function syncEffectFields() {
 /* The help line carries the two things about this run of the filter that are
    not in the dialog anywhere else: that a selection is narrowing it, and that
    the preview has stopped chasing the sliders. Both can change while the dialog
-   is open, and so can the description itself — Sonification is nine different
-   effects behind one title and a paragraph about reverb is no use to somebody
-   who has picked the bitcrusher — so an effect may write its help from its own
-   settings, and it is rendered from here rather than once on the way in. */
+   is open, and so can the description itself, so an effect may write its help
+   from its own settings and it is rendered from here rather than once on the
+   way in. The effects with the most controls — Pixel Sorting, Sonification —
+   describe nothing, because a paragraph long enough to be worth reading pushes
+   a dialog that is already tall past the bottom of the window; there the line
+   is only the notices, and it goes away when there are none. */
 function renderEffectHelp(config, values) {
   const help = typeof config.help === 'function' ? config.help(values) : config.help;
-  appRoot.querySelector('#effectHelp').textContent = `${help}${selection ? ' Only the selected area changes.' : ''}`
-    + `${effectLive ? '' : ' This is slow enough at this size to be worth not chasing, so the preview updates when you let a slider go.'}`;
+  const line = `${help || ''}${selection ? `${help ? ' ' : ''}Only the selected area changes.` : ''}`
+    + `${effectLive ? '' : `${help || selection ? ' ' : ''}This is slow enough at this size to be worth not chasing, so the preview updates when you let a slider go.`}`;
+  const node = appRoot.querySelector('#effectHelp');
+  node.textContent = line;
+  node.hidden = !line;
 }
 
 function buildEffectFields(config) {
