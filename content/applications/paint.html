@@ -5125,26 +5125,28 @@ function pixelSortImage(src, v) {
    every pixel is the arithmetic of the pixels the reading head has already
    passed, so the marks all trail behind the thing that made them.
 
-   The reading order is the whole character of it. Row by row, the unit is torn
-   down and rebuilt at the start of every line, so nothing an echo carries ever
-   crosses from one line into the next. Snaking, the head never lifts — it runs
-   left to right, drops a line, runs back — and the picture becomes one signal
-   several hundred thousand samples long, so a tail thrown off the right-hand
-   edge arrives at the right-hand edge of the row below and the smear leans the
-   way a raster scan does. */
+   The reading order is the whole character of it, and it is three decisions
+   rather than one. Read says which way the head travels, across the rows or
+   down the columns. One stream says whether the unit is torn down and rebuilt
+   at the start of every line — echoes then live and die inside the line that
+   threw them — or kept running from the first pixel to the last, which makes
+   the picture one signal several hundred thousand samples long and lets a tail
+   thrown off the end of a line arrive at the start of the next one. Turn at the
+   ends says whether the head lifts to get back: left it alone it snakes, so the
+   tail carries on at the same edge it went off and the smear leans the way a
+   raster scan does, and turned off the head flies back and the tail crosses the
+   whole picture to reappear on the far side. */
 const SONIFY_SCANS = {
-  rows: { label: 'Rows', down: false, snake: false },
-  'rows-snake': { label: 'Rows, snaking', down: false, snake: true },
-  columns: { label: 'Columns', down: true, snake: false },
-  'columns-snake': { label: 'Columns, snaking', down: true, snake: true }
+  rows: { label: 'Rows', down: false },
+  columns: { label: 'Columns', down: true }
 };
 
-/* Each pass over the picture is a list of runs: where the head lands, how far
+/* Each trip over the picture is a list of runs: where the head lands, how far
    it steps between samples, and how many samples the run holds. Everything the
-   scan order decides is settled here, so the filters downstream only ever see a
-   stream. */
-function sonifyRuns(w, h, scan) {
-  const { down, snake } = SONIFY_SCANS[scan] || SONIFY_SCANS.rows;
+   reading order decides is settled here, so the filters downstream only ever
+   see a stream. */
+function sonifyRuns(w, h, scan, snake) {
+  const down = !!(SONIFY_SCANS[scan] || SONIFY_SCANS.rows).down;
   const runs = [], lines = down ? w : h, length = down ? h : w;
   const step = down ? w : 1;
   for (let line = 0; line < lines; line++) {
@@ -5233,12 +5235,12 @@ const SONIFY_EFFECTS = {
 
 const sonifyUses = (effect, control) => !!SONIFY_EFFECTS[effect]?.uses.includes(control);
 
-function sonifyImage(src, v) {
+function sonifyPass(src, v) {
   const w = src.width, h = src.height, out = copyImage(src), data = out.data, source = src.data;
   const unit = SONIFY_EFFECTS[v.effect] || SONIFY_EFFECTS.reverb;
-  const snake = !!(SONIFY_SCANS[v.scan] || SONIFY_SCANS.rows).snake;
-  const runs = sonifyRuns(w, h, v.scan);
-  const mix = v.mix / 100, channels = v.alpha ? 4 : 3, backwards = !!v.reverse;
+  const runs = sonifyRuns(w, h, v.scan, !!v.snake);
+  const stream = !!v.continuous;
+  const channels = v.alpha ? 4 : 3, backwards = !!v.reverse;
   for (let channel = 0; channel < channels; channel++) {
     let voice = null;
     for (let index = 0; index < runs.length; index++) {
@@ -5247,16 +5249,39 @@ function sonifyImage(src, v) {
          which is the swell in front of the note that reverse reverb is for. */
       const step = backwards ? -run.step : run.step;
       let at = backwards ? run.start + run.step * (run.length - 1) : run.start;
-      /* A snaking read is one signal, so the unit is built once and carries its
-         tail across the turns; anything else starts each line fresh, settled on
-         whatever that line opens with. */
-      if (!snake || !voice) voice = unit.voice(v, channel, source[at * 4 + channel]);
+      /* One stream builds the unit once and lets it run the whole picture;
+         line by line, each line gets a unit of its own, settled on whatever
+         that line opens with. */
+      if (!stream || !voice) voice = unit.voice(v, channel, source[at * 4 + channel]);
       for (let sample = 0; sample < run.length; sample++, at += step) {
-        const i = at * 4 + channel, dry = source[i];
-        data[i] = clampByte(dry + (voice(dry) - dry) * mix);
+        const i = at * 4 + channel;
+        data[i] = clampByte(voice(source[i]));
       }
     }
   }
+  return out;
+}
+
+/* Passes is the picture fed back into the unit — the take played out and
+   recorded again, not the same take with a longer tail. Each trip works on what
+   the last one left, so echoes get echoes of their own and the smear reaches
+   further than winding Depth or Feedback up could take it, while every trip on
+   its own stays a plausible room rather than a runaway. The unit is rebuilt
+   each time round: carrying its delays over would be a second, silent feedback
+   path on top of the one the slider names.
+
+   Mix is held back until the end and settled once against the picture as it
+   arrived, rather than being applied on every trip. Mixed in each time it stops
+   being a wet/dry control and turns into a second decay: at 70% the original is
+   down to a fifth of itself by the fourth pass and gone by the sixth, so most
+   of a twenty-stop slider would be the same wash and Mix would mean something
+   different at every stop. Kept to the end it means one thing — how much of the
+   picture survives — and the passes decide only how far the echoes reach. */
+function sonifyImage(src, v) {
+  let out = src;
+  for (let pass = 0, passes = Math.max(1, Math.round(v.passes)); pass < passes; pass++) out = sonifyPass(out, v);
+  const mix = v.mix / 100, data = out.data, source = src.data;
+  for (let i = 0; i < data.length; i++) data[i] = clampByte(source[i] + (data[i] - source[i]) * mix);
   return out;
 }
 
@@ -5581,8 +5606,8 @@ const EFFECTS = {
   },
   sonify: {
     title: 'Sonification',
-    livePixels: 400_000,
-    help: 'Plays the layer through an audio effect. A line of pixels is a run of numbers arriving in order, which is what a sampled waveform is, so a filter written for sound runs over it untouched — and it leaves the same marks, trailing behind whatever made them. Reverb builds a tail out of six echoes feeding themselves: Depth is how far apart they land, Feedback how long they take to die away, Damping how quickly they lose their edges. Read decides what counts as one signal — a line at a time, or snaking across the whole picture without lifting the head. Colour spread detunes the three colours against each other, which is what turns a grey smear into fringes.',
+    livePixels: v => 400_000 / Math.max(1, v.passes),
+    help: 'Plays the layer through an audio effect. A line of pixels is a run of numbers arriving in order, which is what a sampled waveform is, so a filter written for sound runs over it untouched — and it leaves the same marks, trailing behind whatever made them. Reverb builds a tail out of six echoes feeding themselves: Depth is how far apart they land, Feedback how long they take to die away, Damping how quickly they lose their edges. One stream keeps the unit running from the first pixel of the picture to the last so echoes cross between lines; without it every line is played on its own. Turn at the ends snakes the reading head back instead of flying it home, which is what decides whether a tail carries on at the edge it went off or reappears on the far side. Passes plays the result back through again. Colour spread detunes the three colours against each other, which is what turns a grey smear into fringes.',
     fields: [
       {
         id: 'effect', label: 'Effect', type: 'select', value: 'reverb',
@@ -5593,10 +5618,13 @@ const EFFECTS = {
       { id: 'damping', label: 'Damping', type: 'range', min: 0, max: 99, value: 40, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'damping') },
       { id: 'spread', label: 'Colour spread', type: 'range', min: 0, max: 100, value: 25, step: 1, unit: '%', when: v => sonifyUses(v.effect, 'spread') },
       { id: 'mix', label: 'Mix', type: 'range', min: 0, max: 100, value: 70, step: 1, unit: '%' },
+      { id: 'passes', label: 'Passes', type: 'range', min: 1, max: 20, value: 1, step: 1 },
       {
-        id: 'scan', label: 'Read', type: 'select', value: 'rows-snake',
+        id: 'scan', label: 'Read', type: 'select', value: 'rows',
         options: Object.entries(SONIFY_SCANS).map(([value, scan]) => [value, scan.label])
       },
+      { id: 'continuous', label: 'Run the picture as one stream', type: 'check', value: true },
+      { id: 'snake', label: 'Turn at the ends, don’t fly back', type: 'check', value: true },
       { id: 'reverse', label: 'Play backwards', type: 'check', value: false },
       { id: 'alpha', label: 'Sound the alpha channel too', type: 'check', value: false }
     ],
@@ -5948,8 +5976,17 @@ function selectiveImage(src, values) {
    stutter, so the preview waits for the control to be let go instead. A filter
    whose own cost is far from the usual — Pixel Sorting runs an algorithm over
    every span and can be asked to run it hundreds of times — sets its own
-   livePixels rather than dragging this number down for the other thirty. */
+   livePixels rather than dragging this number down for the other thirty.
+
+   A filter may also give livePixels as a function of its own settings, for the
+   case where one of the sliders is a multiplier on the whole job: Sonification
+   asked to play the picture through twenty times costs twenty times what one
+   pass costs, and a budget fixed when the dialog opened would either forbid a
+   live preview that is perfectly affordable at one pass or promise one it
+   cannot keep at twenty. Those are re-read whenever a control moves. */
 const EFFECT_LIVE_PIXELS = 1_500_000;
+const effectBudget = (config, values) =>
+  (typeof config.livePixels === 'function' ? config.livePixels(values) : config.livePixels) || EFFECT_LIVE_PIXELS;
 const CUSTOM_KERNELS = {
   3: [0, 0, 0, 0, 1, 0, 0, 0, 0],
   5: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -6002,11 +6039,24 @@ function renderCustomMatrix(container, size) {
    with it. */
 function syncEffectFields() {
   if (!activeEffect || !effectRows.length) return;
-  const values = effectValues();
+  const config = EFFECTS[activeEffect], values = effectValues();
   effectRows.forEach(([field, row]) => {
     row.hidden = !!field.when && !field.when(values);
     if (typeof field.label === 'function') row.firstElementChild.textContent = field.label(values);
   });
+  const live = width() * height() <= effectBudget(config, values);
+  if (live === effectLive) return;
+  effectLive = live;
+  renderEffectHelp(config);
+}
+
+/* The help line carries the two things about this run of the filter that are
+   not in the dialog anywhere else: that a selection is narrowing it, and that
+   the preview has stopped chasing the sliders. The second can change while the
+   dialog is open, so it is written from here rather than once on the way in. */
+function renderEffectHelp(config) {
+  appRoot.querySelector('#effectHelp').textContent = `${config.help}${selection ? ' Only the selected area changes.' : ''}`
+    + `${effectLive ? '' : ' This is slow enough at this size to be worth not chasing, so the preview updates when you let a slider go.'}`;
 }
 
 function buildEffectFields(config) {
@@ -6116,12 +6166,15 @@ function openEffect(kind) {
   if (effectOriginal) endEffectPreview(true, false);
   effectOriginal = { layerId: activeLayer.id, pixels: bx.getImageData(0, 0, width(), height()), mask: selectionCoverage() };
   activeEffect = kind; effectPreviewing = true;
-  effectLive = width() * height() <= (config.livePixels || EFFECT_LIVE_PIXELS);
   stack.classList.add('adjust-busy');
   appRoot.querySelector('#effectTitle').textContent = config.title;
   buildEffectFields(config);
+  /* Set from the defaults before the sync runs, so a filter that opens already
+     too slow to chase says so rather than sitting on whatever the last one left
+     behind — the sync only rewrites the line when the answer changes. */
+  effectLive = width() * height() <= effectBudget(config, Object.fromEntries(config.fields.map(f => [f.id, f.value])));
+  renderEffectHelp(config);
   syncEffectFields();
-  appRoot.querySelector('#effectHelp').textContent = `${config.help}${selection ? ' Only the selected area changes.' : ''}${effectLive ? '' : ' The picture is large, so the preview updates when you let a slider go.'}`;
   showModal('effectModal');
   appRoot.querySelector('#effectFields input, #effectFields select')?.focus();
   renderEffectPreview();
