@@ -37,6 +37,19 @@ const OUTPUT_ARGS = {
   ogg: ['-c:a', 'libvorbis', '-q:a', '5']
 };
 
+/* A clip with no sound still has to be encoded, and the container's audio codec
+   flags describe a stream that will not be there. Each is a flag and its value,
+   so both go. */
+const AUDIO_FLAGS = new Set(['-c:a', '-b:a', '-q:a', '-ar', '-ac']);
+function withoutAudioArgs(args) {
+  const kept = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (AUDIO_FLAGS.has(args[index])) { index += 1; continue; }
+    kept.push(args[index]);
+  }
+  return kept;
+}
+
 const cleanExtension = name => {
   const match = name.toLowerCase().match(/\.([a-z0-9]{1,12})$/);
   return match ? match[1] : 'bin';
@@ -319,7 +332,7 @@ export class BrowserFFmpegEngine {
      passes: a second of raw video is 6.9 MB and a second of PCM 176 kB, and
      holding both in the WebAssembly heap at once halves how long a clip can
      be before the tab gives up. */
-  async exportRaw({ segments, assets, audioLayer, width, height, speed, reverse, bounce, framing = 'fill', streams = 'both' }) {
+  async exportRaw({ segments, assets, audioLayer, width, height, speed, reverse, bounce, framing = 'fill', streams = 'both', filterFrame = null }) {
     const wantVideo = streams !== 'audio';
     const wantAudio = streams !== 'video';
     const files = [];
@@ -337,13 +350,14 @@ export class BrowserFFmpegEngine {
         ? `scale=${target}:force_original_aspect_ratio=decrease,pad=${target}:(ow-iw)/2:(oh-ih)/2`
         : `scale=${target}:force_original_aspect_ratio=increase,crop=${target}`;
       graph.filters.push(`[${graph.videoLabel}]${framed},setsar=1,fps=${POPCORN.fps},format=rgb24[raw]`);
-      files.push(await this.runToFile({
+      const raw = await this.runToFile({
         args: graph.args,
         filters: graph.filters,
         output: 'popcorn.rgb',
         outputArgs: ['-map', '[raw]', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-r', String(POPCORN.fps)],
         mimeType: 'application/octet-stream'
-      }));
+      });
+      files.push(filterFrame ? await this.filterRaw(raw, filterFrame) : raw);
       this.cancel();
     }
 
@@ -374,7 +388,7 @@ export class BrowserFFmpegEngine {
      FFmpeg filesystem and deleted again before the next is read, so the
      WebAssembly heap holds the sheet only once rather than alongside the copy
      the archive is being built from. */
-  async exportImages({ segments, assets, audioLayer, width, height, speed, reverse, bounce, fps = 10, imageFormat = 'png', maxWidth = 0, maxFrames = 1200, baseName = 'frames' }) {
+  async exportImages({ segments, assets, audioLayer, width, height, speed, reverse, bounce, fps = 10, imageFormat = 'png', maxWidth = 0, maxFrames = 1200, baseName = 'frames', filterFrame = null }) {
     const graph = await this.buildGraph({
       segments, assets, audioLayer, width, height, speed, reverse, bounce,
       includeVideo: true, includeAudio: false
@@ -402,13 +416,186 @@ export class BrowserFFmpegEngine {
     const zip = new StoredZip();
     for (let index = 0; index < written.length; index += 1) {
       const data = await this.ffmpeg.readFile(written[index]);
-      zip.add(`${baseName}/${written[index]}`, new Uint8Array(data.buffer));
+      let bytes = new Uint8Array(data.buffer);
+      /* With an effect stack the still is decoded, filtered and re-encoded on
+         the way into the archive. PNG only — a JPEG round trip would put the
+         filters' output through a second lossy pass. */
+      if (filterFrame) {
+        const image = await filterFrame(await this.decodeStill(bytes), index, written.length);
+        bytes = await this.encodeStill(image);
+      }
+      zip.add(`${baseName}/${written[index]}`, bytes);
       await this.ffmpeg.deleteFile(written[index]);
       this.callbacks.onProgress?.((index + 1) / written.length);
     }
     const result = { blob: zip.close(), frames: written.length, extension };
     this.cancel();
     return result;
+  }
+
+  /* ---- rendering with an effect stack ------------------------------------
+     FFmpeg has no idea what ClackPaint's filters are, and teaching it would
+     mean writing them twice. So a filtered export is three passes rather than
+     one: FFmpeg lays the project out as stills, the caller's filter runs over
+     each still in turn, and FFmpeg puts the filtered stills back together with
+     the audio it rendered on the way past.
+
+     Stills, rather than a raw stream, because a raw 1080p frame is 8 MB and a
+     ten-second clip of them is two and a half gigabytes in a filesystem that
+     lives in the WebAssembly heap. PNG is lossless, so the round trip costs
+     time rather than picture.
+
+     The filtered frame is written back under its own name and the original
+     deleted straight away, so the heap holds one copy of the sequence rather
+     than two. */
+
+  async decodeStill(bytes) {
+    const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    return context.getImageData(0, 0, canvas.width, canvas.height);
+  }
+
+  async encodeStill(image) {
+    const canvas = new OffscreenCanvas(image.width, image.height);
+    canvas.getContext('2d').putImageData(image, 0, 0);
+    const blob = await canvas.convertToBlob({ type: 'image/png' });
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  /* Runs `filterFrame` over every still FFmpeg wrote, in place. Returns the
+     names of the filtered files, in order. */
+  async filterStills(names, filterFrame, onProgress) {
+    const filtered = [];
+    for (let index = 0; index < names.length; index += 1) {
+      const name = names[index];
+      const output = `fx-${name}`;
+      const data = await this.ffmpeg.readFile(name);
+      const image = await this.decodeStill(new Uint8Array(data.buffer));
+      const result = await filterFrame(image, index, names.length);
+      await this.ffmpeg.writeFile(output, await this.encodeStill(result));
+      await this.ffmpeg.deleteFile(name);
+      filtered.push(output);
+      onProgress?.((index + 1) / names.length);
+    }
+    return filtered;
+  }
+
+  /* The project laid out as one still per frame, at full project size. */
+  async renderStills({ segments, assets, audioLayer, width, height, speed, reverse, bounce, fps, maxFrames, maxWidth = 0 }) {
+    const graph = await this.buildGraph({
+      segments, assets, audioLayer, width, height, speed, reverse, bounce,
+      includeVideo: true, includeAudio: false
+    });
+    const resize = maxWidth > 0 ? `,scale=w='min(${maxWidth},iw)':h=-2:flags=lanczos` : '';
+    graph.filters.push(`[${graph.videoLabel}]fps=${number(fps)}${resize},format=rgb24[stills]`);
+    const code = await this.ffmpeg.exec([
+      ...graph.args, '-filter_complex', graph.filters.join(';'), '-map', '[stills]',
+      '-frames:v', String(Math.max(1, Math.round(maxFrames))),
+      '-c:v', 'png', '-f', 'image2', 'still-%05d.png'
+    ]);
+    if (code !== 0) throw new Error(`FFmpeg stopped with exit code ${code} while laying the clip out as frames.`);
+    const names = (await this.ffmpeg.listDir('/'))
+      .map(entry => entry.name)
+      .filter(name => name.startsWith('still-') && name.endsWith('.png'))
+      .sort();
+    if (!names.length) throw new Error('FFmpeg produced no frames for this range.');
+    return names;
+  }
+
+  /* The project's audio alone, so the encode at the end has something to mux
+     against the filtered frames. Null when the project has none. */
+  async renderAudioTrack(project) {
+    const graph = await this.buildGraph({ ...project, includeVideo: false, includeAudio: true });
+    const output = 'fx-audio.m4a';
+    try { await this.ffmpeg.deleteFile(output); } catch { /* nothing written yet */ }
+    const code = await this.ffmpeg.exec([
+      ...graph.args, '-filter_complex', graph.filters.join(';'), '-map', `[${graph.audioLabel}]`,
+      '-c:a', 'aac', '-b:a', '192k', output
+    ]);
+    /* A clip with no audio stream at all is normal, not a failure. */
+    return code === 0 ? output : null;
+  }
+
+  async exportWithEffects({
+    segments, assets, audioLayer, width, height, speed, reverse, bounce,
+    format, extension, fps = 30, maxFrames = 1200, filterFrame, onStage
+  }) {
+    const project = { segments, assets, audioLayer, width, height, speed, reverse, bounce };
+    const wantsAudio = format !== 'gif';
+
+    onStage?.('Laying the clip out as frames…');
+    const stills = await this.renderStills({ ...project, fps, maxFrames });
+
+    let audio = null;
+    if (wantsAudio) {
+      onStage?.('Rendering the audio…');
+      audio = await this.renderAudioTrack(project);
+    }
+
+    onStage?.(`Running the effects over ${stills.length} frames…`);
+    const filtered = await this.filterStills(stills, filterFrame, value => this.callbacks.onProgress?.(value));
+
+    onStage?.('Encoding the result…');
+    const finalExtension = format === 'custom' ? extension : format;
+    const output = `clack-export.${finalExtension}`;
+    try { await this.ffmpeg.deleteFile(output); } catch { /* first export */ }
+
+    const args = ['-framerate', number(fps), '-i', 'fx-still-%05d.png'];
+    if (audio) args.push('-i', audio);
+    if (format === 'gif') {
+      args.push('-filter_complex',
+        `[0:v]fps=12,scale=w='min(960,iw)':h=-2:flags=lanczos,split[gif-a][gif-b];[gif-a]palettegen[palette];[gif-b][palette]paletteuse[vgif]`,
+        '-map', '[vgif]');
+    } else {
+      args.push('-map', '0:v');
+      if (audio) args.push('-map', '1:a', '-shortest');
+    }
+    args.push(...(audio ? OUTPUT_ARGS[format] || [] : withoutAudioArgs(OUTPUT_ARGS[format] || [])));
+    args.push(output);
+
+    const code = await this.ffmpeg.exec(args);
+    if (code !== 0) throw new Error(`FFmpeg stopped with exit code ${code} while encoding the filtered frames.`);
+    const data = await this.ffmpeg.readFile(output);
+    const result = {
+      blob: new Blob([data.buffer], { type: MIME_TYPES[format] || 'application/octet-stream' }),
+      extension: finalExtension,
+      frames: filtered.length
+    };
+    this.cancel();
+    return result;
+  }
+
+  /* The Popcorn export is the one place the frames arrive already uncompressed:
+     320 × 240 packed RGB, three bytes a pixel, one frame after another. So an
+     effect stack costs no codec round trip here at all — the bytes are widened
+     to RGBA for the filters, which is the only layout they know, and packed
+     back down afterwards. */
+  async filterRaw(file, filterFrame) {
+    const { width, height } = POPCORN;
+    const packed = new Uint8Array(await file.blob.arrayBuffer());
+    const frameBytes = width * height * 3;
+    const frames = Math.floor(packed.length / frameBytes);
+    for (let index = 0; index < frames; index += 1) {
+      const at = index * frameBytes;
+      const image = new ImageData(width, height);
+      for (let pixel = 0, source = at, target = 0; pixel < width * height; pixel += 1, source += 3, target += 4) {
+        image.data[target] = packed[source];
+        image.data[target + 1] = packed[source + 1];
+        image.data[target + 2] = packed[source + 2];
+        image.data[target + 3] = 255;
+      }
+      const result = await filterFrame(image, index, frames);
+      for (let pixel = 0, source = 0, target = at; pixel < width * height; pixel += 1, source += 4, target += 3) {
+        packed[target] = result.data[source];
+        packed[target + 1] = result.data[source + 1];
+        packed[target + 2] = result.data[source + 2];
+      }
+      this.callbacks.onProgress?.((index + 1) / frames);
+    }
+    return { ...file, blob: new Blob([packed], { type: 'application/octet-stream' }), bytes: packed.length };
   }
 
   /* Shared tail for the raw passes: run one graph, read its single output back
