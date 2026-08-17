@@ -1048,7 +1048,10 @@ function resample(image, dstW, dstH, options = {}) {
   return out;
 }
 
-window.ClackRetouch = {
+/* globalThis rather than window: Video Lab's render workers pull this file in
+   with importScripts for the two filters that use the bilateral blur, and a
+   worker has no window. On a page the two are the same object. */
+globalThis.ClackRetouch = {
   makeMask, maskBounds, stampMask, dilateMask, erodeMask, featherMask,
   poissonBlend, stampSource, offsetImage, bestSourceOffset,
   inpaint, surfaceBlur, localContrast,

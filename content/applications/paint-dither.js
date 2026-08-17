@@ -1460,8 +1460,12 @@ function destroyPanel() {
   dialog.form = null;
 }
 
-/* the panel must not outlive the ClackPaint window it belongs to */
-window.addEventListener('pagehide', () => { if (dialog.win) closePanel(true); });
+/* the panel must not outlive the ClackPaint window it belongs to — and there
+   is no panel, or window, when a Video Lab render worker loads this file for
+   the dither algorithms alone */
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => { if (dialog.win) closePanel(true); });
+}
 
 function fieldFor(doc, param) {
   const row = doc.createElement('label');
@@ -1672,7 +1676,9 @@ function repeatLast() {
   }
 }
 
-window.ClackDither = {
+/* globalThis rather than window, so a Video Lab render worker can importScripts
+   this file and reach the algorithms; on a page the two are the same object. */
+globalThis.ClackDither = {
   GROUPS,
   /* The dialog above is one caller; the program-array exporter is the other,
      and it drives the same algorithms headlessly with a palette of its own. */
