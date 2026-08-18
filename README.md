@@ -16,6 +16,7 @@ assets/
   js/clackos.js             ← window manager and menu builder
   js/markdown.js            ← the markdown renderer (desktop + editor preview)
   js/model-scene.js         ← three.js viewer core (app + inline @[model])
+  js/clack-fx.js            ← the image filters, shared by ClackPaint and Video Lab
   js/app-state.js           ← opt-in state persistence for application pages
   js/events.js              ← shared events reader (Calendar app + menu-bar pull-down)
   js/midi-bytes.js          ← shared MIDI message parser
@@ -45,6 +46,8 @@ content/
     calendar.html           ← Calendar app
     calendar/events.csv     ← the upcoming events it shows
     calendar/luma.json      ← mirror of the Luma events (generated)
+    paint-dither.js         ← the dither algorithms (ClackPaint + Video Lab)
+    paint-retouch.js        ← the retouching maths (ClackPaint + Video Lab)
     video/                  ← browser-only Video Lab app + FFmpeg core
     audiogen/               ← local music and speech generation app
     audiogen/mrt2/          ← Magenta RealTime 2 engine (ONNX Runtime, not Transformers.js)
@@ -595,6 +598,47 @@ the next load. Reboot options differ in scope:
   and app data.
 - **View → Reset** confirms, then clears local/session storage, the theme
   cookie, and Cache Storage. IndexedDB is retained.
+
+### The shared image filters
+
+`assets/js/clack-fx.js` holds the maths behind ClackPaint's Effects menu — the
+blurs, the distorts, Pixel Sorting, Sonification, the lot. It began as a
+section of `paint.html` and moved out when Video Lab wanted the same filters
+frame by frame. Two neighbours complete the set: `paint-dither.js` carries the
+dither algorithms and `paint-retouch.js` the bilateral blur that Surface Blur
+and Clarity are built on.
+
+All three are plain scripts that hang one object off `globalThis` rather than
+ES modules, because both callers need them that way: `paint.html` is one large
+inline script that cannot `import`, and Video Lab's render workers pull them in
+with `importScripts`.
+
+```js
+ClackFX.EFFECTS['pixel-sort'].run(imageData, values)  // → fresh ImageData
+ClackDither.apply(imageData, 'error-diffusion', ClackDither.normalise(...), colours)
+```
+
+A filter is a pure function of pixels and its dialog's values, which is what
+lets one `run()` serve a paint layer, a live preview and the four hundredth
+frame of a clip. Three of them need something the picture cannot supply — the
+two colours Clouds paints between, and the point Selective Colour was aimed at
+— and the caller passes those in:
+
+```js
+ClackFX.setContext({ fg, bg, pin });
+```
+
+`EFFECTS[id].fields` describes the controls, and both apps generate their
+panels from it rather than listing filters by hand, so a filter added here
+appears in both. Some fields carry a `when` predicate deciding whether they
+apply to the current settings, and a few carry a `label` that is a function
+rather than a string; a panel that skips either will show controls that do
+nothing and, in the second case, a function body where a name should be.
+
+**Adding a filter** means adding one entry to `EFFECTS` — nothing in either
+app needs to learn about it. Changing an existing one changes it in both, so
+check the result in ClackPaint *and* over a clip in Video Lab.
+
 
 ### Letting an app remember its own state
 
