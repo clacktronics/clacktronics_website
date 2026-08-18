@@ -521,7 +521,7 @@ export class BrowserFFmpegEngine {
 
   async exportWithEffects({
     segments, assets, audioLayer, width, height, speed, reverse, bounce,
-    format, extension, fps = 30, maxFrames = 1200, filterFrame, onStage
+    format, extension, fps = 30, maxFrames = 1200, filterFrame, onStage, alpha = false
   }) {
     const project = { segments, assets, audioLayer, width, height, speed, reverse, bounce };
     const wantsAudio = format !== 'gif';
@@ -554,6 +554,23 @@ export class BrowserFFmpegEngine {
       if (audio) args.push('-map', '1:a', '-shortest');
     }
     args.push(...(audio ? OUTPUT_ARGS[format] || [] : withoutAudioArgs(OUTPUT_ARGS[format] || [])));
+
+    /* The stills coming back from the filters are RGBA, because a PNG always
+       is, and an encoder that has not been told what to do with that alpha
+       either refuses outright — libvpx answers "Transparency encoding with
+       auto_alt_ref does not work" and stops — or carries it into a container
+       with nowhere to put it. The formats whose arguments already name a pixel
+       format say so for themselves; the rest are told here.
+
+       GIF is the exception. Its palette filter decides its own format, and
+       naming another breaks the chain. */
+    const wantsAlpha = alpha && format === 'webm';
+    if (format !== 'gif' && !(OUTPUT_ARGS[format] || []).includes('-pix_fmt')) {
+      args.push('-pix_fmt', wantsAlpha ? 'yuva420p' : 'yuv420p');
+      /* VP8 can carry alpha, but not while it is picking alternate reference
+         frames for itself — which is exactly what it was complaining about. */
+      if (wantsAlpha) args.push('-auto-alt-ref', '0');
+    }
     args.push(output);
 
     const code = await this.ffmpeg.exec(args);

@@ -792,6 +792,10 @@ async function exportProject() {
         ...project,
         format: settings.format,
         extension: settings.extension,
+        /* only worth keeping the alpha channel if something in the stack is
+           actually cutting one, and only WebM can carry it */
+        alpha: fxStack().some(entry =>
+          entry.kind.startsWith('matte:') && entry.values.output === 'transparent'),
         fps: EFFECT_RENDER_FPS,
         maxFrames: EFFECT_FRAME_LIMIT,
         filterFrame,
