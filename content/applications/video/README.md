@@ -16,6 +16,7 @@ own page and inside a ClackOS iframe window.
   audio or replacing it, with 0–200% rendered gain.
 - An effect stack applied to every frame — ClackPaint's filters, its dithers and
   its background matting, run here over video (see "Effects" below).
+- Pre-rendering, for stacks too slow to preview as the clip plays.
 - Browser-only export to MP4, WebM, MOV, MKV, AVI, GIF, MP3, WAV, Ogg, or a
   custom container extension.
 - **File → Export → Raw**: the pair of raw files Popcorn wants (see below).
@@ -122,6 +123,36 @@ The **preview** works at a reduced size, chosen from the filters in the stack
 and how many there are, and asks for the next frame only once it has finished
 the last — an expensive stack becomes a slower preview rather than a stuck one.
 The export always renders at full size.
+
+### Pre-rendering
+
+Some stacks are simply too slow to keep up, and no amount of shrinking the
+preview turns a second-a-frame filter into twenty-five frames a second.
+**Pre-render** walks the range once, filters every frame at leisure and keeps
+the results, after which playback is only drawing bitmaps and runs at full
+speed. Scrubbing, looping and reverse all come from the cache.
+
+It covers the A/B range when both markers are set and the whole project
+otherwise, so pre-rendering the stretch you are working on is a matter of
+setting A and B around it.
+
+Frames are held as ImageBitmaps, and their total size is what governs
+everything: a 1280 × 720 frame is 3.7 MB, so ten seconds of them at 25fps is
+nearly a gigabyte. Rather than offer a resolution control nobody can price in
+their head, the cache works out how large it can afford to be — 384 MB is the
+budget — and the panel says how many frames, at what size, before anything is
+rendered. Past about a minute and three quarters there is no size left worth
+looking at, and it says so instead.
+
+Capture uses a video element of its own, so the clip on screen stays scrubbable
+while the render runs behind it. The button becomes **Cancel** while it works.
+
+The cache is of one exact thing: this stack, these values, these colours, this
+clip. Move any of them and the frames are of something else, so they are thrown
+away and the live preview comes back. **Discard** frees them by hand.
+
+Pre-rendering is a preview device and nothing more — it is held at preview
+resolution and the export ignores it, rendering the stack again at full size.
 
 ### How a filtered export is put together
 

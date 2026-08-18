@@ -203,6 +203,11 @@
             <select id="fx-picker" aria-label="Add an effect"></select>
           </div>
           <div class="fx-stack" id="fx-stack"></div>
+          <div class="fx-prerender">
+            <button class="btn ghost" type="button" data-action="fx-prerender" id="fx-prerender-btn"><span class="pixel-icon" data-icon="zap" aria-hidden="true"></span> Pre-render</button>
+            <button class="text-btn" type="button" data-action="fx-prerender-clear" id="fx-prerender-clear" hidden><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span> DISCARD</button>
+          </div>
+          <p class="note" id="fx-prerender-note"></p>
           <div class="fx-colours">
             <label class="compact-field">Ink <input type="color" id="fx-fg" value="#ffffff"></label>
             <label class="compact-field">Paper <input type="color" id="fx-bg" value="#000000"></label>
