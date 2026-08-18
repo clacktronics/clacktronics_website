@@ -13,6 +13,10 @@
  * same shape as what a saved stack would carry.
  */
 
+import {
+  MOTION_KINDS, motionCatalogue, isMotion, readTarget, targetOptions, targetField, useFieldLookup
+} from './fx-motion.js';
+
 const FX = () => globalThis.ClackFX;
 const DITHER = () => globalThis.ClackDither;
 
@@ -111,17 +115,22 @@ export function catalogue() {
     help: method.help,
     fields: [...method.params, ...MATTE_SHAPING]
   }));
-  return { effects, dithers, mattes };
+  return { effects, dithers, mattes, motions: motionCatalogue() };
 }
 
 const byKind = new Map();
 function entryFor(kind) {
   if (!byKind.size) {
-    const { effects, dithers, mattes } = catalogue();
-    for (const item of [...effects, ...dithers, ...mattes]) byKind.set(item.kind, item);
+    const { effects, dithers, mattes, motions } = catalogue();
+    for (const item of [...effects, ...dithers, ...mattes, ...motions]) byKind.set(item.kind, item);
   }
   return byKind.get(kind);
 }
+
+/* fx-motion works out what a motion card is aiming at, which means asking what
+   controls the card at the other end has. It cannot reach the catalogue itself
+   without the two files importing each other, so it is handed the lookup. */
+useFieldLookup(kind => entryFor(kind)?.fields || []);
 
 /* The Custom Matrix filter is the one control the dialog fills rather than the
    definition: its weights come from the identity kernel for the chosen size. */
@@ -131,6 +140,10 @@ function seedValues(item) {
     if (field.type === 'matrix') {
       const size = Number(values.size || item.fields.find(f => f.id === 'size')?.value || 3);
       values[field.id] = (FX().CUSTOM_KERNELS[size] || [1]).slice();
+    } else if (field.value === 'min' || field.value === 'max') {
+      /* a ramp starts life with nothing to span and is re-seeded from the
+         target's own extremes the moment one is chosen */
+      values[field.id] = 0;
     } else values[field.id] = field.value;
   }
   return values;
@@ -144,12 +157,35 @@ export function makeEntry(kind) {
   return { id: nextId += 1, kind, title: item.title, values: seedValues(item), bypass: false };
 }
 
-/* Which controls a filter is showing right now. ClackPaint's `when` predicates
+/* Two things about a motion card's controls cannot be written down in advance.
+   Its target list is whatever else is in the stack, and a ramp's From and To
+   are measured in the units of the parameter it is aimed at — degrees for an
+   angle, percent for a threshold. Both are settled here, at the moment the row
+   is drawn, against the stack as it stands. */
+function resolveField(field, entry, stack) {
+  if (typeof field.options === 'function') {
+    return { ...field, options: field.options(stack, entry) };
+  }
+  if (field.type === 'target') {
+    return { ...field, type: 'select', options: [['', 'Choose a parameter…'], ...targetOptions(stack, entry)] };
+  }
+  if (field.range === 'target') {
+    const aimed = targetField(stack, readTarget(entry.values.target));
+    if (!aimed) return { ...field, type: 'range', min: 0, max: 100, step: 1 };
+    const { min, max, step, unit, decimals } = aimed.field;
+    return { ...field, type: 'range', min, max, step, unit, decimals };
+  }
+  return field;
+}
+
+/* Which controls a card is showing right now. ClackPaint's `when` predicates
    read the current values, so this has to be asked again after every change. */
-export function visibleFields(entry) {
+export function visibleFields(entry, stack = []) {
   const item = entryFor(entry.kind);
   if (!item) return [];
-  return item.fields.filter(field => typeof field.when !== 'function' || field.when(entry.values));
+  return item.fields
+    .filter(field => typeof field.when !== 'function' || field.when(entry.values))
+    .map(field => resolveField(field, entry, stack));
 }
 
 export function helpFor(entry) {
@@ -165,17 +201,21 @@ export function previewBudget(stack) {
   const shared = FX()?.EFFECT_LIVE_PIXELS || 1_500_000;
   let budget = Math.min(shared, 480_000);
   for (const entry of stack) {
-    if (entry.bypass) continue;
+    if (entry.bypass || isMotion(entry.kind)) continue;
     const own = entryFor(entry.kind)?.livePixels;
     const value = typeof own === 'function' ? own(entry.values) : own;
     if (value) budget = Math.min(budget, value);
   }
-  /* several filters in a row cost the sum of them */
-  const active = stack.filter(entry => !entry.bypass).length || 1;
+  /* several filters in a row cost the sum of them; motion cards render nothing
+     and so cost nothing */
+  const active = stack.filter(entry => !entry.bypass && !isMotion(entry.kind)).length || 1;
   return Math.max(24_000, Math.round(budget / active));
 }
 
 /* ------------------------------------------------------------------ panel */
+
+const labelOf = (field, values) =>
+  typeof field.label === 'function' ? field.label(values) : field.label;
 
 const formatValue = (field, value) => {
   if (field.type === 'check') return value ? 'on' : 'off';
@@ -188,9 +228,9 @@ const formatValue = (field, value) => {
   return `${field.decimals ? number.toFixed(field.decimals) : number}${field.unit || ''}`;
 };
 
-function controlFor(entry, field, onChange) {
+function controlFor(entry, field, onChange, drivenBy = null) {
   const row = document.createElement('label');
-  row.className = 'fx-field';
+  row.className = `fx-field${drivenBy ? ' patched' : ''}`;
 
   const caption = document.createElement('span');
   caption.className = 'fx-field-label';
@@ -198,7 +238,14 @@ function controlFor(entry, field, onChange) {
   /* A few controls rename themselves: Pixel Sorting's angle becomes "Ring cut"
      on a spin path and "Spiral cut" on a spiral one, so the label is a function
      of the other values rather than a string. */
-  name.textContent = typeof field.label === 'function' ? field.label(entry.values) : field.label;
+  name.textContent = labelOf(field, entry.values);
+  if (drivenBy) {
+    const chip = document.createElement('span');
+    chip.className = 'fx-wire-chip';
+    chip.textContent = `⟳ ${drivenBy.join(', ')}`;
+    chip.title = 'driven by a motion card';
+    name.append(' ', chip);
+  }
   const readout = document.createElement('output');
   readout.className = 'fx-field-value';
   caption.append(name, readout);
@@ -250,6 +297,10 @@ function controlFor(entry, field, onChange) {
     input.value = entry.values[field.id];
   }
 
+  /* Controls that say what they are without a readout: a colour swatch, a
+     matrix of weights, and a target — which the select beneath it and the
+     "drives" line above it already both name. */
+  const quiet = field.type === 'matrix' || field.type === 'colour' || field.id === 'target';
   const sync = () => {
     if (field.type === 'check') entry.values[field.id] = input.checked;
     else if (field.type !== 'matrix') entry.values[field.id] = input.value;
@@ -260,12 +311,33 @@ function controlFor(entry, field, onChange) {
       entry.values.matrix = (FX().CUSTOM_KERNELS[Number(input.value)] || [1]).slice();
       void item;
     }
-    if (field.type !== 'matrix' && field.type !== 'colour') readout.textContent = formatValue(field, entry.values[field.id]);
+    if (!quiet) readout.textContent = formatValue(field, entry.values[field.id]);
     onChange();
   };
   if (field.type !== 'matrix') input.addEventListener('input', sync);
-  const quiet = field.type === 'matrix' || field.type === 'colour';
   readout.textContent = quiet ? '' : formatValue(field, entry.values[field.id]);
+
+  /* A driven control keeps showing — and dragging — the value you set. The
+     amber marker riding the track is what the motion has made of it this frame.
+     Putting the motion on the thumb instead was the first idea and the wrong
+     one: a thumb that runs away from the pointer cannot be adjusted. */
+  if (field.type === 'range' || field.type === 'number') {
+    row.dataset.field = field.id;
+    const track = document.createElement('span');
+    track.className = 'fx-track';
+    const marker = document.createElement('span');
+    marker.className = 'fx-live-marker';
+    marker.hidden = true;
+    track.append(input, marker);
+    row.append(caption, track);
+    row.dataset.min = field.min ?? 0;
+    row.dataset.max = field.max ?? 100;
+    row.dataset.unit = field.unit ?? '';
+    /* a control that steps in whole numbers should not report two decimals
+       just because the motion put it between two of them */
+    row.dataset.decimals = field.decimals ?? (Number(field.step) < 1 ? 2 : 0);
+    return row;
+  }
 
   row.append(caption, input);
   return row;
@@ -283,16 +355,30 @@ export function renderStack(container, stack, handlers) {
     return;
   }
 
+  /* which parameters are being driven, and by what — so a filter card can name
+     the motion card moving each of its controls */
+  const driven = new Map();
+  for (const entry of stack) {
+    if (entry.bypass || !isMotion(entry.kind)) continue;
+    const target = readTarget(entry.values.target);
+    if (!target) continue;
+    const key = `${target.id}:${target.field}`;
+    driven.set(key, [...(driven.get(key) || []), entry]);
+  }
+  const positionOf = entry => stack.indexOf(entry) + 1;
+
   stack.forEach((entry, index) => {
+    const motion = isMotion(entry.kind);
     const card = document.createElement('div');
-    card.className = `fx-card${entry.bypass ? ' bypassed' : ''}`;
+    card.className = `fx-card${entry.bypass ? ' bypassed' : ''}${motion ? ' motion' : ''}`;
+    card.dataset.entry = entry.id;
 
     const head = document.createElement('div');
     head.className = 'fx-card-head';
 
     const title = document.createElement('span');
     title.className = 'fx-card-title';
-    title.textContent = `${index + 1}. ${entry.title}`;
+    title.textContent = `${motion ? '⟳ ' : ''}${index + 1}. ${entry.title}`;
 
     const buttons = document.createElement('span');
     buttons.className = 'fx-card-buttons';
@@ -330,28 +416,89 @@ export function renderStack(container, stack, handlers) {
       card.append(note);
     }
 
+    /* A motion card says what it is aimed at before it says how, because that
+       is the question you have when you look at one. */
+    if (motion) {
+      const aim = document.createElement('p');
+      aim.className = 'fx-aim';
+      const target = readTarget(entry.values.target);
+      const aimed = target ? targetField(stack, target) : null;
+      if (aimed) {
+        aim.innerHTML = 'drives <b></b>';
+        aim.querySelector('b').textContent =
+          `${positionOf(aimed.entry)}. ${aimed.entry.title} · ${labelOf(aimed.field, aimed.entry.values)}`;
+      } else if (target) {
+        card.classList.add('orphan');
+        aim.classList.add('broken');
+        aim.textContent = 'Nothing to drive — the card this pointed at was removed. Pick another target, or remove this card.';
+      } else {
+        aim.classList.add('unset');
+        aim.textContent = 'Not aimed at anything yet.';
+      }
+      card.append(aim);
+    }
+
     const fields = document.createElement('div');
     fields.className = 'fx-fields';
     const draw = () => {
       fields.textContent = '';
-      for (const field of visibleFields(entry)) {
+      for (const field of visibleFields(entry, stack)) {
+        const chip = motion ? null : driven.get(`${entry.id}:${field.id}`);
+        const chipNames = chip ? chip.map(source => `${positionOf(source)}. ${source.title}`) : null;
         fields.append(controlFor(entry, field, () => {
           /* a select can change which controls apply; a slider cannot */
-          if (field.type === 'select' || field.type === 'check') draw();
+          if (field.type === 'select' || field.type === 'check') {
+            /* choosing a target rewrites everything about a motion card: what
+               its ramp is measured in, and what the card at the other end says
+               about itself */
+            if (field.id === 'target') { seedRamp(entry, stack); handlers.onRetarget(entry); return; }
+            draw();
+          }
           handlers.onChange(entry);
-        }));
+        }, chipNames));
       }
     };
     draw();
     card.append(fields);
     container.append(card);
+
+    if (motion) card.append(scopeFor(entry));
   });
+}
+
+/* A ramp is measured in the units of whatever it is pointed at, so choosing a
+   target for the first time sets its ends to that control's own extremes —
+   0° to 180° for an angle — rather than leaving two zeroes behind. */
+function seedRamp(entry, stack) {
+  const source = MOTION_KINDS[entry.kind];
+  if (!source) return;
+  const aimed = targetField(stack, readTarget(entry.values.target));
+  if (!aimed) return;
+  for (const field of source.fields) {
+    if (field.range !== 'target') continue;
+    entry.values[field.id] = field.value === 'max' ? aimed.field.max : aimed.field.min;
+  }
+}
+
+/* The little scope inside a motion card: the shape it will trace across the
+   clip, with a playhead. Drawn once; the playhead and the readout are moved
+   every frame by updateDriven. */
+function scopeFor(entry) {
+  const scope = document.createElement('div');
+  scope.className = 'fx-scope';
+  scope.innerHTML =
+    '<svg viewBox="0 0 240 34" preserveAspectRatio="none" aria-hidden="true">' +
+    '<line class="fx-scope-mid" x1="0" y1="17" x2="240" y2="17"></line>' +
+    '<path class="fx-scope-trace" fill="none"></path>' +
+    '<line class="fx-scope-head" x1="0" y1="0" x2="0" y2="34"></line>' +
+    '</svg><div class="fx-scope-foot"><span class="fx-scope-what"></span><span class="fx-scope-now"></span></div>';
+  return scope;
 }
 
 /* The Effects menu and the "add" control are built from the same catalogue, so
    a filter added to ClackPaint shows up in both without being named twice. */
 export function fillPicker(select) {
-  const { effects, dithers, mattes } = catalogue();
+  const { effects, dithers, mattes, motions } = catalogue();
   select.textContent = '';
   const blank = document.createElement('option');
   blank.value = ''; blank.textContent = 'Add an effect…';
@@ -370,4 +517,76 @@ export function fillPicker(select) {
   group('Filters', effects);
   group('Dither', dithers);
   group('Background', mattes);
+  group('Motion', motions);
+}
+
+/* ------------------------------------------------- what moves every frame
+   Rebuilding the panel per frame would fight the pointer and lose the focus
+   ring, so the rows are built once and only the parts that move are written:
+   the amber marker on a driven track, the value beside it, and each motion
+   card's playhead. Everything here is a write — nothing is measured — so it
+   costs nothing to call on every preview frame. */
+
+const scopeShape = (entry, context, samples = 96) => {
+  const source = MOTION_KINDS[entry.kind];
+  if (!source) return [];
+  const points = [];
+  for (let i = 0; i <= samples; i += 1) {
+    const time = (i / samples) * (context.duration || 1);
+    const value = Number(source.at(entry.values, time, context));
+    points.push(Number.isFinite(value) ? Math.max(-1, Math.min(1, value)) : 0);
+  }
+  return points;
+};
+
+export function updateDriven(container, { effects, drivers, time, context }) {
+  for (const card of container.querySelectorAll('.fx-card')) {
+    const entry = effects.find(item => String(item.id) === card.dataset.entry);
+    if (!entry) continue;
+
+    /* a filter's driven controls */
+    for (const row of card.querySelectorAll('.fx-field.patched')) {
+      const held = drivers.get(`${entry.id}:${row.dataset.field}`);
+      const marker = row.querySelector('.fx-live-marker');
+      const readout = row.querySelector('.fx-field-value');
+      if (!held || held.value === undefined) { if (marker) marker.hidden = true; continue; }
+      const low = Number(row.dataset.min), high = Number(row.dataset.max);
+      const span = (high - low) || 1;
+      if (marker) {
+        marker.hidden = false;
+        marker.style.setProperty('--at', `${Math.max(0, Math.min(1, (held.value - low) / span)) * 100}%`);
+      }
+      if (readout) {
+        readout.textContent = held.value.toFixed(Number(row.dataset.decimals) || 0) + (row.dataset.unit || '');
+        readout.classList.add('driven');
+      }
+    }
+
+    /* a motion card's scope */
+    const scope = card.querySelector('.fx-scope');
+    if (!scope || !isMotion(entry.kind)) continue;
+    const trace = scope.querySelector('.fx-scope-trace');
+    const head = scope.querySelector('.fx-scope-head');
+    const shape = scopeShape(entry, context);
+    if (trace && shape.length) {
+      trace.setAttribute('d', 'M' + shape
+        .map((value, i) => `${((i / (shape.length - 1)) * 240).toFixed(1)},${(17 - value * 13).toFixed(1)}`)
+        .join(' L'));
+    }
+    if (head && context.duration) {
+      const x = Math.max(0, Math.min(1, time / context.duration)) * 240;
+      head.setAttribute('x1', x); head.setAttribute('x2', x);
+    }
+    const target = readTarget(entry.values.target);
+    const held = target ? drivers.get(`${target.id}:${target.field}`) : null;
+    const now = scope.querySelector('.fx-scope-now');
+    if (now) {
+      const row = held && container.querySelector(
+        `.fx-card[data-entry="${target.id}"] .fx-field[data-field="${target.field}"]`);
+      now.textContent = held?.value === undefined ? ''
+        : held.value.toFixed(Number(row?.dataset.decimals) || 0) + (row?.dataset.unit || '');
+    }
+    const what = scope.querySelector('.fx-scope-what');
+    if (what) what.textContent = MOTION_KINDS[entry.kind]?.summary?.(entry.values, context) || '';
+  }
 }

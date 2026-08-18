@@ -2460,6 +2460,9 @@ globalThis.ClackFX = {
   EFFECTS, CUSTOM_KERNELS, EFFECT_LIVE_PIXELS, effectBudget,
   setContext,
   blankImage, copyImage, sampleImage, remapImage, convolveImage, blurredImage,
-  hexToRgb, clampByte, wrapIndex, edgeIndex
+  hexToRgb, clampByte, wrapIndex, edgeIndex,
+  /* Video Lab's modulation sources oscillate with the same four shapes
+     Sonification does, and there is no reason for a second set of them. */
+  WAVES: SONIFY_WAVES
 };
 })();

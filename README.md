@@ -632,6 +632,9 @@ two colours Clouds paints between, and the point Selective Colour was aimed at
 ClackFX.setContext({ fg, bg, pin });
 ```
 
+`ClackFX.WAVES` is the same four oscillator shapes Sonification runs on,
+exported so Video Lab's motion cards need no second set of them.
+
 `EFFECTS[id].fields` describes the controls, and both apps generate their
 panels from it rather than listing filters by hand, so a filter added here
 appears in both. Some fields carry a `when` predicate deciding whether they

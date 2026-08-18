@@ -340,3 +340,59 @@ dialog::backdrop { background: var(--overlay); }
 /* The cached picture is drawn at whatever size the cache holds and scaled up,
    so it must not be smoothed into mush on the way. */
 #fx-canvas.cached { image-rendering: auto; }
+
+/* ---- motion -------------------------------------------------------------
+   Amber is the modulation signal: it marks the cards that move things and the
+   controls being moved, so a patched parameter is visible without reading. */
+:root {
+  --wire: #9a6414;
+  --wire-soft: #c99a4e;
+}
+
+.fx-card.motion {
+  border-color: var(--wire);
+  background: linear-gradient(180deg, rgba(154, 100, 20, .07), rgba(154, 100, 20, .02));
+}
+.fx-card.motion .fx-card-title { color: var(--wire); }
+.fx-card.motion input[type="range"] { accent-color: var(--wire); }
+.fx-card.orphan { border-color: var(--danger); background: rgba(160, 74, 58, .06); }
+.fx-card.orphan .fx-card-title { color: var(--danger); }
+
+.fx-aim { margin: 6px 0 0; font-size: 10px; color: var(--sage); line-height: 1.55; }
+.fx-aim b { color: var(--ink); font-weight: 600; }
+.fx-aim.broken { color: var(--danger); }
+.fx-aim.unset { font-style: italic; }
+
+/* A driven control keeps showing the value you set — you have to be able to
+   drag it — so the motion rides above the track as a marker instead. */
+.fx-track { position: relative; display: block; }
+.fx-track input[type="range"] { display: block; width: 100%; }
+.fx-live-marker {
+  position: absolute; top: 50%; left: var(--at, 0%);
+  width: 3px; height: 15px; border-radius: 2px; background: var(--wire);
+  transform: translate(-50%, -50%); pointer-events: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--paper) 70%, transparent);
+}
+.fx-field.patched input[type="range"] { accent-color: var(--wire-soft); }
+.fx-field-value.driven { color: var(--wire); font-weight: 600; }
+.fx-wire-chip {
+  display: inline-block; margin-left: 4px; padding: 0 4px;
+  font-size: 9.5px; font-weight: 600; color: var(--wire);
+  border: 1px solid var(--wire-soft); border-radius: 3px;
+  background: rgba(154, 100, 20, .09);
+}
+
+/* the shape a motion card will trace across the clip, with a playhead */
+.fx-scope {
+  margin-top: 9px; border: 1px solid var(--paper-line); border-radius: 4px;
+  background: var(--paper-deep); padding: 4px 5px;
+}
+.fx-scope svg { display: block; width: 100%; height: 34px; }
+.fx-scope-mid { stroke: var(--paper-line); stroke-width: 1; }
+.fx-scope-trace { stroke: var(--wire); stroke-width: 1.6; }
+.fx-scope-head { stroke: var(--leaf-deep); stroke-width: 1.4; }
+.fx-scope-foot {
+  display: flex; justify-content: space-between; gap: 8px; margin-top: 3px;
+  font-size: 9.5px; color: var(--sage); font-variant-numeric: tabular-nums;
+}
+.fx-scope-now { color: var(--wire); font-weight: 600; }
