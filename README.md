@@ -47,6 +47,7 @@ content/
     calendar/events.csv     ← the upcoming events it shows
     calendar/luma.json      ← mirror of the Luma events (generated)
     paint-dither.js         ← the dither algorithms (ClackPaint + Video Lab)
+    paint-matte.js          ← background matting (ClackPaint + Video Lab)
     paint-retouch.js        ← the retouching maths (ClackPaint + Video Lab)
     video/                  ← browser-only Video Lab app + FFmpeg core
     audiogen/               ← local music and speech generation app
@@ -606,7 +607,10 @@ blurs, the distorts, Pixel Sorting, Sonification, the lot. It began as a
 section of `paint.html` and moved out when Video Lab wanted the same filters
 frame by frame. Two neighbours complete the set: `paint-dither.js` carries the
 dither algorithms and `paint-retouch.js` the bilateral blur that Surface Blur
-and Clarity are built on.
+and Clarity are built on. `paint-matte.js` holds the background matting, and is
+the odd one out: it stays an ES module, because ClackPaint's matting worker
+imports it that way. Video Lab's filter worker is a classic one and reaches it
+with a dynamic `import()`, which classic workers do allow.
 
 All three are plain scripts that hang one object off `globalThis` rather than
 ES modules, because both callers need them that way: `paint.html` is one large

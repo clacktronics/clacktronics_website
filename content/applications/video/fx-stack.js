@@ -26,6 +26,71 @@ const fromDitherParam = param => ({
   min: param.min, max: param.max, step: param.step, unit: param.unit, value: param.default
 });
 
+/* Background removal. The maths is paint-matte.js, shared with ClackPaint, but
+   the controls are described here rather than imported: ClackPaint's own list
+   carries advice about layers and selections that means nothing over video,
+   and video needs the two things a still does not — something to put where the
+   background was, and a warning about what happens frame to frame.
+
+   Only the methods that judge a frame on its own are offered. GrowCut needs
+   scribbles on the picture and difference matting needs a second layer;
+   neither has an answer for frame four hundred. */
+const MATTE_METHODS = [
+  {
+    id: 'chroma',
+    title: 'Remove Background — Chroma key',
+    help: 'Keys out one colour by hue alone, ignoring brightness, so a shadow falling across the screen goes with it. The right tool for video: it judges each pixel on its own, so it does not crawl from frame to frame the way a cleverer method would.',
+    params: [
+      { id: 'key', label: 'Key colour', type: 'colour', value: '#00b140' },
+      { id: 'tolerance', label: 'Tolerance', type: 'range', min: 1, max: 100, value: 35, step: 1 }
+    ]
+  },
+  {
+    id: 'colour-range',
+    title: 'Remove Background — Colour range',
+    help: 'Every pixel near one colour goes, wherever it is in the frame. Brightness counts here, unlike the chroma key — what you want for a white sweep, not for a green screen.',
+    params: [
+      { id: 'key', label: 'Background colour', type: 'colour', value: '#ffffff' },
+      { id: 'tolerance', label: 'Tolerance', type: 'range', min: 1, max: 100, value: 25, step: 1 }
+    ]
+  },
+  {
+    id: 'border-flood',
+    title: 'Remove Background — Flood from the edges',
+    help: 'A magic wand run from all four edges at once, so the sky behind the subject goes and the identical blue of their shirt stays. Connectedness can change between frames, so check a filtered clip end to end rather than one frame of it.',
+    params: [
+      { id: 'tolerance', label: 'Tolerance', type: 'range', min: 1, max: 100, value: 20, step: 1 }
+    ]
+  },
+  {
+    id: 'brightness',
+    title: 'Remove Background — By brightness',
+    help: 'Keeps the light and drops the dark, or the other way about. For a subject lit against a black studio, or a silhouette.',
+    params: [
+      { id: 'background', label: 'Background is', type: 'select', value: 'dark',
+        options: [['dark', 'Dark'], ['light', 'Light']] }
+    ]
+  },
+  {
+    id: 'saliency',
+    title: 'Remove Background — What stands out',
+    help: 'Measures how far each pixel sits from the average colour of the whole frame; what stands out is what is left. Works when one subject stands clear of a settled background, and not at all on a busy one.',
+    params: []
+  }
+];
+
+/* Every method ends the same way — a ramp turned into a cut, and something put
+   where the background was — so those controls are appended to all of them. */
+const MATTE_SHAPING = [
+  { id: 'cutoff', label: 'Cutoff', type: 'range', min: 0, max: 100, value: 50, step: 1, unit: '%' },
+  { id: 'softness', label: 'Edge softness', type: 'range', min: 1, max: 100, value: 30, step: 1, unit: '%' },
+  { id: 'invert', label: 'Keep the background instead', type: 'check', value: false },
+  { id: 'output', label: 'Background becomes', type: 'select', value: 'fill',
+    options: [['fill', 'A flat colour'], ['transparent', 'Transparent']] },
+  { id: 'fillColour', label: 'Fill colour', type: 'colour', value: '#00b140',
+    when: values => values.output !== 'transparent' }
+];
+
 export function catalogue() {
   const effects = Object.entries(FX()?.EFFECTS || {}).map(([id, config]) => ({
     kind: `fx:${id}`,
@@ -40,14 +105,20 @@ export function catalogue() {
     help: group.hint || '',
     fields: DITHER().params(id).map(fromDitherParam)
   }));
-  return { effects, dithers };
+  const mattes = MATTE_METHODS.map(method => ({
+    kind: `matte:${method.id}`,
+    title: method.title,
+    help: method.help,
+    fields: [...method.params, ...MATTE_SHAPING]
+  }));
+  return { effects, dithers, mattes };
 }
 
 const byKind = new Map();
 function entryFor(kind) {
   if (!byKind.size) {
-    const { effects, dithers } = catalogue();
-    for (const item of [...effects, ...dithers]) byKind.set(item.kind, item);
+    const { effects, dithers, mattes } = catalogue();
+    for (const item of [...effects, ...dithers, ...mattes]) byKind.set(item.kind, item);
   }
   return byKind.get(kind);
 }
@@ -146,6 +217,11 @@ function controlFor(entry, field, onChange) {
     input.type = 'checkbox';
     input.checked = !!entry.values[field.id];
     row.classList.add('fx-field-check');
+  } else if (field.type === 'colour') {
+    input = document.createElement('input');
+    input.type = 'color';
+    input.value = entry.values[field.id];
+    row.classList.add('fx-field-colour');
   } else if (field.type === 'matrix') {
     /* a grid of weights rather than one control */
     input = document.createElement('div');
@@ -177,17 +253,19 @@ function controlFor(entry, field, onChange) {
   const sync = () => {
     if (field.type === 'check') entry.values[field.id] = input.checked;
     else if (field.type !== 'matrix') entry.values[field.id] = input.value;
+    if (field.type === 'colour') readout.textContent = '';
     /* Custom Matrix changes shape when its size does */
     if (field.id === 'size' && entry.values.matrix) {
       const item = entryFor(entry.kind);
       entry.values.matrix = (FX().CUSTOM_KERNELS[Number(input.value)] || [1]).slice();
       void item;
     }
-    readout.textContent = field.type === 'matrix' ? '' : formatValue(field, entry.values[field.id]);
+    if (field.type !== 'matrix' && field.type !== 'colour') readout.textContent = formatValue(field, entry.values[field.id]);
     onChange();
   };
   if (field.type !== 'matrix') input.addEventListener('input', sync);
-  readout.textContent = field.type === 'matrix' ? '' : formatValue(field, entry.values[field.id]);
+  const quiet = field.type === 'matrix' || field.type === 'colour';
+  readout.textContent = quiet ? '' : formatValue(field, entry.values[field.id]);
 
   row.append(caption, input);
   return row;
@@ -273,7 +351,7 @@ export function renderStack(container, stack, handlers) {
 /* The Effects menu and the "add" control are built from the same catalogue, so
    a filter added to ClackPaint shows up in both without being named twice. */
 export function fillPicker(select) {
-  const { effects, dithers } = catalogue();
+  const { effects, dithers, mattes } = catalogue();
   select.textContent = '';
   const blank = document.createElement('option');
   blank.value = ''; blank.textContent = 'Add an effect…';
@@ -291,4 +369,5 @@ export function fillPicker(select) {
   };
   group('Filters', effects);
   group('Dither', dithers);
+  group('Background', mattes);
 }

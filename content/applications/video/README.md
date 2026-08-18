@@ -14,8 +14,8 @@ own page and inside a ClackOS iframe window.
   cut-after-playhead.
 - An extra audio layer starting at the playhead, either mixed over the original
   audio or replacing it, with 0–200% rendered gain.
-- An effect stack applied to every frame — ClackPaint's filters, run here over
-  video (see "Effects" below).
+- An effect stack applied to every frame — ClackPaint's filters, its dithers and
+  its background matting, run here over video (see "Effects" below).
 - Browser-only export to MP4, WebM, MOV, MKV, AVI, GIF, MP3, WAV, Ogg, or a
   custom container extension.
 - **File → Export → Raw**: the pair of raw files Popcorn wants (see below).
@@ -76,6 +76,32 @@ The **Ink** and **Paper** colours below the stack feed the three filters that
 need colours rather than reading them off the frame: the dithers quantise
 towards them, and Clouds paints between them.
 
+### Removing the background
+
+**Effects → Remove background** offers the five matting methods from
+`../paint-matte.js` that judge a frame on its own: chroma key, colour range,
+flood from the edges, brightness and saliency. GrowCut and difference matting
+are not offered — one needs scribbles on the picture and the other a second
+layer, and neither has an answer for frame four hundred.
+
+Judging each frame on its own is also the point. A cleverer matte that looked
+at the whole clip would be steadier, and every per-frame method will crawl a
+little at the edges where a pixel sits near the cutoff. **Chroma key is the one
+to reach for**: it keys on hue alone, ignoring brightness, so a shadow on the
+screen goes with the screen and the same pixel decides the same way every
+frame. Widen **Edge softness** if the edge boils.
+
+The background either goes transparent or is filled with a flat colour.
+Transparency is the honest answer, but only WebM and a PNG sequence have
+anywhere to put it — an MP4 will flatten it to black — so filling is offered
+beside it. To key onto other footage, fill with a colour and composite
+elsewhere, or export a PNG sequence.
+
+The neural matting models ClackPaint offers are deliberately not here. MODNet
+and the rest are hundreds of megabytes, want WebGPU to run at any speed, and
+being per-frame would flicker worse than the classic methods rather than
+better.
+
 ### What it costs
 
 Frames do not depend on one another, so they are filtered in parallel by one
@@ -86,6 +112,7 @@ worker per core. Rough per-frame figures for a 720p frame on a modest machine:
 | Mosaic | 8 ms |
 | Crystallize, Pixel Sorting | 70–85 ms |
 | Error diffusion | 120 ms |
+| Chroma key, colour range | 10–20 ms |
 | Motion blur, Radial blur | 600–900 ms |
 
 A ten-second clip is three hundred frames, so most stacks render in seconds and

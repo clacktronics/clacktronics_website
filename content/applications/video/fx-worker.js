@@ -32,10 +32,64 @@ const DITHER = globalThis.ClackDither;
    colour wells, so its effects panel offers them and they arrive with the job. */
 const DEFAULT_COLOURS = { fg: '#ffffff', bg: '#000000', palette: [] };
 
+/* Background removal is the one part that is an ES module — paint-matte.js is
+   imported by ClackPaint's own matting worker and stays that way. A classic
+   worker cannot importScripts a module, but it can import() one, so it is
+   pulled in the first time a frame actually asks for a matte. */
+let matteModule = null;
+async function matting() {
+  if (!matteModule) matteModule = await import('../paint-matte.js');
+  return matteModule;
+}
+
+const hexToRgb = hex => {
+  const n = parseInt(String(hex).replace('#', ''), 16) || 0;
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+
+/* The matte comes back as coverage — one byte a pixel, 255 for subject — and
+   is deliberately not a decision. Where along that ramp the subject ends, and
+   how soft the crossing is, are the two controls that matter, and neither
+   needs the matte worked out again.
+
+   Over video the cut is either punched through to transparency or filled with
+   a flat colour. Transparency is the honest answer and survives a WebM or a
+   PNG sequence; most other containers have nowhere to put it, which is why
+   filling is offered beside it rather than instead of it. */
+async function applyMatte(image, method, values, colours) {
+  const { classicMatte, CLASSIC_METHODS } = await matting();
+  if (!CLASSIC_METHODS.has(method)) return image;
+
+  const params = { ...values };
+  if (params.key) params.key = hexToRgb(params.key);
+  const { width: w, height: h, data } = image;
+  const coverage = classicMatte(method, data, w, h, params);
+
+  const cutoff = (Number(values.cutoff) || 0) / 100 * 255;
+  const softness = Math.max(1, (Number(values.softness) || 0) / 100 * 255);
+  const low = cutoff - softness / 2, high = cutoff + softness / 2;
+  const invert = !!values.invert;
+  const fill = values.output === 'fill' ? hexToRgb(values.fillColour || colours.bg) : null;
+
+  for (let pixel = 0, at = 0; pixel < coverage.length; pixel += 1, at += 4) {
+    let subject = (coverage[pixel] - low) / (high - low);
+    subject = subject < 0 ? 0 : subject > 1 ? 1 : subject;
+    if (invert) subject = 1 - subject;
+    if (fill) {
+      for (let channel = 0; channel < 3; channel += 1) {
+        data[at + channel] = fill[channel] + (data[at + channel] - fill[channel]) * subject;
+      }
+    } else {
+      data[at + 3] = data[at + 3] * subject;
+    }
+  }
+  return image;
+}
+
 /* An effect entry is { kind, values }, where kind is namespaced by which of the
-   three libraries owns it. Anything unknown is skipped rather than thrown, so
-   one bad entry in a saved stack cannot cost the whole render. */
-function applyOne(image, entry, colours) {
+   libraries owns it. Anything unknown is skipped rather than thrown, so one bad
+   entry in a saved stack cannot cost the whole render. */
+async function applyOne(image, entry, colours) {
   const [family, name] = String(entry.kind || '').split(':');
   if (family === 'fx') {
     const effect = FX.EFFECTS[name];
@@ -48,25 +102,26 @@ function applyOne(image, entry, colours) {
     /* applyDither works in place and hands the same ImageData back */
     return DITHER.apply(image, name, DITHER.normalise(name, entry.values || {}), colours);
   }
+  if (family === 'matte') return applyMatte(image, name, entry.values || {}, colours);
   return image;
 }
 
-function renderFrame(payload) {
+async function renderFrame(payload) {
   const { width, height, data, stack, colours } = payload;
   let image = new ImageData(new Uint8ClampedArray(data), width, height);
   for (const entry of stack || []) {
     if (entry.bypass) continue;
-    image = applyOne(image, entry, colours || DEFAULT_COLOURS);
+    image = await applyOne(image, entry, colours || DEFAULT_COLOURS);
   }
   return image;
 }
 
-self.onmessage = event => {
+self.onmessage = async event => {
   const message = event.data || {};
   if (message.type !== 'render') return;
   const { token } = message;
   try {
-    const image = renderFrame(message);
+    const image = await renderFrame(message);
     const buffer = image.data.buffer;
     self.postMessage({ type: 'done', token, width: image.width, height: image.height, data: buffer }, [buffer]);
   } catch (error) {

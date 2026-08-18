@@ -998,7 +998,7 @@ function bypassAllEffects() {
    a filter added to ClackPaint appears in Video Lab without being listed by
    hand in either place. */
 function buildFxMenus() {
-  const { effects, dithers } = catalogue();
+  const { effects, dithers, mattes } = catalogue();
   fillPicker($('#fx-picker'));
   const fill = (container, items) => {
     container.textContent = '';
@@ -1012,6 +1012,7 @@ function buildFxMenus() {
   };
   fill($('#fx-menu-effects'), effects);
   fill($('#fx-menu-dithers'), dithers);
+  fill($('#fx-menu-mattes'), mattes);
 }
 
 function showDialog(kind) {
