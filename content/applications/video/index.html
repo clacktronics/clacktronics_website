@@ -23,6 +23,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2309140d'/%3E%3Cpath d='M5 4.5v7l6-3.5z' fill='%234fae7d'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
+  <!-- The filters themselves, shared with ClackPaint. The page loads them for
+       the effects panel — it needs the real control definitions, including the
+       predicates that decide which of them apply — and the render workers load
+       the same files for the maths. -->
+  <script src="../../../assets/js/clack-fx.js"></script>
+  <script src="../paint-retouch.js"></script>
+  <script src="../paint-dither.js"></script>
   <script src="../../../assets/js/app-menu.js" defer></script>
 <script src="../../../assets/js/app-bar.js" defer></script>
 <script src="../../../assets/js/app-home.js" defer></script>
@@ -54,6 +61,28 @@
         <div class="sep"></div>
         <button type="button" data-action="cut-before"><span class="menu-item-label"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Cut before playhead</span></button>
         <button type="button" data-action="cut-after"><span class="menu-item-label"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Cut after playhead</span></button>
+      </div>
+    </div>
+    <div class="rm">
+      <button type="button">Effects</button>
+      <div class="rm-dd" id="effects-menu">
+        <button type="button" data-action="fx-focus"><span class="menu-item-label"><span class="pixel-icon" data-icon="list-box" aria-hidden="true"></span>Effect stack…</span></button>
+        <div class="sep"></div>
+        <div class="rm-sub">
+          <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="menu-item-label"><span class="pixel-icon" data-icon="shapes" aria-hidden="true"></span>Add filter</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+          <div class="rm-dd rm-sub-dd fx-menu-list" id="fx-menu-effects"></div>
+        </div>
+        <div class="rm-sub">
+          <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="menu-item-label"><span class="pixel-icon" data-icon="invert" aria-hidden="true"></span>Add dither</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+          <div class="rm-dd rm-sub-dd fx-menu-list" id="fx-menu-dithers"></div>
+        </div>
+        <div class="rm-sub">
+          <button type="button" class="rm-sub-open" aria-haspopup="true" aria-expanded="false"><span class="menu-item-label"><span class="pixel-icon" data-icon="scissors" aria-hidden="true"></span>Remove background</span><span class="rm-sub-arrow" aria-hidden="true">▸</span></button>
+          <div class="rm-dd rm-sub-dd fx-menu-list" id="fx-menu-mattes"></div>
+        </div>
+        <div class="sep"></div>
+        <button type="button" data-action="fx-bypass-all"><span class="menu-item-label"><span class="pixel-icon" data-icon="eye-off" aria-hidden="true"></span>Switch all off</span></button>
+        <button type="button" data-action="fx-clear"><span class="menu-item-label"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span>Remove all effects</span></button>
       </div>
     </div>
     <div class="rm">
@@ -91,6 +120,10 @@
       <div class="viewer-column">
         <div class="viewer" id="drop-zone">
           <video id="player" playsinline preload="metadata" aria-label="Video preview"></video>
+          <!-- Sits over the player and carries the filtered picture whenever the
+               stack has anything in it; hidden otherwise, so an unfiltered clip
+               plays through the video element exactly as it always did. -->
+          <canvas id="fx-canvas" hidden aria-label="Filtered preview"></canvas>
           <div class="empty-state" id="empty-state">
             <span class="empty-icon" aria-hidden="true"><span class="pixel-icon" data-icon="video"></span></span>
             <b>Drop a video here</b>
@@ -161,6 +194,22 @@
       </div>
 
       <aside class="control-column" aria-label="Audio and export settings">
+        <section class="control-section" id="fx-panel" aria-labelledby="fx-title">
+          <div class="section-head">
+            <span class="app-lbl" id="fx-title">// Effects</span>
+            <button class="text-btn" type="button" data-action="fx-clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span> CLEAR</button>
+          </div>
+          <div class="fx-add-row">
+            <select id="fx-picker" aria-label="Add an effect"></select>
+          </div>
+          <div class="fx-stack" id="fx-stack"></div>
+          <div class="fx-colours">
+            <label class="compact-field">Ink <input type="color" id="fx-fg" value="#ffffff"></label>
+            <label class="compact-field">Paper <input type="color" id="fx-bg" value="#000000"></label>
+          </div>
+          <p class="note" id="fx-note">Effects run on every frame. The preview works at a reduced size to keep up; the export renders at full size.</p>
+        </section>
+
         <section class="control-section" aria-labelledby="audio-title">
           <div class="section-head">
             <span class="app-lbl" id="audio-title">// Audio layer</span>

@@ -1,4 +1,6 @@
 import { BrowserFFmpegEngine, POPCORN } from './ffmpeg-engine.js';
+import { FxPool } from './fx-pool.js';
+import { catalogue, makeEntry, renderStack, fillPicker, previewBudget } from './fx-stack.js';
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
@@ -30,7 +32,9 @@ const state = {
   reverseLast: 0,
   exporting: false,
   insertMode: 'after',
-  audioPickMode: 'mix'
+  audioPickMode: 'mix',
+  /* the filters applied to every frame, in order — see the effects section */
+  effects: []
 };
 
 const engine = new BrowserFFmpegEngine({
@@ -251,6 +255,7 @@ function updateUi() {
   $('#seek').value = total ? state.currentTime / total * 1000 : 0;
   $('#empty-state').hidden = !!state.segments.length;
   $('#viewer-badge').hidden = !state.segments.length;
+  scheduleFxPreview();
   $('#reverse-btn').setAttribute('aria-pressed', String(state.reverse));
   $('#reverse-btn').textContent = state.reverse ? 'REV ON' : 'REV';
   $('#loop-btn').setAttribute('aria-pressed', String(state.loop));
@@ -607,6 +612,13 @@ const humanBytes = bytes => {
 const IMAGE_FRAME_LIMIT = 1200;
 const RAW_BYTE_LIMIT = 700 * 1024 * 1024;
 
+/* A filtered video export goes out to stills and back — see the engine's
+   exportWithEffects — so it is governed by the frame count the way the image
+   sequence is, and by the same memory ceiling. Thirty frames a second keeps
+   ordinary motion; the limit is forty seconds of it. */
+const EFFECT_RENDER_FPS = 30;
+const EFFECT_FRAME_LIMIT = 1200;
+
 function exportSettings() {
   const bake = $('#bake-playback').checked;
   return {
@@ -661,7 +673,20 @@ function exportEstimate(settings) {
       heavy: frames > IMAGE_FRAME_LIMIT
     };
   }
-  return { text: `${formatTime(seconds, true)} of ${settings.format === 'custom' ? settings.extension.toUpperCase() : settings.format.toUpperCase()} rendered in this tab.`, heavy: false };
+  const label = settings.format === 'custom' ? settings.extension.toUpperCase() : settings.format.toUpperCase();
+  const active = state.effects.filter(entry => !entry.bypass).length;
+  const audioOnly = ['mp3', 'wav', 'ogg'].includes(settings.format);
+  if (active && !audioOnly) {
+    const frames = Math.max(1, Math.ceil(seconds * EFFECT_RENDER_FPS));
+    return {
+      text: `${formatTime(seconds, true)} of ${label}, ${frames} frames through ${active} effect${active === 1 ? '' : 's'}. ` +
+        (frames > EFFECT_FRAME_LIMIT
+          ? `Over the ${EFFECT_FRAME_LIMIT}-frame ceiling a filtered render can hold — cut the project shorter.`
+          : 'Filtered frames go out to stills and back, so this takes noticeably longer than an untouched export.'),
+      heavy: frames > EFFECT_FRAME_LIMIT
+    };
+  }
+  return { text: `${formatTime(seconds, true)} of ${label} rendered in this tab.`, heavy: false };
 }
 
 function updateExportPanel() {
@@ -708,14 +733,24 @@ async function exportProject() {
     reverse: settings.reverse,
     bounce: settings.bounce
   };
+  /* Every export route takes the same per-frame filter, so an effect stack
+     applies to a video, an image sequence and a Popcorn dump alike. Full size,
+     not the preview's reduced one. */
+  const stack = fxStack();
+  const filterFrame = stack.length
+    ? (image => ensureFxPool().render(image, stack, fxColours()))
+    : null;
+
   state.exporting = true;
   $('.export-btn').disabled = true;
   $('#cancel-export').hidden = false;
   setProgress(0, 'Loading local FFmpeg engine…');
-  setStatus('Preparing browser-only export. This can take a while for long files.', 'busy');
+  setStatus(stack.length
+    ? `Preparing browser-only export with ${stack.length} effect${stack.length === 1 ? '' : 's'} on every frame. This takes longer than an untouched export.`
+    : 'Preparing browser-only export. This can take a while for long files.', 'busy');
   try {
     if (settings.target === 'raw') {
-      const { files } = await engine.exportRaw({ ...project, framing: settings.framing, streams: settings.streams });
+      const { files } = await engine.exportRaw({ ...project, framing: settings.framing, streams: settings.streams, filterFrame });
       setProgress(1, 'Export complete.');
       const written = files.map(file => download(file.blob, `${settings.baseName}.${file.name.split('.').pop()}`));
       setStatus(settings.streams === 'both'
@@ -728,11 +763,28 @@ async function exportProject() {
         imageFormat: settings.imageFormat,
         maxWidth: settings.maxWidth,
         maxFrames: IMAGE_FRAME_LIMIT,
-        baseName: settings.baseName
+        baseName: settings.baseName,
+        filterFrame
       });
       setProgress(1, 'Export complete.');
       const name = download(result.blob, `${settings.baseName}-frames.zip`);
       setStatus(`Zipped ${result.frames} ${result.extension.toUpperCase()} frame${result.frames === 1 ? '' : 's'} into ${name}.`);
+    } else if (filterFrame && settings.format !== 'mp3' && settings.format !== 'wav' && settings.format !== 'ogg') {
+      /* A filtered video cannot go through the single FFmpeg graph, because the
+         filters are not FFmpeg's — see exportWithEffects. Audio-only formats
+         have no frames to filter, so they take the ordinary route. */
+      const result = await engine.exportWithEffects({
+        ...project,
+        format: settings.format,
+        extension: settings.extension,
+        fps: EFFECT_RENDER_FPS,
+        maxFrames: EFFECT_FRAME_LIMIT,
+        filterFrame,
+        onStage: message => setProgress(0, message)
+      });
+      setProgress(1, 'Export complete.');
+      const name = download(result.blob, `${settings.baseName}.${result.extension}`);
+      setStatus(`Exported ${name} — ${result.frames} frames through ${stack.length} effect${stack.length === 1 ? '' : 's'}, entirely in this browser.`);
     } else {
       const result = await engine.exportProject({ ...project, format: settings.format, extension: settings.extension });
       setProgress(1, 'Export complete.');
@@ -769,11 +821,198 @@ function chooseExportTarget(target) {
 function cancelExport() {
   if (!state.exporting) return;
   engine.cancel();
+  /* frames already queued for filtering would otherwise carry on arriving
+     after the engine that asked for them has gone */
+  fxPool?.cancel('Export cancelled.');
   state.exporting = false;
   $('.export-btn').disabled = false;
   $('#cancel-export').hidden = true;
   setProgress(0, 'Export cancelled.');
   setStatus('Export cancelled. The local engine was reset.');
+}
+
+/* ---- effects -------------------------------------------------------------
+   The stack is a list of filters applied to every frame in order. Nothing is
+   ever written back into the clip: the preview draws over the player and the
+   export runs the same stack again at full size, so switching an effect off
+   restores the original picture exactly.
+
+   The preview runs at a fraction of the frame's size, because the filters cost
+   what they cost — Pixel Sorting is around 85 ms for a 720p frame — and a
+   preview that arrives after the frame it was meant for has already gone is
+   worse than a smaller one that keeps up. previewBudget() works out how small
+   from the filters in the stack and how many of them there are. */
+
+const fxCanvas = $('#fx-canvas');
+const fxContext = fxCanvas.getContext('2d', { willReadFrequently: true });
+/* the frame is drawn here at preview size and read back; kept between frames
+   so a render loop does not allocate a canvas per frame */
+const fxScratch = document.createElement('canvas');
+const fxScratchContext = fxScratch.getContext('2d', { willReadFrequently: true });
+
+let fxPool = null;
+let fxBusy = false;
+let fxDirty = false;
+let fxFailure = '';
+
+function fxStack() {
+  return state.effects.filter(entry => !entry.bypass);
+}
+
+function fxColours() {
+  return { fg: $('#fx-fg').value, bg: $('#fx-bg').value, palette: [] };
+}
+
+function ensureFxPool() {
+  if (!fxPool) fxPool = new FxPool();
+  return fxPool;
+}
+
+/* The preview frame's size: the clip's aspect, scaled until it fits the budget
+   the stack can afford, and never larger than the frame itself. */
+function previewSize() {
+  const width = state.canvasWidth || 1280;
+  const height = state.canvasHeight || 720;
+  const budget = previewBudget(state.effects);
+  const scale = Math.min(1, Math.sqrt(budget / (width * height)));
+  return {
+    width: Math.max(2, Math.round(width * scale / 2) * 2),
+    height: Math.max(2, Math.round(height * scale / 2) * 2)
+  };
+}
+
+async function drawFxPreview() {
+  if (fxBusy) { fxDirty = true; return; }
+  const stack = fxStack();
+  if (!stack.length || !state.segments.length || player.readyState < 2) return;
+  fxBusy = true;
+  fxDirty = false;
+  try {
+    const { width, height } = previewSize();
+    if (fxScratch.width !== width || fxScratch.height !== height) {
+      fxScratch.width = width; fxScratch.height = height;
+      fxCanvas.width = width; fxCanvas.height = height;
+    }
+    fxScratchContext.drawImage(player, 0, 0, width, height);
+    const frame = fxScratchContext.getImageData(0, 0, width, height);
+    const filtered = await ensureFxPool().render(frame, stack, fxColours());
+    fxContext.putImageData(filtered, 0, 0);
+    if (fxFailure) { fxFailure = ''; updateFxNote(); }
+  } catch (error) {
+    /* a filter that throws on one frame would otherwise throw on all of them,
+       so it is reported once rather than every frame */
+    const message = error?.message || String(error);
+    if (message !== fxFailure && !/cancel/i.test(message)) {
+      fxFailure = message;
+      updateFxNote();
+    }
+  } finally {
+    fxBusy = false;
+    /* While the clip plays the preview keeps asking for the next frame the
+       moment it has finished the last, which is what makes an expensive stack
+       degrade into a slower preview rather than a stuck one. */
+    if (fxDirty || state.playing) requestAnimationFrame(drawFxPreview);
+  }
+}
+
+/* Called from the transport, the seek bar and the playback loops. While a clip
+   plays this asks for a new preview as often as the filters can answer, which
+   for a cheap stack is every frame and for an expensive one is not. */
+function scheduleFxPreview() {
+  if (!fxStack().length) return;
+  if (fxBusy) { fxDirty = true; return; }
+  requestAnimationFrame(drawFxPreview);
+}
+
+function updateFxNote() {
+  const note = $('#fx-note');
+  const active = fxStack().length;
+  if (fxFailure) {
+    note.textContent = `That stack failed on this frame: ${fxFailure}`;
+    note.classList.add('heavy');
+    return;
+  }
+  note.classList.remove('heavy');
+  if (!state.effects.length) {
+    note.textContent = 'Effects run on every frame. The preview works at a reduced size to keep up; the export renders at full size.';
+    return;
+  }
+  const { width, height } = previewSize();
+  note.textContent = active
+    ? `${active} effect${active === 1 ? '' : 's'} on every frame. Previewing at ${width} × ${height}; the export renders at ${state.canvasWidth} × ${state.canvasHeight}.`
+    : 'Every effect is switched off — the clip plays untouched.';
+}
+
+function refreshFx({ redraw = true } = {}) {
+  if (redraw) {
+    renderStack($('#fx-stack'), state.effects, {
+      onChange: () => { updateFxNote(); scheduleFxPreview(); },
+      onBypass: entry => { entry.bypass = !entry.bypass; refreshFx(); },
+      onMove: (entry, by) => {
+        const from = state.effects.indexOf(entry);
+        const to = from + by;
+        if (to < 0 || to >= state.effects.length) return;
+        state.effects.splice(to, 0, ...state.effects.splice(from, 1));
+        refreshFx();
+      },
+      onRemove: entry => {
+        state.effects.splice(state.effects.indexOf(entry), 1);
+        refreshFx();
+      }
+    });
+  }
+  const live = fxStack().length > 0;
+  fxCanvas.hidden = !live;
+  $('#drop-zone').classList.toggle('fx-live', live);
+  if (!live) fxContext.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  updateFxNote();
+  updateExportPanel();
+  scheduleFxPreview();
+}
+
+function addEffect(kind) {
+  const entry = makeEntry(kind);
+  if (!entry) return;
+  state.effects.push(entry);
+  refreshFx();
+  setStatus(`${entry.title} added — it runs on every frame from here on.`);
+}
+
+function clearEffects() {
+  if (!state.effects.length) { setStatus('There are no effects to remove.'); return; }
+  const count = state.effects.length;
+  state.effects.length = 0;
+  refreshFx();
+  setStatus(`Removed ${count} effect${count === 1 ? '' : 's'}.`);
+}
+
+function bypassAllEffects() {
+  if (!state.effects.length) { setStatus('There are no effects to switch off.'); return; }
+  const anyLive = state.effects.some(entry => !entry.bypass);
+  state.effects.forEach(entry => { entry.bypass = anyLive; });
+  refreshFx();
+  setStatus(anyLive ? 'All effects switched off.' : 'All effects switched back on.');
+}
+
+/* The Effects menu and the picker are both built from the shared catalogue, so
+   a filter added to ClackPaint appears in Video Lab without being listed by
+   hand in either place. */
+function buildFxMenus() {
+  const { effects, dithers, mattes } = catalogue();
+  fillPicker($('#fx-picker'));
+  const fill = (container, items) => {
+    container.textContent = '';
+    for (const item of items) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.fxAdd = item.kind;
+      button.innerHTML = `<span class="menu-item-label">${item.title}</span>`;
+      container.append(button);
+    }
+  };
+  fill($('#fx-menu-effects'), effects);
+  fill($('#fx-menu-dithers'), dithers);
+  fill($('#fx-menu-mattes'), mattes);
 }
 
 function showDialog(kind) {
@@ -844,7 +1083,13 @@ const actions = {
   'audio-replace': () => chooseAudio('replace'),
   'audio-remove': () => { clearAudio(); setStatus('Extra audio removed.'); },
   help: () => showDialog('formats'),
-  shortcuts: () => showDialog('shortcuts')
+  shortcuts: () => showDialog('shortcuts'),
+  'fx-focus': () => {
+    $('#fx-panel').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    $('#fx-picker').focus({ preventScroll: true });
+  },
+  'fx-clear': clearEffects,
+  'fx-bypass-all': bypassAllEffects
 };
 
 function closeSubMenus() {
@@ -1032,9 +1277,37 @@ document.addEventListener('keydown', event => {
 window.addEventListener('beforeunload', () => {
   for (const asset of state.assets.values()) revokeAsset(asset);
   if (state.audioLayer?.url) URL.revokeObjectURL(state.audioLayer.url);
+  fxPool?.destroy();
 });
 
+/* Adding an effect from the menu carries the filter's name in the button, which
+   the shared data-action dispatch has no way to pass along. */
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-fx-add]');
+  if (!button) return;
+  addEffect(button.dataset.fxAdd);
+  closeMenus();
+});
+
+$('#fx-picker').addEventListener('change', event => {
+  const kind = event.target.value;
+  if (!kind) return;
+  event.target.value = '';
+  addEffect(kind);
+});
+
+for (const id of ['#fx-fg', '#fx-bg']) {
+  $(id).addEventListener('input', () => scheduleFxPreview());
+}
+
+/* A seek lands a new frame without a timeupdate, so the filtered picture would
+   otherwise keep showing the frame before it. */
+player.addEventListener('seeked', () => scheduleFxPreview());
+player.addEventListener('loadeddata', () => scheduleFxPreview());
+
 renderTimeline();
+buildFxMenus();
+refreshFx();
 updateUi();
 updateExportPanel();
 const linkedSource = new URLSearchParams(location.search).get('src');
