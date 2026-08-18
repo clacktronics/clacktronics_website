@@ -1,6 +1,8 @@
 import { BrowserFFmpegEngine, POPCORN } from './ffmpeg-engine.js';
 import { FxPool } from './fx-pool.js';
-import { catalogue, makeEntry, renderStack, fillPicker, previewBudget } from './fx-stack.js';
+import { catalogue, makeEntry, renderStack, fillPicker, previewBudget, updateDriven } from './fx-stack.js';
+import { resolveStack, hasMotion, isMotion } from './fx-motion.js';
+import { analyseAudio } from './fx-audio.js';
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
@@ -131,6 +133,8 @@ function revokeAsset(asset) {
 
 function clearProject({ announce = true } = {}) {
   pausePlayback();
+  discardPrerender();
+  forgetAudio();
   for (const asset of state.assets.values()) revokeAsset(asset);
   state.assets.clear();
   state.segments = [];
@@ -674,7 +678,7 @@ function exportEstimate(settings) {
     };
   }
   const label = settings.format === 'custom' ? settings.extension.toUpperCase() : settings.format.toUpperCase();
-  const active = state.effects.filter(entry => !entry.bypass).length;
+  const active = state.effects.filter(entry => !entry.bypass && !isMotion(entry.kind)).length;
   const audioOnly = ['mp3', 'wav', 'ogg'].includes(settings.format);
   if (active && !audioOnly) {
     const frames = Math.max(1, Math.ceil(seconds * EFFECT_RENDER_FPS));
@@ -690,6 +694,10 @@ function exportEstimate(settings) {
 }
 
 function updateExportPanel() {
+  /* The pre-render plan is priced off the same things an export is — the clip,
+     the markers, whether a render is already running — so it is refreshed from
+     the same places rather than hooked up to each of them separately. */
+  updatePrerenderNote();
   const settings = exportSettings();
   $('#video-options').hidden = settings.target !== 'video';
   $('#raw-options').hidden = settings.target !== 'raw';
@@ -736,21 +744,28 @@ async function exportProject() {
   /* Every export route takes the same per-frame filter, so an effect stack
      applies to a video, an image sequence and a Popcorn dump alike. Full size,
      not the preview's reduced one. */
-  const stack = fxStack();
-  const filterFrame = stack.length
-    ? (image => ensureFxPool().render(image, stack, fxColours()))
-    : null;
+  const filters = fxStack().filter(entry => !isMotion(entry.kind));
+  const colours = fxColours();
+  /* Each export route hands its frames over at its own rate, so the filter is
+     built knowing which one, and turns a frame number back into the project
+     time the motion sources are written against. */
+  const filterAt = fps => (image, index) =>
+    ensureFxPool().render(image, stackAt(projectTimeFor(index / fps, settings)).stack, colours);
+  const filterFrame = filters.length ? filterAt(EFFECT_RENDER_FPS) : null;
 
   state.exporting = true;
   $('.export-btn').disabled = true;
   $('#cancel-export').hidden = false;
   setProgress(0, 'Loading local FFmpeg engine…');
-  setStatus(stack.length
-    ? `Preparing browser-only export with ${stack.length} effect${stack.length === 1 ? '' : 's'} on every frame. This takes longer than an untouched export.`
+  setStatus(filters.length
+    ? `Preparing browser-only export with ${filters.length} effect${filters.length === 1 ? '' : 's'} on every frame. This takes longer than an untouched export.`
     : 'Preparing browser-only export. This can take a while for long files.', 'busy');
   try {
     if (settings.target === 'raw') {
-      const { files } = await engine.exportRaw({ ...project, framing: settings.framing, streams: settings.streams, filterFrame });
+      const { files } = await engine.exportRaw({
+        ...project, framing: settings.framing, streams: settings.streams,
+        filterFrame: filters.length ? filterAt(POPCORN.fps) : null
+      });
       setProgress(1, 'Export complete.');
       const written = files.map(file => download(file.blob, `${settings.baseName}.${file.name.split('.').pop()}`));
       setStatus(settings.streams === 'both'
@@ -764,7 +779,7 @@ async function exportProject() {
         maxWidth: settings.maxWidth,
         maxFrames: IMAGE_FRAME_LIMIT,
         baseName: settings.baseName,
-        filterFrame
+        filterFrame: filters.length ? filterAt(settings.fps) : null
       });
       setProgress(1, 'Export complete.');
       const name = download(result.blob, `${settings.baseName}-frames.zip`);
@@ -777,6 +792,10 @@ async function exportProject() {
         ...project,
         format: settings.format,
         extension: settings.extension,
+        /* only worth keeping the alpha channel if something in the stack is
+           actually cutting one, and only WebM can carry it */
+        alpha: fxStack().some(entry =>
+          entry.kind.startsWith('matte:') && entry.values.output === 'transparent'),
         fps: EFFECT_RENDER_FPS,
         maxFrames: EFFECT_FRAME_LIMIT,
         filterFrame,
@@ -784,7 +803,7 @@ async function exportProject() {
       });
       setProgress(1, 'Export complete.');
       const name = download(result.blob, `${settings.baseName}.${result.extension}`);
-      setStatus(`Exported ${name} — ${result.frames} frames through ${stack.length} effect${stack.length === 1 ? '' : 's'}, entirely in this browser.`);
+      setStatus(`Exported ${name} — ${result.frames} frames through ${filters.length} effect${filters.length === 1 ? '' : 's'}, entirely in this browser.`);
     } else {
       const result = await engine.exportProject({ ...project, format: settings.format, extension: settings.extension });
       setProgress(1, 'Export complete.');
@@ -854,6 +873,7 @@ let fxPool = null;
 let fxBusy = false;
 let fxDirty = false;
 let fxFailure = '';
+let fxFrame = 0;
 
 function fxStack() {
   return state.effects.filter(entry => !entry.bypass);
@@ -861,6 +881,94 @@ function fxStack() {
 
 function fxColours() {
   return { fg: $('#fx-fg').value, bg: $('#fx-bg').value, palette: [] };
+}
+
+/* What the motion sources need to know beyond the clock: how long the project
+   is, and which stretch a ramp should run across. */
+function motionContext() {
+  const marked = state.markerA !== null && state.markerB !== null;
+  return {
+    range: loopBounds(),
+    duration: projectDuration(),
+    marked,
+    audio: audioEnvelope
+  };
+}
+
+/* ---- the clip's loudness, for the motion cards that follow it -------------
+   Measured once and kept, because the preview, the pre-render and the export
+   all have to agree about what frame four hundred sounded like. Analysis is
+   started the first time a card asks for it rather than on every open — most
+   projects never use it, and decoding the audio of a long clip is not free. */
+let audioEnvelope = null;
+let audioAnalysis = null;
+let audioFailure = '';
+let audioAsset = null;
+
+function wantsAudio() {
+  return state.effects.some(entry => !entry.bypass && entry.kind === 'motion:audio');
+}
+
+function forgetAudio() {
+  audioEnvelope = null;
+  audioAnalysis = null;
+  audioFailure = '';
+  audioAsset = null;
+}
+
+/* The first clip in the project is the one listened to. A project cut from
+   several sources would want the envelope stitched the way the timeline is,
+   which is a bigger job than the one card asking for it justifies yet. */
+async function ensureAudio() {
+  const first = state.segments[0] && state.assets.get(state.segments[0].assetId);
+  if (!first?.file) return null;
+  /* inserting a clip before the first one changes what there is to listen to */
+  if (audioAsset !== null && audioAsset !== first.id) forgetAudio();
+  if (audioEnvelope || audioAnalysis || audioFailure) return audioAnalysis;
+  audioAsset = first.id;
+
+  audioAnalysis = (async () => {
+    setStatus('Listening to the clip…', 'busy');
+    try {
+      audioEnvelope = await analyseAudio(first.file);
+      setStatus(`Analysed ${audioEnvelope.seconds.toFixed(1)} s of audio — the envelope is held until the clip changes.`);
+    } catch (error) {
+      audioFailure = error?.message || String(error);
+      setStatus(audioFailure, 'error');
+    } finally {
+      audioAnalysis = null;
+      refreshFx();
+    }
+  })();
+  return audioAnalysis;
+}
+
+/* The stack as it stands at one instant of project time, with every motion card
+   already folded into the numbers. This is the only thing the workers ever see;
+   they are never told that motion exists.
+
+   Called from the preview, the pre-render walk and the export alike, so all
+   three agree by construction rather than by being kept in step. */
+function stackAt(time) {
+  return resolveStack(state.effects, time, motionContext());
+}
+
+/* An export measures time from the first rendered frame, which is not project
+   time once speed, reverse or bounce have been baked in. Motion follows the
+   picture rather than the render — slow the footage and a wobble slows with it
+   — so output time is walked back through the same three steps the FFmpeg graph
+   applies, in reverse order: bounce, then speed, then reverse. */
+function projectTimeFor(outputTime, settings) {
+  const total = projectDuration();
+  const speed = Math.abs(settings.speed) > 0.0001 ? Math.abs(settings.speed) : 1;
+  let time = outputTime;
+  if (settings.bounce) {
+    const oneWay = total / speed;
+    if (time > oneWay) time = Math.max(0, 2 * oneWay - time);
+  }
+  time *= speed;
+  if (settings.reverse) time = total - time;
+  return Math.max(0, Math.min(total, time));
 }
 
 function ensureFxPool() {
@@ -882,9 +990,28 @@ function previewSize() {
 }
 
 async function drawFxPreview() {
+  const stack = fxStack().filter(entry => !isMotion(entry.kind));
+  if (!stack.length || !state.segments.length) return;
+
+  /* A pre-rendered frame is just a bitmap to blit, so it is drawn before any of
+     the filtering machinery is consulted — that is the whole point of it. */
+  const held = usablePrerender();
+  if (held) {
+    const index = Math.round((state.currentTime - held.from) * held.fps);
+    const frame = held.frames[Math.max(0, Math.min(held.frames.length - 1, index))];
+    if (frame && state.currentTime >= held.from - 0.05 && state.currentTime <= held.to + 0.05) {
+      if (fxCanvas.width !== held.width || fxCanvas.height !== held.height) {
+        fxCanvas.width = held.width; fxCanvas.height = held.height;
+      }
+      fxContext.drawImage(frame, 0, 0);
+      showMotion(stackAt(state.currentTime), state.currentTime);
+      if (state.playing) scheduleFxPreview();
+      return;
+    }
+  }
+
   if (fxBusy) { fxDirty = true; return; }
-  const stack = fxStack();
-  if (!stack.length || !state.segments.length || player.readyState < 2) return;
+  if (player.readyState < 2) return;
   fxBusy = true;
   fxDirty = false;
   try {
@@ -895,8 +1022,10 @@ async function drawFxPreview() {
     }
     fxScratchContext.drawImage(player, 0, 0, width, height);
     const frame = fxScratchContext.getImageData(0, 0, width, height);
-    const filtered = await ensureFxPool().render(frame, stack, fxColours());
+    const moment = stackAt(state.currentTime);
+    const filtered = await ensureFxPool().render(frame, moment.stack, fxColours());
     fxContext.putImageData(filtered, 0, 0);
+    showMotion(moment, state.currentTime);
     if (fxFailure) { fxFailure = ''; updateFxNote(); }
   } catch (error) {
     /* a filter that throws on one frame would otherwise throw on all of them,
@@ -911,7 +1040,7 @@ async function drawFxPreview() {
     /* While the clip plays the preview keeps asking for the next frame the
        moment it has finished the last, which is what makes an expensive stack
        degrade into a slower preview rather than a stuck one. */
-    if (fxDirty || state.playing) requestAnimationFrame(drawFxPreview);
+    if (fxDirty || state.playing) scheduleFxPreview();
   }
 }
 
@@ -920,8 +1049,22 @@ async function drawFxPreview() {
    for a cheap stack is every frame and for an expensive one is not. */
 function scheduleFxPreview() {
   if (!fxStack().length) return;
-  if (fxBusy) { fxDirty = true; return; }
-  requestAnimationFrame(drawFxPreview);
+  /* a cached frame costs nothing to draw, so it never waits for the filter */
+  if (fxBusy && !prerender) { fxDirty = true; return; }
+  /* One frame in the air at a time. The cached path draws and immediately asks
+     for the next, so without this every caller that schedules a preview would
+     start a chain of its own and they would all keep running. */
+  if (fxFrame) return;
+  fxFrame = requestAnimationFrame(() => { fxFrame = 0; drawFxPreview(); });
+}
+
+/* The amber markers, the scope playheads and the live readouts. Written every
+   preview frame; nothing here reads the layout, so it is cheap enough to. */
+function showMotion(moment, time) {
+  if (!state.effects.some(entry => isMotion(entry.kind))) return;
+  updateDriven($('#fx-stack'), {
+    effects: state.effects, drivers: moment.drivers, time, context: motionContext()
+  });
 }
 
 function updateFxNote() {
@@ -938,15 +1081,272 @@ function updateFxNote() {
     return;
   }
   const { width, height } = previewSize();
-  note.textContent = active
-    ? `${active} effect${active === 1 ? '' : 's'} on every frame. Previewing at ${width} × ${height}; the export renders at ${state.canvasWidth} × ${state.canvasHeight}.`
-    : 'Every effect is switched off — the clip plays untouched.';
+  const live = prerender ? `Playing back pre-rendered frames at ${prerender.width} × ${prerender.height}` : `Previewing at ${width} × ${height}`;
+  const filters = fxStack().filter(entry => !isMotion(entry.kind)).length;
+  const motions = fxStack().filter(entry => isMotion(entry.kind)).length;
+  if (!filters) {
+    note.textContent = motions
+      ? 'Nothing to render yet — motion cards move a filter\u2019s controls, so add a filter for them to drive.'
+      : 'Every effect is switched off — the clip plays untouched.';
+    return;
+  }
+  const moving = motions ? ` and ${motions} motion${motions === 1 ? '' : 's'}` : '';
+  note.textContent = `${filters} effect${filters === 1 ? '' : 's'}${moving} on every frame. ${live}; the export renders at ${state.canvasWidth} × ${state.canvasHeight}.`;
+}
+
+/* ---- pre-rendering -------------------------------------------------------
+   Some stacks are simply too slow to keep up with playback: Radial Blur is the
+   better part of a second a frame, and no amount of shrinking the preview makes
+   that into twenty-five frames a second. Pre-render walks the clip once, filters
+   every frame at leisure and keeps the results, after which playback is just
+   drawing bitmaps and runs at full speed.
+
+   The frames are held as ImageBitmaps, which the compositor can draw without
+   touching the main thread, and which is also what makes the size of the cache
+   the thing that governs everything. A 1280 × 720 frame is 3.7 MB, so a
+   ten-second clip of them at 25fps is nearly a gigabyte. Rather than offer a
+   resolution control nobody can price in their head, the cache works out how
+   large it can afford to be from how many frames it has been asked for, and
+   says so before anything is rendered.
+
+   Capture happens on a video element of its own rather than the one on screen.
+   Seeking the player would fight whatever the person is doing with it, and this
+   way the clip stays scrubbable while the render runs behind it. */
+
+const PRERENDER_FPS = 25;
+const PRERENDER_BYTE_BUDGET = 384 * 1024 * 1024;
+/* Below this the cache is too coarse to be judging anything by, so a range that
+   cannot be held at this width is refused rather than rendered into mud. */
+const PRERENDER_MIN_WIDTH = 256;
+
+const prerenderVideo = document.createElement('video');
+prerenderVideo.muted = true;
+prerenderVideo.preload = 'auto';
+prerenderVideo.playsInline = true;
+
+let prerender = null;      /* { frames, fps, from, to, width, height, signature } */
+let prerenderToken = 0;
+let prerendering = false;
+
+/* Everything the filtered picture depends on. If any of it moves, the frames in
+   hand are of something else and have to go. */
+function prerenderSignature() {
+  return JSON.stringify({
+    stack: fxStack().map(entry => [entry.kind, entry.values]),
+    colours: fxColours(),
+    segments: state.segments.map(segment => [segment.assetId, segment.start, segment.end]),
+    /* frames rendered before the envelope arrived were driven by silence */
+    audio: audioEnvelope ? audioAsset : null
+  });
+}
+
+function discardPrerender(reason = '') {
+  if (prerender) {
+    for (const frame of prerender.frames) frame?.close?.();
+    prerender = null;
+  }
+  fxCanvas.classList.remove('cached');
+  if (reason) setStatus(reason);
+}
+
+/* The cache, but only while it is still of the right thing. */
+function usablePrerender() {
+  if (!prerender) return null;
+  if (prerender.signature !== prerenderSignature()) { discardPrerender(); updatePrerenderNote(); return null; }
+  return prerender;
+}
+
+const prerenderRange = () => {
+  const bounds = loopBounds();
+  return { from: bounds.start, to: bounds.end };
+};
+
+/* How big a cache of this range would be, and whether it fits. */
+function prerenderPlan() {
+  const { from, to } = prerenderRange();
+  const seconds = Math.max(0, to - from);
+  const frames = Math.max(1, Math.round(seconds * PRERENDER_FPS));
+  const full = { width: state.canvasWidth || 1280, height: state.canvasHeight || 720 };
+  const perFrame = PRERENDER_BYTE_BUDGET / frames;
+  const scale = Math.min(1, Math.sqrt(perFrame / (full.width * full.height * 4)));
+  const width = Math.max(2, Math.round(full.width * scale / 2) * 2);
+  const height = Math.max(2, Math.round(full.height * scale / 2) * 2);
+  return {
+    from, to, seconds, frames, width, height,
+    bytes: frames * width * height * 4,
+    tooLong: width < PRERENDER_MIN_WIDTH
+  };
+}
+
+function updatePrerenderNote() {
+  const note = $('#fx-prerender-note');
+  const button = $('#fx-prerender-btn');
+  const clear = $('#fx-prerender-clear');
+  const live = fxStack().length > 0;
+
+  button.disabled = !live || !state.segments.length || state.exporting;
+  clear.hidden = !prerender;
+
+  if (prerendering) return;
+  button.innerHTML = '<span class="pixel-icon" data-icon="zap" aria-hidden="true"></span> Pre-render';
+
+  if (!live || !state.segments.length) {
+    note.textContent = '';
+    note.classList.remove('ready');
+    return;
+  }
+  const held = usablePrerender();
+  if (held) {
+    note.classList.add('ready');
+    note.textContent = `Playing back ${held.frames.length} pre-rendered frames at ${held.width} × ${held.height}. ` +
+      'Changing the stack or the clip throws them away.';
+    return;
+  }
+  note.classList.remove('ready');
+  const plan = prerenderPlan();
+  const range = state.markerA !== null && state.markerB !== null ? 'between A and B' : 'the whole project';
+  note.textContent = plan.tooLong
+    ? `Too long to pre-render ${range} — ${plan.frames} frames would not fit in memory at a useful size. Set A and B markers around a shorter stretch.`
+    : `Pre-render ${range}: ${plan.frames} frames at ${plan.width} × ${plan.height}, about ${humanBytes(plan.bytes)} held in memory. Playback is then full speed.`;
+}
+
+function loadPrerenderSource(url) {
+  if (prerenderVideo.dataset.url === url) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const done = () => { cleanup(); prerenderVideo.dataset.url = url; resolve(); };
+    const fail = () => { cleanup(); reject(new Error('Could not open that clip for pre-rendering.')); };
+    const cleanup = () => {
+      prerenderVideo.removeEventListener('loadeddata', done);
+      prerenderVideo.removeEventListener('error', fail);
+    };
+    prerenderVideo.addEventListener('loadeddata', done);
+    prerenderVideo.addEventListener('error', fail);
+    prerenderVideo.src = url;
+    prerenderVideo.load();
+  });
+}
+
+/* A seek to where the video already is fires no `seeked`, which would hang the
+   walk on the first frame of every segment. */
+function seekPrerenderSource(time) {
+  if (Math.abs(prerenderVideo.currentTime - time) < 0.0005) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const done = () => { cleanup(); resolve(); };
+    const fail = () => { cleanup(); reject(new Error('Could not seek that clip while pre-rendering.')); };
+    const cleanup = () => {
+      prerenderVideo.removeEventListener('seeked', done);
+      prerenderVideo.removeEventListener('error', fail);
+    };
+    prerenderVideo.addEventListener('seeked', done, { once: true });
+    prerenderVideo.addEventListener('error', fail, { once: true });
+    prerenderVideo.currentTime = time;
+  });
+}
+
+async function startPrerender() {
+  if (prerendering) { prerenderToken += 1; return; }
+  if (!fxStack().some(entry => !isMotion(entry.kind))) { setStatus('Add an effect before pre-rendering.', 'error'); return; }
+  if (!state.segments.length) { setStatus('Open a video before pre-rendering.', 'error'); return; }
+  if (state.exporting) { setStatus('Wait for the export to finish before pre-rendering.', 'error'); return; }
+
+  const plan = prerenderPlan();
+  if (plan.tooLong) { setStatus('That range is too long to pre-render — set A and B markers around a shorter stretch.', 'error'); return; }
+
+  discardPrerender();
+  pausePlayback();
+
+  const token = prerenderToken += 1;
+  const signature = prerenderSignature();
+  const colours = fxColours();
+  prerendering = true;
+  $('#fx-prerender-btn').innerHTML = '<span class="pixel-icon" data-icon="close" aria-hidden="true"></span> Cancel';
+  $('#fx-prerender-note').classList.remove('ready');
+  setStatus(`Pre-rendering ${plan.frames} frames. The clip stays scrubbable while this runs.`, 'busy');
+
+  const scratch = document.createElement('canvas');
+  scratch.width = plan.width; scratch.height = plan.height;
+  const context = scratch.getContext('2d', { willReadFrequently: true });
+
+  const frames = new Array(plan.frames);
+  const pool = ensureFxPool();
+  /* Seeking is serial and filtering is not, so the walk hands each frame off
+     and carries on, holding only enough in flight to keep the pool busy. */
+  const inFlight = new Set();
+  const limit = Math.max(2, pool.size);
+  let done = 0;
+
+  const settle = async () => {
+    while (inFlight.size >= limit) await Promise.race(inFlight);
+  };
+
+  try {
+    for (let index = 0; index < plan.frames; index += 1) {
+      if (token !== prerenderToken) throw new Error('cancelled');
+      const time = Math.min(plan.to - 0.0001, plan.from + index / PRERENDER_FPS);
+      const spot = locate(time);
+      if (!spot) break;
+      const asset = state.assets.get(spot.segment.assetId);
+      if (!asset) break;
+      await loadPrerenderSource(asset.previewUrl);
+      await seekPrerenderSource(spot.sourceTime);
+      if (token !== prerenderToken) throw new Error('cancelled');
+
+      context.drawImage(prerenderVideo, 0, 0, plan.width, plan.height);
+      const image = context.getImageData(0, 0, plan.width, plan.height);
+
+      await settle();
+      /* resolved at this frame's own time, so a pre-rendered clip carries the
+         motion rather than four hundred copies of one instant */
+      const job = pool.render(image, stackAt(time).stack, colours)
+        .then(async filtered => {
+          if (token !== prerenderToken) return;
+          frames[index] = await createImageBitmap(filtered);
+          done += 1;
+          setProgress(done / plan.frames, `Pre-rendering… ${done} of ${plan.frames} frames`);
+        })
+        .finally(() => inFlight.delete(job));
+      inFlight.add(job);
+    }
+    await Promise.all(inFlight);
+    if (token !== prerenderToken) throw new Error('cancelled');
+
+    prerender = {
+      frames: frames.filter(Boolean), fps: PRERENDER_FPS,
+      from: plan.from, to: plan.to, width: plan.width, height: plan.height, signature
+    };
+    fxCanvas.width = plan.width;
+    fxCanvas.height = plan.height;
+    fxCanvas.classList.add('cached');
+    setProgress(1, 'Pre-render complete.');
+    setStatus(`Pre-rendered ${prerender.frames.length} frames — playback runs at full speed until the stack changes.`);
+  } catch (error) {
+    for (const frame of frames) frame?.close?.();
+    const message = error?.message || String(error);
+    if (/cancel/i.test(message)) {
+      setProgress(0, 'Pre-render cancelled.');
+      setStatus('Pre-render cancelled.');
+    } else {
+      setProgress(0, 'Pre-render failed.');
+      setStatus(`Pre-render failed: ${message}`, 'error');
+    }
+  } finally {
+    prerendering = false;
+    prerenderVideo.removeAttribute('src');
+    delete prerenderVideo.dataset.url;
+    prerenderVideo.load();
+    updateFxNote();
+    updatePrerenderNote();
+    scheduleFxPreview();
+  }
 }
 
 function refreshFx({ redraw = true } = {}) {
   if (redraw) {
     renderStack($('#fx-stack'), state.effects, {
       onChange: () => { updateFxNote(); scheduleFxPreview(); },
+      /* aiming a motion card changes what every other card's controls are
+         called and what its own ramp is measured in, so the panel is redrawn */
+      onRetarget: () => refreshFx(),
       onBypass: entry => { entry.bypass = !entry.bypass; refreshFx(); },
       onMove: (entry, by) => {
         const from = state.effects.indexOf(entry);
@@ -961,11 +1361,14 @@ function refreshFx({ redraw = true } = {}) {
       }
     });
   }
+  if (wantsAudio()) ensureAudio();
   const live = fxStack().length > 0;
   fxCanvas.hidden = !live;
   $('#drop-zone').classList.toggle('fx-live', live);
-  if (!live) fxContext.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  if (!live) { fxContext.clearRect(0, 0, fxCanvas.width, fxCanvas.height); discardPrerender(); }
+  usablePrerender();
   updateFxNote();
+  updatePrerenderNote();
   updateExportPanel();
   scheduleFxPreview();
 }
@@ -998,7 +1401,7 @@ function bypassAllEffects() {
    a filter added to ClackPaint appears in Video Lab without being listed by
    hand in either place. */
 function buildFxMenus() {
-  const { effects, dithers, mattes } = catalogue();
+  const { effects, dithers, mattes, motions } = catalogue();
   fillPicker($('#fx-picker'));
   const fill = (container, items) => {
     container.textContent = '';
@@ -1013,6 +1416,7 @@ function buildFxMenus() {
   fill($('#fx-menu-effects'), effects);
   fill($('#fx-menu-dithers'), dithers);
   fill($('#fx-menu-mattes'), mattes);
+  fill($('#fx-menu-motions'), motions);
 }
 
 function showDialog(kind) {
@@ -1089,7 +1493,9 @@ const actions = {
     $('#fx-picker').focus({ preventScroll: true });
   },
   'fx-clear': clearEffects,
-  'fx-bypass-all': bypassAllEffects
+  'fx-bypass-all': bypassAllEffects,
+  'fx-prerender': startPrerender,
+  'fx-prerender-clear': () => { discardPrerender('Pre-rendered frames discarded.'); updateFxNote(); updatePrerenderNote(); scheduleFxPreview(); }
 };
 
 function closeSubMenus() {
@@ -1278,6 +1684,7 @@ window.addEventListener('beforeunload', () => {
   for (const asset of state.assets.values()) revokeAsset(asset);
   if (state.audioLayer?.url) URL.revokeObjectURL(state.audioLayer.url);
   fxPool?.destroy();
+  discardPrerender();
 });
 
 /* Adding an effect from the menu carries the filter's name in the button, which
@@ -1297,7 +1704,7 @@ $('#fx-picker').addEventListener('change', event => {
 });
 
 for (const id of ['#fx-fg', '#fx-bg']) {
-  $(id).addEventListener('input', () => scheduleFxPreview());
+  $(id).addEventListener('input', () => { usablePrerender(); updateFxNote(); scheduleFxPreview(); });
 }
 
 /* A seek lands a new frame without a timeupdate, so the filtered picture would

@@ -16,6 +16,9 @@ own page and inside a ClackOS iframe window.
   audio or replacing it, with 0–200% rendered gain.
 - An effect stack applied to every frame — ClackPaint's filters, its dithers and
   its background matting, run here over video (see "Effects" below).
+- Motion cards that move a filter's controls over time, from an LFO, an A → B
+  ramp or the clip's own audio.
+- Pre-rendering, for stacks too slow to preview as the clip plays.
 - Browser-only export to MP4, WebM, MOV, MKV, AVI, GIF, MP3, WAV, Ogg, or a
   custom container extension.
 - **File → Export → Raw**: the pair of raw files Popcorn wants (see below).
@@ -123,6 +126,96 @@ and how many there are, and asks for the next frame only once it has finished
 the last — an expensive stack becomes a slower preview rather than a stuck one.
 The export always renders at full size.
 
+### Motion
+
+**Effects → Add motion** puts a different kind of card in the same stack. A
+motion card renders nothing: it names one numeric control of one other card and
+a source to drive it with, and every frame it contributes a number. Because it
+is a card it inherits add, reorder, switch off and remove from the ones already
+there — switching one off is how you compare a moving parameter against a still
+one.
+
+| Source | What it does |
+| --- | --- |
+| LFO | Wobbles the control around wherever its slider is set. Sine, triangle, square or saw — the same four shapes Sonification uses — at a rate in cycles per second, a depth as a percentage of the control's own range, and a phase. |
+| A → B ramp | Slides the control from one value to another across the A and B markers, holding at each end. From and To are measured in the control's own units, so an angle ramps in degrees. |
+| Audio envelope | Follows how loud the clip is. Listens to everything, the low end or the top; depth and a smoothing window in milliseconds. |
+
+Only numbers can be driven. There is no halfway between two entries of a select
+and no ramp for a checkbox, so those are not offered as targets.
+
+A card is aimed by the **id** of the entry it points at, not by where that entry
+sits, so reordering the stack repoints nothing. Delete the card at the other end
+and the motion card turns red and says so, rather than going quiet.
+
+A driven control keeps showing — and dragging — the value you set. The amber
+marker riding its track is what the motion has made of it this frame. Putting
+the motion on the thumb itself was the first idea and the wrong one: a thumb
+that runs away from the pointer cannot be adjusted.
+
+Two cards may aim at the same control. Offsets add, so a slow drift with a fast
+wobble on top is a patch rather than a conflict, and the result is clamped to
+the control's own range — nothing can drive a filter outside what its dialog
+allows.
+
+Resolution runs down the stack, which is the only reason the list is ordered
+rather than a set: a motion card can drive **another motion card's** rate or
+depth, as long as it sits above it. An A → B ramp replaces what the cards above
+it arrived at rather than adding to it, so a ramp that others should ride on
+belongs above them.
+
+The audio envelope is measured once, the first time a card asks for it, and
+kept — a live analyser would answer differently on every pass, and the preview,
+the pre-render and the export all have to agree about what frame four hundred
+sounded like. The clip is decoded, mixed to mono and reduced to two hundred
+RMS buckets a second, split three ways at roughly 200 Hz so a kick can drive one
+thing and a hi-hat another. It is thrown away with the clip, and re-measured if
+a clip is inserted ahead of the one it listened to.
+
+Every source is a pure function of project time — never of how many frames have
+been drawn. The preview draws frames irregularly and drops them where the
+pre-render and the export do not, and a source that advanced per drawn frame
+would export something other than what was watched. Following *project* time
+also means motion is locked to the picture: slow the footage and a wobble slows
+with it, and bounce runs it backwards for nothing. An export that has baked
+speed, reverse or bounce walks its frame numbers back through those three steps
+to find the project time each frame came from.
+
+### Pre-rendering
+
+Some stacks are simply too slow to keep up, and no amount of shrinking the
+preview turns a second-a-frame filter into twenty-five frames a second.
+**Pre-render** walks the range once, filters every frame at leisure and keeps
+the results, after which playback is only drawing bitmaps and runs at full
+speed. Scrubbing, looping and reverse all come from the cache.
+
+It covers the A/B range when both markers are set and the whole project
+otherwise, so pre-rendering the stretch you are working on is a matter of
+setting A and B around it.
+
+It is also what makes an animated stack watchable: every frame is genuinely
+different once motion is involved, so nothing amortises and the live preview has
+no chance. The cache is walked in time order, so each frame is resolved at its
+own instant and the motion is carried into it.
+
+Frames are held as ImageBitmaps, and their total size is what governs
+everything: a 1280 × 720 frame is 3.7 MB, so ten seconds of them at 25fps is
+nearly a gigabyte. Rather than offer a resolution control nobody can price in
+their head, the cache works out how large it can afford to be — 384 MB is the
+budget — and the panel says how many frames, at what size, before anything is
+rendered. Past about a minute and three quarters there is no size left worth
+looking at, and it says so instead.
+
+Capture uses a video element of its own, so the clip on screen stays scrubbable
+while the render runs behind it. The button becomes **Cancel** while it works.
+
+The cache is of one exact thing: this stack, these values, these colours, this
+clip. Move any of them and the frames are of something else, so they are thrown
+away and the live preview comes back. **Discard** frees them by hand.
+
+Pre-rendering is a preview device and nothing more — it is held at preview
+resolution and the export ignores it, rendering the stack again at full size.
+
 ### How a filtered export is put together
 
 FFmpeg cannot run these filters, so a filtered video export is three passes
@@ -212,6 +305,8 @@ styles.css                ClackOS-derived standalone theme
 main.js                   Player, timeline, audio, markers, and UI behavior
 ffmpeg-engine.js          Compatibility conversion and export graph
 fx-stack.js               The effect stack and the panel that edits it
+fx-motion.js              Motion cards: the sources, and resolving them per frame
+fx-audio.js               The clip's loudness, measured once, read by time
 fx-pool.js                One filter worker per core, fed a frame at a time
 fx-worker.js              Applies a stack to one frame; loads the shared filters
 zip.js                    Store-only ZIP writer for the image sequence
