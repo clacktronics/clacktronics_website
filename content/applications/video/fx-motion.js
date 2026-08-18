@@ -151,7 +151,8 @@ export const MOTION_KINDS = {
     },
     amount: values => Number(values.depth) / 100,
     summary: (values, context) => context.audio
-      ? `${context.audio.seconds.toFixed(1)} s analysed` : 'no audio analysed yet'
+      ? `${context.audio.seconds.toFixed(1)} s analysed · ${values.band === 'low' ? 'low end' : values.band === 'high' ? 'top end' : 'everything'}`
+      : 'listening to the clip…'
   }
 };
 

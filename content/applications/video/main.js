@@ -2,6 +2,7 @@ import { BrowserFFmpegEngine, POPCORN } from './ffmpeg-engine.js';
 import { FxPool } from './fx-pool.js';
 import { catalogue, makeEntry, renderStack, fillPicker, previewBudget, updateDriven } from './fx-stack.js';
 import { resolveStack, hasMotion, isMotion } from './fx-motion.js';
+import { analyseAudio } from './fx-audio.js';
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
@@ -133,6 +134,7 @@ function revokeAsset(asset) {
 function clearProject({ announce = true } = {}) {
   pausePlayback();
   discardPrerender();
+  forgetAudio();
   for (const asset of state.assets.values()) revokeAsset(asset);
   state.assets.clear();
   state.segments = [];
@@ -885,8 +887,56 @@ function motionContext() {
     range: loopBounds(),
     duration: projectDuration(),
     marked,
-    audio: null
+    audio: audioEnvelope
   };
+}
+
+/* ---- the clip's loudness, for the motion cards that follow it -------------
+   Measured once and kept, because the preview, the pre-render and the export
+   all have to agree about what frame four hundred sounded like. Analysis is
+   started the first time a card asks for it rather than on every open — most
+   projects never use it, and decoding the audio of a long clip is not free. */
+let audioEnvelope = null;
+let audioAnalysis = null;
+let audioFailure = '';
+let audioAsset = null;
+
+function wantsAudio() {
+  return state.effects.some(entry => !entry.bypass && entry.kind === 'motion:audio');
+}
+
+function forgetAudio() {
+  audioEnvelope = null;
+  audioAnalysis = null;
+  audioFailure = '';
+  audioAsset = null;
+}
+
+/* The first clip in the project is the one listened to. A project cut from
+   several sources would want the envelope stitched the way the timeline is,
+   which is a bigger job than the one card asking for it justifies yet. */
+async function ensureAudio() {
+  const first = state.segments[0] && state.assets.get(state.segments[0].assetId);
+  if (!first?.file) return null;
+  /* inserting a clip before the first one changes what there is to listen to */
+  if (audioAsset !== null && audioAsset !== first.id) forgetAudio();
+  if (audioEnvelope || audioAnalysis || audioFailure) return audioAnalysis;
+  audioAsset = first.id;
+
+  audioAnalysis = (async () => {
+    setStatus('Listening to the clip…', 'busy');
+    try {
+      audioEnvelope = await analyseAudio(first.file);
+      setStatus(`Analysed ${audioEnvelope.seconds.toFixed(1)} s of audio — the envelope is held until the clip changes.`);
+    } catch (error) {
+      audioFailure = error?.message || String(error);
+      setStatus(audioFailure, 'error');
+    } finally {
+      audioAnalysis = null;
+      refreshFx();
+    }
+  })();
+  return audioAnalysis;
 }
 
 /* The stack as it stands at one instant of project time, with every motion card
@@ -1080,7 +1130,9 @@ function prerenderSignature() {
   return JSON.stringify({
     stack: fxStack().map(entry => [entry.kind, entry.values]),
     colours: fxColours(),
-    segments: state.segments.map(segment => [segment.assetId, segment.start, segment.end])
+    segments: state.segments.map(segment => [segment.assetId, segment.start, segment.end]),
+    /* frames rendered before the envelope arrived were driven by silence */
+    audio: audioEnvelope ? audioAsset : null
   });
 }
 
@@ -1305,6 +1357,7 @@ function refreshFx({ redraw = true } = {}) {
       }
     });
   }
+  if (wantsAudio()) ensureAudio();
   const live = fxStack().length > 0;
   fxCanvas.hidden = !live;
   $('#drop-zone').classList.toggle('fx-live', live);

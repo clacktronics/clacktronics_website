@@ -16,8 +16,8 @@ own page and inside a ClackOS iframe window.
   audio or replacing it, with 0–200% rendered gain.
 - An effect stack applied to every frame — ClackPaint's filters, its dithers and
   its background matting, run here over video (see "Effects" below).
-- Motion cards that move a filter's controls over time, from an LFO or an A → B
-  ramp.
+- Motion cards that move a filter's controls over time, from an LFO, an A → B
+  ramp or the clip's own audio.
 - Pre-rendering, for stacks too slow to preview as the clip plays.
 - Browser-only export to MP4, WebM, MOV, MKV, AVI, GIF, MP3, WAV, Ogg, or a
   custom container extension.
@@ -139,7 +139,7 @@ one.
 | --- | --- |
 | LFO | Wobbles the control around wherever its slider is set. Sine, triangle, square or saw — the same four shapes Sonification uses — at a rate in cycles per second, a depth as a percentage of the control's own range, and a phase. |
 | A → B ramp | Slides the control from one value to another across the A and B markers, holding at each end. From and To are measured in the control's own units, so an angle ramps in degrees. |
-| Audio envelope | Follows how loud the clip is. Not built yet — the card is there and the analysis pass is the next piece of work. |
+| Audio envelope | Follows how loud the clip is. Listens to everything, the low end or the top; depth and a smoothing window in milliseconds. |
 
 Only numbers can be driven. There is no halfway between two entries of a select
 and no ramp for a checkbox, so those are not offered as targets.
@@ -163,6 +163,14 @@ rather than a set: a motion card can drive **another motion card's** rate or
 depth, as long as it sits above it. An A → B ramp replaces what the cards above
 it arrived at rather than adding to it, so a ramp that others should ride on
 belongs above them.
+
+The audio envelope is measured once, the first time a card asks for it, and
+kept — a live analyser would answer differently on every pass, and the preview,
+the pre-render and the export all have to agree about what frame four hundred
+sounded like. The clip is decoded, mixed to mono and reduced to two hundred
+RMS buckets a second, split three ways at roughly 200 Hz so a kick can drive one
+thing and a hi-hat another. It is thrown away with the clip, and re-measured if
+a clip is inserted ahead of the one it listened to.
 
 Every source is a pure function of project time — never of how many frames have
 been drawn. The preview draws frames irregularly and drops them where the
@@ -298,6 +306,7 @@ main.js                   Player, timeline, audio, markers, and UI behavior
 ffmpeg-engine.js          Compatibility conversion and export graph
 fx-stack.js               The effect stack and the panel that edits it
 fx-motion.js              Motion cards: the sources, and resolving them per frame
+fx-audio.js               The clip's loudness, measured once, read by time
 fx-pool.js                One filter worker per core, fed a frame at a time
 fx-worker.js              Applies a stack to one frame; loads the shared filters
 zip.js                    Store-only ZIP writer for the image sequence
