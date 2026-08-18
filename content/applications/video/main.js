@@ -976,6 +976,25 @@ function ensureFxPool() {
   return fxPool;
 }
 
+/* Where the playhead actually is, this instant.
+
+   state.currentTime is only refreshed when the video element fires timeupdate,
+   which it does about four times a second. That is plenty for a clock readout
+   and a seek bar, and hopeless for modulation: the preview redraws thirty-odd
+   times a second and would paint the same four values over and over, so an LFO
+   at any useful rate arrives as a staircase rather than a wobble.
+
+   Reverse playback already runs off its own animation frame and keeps
+   state.currentTime exact, and a paused or seeking player has not necessarily
+   arrived where it was sent — so the element's own clock is trusted only while
+   it is the thing driving playback forwards. */
+function playheadTime() {
+  if (!state.playing || state.reverse || state.segmentIndex < 0) return state.currentTime;
+  const segment = state.segments[state.segmentIndex];
+  if (!segment || player.readyState < 1) return state.currentTime;
+  return clamp(segmentOffset(state.segmentIndex) + player.currentTime - segment.start, 0, projectDuration());
+}
+
 /* The preview frame's size: the clip's aspect, scaled until it fits the budget
    the stack can afford, and never larger than the frame itself. */
 function previewSize() {
@@ -996,15 +1015,16 @@ async function drawFxPreview() {
   /* A pre-rendered frame is just a bitmap to blit, so it is drawn before any of
      the filtering machinery is consulted — that is the whole point of it. */
   const held = usablePrerender();
+  const now = playheadTime();
   if (held) {
-    const index = Math.round((state.currentTime - held.from) * held.fps);
+    const index = Math.round((now - held.from) * held.fps);
     const frame = held.frames[Math.max(0, Math.min(held.frames.length - 1, index))];
-    if (frame && state.currentTime >= held.from - 0.05 && state.currentTime <= held.to + 0.05) {
+    if (frame && now >= held.from - 0.05 && now <= held.to + 0.05) {
       if (fxCanvas.width !== held.width || fxCanvas.height !== held.height) {
         fxCanvas.width = held.width; fxCanvas.height = held.height;
       }
       fxContext.drawImage(frame, 0, 0);
-      showMotion(stackAt(state.currentTime), state.currentTime);
+      showMotion(stackAt(now), now);
       if (state.playing) scheduleFxPreview();
       return;
     }
@@ -1022,10 +1042,14 @@ async function drawFxPreview() {
     }
     fxScratchContext.drawImage(player, 0, 0, width, height);
     const frame = fxScratchContext.getImageData(0, 0, width, height);
-    const moment = stackAt(state.currentTime);
+    /* read again rather than reusing the value from the top of the function:
+       decoding the frame took time, and the motion should match the picture
+       being filtered, not the one before it */
+    const at = playheadTime();
+    const moment = stackAt(at);
     const filtered = await ensureFxPool().render(frame, moment.stack, fxColours());
     fxContext.putImageData(filtered, 0, 0);
-    showMotion(moment, state.currentTime);
+    showMotion(moment, at);
     if (fxFailure) { fxFailure = ''; updateFxNote(); }
   } catch (error) {
     /* a filter that throws on one frame would otherwise throw on all of them,
