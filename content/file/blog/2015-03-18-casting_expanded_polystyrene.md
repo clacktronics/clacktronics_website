@@ -32,7 +32,7 @@ But how are shapes formed with these pellets? I initially thought that perhaps a
 >
 >The second moulding process is known as Shape Moulding, and produces shaped parts ready to use in a wide range of applications. Electronic product packaging in particular is where shape moulded EPS is used extensively. Computers, office machines, televisions and stereo equipment are everyday examples.
 
-Source [www.plastics.org.nz](http://www.plastics.org.nz/factsandresources/typesofplastic/expandedpolystryene/EPSproperties/)
+Source [www.plastics.org.nz](https://web.archive.org/web/20150419194800/http://www.plastics.org.nz/factsandresources/typesofplastic/expandedpolystryene/EPSproperties/) (wayback mirror)
 
 So it mentions that there are 2 stages, making the beads and casting the beads. There is no chance I have the ability to process my own polystyrene into EPS, but what if I can get hold of the secondary material? All that seems to happen is steam is injected into a mould, that can't be hard to re-create! Looking at various Alibaba listings for raw EPS I noticed that the beads sold for straight casting look pretty much like the ones sold for filling bean bags. Could it be that manufacturers just buy pre cast raw EPS and fill bean bags with it? maybe, but perhaps they post-expand the beads for maximum volume and cost? Time for an experiment. I purchased a small bag of EPS beads from ebay, specifically 'virgin' beads ( horrible name ) that means they are not recycled broken down cast polystyrene but perhaps straight from the first process?
 
