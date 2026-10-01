@@ -24,7 +24,7 @@ As a kit it is designed to be simple and fast to assemble, so ideal for beginner
 ## Available to buy from
 
 - [Clacktronics Etsy](https://www.etsy.com/uk/listing/1176360699/eurorack-8hp-mini-speaker-kit)
-- [Clacktronics Tindie](https://www.tindie.com/products/Clacktronics/clacktronics-8hp-eurorack-mini-speaker-kit/)
+- [Clacktronics Tindie](https://web.archive.org/web/20260503132707/https://www.tindie.com/products/clacktronics/clacktronics-8hp-eurorack-mini-speaker-kit/) (wayback mirror)
 - [Pushermann](https://web.archive.org/web/20251011203650/https://pushermanproductions.com/product/clacktronics-6hp-eurorack-speaker-full-kit/) (wayback mirror)
 - [Synthcube](https://synthcube.com/cart/clacktronics-euro-speaker-kit)
 - [Thonk](https://web.archive.org/web/20260516112328/https://www.thonk.co.uk/shop/clacktronics-speaker-kit/) (wayback mirror)
