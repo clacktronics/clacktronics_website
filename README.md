@@ -456,8 +456,7 @@ OpenSCAD, Markdown windows, and desktop actions.
   only build needs f16 on a GPU without it (ternary 8B). The choice is
   remembered, a cached model starts without the gate, and Chat → Change Model
   terminates the worker to free the GPU memory. Bonsai 2 27B is not offered:
-  it is 5.9 GB and runs only on purpose-built WebGPU kernels, not this runtime,
-  so the gate links Hugging Face's demo instead.
+  it is 5.9 GB and runs only on purpose-built WebGPU kernels, not this runtime.
 - `applications/audiogen/index.html` — local text-to-audio workspace; prompts
   and WAV output stay in the browser. Five models share one interface: **Meta
   MusicGen Small** (music, 656 MB), **Google Magenta RealTime 2** (music,
