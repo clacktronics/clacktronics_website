@@ -1,24 +1,28 @@
-/* ClackChat inference worker — runs Bonsai 1.7B (1-bit, Apache-2.0) fully
- * in-browser with Transformers.js on WebGPU. Weights come from the Hugging
- * Face Hub on first use and stay in the browser cache; nothing typed in the
- * chat ever leaves the machine. */
+/* ClackChat inference worker — runs one small language model (the page picks
+ * which, from the catalogue in chat.html) fully in-browser with
+ * Transformers.js on WebGPU. Weights come from the Hugging Face Hub on first
+ * use and stay in the browser cache; nothing typed in the chat ever leaves
+ * the machine. One worker holds one model: switching models terminates the
+ * worker, which is the only reliable way to hand its GPU memory back. */
 import { pipeline, TextStreamer, InterruptableStoppingCriteria, env }
   from '../../vendor/transformers/transformers.min.js';
 
 /* serve the ONNX runtime .wasm from our vendor dir, not the jsDelivr CDN */
 env.backends.onnx.wasm.wasmPaths = new URL('../../vendor/transformers/', self.location.href).href;
 
-const MODEL_ID = 'onnx-community/Bonsai-1.7B-ONNX';
-
 let generator = null;
+let sampling = {};
 const stopper = new InterruptableStoppingCriteria();
 
+/* f16 says whether the adapter offers shader-f16: the q1f16/q2f16/q4f16
+ * builds are smaller and faster, but only run where it does */
 async function checkWebGPU() {
   try {
-    if (!('gpu' in navigator)) return false;
-    return !!await navigator.gpu.requestAdapter();
+    if (!('gpu' in navigator)) return { ok: false };
+    const adapter = await navigator.gpu.requestAdapter();
+    return { ok: !!adapter, f16: !!adapter?.features.has('shader-f16') };
   } catch {
-    return false;
+    return { ok: false };
   }
 }
 
@@ -39,17 +43,18 @@ function reportProgress(info) {
   }
 }
 
-async function load() {
+async function load({ model, dtype, gen }) {
   if (generator) { postMessage({ type: 'ready' }); return; }
-  if (!await checkWebGPU()) {
+  if (!(await checkWebGPU()).ok) {
     postMessage({ type: 'no-webgpu' });
     return;
   }
   try {
     postMessage({ type: 'loading', detail: 'Contacting the Hugging Face Hub…' });
-    generator = await pipeline('text-generation', MODEL_ID, {
+    sampling = gen || {};
+    generator = await pipeline('text-generation', model, {
       device: 'webgpu',
-      dtype: 'q1',
+      dtype,
       progress_callback: reportProgress,
     });
     postMessage({ type: 'loading', detail: 'Compiling shaders…' });
@@ -76,6 +81,7 @@ async function generate(messages) {
       do_sample: true,
       temperature: 0.7,
       top_p: 0.9,
+      ...sampling,
       streamer,
       stopping_criteria: stopper,
     });
@@ -91,8 +97,8 @@ async function generate(messages) {
 self.onmessage = async e => {
   const msg = e.data;
   switch (msg.type) {
-    case 'check': postMessage({ type: 'webgpu', ok: await checkWebGPU() }); break;
-    case 'load': await load(); break;
+    case 'check': postMessage({ type: 'webgpu', ...await checkWebGPU() }); break;
+    case 'load': await load(msg); break;
     case 'generate': await generate(msg.messages); break;
     case 'interrupt': stopper.interrupt(); break;
   }
