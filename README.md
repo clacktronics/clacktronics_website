@@ -446,6 +446,17 @@ OpenSCAD, Markdown windows, and desktop actions.
 - `applications/pdf-reader/index.html` — MuPDF.js 1.28.0 reader with lazy
   rendering, search, zoom, passwords, local/website files, and `?file=` URLs.
   MuPDF is vendored under `vendor/mupdf/` (AGPL-3.0).
+- `applications/chat.html` — ClackChat, a local chat with a small language
+  model on WebGPU; `chat-worker.js` runs the vendored Transformers.js
+  text-generation pipeline. The `MODELS` catalogue at the top of the page's
+  script is the whole list: PrismML's 1-bit Bonsai 1.7B, 4B and 8B and ternary
+  Bonsai 1.7B, 4B and 8B (291 MB to 2.2 GB), with Qwen 3.5 0.8B and Liquid
+  LFM 2.5 1.2B Instruct alongside for comparison. Each entry names a
+  shader-f16 build and a plain fallback, and the picker disables a model whose
+  only build needs f16 on a GPU without it (ternary 8B). The choice is
+  remembered, a cached model starts without the gate, and Chat → Change Model
+  terminates the worker to free the GPU memory. Bonsai 2 27B is not offered:
+  it is 5.9 GB and runs only on purpose-built WebGPU kernels, not this runtime.
 - `applications/audiogen/index.html` — local text-to-audio workspace; prompts
   and WAV output stay in the browser. Five models share one interface: **Meta
   MusicGen Small** (music, 656 MB), **Google Magenta RealTime 2** (music,

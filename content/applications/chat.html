@@ -8,13 +8,13 @@
 <!-- crawler metadata — this app is a page in its own right, reachable from the
      plain mirror and linkable on its own, so it says what it is. -->
 <meta name="robots" content="noindex,follow">
-<meta name="description" content="A chat application for the ClackOS desktop.">
+<meta name="description" content="Chat with a small language model — Bonsai, Qwen 3.5 or LFM 2.5 — running entirely in your browser on WebGPU.">
 <link rel="canonical" href="https://clacktronics.co.uk/content/applications/chat.html">
 <meta property="og:site_name" content="Clacktronics">
 <meta property="og:type" content="website">
 <meta property="og:title" content="ClackChat — ClackOS">
 <meta property="og:url" content="https://clacktronics.co.uk/content/applications/chat.html">
-<meta property="og:description" content="A chat application for the ClackOS desktop.">
+<meta property="og:description" content="Chat with a small language model — Bonsai, Qwen 3.5 or LFM 2.5 — running entirely in your browser on WebGPU.">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,6 +34,10 @@
 .chat-progress { border: 1px solid var(--ink); border-radius: 6px; background: var(--paper-deep); height: 18px; overflow: hidden; }
 .chat-progress > div { height: 100%; width: 0%; background: var(--leaf-deep); transition: width 0.2s; }
 .chat-small { font-size: 10.5px; color: var(--sage); line-height: 1.6; }
+.chat-small a, .chat-pick-info a { color: var(--leaf-deep); text-decoration: underline; }
+.chat-pick { display: flex; flex-direction: column; gap: 6px; }
+.chat-pick select { width: 100%; }
+.chat-pick-info { font-size: 11.5px; line-height: 1.65; }
 
 /* ---- chat log ---- */
 .chat-log {
@@ -79,6 +83,7 @@
   <div class="rm-bar">
     <div class="rm"><button>Chat</button><div class="rm-dd">
       <button data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New Conversation</button>
+      <button data-cmd="model" data-need="ready"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Change Model…</button>
       <button data-cmd="stop" data-need="busy"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop Generating</button>
     </div></div>
     <div class="rm"><button>Help</button><div class="rm-dd">
@@ -90,17 +95,20 @@
     <div class="chat-gate" data-view="gate" hidden>
       <span class="app-lbl">Local AI chat</span>
       <div class="app-panel">
-        <p>ClackChat runs a small language model — <b>Bonsai&nbsp;1.7B</b>, a 1-bit
-        model — entirely inside your browser using WebGPU. Nothing you type is
-        sent to a server: once the model is downloaded, the conversation stays
-        on your machine.</p>
-        <p>The first start downloads <b>≈&nbsp;291&nbsp;MB</b> of model weights from the
-        Hugging Face Hub. Your browser caches them, so later starts are quick.</p>
+        <p>ClackChat runs a small language model entirely inside your browser
+        using WebGPU. Nothing you type is sent to a server: once the model is
+        downloaded, the conversation stays on your machine.</p>
+        <p>The first start downloads the model's weights from the Hugging Face
+        Hub. Your browser caches them, so later starts are quick.</p>
+      </div>
+      <div class="chat-pick">
+        <label class="app-lbl" for="chat-model">Model</label>
+        <select id="chat-model"></select>
+        <p class="chat-pick-info"></p>
       </div>
       <button class="btn primary" data-cmd="download"><span class="pixel-icon" data-icon="download" aria-hidden="true"></span>Download model &amp; start</button>
       <p class="chat-small">Expect a small, occasionally confused assistant — it is a
-      tiny model running on your GPU, not a datacentre. Requires roughly 2&nbsp;GB of
-      free memory.</p>
+      tiny model running on your GPU, not a datacentre.</p>
     </div>
 
     <div class="chat-gate" data-view="no-webgpu" hidden>
@@ -122,9 +130,9 @@
 
     <div class="app-panel chat-about" hidden>
       <b>ClackChat</b> — local AI chat for ClackOS.<br>
-      Model: Bonsai&nbsp;1.7B by prism-ml, ONNX conversion by onnx-community
-      (Apache-2.0). Runs via Transformers.js (Apache-2.0) on ONNX&nbsp;Runtime (MIT)
-      with WebGPU. All inference happens in your browser.
+      Model: <span class="chat-about-model"></span>. Runs via Transformers.js
+      (Apache-2.0) on ONNX&nbsp;Runtime (MIT) with WebGPU. All inference happens
+      in your browser.
     </div>
 
     <div class="chat-compose" hidden>
@@ -132,10 +140,7 @@
       <button class="btn primary chat-send" title="Send (Enter)"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Send</button>
     </div>
     <p class="app-status chat-status"></p>
-    <p class="chat-credit">Model:
-      <a href="https://huggingface.co/prism-ml/Bonsai-1.7B-unpacked" target="_blank" rel="noopener">Bonsai&nbsp;1.7B</a>
-      by prism-ml, <a href="https://huggingface.co/onnx-community/Bonsai-1.7B-ONNX" target="_blank" rel="noopener">ONNX conversion</a>
-      by onnx-community · Apache-2.0.<br>
+    <p class="chat-credit">Model: <span class="chat-credit-model"></span>.<br>
       Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
       by Hugging Face, <a href="../../vendor/transformers/LICENSE" target="_blank">Apache-2.0</a> ·
       <a href="https://github.com/microsoft/onnxruntime" target="_blank" rel="noopener">ONNX&nbsp;Runtime</a>
@@ -157,14 +162,72 @@ const status = appRoot.querySelector('.chat-status');
 const aboutPanel = appRoot.querySelector('.chat-about');
 const progressBar = appRoot.querySelector('.chat-progress > div');
 const loadingDetail = appRoot.querySelector('.chat-loading-detail');
+const picker = appRoot.querySelector('#chat-model');
+const pickInfo = appRoot.querySelector('.chat-pick-info');
+const creditModel = appRoot.querySelector('.chat-credit-model');
+const aboutModel = appRoot.querySelector('.chat-about-model');
 
 const SYSTEM_PROMPT = 'You are ClackChat, a small helpful assistant running locally ' +
   'inside ClackOS on the Clacktronics website. Keep answers short and friendly.';
-const DOWNLOADED_KEY = 'clackos-chat-model-downloaded';
+
+/* Every model here runs on the vendored Transformers.js text-generation
+ * pipeline, which is what decides the list: Bonsai 2 27B, Gemma 4 and the
+ * like either need engines of their own or weigh several gigabytes. Sizes
+ * are the ONNX weight files in MB — `f16` is the build for adapters with
+ * shader-f16, `plain` the fallback for those without (null where the repo
+ * publishes no such build, which rules the model out on that machine). */
+const MODELS = [
+  { key: 'bonsai-1.7b', group: 'Bonsai · 1-bit', name: 'Bonsai 1.7B', mem: 2,
+    repo: 'onnx-community/Bonsai-1.7B-ONNX', f16: null, plain: ['q1', 291],
+    blurb: 'The original and the lightest: every weight a single bit. Quick, small, and a little scatterbrained.',
+    by: 'prism-ml', source: 'prism-ml/Bonsai-1.7B-unpacked', licence: 'Apache-2.0' },
+  { key: 'bonsai-4b', group: 'Bonsai · 1-bit', name: 'Bonsai 4B', mem: 2.5,
+    repo: 'onnx-community/Bonsai-4B-ONNX', f16: ['q1f16', 584], plain: ['q1', 655],
+    blurb: 'More than twice the parameters in a 1-bit squeeze — noticeably better answers for a modest download.',
+    by: 'prism-ml', source: 'prism-ml/Bonsai-4B-unpacked', licence: 'Apache-2.0' },
+  { key: 'bonsai-8b', group: 'Bonsai · 1-bit', name: 'Bonsai 8B', mem: 3,
+    repo: 'onnx-community/Bonsai-8B-ONNX', f16: ['q1f16', 1186], plain: ['q1', 1331],
+    blurb: 'The largest 1-bit Bonsai. Wants a reasonably capable GPU.',
+    by: 'prism-ml', source: 'prism-ml/Bonsai-8B-unpacked', licence: 'Apache-2.0' },
+  { key: 'ternary-bonsai-1.7b', group: 'Bonsai · ternary', name: 'Ternary Bonsai 1.7B', mem: 2,
+    repo: 'onnx-community/Ternary-Bonsai-1.7B-ONNX', f16: ['q2f16', 470], plain: ['q2', 506],
+    blurb: 'Weights of −1, 0 or +1 (1.58 bits): a little bigger than 1-bit Bonsai and holds on to more of the full model.',
+    by: 'prism-ml', source: 'prism-ml/Ternary-Bonsai-1.7B-unpacked', licence: 'Apache-2.0' },
+  { key: 'ternary-bonsai-4b', group: 'Bonsai · ternary', name: 'Ternary Bonsai 4B', mem: 3,
+    repo: 'onnx-community/Ternary-Bonsai-4B-ONNX', f16: ['q2f16', 1086], plain: ['q2', 1158],
+    blurb: 'The ternary sweet spot — about a gigabyte for a model that keeps a conversation together.',
+    by: 'prism-ml', source: 'prism-ml/Ternary-Bonsai-4B-unpacked', licence: 'Apache-2.0' },
+  { key: 'ternary-bonsai-8b', group: 'Bonsai · ternary', name: 'Ternary Bonsai 8B', mem: 4,
+    repo: 'onnx-community/Ternary-Bonsai-8B-ONNX', f16: ['q2f16', 2209], plain: null,
+    blurb: 'The most capable model ClackChat offers. A big download, and it needs a GPU with shader-f16.',
+    by: 'prism-ml', source: 'prism-ml/Ternary-Bonsai-8B-unpacked', licence: 'Apache-2.0' },
+  { key: 'qwen3.5-0.8b', group: 'Other small models', name: 'Qwen 3.5 0.8B', mem: 2,
+    repo: 'onnx-community/Qwen3.5-0.8B-Text-ONNX', f16: ['q4f16', 469], plain: ['q4', 551],
+    blurb: 'Alibaba\'s smallest Qwen 3.5, conventionally 4-bit quantised — a useful yardstick for what 1-bit Bonsai gives up.',
+    by: 'Qwen', source: 'Qwen/Qwen3.5-0.8B', licence: 'Apache-2.0',
+    gen: { temperature: 0.7, top_p: 0.8 } },
+  { key: 'lfm2.5-1.2b', group: 'Other small models', name: 'LFM 2.5 1.2B Instruct', mem: 2,
+    repo: 'LiquidAI/LFM2.5-1.2B-Instruct-ONNX', f16: ['q4f16', 760], plain: ['q4', 850],
+    blurb: 'Liquid AI\'s hybrid convolution-and-attention model, built for on-device use and quick on modest GPUs.',
+    by: 'Liquid AI', source: 'LiquidAI/LFM2.5-1.2B-Instruct', licence: 'LFM Open License v1.0',
+    licenceUrl: 'https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-ONNX/blob/main/LICENSE',
+    gen: { temperature: 0.1, top_k: 50, repetition_penalty: 1.05 } },
+];
+const MODEL_KEY = 'clackos-chat-model';
+/* before the picker there was one model and one flag saying it was cached */
+const LEGACY_DOWNLOADED_KEY = 'clackos-chat-model-downloaded';
+const downloadedKey = key => 'clackos-chat-downloaded:' + key;
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
 
 let worker = null;
 let busy = false;
 let ready = false;
+let hasF16 = false;
+let model = MODELS[0];
 let history = [];             /* [{role, content}] excluding system prompt */
 let currentBody = null;       /* streaming assistant .chat-body element */
 let currentMsg = null;
@@ -174,6 +237,65 @@ let streamText = '';
 const say = t => { status.textContent = t; };
 const show = name => views.forEach(v => { v.hidden = v.dataset.view !== name; });
 const showCompose = on => { compose.hidden = !on; };
+
+if (store.get(LEGACY_DOWNLOADED_KEY)) store.set(downloadedKey(MODELS[0].key), '1');
+
+const build = m => (hasF16 && m.f16) || m.plain;
+const usable = m => !!build(m);
+const fmtSize = mb => mb >= 1000 ? `${(mb / 1000).toFixed(1)}\u00a0GB` : `${mb}\u00a0MB`;
+
+function link(href, text) {
+  const a = document.createElement('a');
+  a.href = href; a.target = '_blank'; a.rel = 'noopener';
+  a.textContent = text;
+  return a;
+}
+
+/* "Bonsai 4B by prism-ml, ONNX conversion by onnx-community · Apache-2.0" */
+function describeModel(el, m) {
+  const owner = m.repo.split('/')[0];
+  el.replaceChildren(
+    link('https://huggingface.co/' + m.source, m.name), ` by ${m.by}, `,
+    link('https://huggingface.co/' + m.repo, owner === m.source.split('/')[0] ? 'ONNX build' : 'ONNX conversion'),
+    owner === m.source.split('/')[0] ? '' : ` by ${owner}`, ' · ',
+    m.licenceUrl ? link(m.licenceUrl, m.licence) : m.licence);
+}
+
+function fillPicker() {
+  picker.replaceChildren();
+  const groups = new Map();
+  for (const m of MODELS) {
+    if (!groups.has(m.group)) {
+      const g = document.createElement('optgroup');
+      g.label = m.group;
+      groups.set(m.group, g);
+      picker.appendChild(g);
+    }
+    const o = document.createElement('option');
+    o.value = m.key;
+    const b = build(m);
+    o.textContent = b ? `${m.name} — ${fmtSize(b[1])}` : `${m.name} — needs shader-f16`;
+    o.disabled = !b;
+    groups.get(m.group).appendChild(o);
+  }
+  picker.value = model.key;
+  showPick();
+}
+
+function showPick() {
+  const b = build(model);
+  describeModel(creditModel, model);
+  describeModel(aboutModel, model);
+  pickInfo.replaceChildren(model.blurb, ' ',
+    b ? `Downloads ${fmtSize(b[1])} once; needs roughly ${model.mem}\u00a0GB of free memory.`
+      : 'This GPU lacks shader-f16, which the only published build of this model needs.');
+}
+
+picker.addEventListener('change', () => {
+  model = MODELS.find(m => m.key === picker.value) || MODELS[0];
+  store.set(MODEL_KEY, model.key);
+  showPick();
+});
 
 function nearBottom() { return log.scrollHeight - log.scrollTop - log.clientHeight < 60; }
 function scrollDown(force) { if (force || nearBottom()) log.scrollTop = log.scrollHeight; }
@@ -254,7 +376,12 @@ function ensureWorker() {
     switch (msg.type) {
       case 'webgpu':
         if (msg.ok) {
-          if (localStorage.getItem(DOWNLOADED_KEY)) startLoad();
+          hasF16 = !!msg.f16;
+          const saved = MODELS.find(m => m.key === store.get(MODEL_KEY));
+          if (saved && usable(saved)) model = saved;
+          else if (!usable(model)) model = MODELS.find(usable);
+          fillPicker();
+          if (store.get(downloadedKey(model.key))) startLoad();
           else show('gate');
         } else show('no-webgpu');
         break;
@@ -271,11 +398,11 @@ function ensureWorker() {
       }
       case 'ready':
         ready = true;
-        localStorage.setItem(DOWNLOADED_KEY, '1');
+        store.set(downloadedKey(model.key), '1');
         show('chat');
         showCompose(true);
-        if (!log.childElementCount) addMsg('assistant', 'Hello! I\'m a little language model running right here on your GPU. What shall we talk about?');
-        say('Ready — everything runs locally.');
+        if (!log.childElementCount) addMsg('assistant', `Hello! I'm ${model.name}, a little language model running right here on your GPU. What shall we talk about?`);
+        say(`${model.name} ready — everything runs locally.`);
         setBusy(false);
         break;
       case 'token':
@@ -307,10 +434,29 @@ function renderFinal(text) {
 }
 
 function startLoad() {
+  const b = build(model);
+  if (!b) return;
+  store.set(MODEL_KEY, model.key);
   show('loading');
   progressBar.style.width = '0%';
+  loadingDetail.textContent = 'Starting…';
   say('');
-  ensureWorker().postMessage({ type: 'load' });
+  ensureWorker().postMessage({ type: 'load', model: model.repo, dtype: b[0], gen: model.gen });
+}
+
+/* back to the picker: the worker goes with the old model, since terminating
+ * it is what frees the GPU memory the weights were holding */
+function changeModel() {
+  if (worker) { worker.terminate(); worker = null; }
+  ready = false;
+  history = [];
+  log.replaceChildren();
+  currentMsg = null; currentBody = null; currentThink = null; streamText = '';
+  setBusy(false);
+  showCompose(false);
+  fillPicker();
+  show('gate');
+  say('');
 }
 
 function send() {
@@ -357,6 +503,7 @@ rms.forEach(m => {
     closeRm();
     if (!was) {
       m.querySelectorAll('[data-need="busy"]').forEach(b => { b.disabled = !busy; });
+      m.querySelectorAll('[data-need="ready"]').forEach(b => { b.disabled = !ready; });
       m.classList.add('open');
     }
   });
@@ -367,6 +514,7 @@ appRoot.querySelector('.rm-bar').addEventListener('click', e => {
   closeRm();
   switch (cmd.dataset.cmd) {
     case 'new': newConversation(); break;
+    case 'model': changeModel(); break;
     case 'stop': if (busy) { worker.postMessage({ type: 'interrupt' }); say('Stopping…'); } break;
     case 'about': aboutPanel.hidden = !aboutPanel.hidden; break;
   }
