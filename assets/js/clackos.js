@@ -688,6 +688,9 @@ async function openWindow(id, restore = null) {
     contentHtml = content.html;
   }
   const title = meta.title || id;
+  /* a window brought back from a saved desktop was counted when it was first
+   * opened, so only fresh opens are counted (see assets/js/analytics.js) */
+  if (!restore) window.ClackOSAnalytics?.countWindow(id, title);
 
   const el = document.createElement('section');
   el.className = 'window';
