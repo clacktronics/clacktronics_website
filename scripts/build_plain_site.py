@@ -1130,6 +1130,7 @@ def render_page(md_rel, page_out):
 <link rel="stylesheet" href="{css('assets/css/content.css')}">
 <link rel="stylesheet" href="{css('assets/themes/' + theme)}">
 <link rel="stylesheet" href="{esc(rel_href(STYLE, page_out))}">
+<script src="{esc(resolve_site_url('assets/js/analytics.js', page_out))}" defer></script>
 {kicanvas}{model}{highlight}{zoom}</head>
 <body class="plain-mirror">
 <header id="plain-nav">{menu}</header>
@@ -1280,6 +1281,7 @@ def build_404():
 <link rel="stylesheet" href="{at('assets/css/content.css')}">
 <link rel="stylesheet" href="{at('assets/themes/' + theme)}">
 <link rel="stylesheet" href="{at('plain/' + STYLE)}">
+<script src="{at('assets/js/analytics.js')}" defer></script>
 </head>
 <body class="plain-mirror">
 <main>

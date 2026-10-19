@@ -58,6 +58,7 @@ assets/
   js/app-state.js             opt-in state persistence for apps
   js/highlight.js             syntax highlighter for fenced code blocks
   js/model-scene.js           three.js viewer core (3D Model Viewer + inline @[model])
+  js/analytics.js             GoatCounter visitor counting — the one place the endpoint is named
   js/{events,file-manager,image-zoom,backgrounds,midi-bytes,model-embed,model-squish}.js
   upload.php                  media upload endpoint (runs on the web host)
   upload-config.example.php   template — the real config is host-only, never committed
@@ -209,6 +210,8 @@ A new app should:
   rather than hardcoded colours, so themes apply;
 - load `assets/js/app-home.js` (adds the "ClackOS" link back to the desktop,
   only when the app *is* the page) and `assets/js/app-bar.js` if it builds a bar;
+- load `assets/js/analytics.js` beside `app-home.js`, so a visit to the app as
+  a standalone page is counted (README § "Visitor statistics");
 - carry its own crawler metadata in `<head>` — `description`, `canonical`,
   Open Graph. The mirror generator reads indexing decisions back out of the
   file: a canonical link and no `noindex` puts it in the sitemap. Desktop

@@ -767,6 +767,35 @@ Absolute metadata URLs use:
 `SUBDIR` is currently empty. Set it in `.github/workflows/deploy-purely.yml` to
 stage both deployed files and generated URLs in a subfolder.
 
+## Visitor statistics
+
+Visits are counted with [GoatCounter](https://www.goatcounter.com): no
+cookies, nothing stored in the visitor's browser, so no consent banner. The
+browser sends each hit (path, title, referrer, screen size) straight to
+GoatCounter, which keeps the counts and shows them on its dashboard. Nothing
+is written on this site's host.
+
+`assets/js/analytics.js` is the only place the endpoint
+(`https://clacktronics.goatcounter.com/count`) is named. It is loaded by
+`index.html`, by every app page under `content/applications/` (next to
+`app-home.js`) and by every page the plain mirror generator writes, the 404
+page included. A new app should load it too.
+
+What is recorded:
+
+- **The desktop** — one hit for the page itself, then one per window as it
+  opens, under `/desktop/<id>`: `/desktop/file/blog.md`,
+  `/desktop/applications/paint.html`. Windows brought back from a saved desktop
+  or a shared desktop link are not counted again.
+- **A standalone app page or a mirror page** — an ordinary page view under its
+  canonical URL.
+- **An app inside a desktop window** — only the window hit above. GoatCounter
+  ignores framed pages, and an integrated app runs in the desktop document,
+  where the script has already run.
+
+GoatCounter ignores `localhost`, so working on the site locally adds nothing
+to the numbers.
+
 ## Deploying to a web host (purely.website)
 
 `.github/workflows/deploy-purely.yml` runs on relevant pushes to `main` or
