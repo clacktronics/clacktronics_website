@@ -749,6 +749,24 @@ deploy workflows run this generator automatically.
 The generated, `noindex` 404 page links to current and archived content;
 `.htaccess` selects it with a `SUBDIR`-aware `ErrorDocument`.
 
+Before that page is reached, `.htaccess` sends addresses from the two earlier
+sites to where their content lives now, with permanent (301) redirects:
+
+- **The Jekyll site (2015–2026).** `/byom` (any case, the address printed in
+  the book) goes to the BYOM page in the plain mirror, and `/byom/…` to the
+  book's files under `content/file/euroclack/byom/`. The EuroClack pages and
+  kit folders, the Lazertran and Press-n-Peel pages, `/about.html`, the
+  `/pageN` blog index and every `/YEAR/Title.html` post are mapped one by one.
+  Pages with no counterpart here (`/research/drumlab/…`, `/design`, `/crab/`)
+  go to the frozen copy under `/archive/clacktronics2015/`.
+- **The WordPress site (2011–2014).** Its `/category/post-slug/` addresses are
+  matched on the post slug alone, under any prefix, and sent to the post in
+  `plain/blog/`; `/feed/` goes to `feed.xml`. These rules never fire for a
+  file or directory that really exists.
+
+Redirects point at the plain mirror because a desktop window has no URL of
+its own. A new blog post needs nothing here; a renamed or removed page does.
+
 The site root is the canonical home page. `index.html` uses `./`, and the
 mirror home points back to the root; the sitemap includes the root rather than
 `plain/index.html`. Keep the shell title and description aligned with

@@ -113,6 +113,149 @@ ErrorDocument 404 /404.html
   </FilesMatch>
 </IfModule>
 
+# ------------------------------------------------------- Addresses from the old sites
+# Two websites came before this one, both served from the root of this domain,
+# and their addresses are still out there: printed in the Build Your Own Modular
+# book, on kit instructions, on forums and in other people's posts. Each rule
+# below sends one of those addresses to the page that now carries the same
+# content, so a visitor lands on the thing they were after rather than on the
+# 404 page. The targets are the plain mirror rather than the desktop because a
+# window cannot be addressed by URL; the mirror page links on to the desktop.
+#
+# This block sits after the Wasm rewrite on purpose: the WordPress rules at the
+# end bail out for any real file, and that early exit must not come before the
+# rule that serves a .wasm its gzipped neighbour.
+#
+# 301s are cached by browsers indefinitely, so a target changed here later will
+# not reach someone who already followed the old one. Point them at addresses
+# that are going to stay put.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # The Jekyll site, 2015–2026. Its frozen copy now lives under
+  # /archive/clacktronics2015/, which is where pages with no counterpart here
+  # (the Drum Lab, the design portfolio, the old blog pagination) are sent.
+
+  # Build Your Own Modular. /byom is the address printed in the book, so it is
+  # matched without regard to case. The book's supporting files (interactive
+  # BOMs, build guides, spreadsheets, images) moved under content/ unchanged.
+  RewriteRule ^byom(?:/|/index\.html)?$ https://%{HTTP_HOST}/plain/euroclack/byom.html [NC,R=301,L]
+  RewriteRule ^byom/(.+)$ https://%{HTTP_HOST}/content/file/euroclack/byom/$1 [NC,R=301,L]
+
+  # EuroClack and its kits. The page itself moves to the mirror; ibom.html and
+  # images/ beside it moved under content/, some with a renamed folder.
+  RewriteRule ^euroclack(?:/|/index\.html)?$ https://%{HTTP_HOST}/plain/euroclack.html [NC,R=301,L]
+  RewriteRule ^euroclack/analogue_meter(?:/|/index\.html)?$ https://%{HTTP_HOST}/plain/euroclack/analogue-meter.html [NC,R=301,L]
+  RewriteRule ^euroclack/analogue_meter/(.+)$ https://%{HTTP_HOST}/content/file/euroclack/analogue_meter/$1 [NC,R=301,L]
+  RewriteRule ^euroclack/mini-speaker_kit(?:/|/index\.html)?$ https://%{HTTP_HOST}/plain/euroclack/mini-speaker.html [NC,R=301,L]
+  RewriteRule ^euroclack/mini-speaker_kit/(.+)$ https://%{HTTP_HOST}/content/file/euroclack/mini_speaker/$1 [NC,R=301,L]
+  RewriteRule ^euroclack/proto_PSU(?:/|/index\.html)?$ https://%{HTTP_HOST}/plain/euroclack/proto-psu.html [NC,R=301,L]
+  RewriteRule ^euroclack/proto_PSU/(.+)$ https://%{HTTP_HOST}/content/file/euroclack/proto_psu/$1 [NC,R=301,L]
+
+  # Research pages that were carried over, then the ones that were not.
+  RewriteRule ^research/lazertran(?:/.*)?$ https://%{HTTP_HOST}/plain/misc/lazertran.html [NC,R=301,L]
+  RewriteRule ^research/pressnpeel(?:/.*)?$ https://%{HTTP_HOST}/plain/misc/pressnpeel.html [NC,R=301,L]
+  RewriteRule ^((?:research|design|crab)(?:/.*)?)$ https://%{HTTP_HOST}/archive/clacktronics2015/$1 [R=301,L]
+
+  # The about page has become the home window, and the paginated blog index
+  # the blog list, which shows every post on one page.
+  RewriteRule ^about\.html$ https://%{HTTP_HOST}/ [R=301,L]
+  RewriteRule ^page[0-9]+/?$ https://%{HTTP_HOST}/plain/blog-list.html [R=301,L]
+
+  # Blog posts were /YEAR/Title.html; here they are dated files under
+  # plain/blog/. The titles were not always the same slug as the post's file,
+  # so each is listed rather than derived.
+  RewriteRule ^2011/akg-bx-20-repair\.html$ https://%{HTTP_HOST}/plain/blog/2011-02-07-akg-bx-20-repair.html [R=301,L]
+  RewriteRule ^2011/amdek-pck-100\.html$ https://%{HTTP_HOST}/plain/blog/2011-01-27-amdek-pck-100.html [R=301,L]
+  RewriteRule ^2011/another-day-another-couple-of-wasps\.html$ https://%{HTTP_HOST}/plain/blog/2011-08-30-another-day-another-couple-of-wasps.html [R=301,L]
+  RewriteRule ^2011/edp-wasp-deluxe\.html$ https://%{HTTP_HOST}/plain/blog/2011-06-08-edp-wasp-deluxe.html [R=301,L]
+  RewriteRule ^2011/edp-wasp-restoration-part-1\.html$ https://%{HTTP_HOST}/plain/blog/2011-04-20-edp-wasp-restoration-part-1.html [R=301,L]
+  RewriteRule ^2011/enclosures\.html$ https://%{HTTP_HOST}/plain/blog/2011-01-27-enclosures.html [R=301,L]
+  RewriteRule ^2011/juno-60-memory-repair\.html$ https://%{HTTP_HOST}/plain/blog/2011-03-14-juno-60-memory-repair.html [R=301,L]
+  RewriteRule ^2011/late-spring-cleanout-avrsyn\.html$ https://%{HTTP_HOST}/plain/blog/2011-06-07-late-spring-cleanout-avrsyn.html [R=301,L]
+  RewriteRule ^2011/lazertran-tutorial\.html$ https://%{HTTP_HOST}/plain/blog/2011-09-27-lazertran-tutorial.html [R=301,L]
+  RewriteRule ^2011/midsoundlab\.html$ https://%{HTTP_HOST}/plain/blog/2011-06-05-midsoundlab.html [R=301,L]
+  RewriteRule ^2011/modded-realistic-reverb-2\.html$ https://%{HTTP_HOST}/plain/blog/2011-09-05-modded-realistic-reverb-2.html [R=301,L]
+  RewriteRule ^2011/octave-cat-srm-repair\.html$ https://%{HTTP_HOST}/plain/blog/2011-01-25-octave-cat-srm-repair.html [R=301,L]
+  RewriteRule ^2011/octave-kitten-repair\.html$ https://%{HTTP_HOST}/plain/blog/2011-06-22-octave-kitten-repair.html [R=301,L]
+  RewriteRule ^2011/oxford-oscar\.html$ https://%{HTTP_HOST}/plain/blog/2011-09-27-oxford-oscar.html [R=301,L]
+  RewriteRule ^2011/press-n-peel-printing-service\.html$ https://%{HTTP_HOST}/plain/blog/2011-04-21-press-n-peel-printing-service.html [R=301,L]
+  RewriteRule ^2011/realistic-reverb-noismaking-mods\.html$ https://%{HTTP_HOST}/plain/blog/2011-04-07-realistic-reverb-noismaking-mods.html [R=301,L]
+  RewriteRule ^2011/roland-re201-repair\.html$ https://%{HTTP_HOST}/plain/blog/2011-01-31-roland-re201-repair.html [R=301,L]
+  RewriteRule ^2011/roland-sre555\.html$ https://%{HTTP_HOST}/plain/blog/2011-04-23-roland-sre555.html [R=301,L]
+  RewriteRule ^2011/star-synare-3-page\.html$ https://%{HTTP_HOST}/plain/blog/2011-09-29-star-synare-3-page.html [R=301,L]
+  RewriteRule ^2011/video-synthesis-part-1-getting-into-video-circuits\.html$ https://%{HTTP_HOST}/plain/blog/2011-06-22-video-synthesis-part-1-getting-into-video-circuits.html [R=301,L]
+  RewriteRule ^2011/wasp-drive-first-batch-complete\.html$ https://%{HTTP_HOST}/plain/blog/2011-07-04-wasp-drive-first-batch-complete.html [R=301,L]
+  RewriteRule ^2011/wasp-patch-pad\.html$ https://%{HTTP_HOST}/plain/blog/2011-07-28-wasp-patch-pad.html [R=301,L]
+  RewriteRule ^2011/yamahacs10\.html$ https://%{HTTP_HOST}/plain/blog/2011-06-22-yamahacs10.html [R=301,L]
+  RewriteRule ^2012/592\.html$ https://%{HTTP_HOST}/plain/blog/2012-07-01-592.html [R=301,L]
+  RewriteRule ^2012/clacktronics-back-in-new-year\.html$ https://%{HTTP_HOST}/plain/blog/2012-01-25-clacktronics-back-in-new-year.html [R=301,L]
+  RewriteRule ^2013/clacktronics-does-led-projects\.html$ https://%{HTTP_HOST}/plain/blog/2013-01-04-clacktronics-does-led-projects.html [R=301,L]
+  RewriteRule ^2013/cri-baby-call\.html$ https://%{HTTP_HOST}/plain/blog/2013-02-16-cri-baby-call.html [R=301,L]
+  RewriteRule ^2013/maplin-ada-delay\.html$ https://%{HTTP_HOST}/plain/blog/2013-01-04-maplin-ada-delay.html [R=301,L]
+  RewriteRule ^2013/the-3d-printed-bandwagon\.html$ https://%{HTTP_HOST}/plain/blog/2013-01-09-the-3d-printed-bandwagon.html [R=301,L]
+  RewriteRule ^2013/tottenham-to-walthamstow\.html$ https://%{HTTP_HOST}/plain/blog/2013-05-07-tottenham-to-walthamstow.html [R=301,L]
+  RewriteRule ^2015/Casting-expanded-polystyrene\.html$ https://%{HTTP_HOST}/plain/blog/2015-03-18-casting_expanded_polystyrene.html [R=301,L]
+  RewriteRule ^2015/IRCAM\.html$ https://%{HTTP_HOST}/plain/blog/2015-03-02-IRCAM.html [R=301,L]
+  RewriteRule ^2015/New-Website\.html$ https://%{HTTP_HOST}/plain/blog/2015-03-02-New_Website.html [R=301,L]
+  RewriteRule ^2015/Wanted\.html$ https://%{HTTP_HOST}/plain/blog/2015-03-25-Star-synare-tympani-lo-tom.html [R=301,L]
+  RewriteRule ^2016/Colours,-Speakers-and-Pulses\.html$ https://%{HTTP_HOST}/plain/blog/2016-01-13-Colours-speakers-pw.html [R=301,L]
+  RewriteRule ^2016/OpenScad\.html$ https://%{HTTP_HOST}/plain/blog/2016-01-16-Openscad.html [R=301,L]
+  RewriteRule ^2016/Scanner-Cloud\.html$ https://%{HTTP_HOST}/plain/blog/2016-05-18-Scanner_Cloud.html [R=301,L]
+  RewriteRule ^2016/Shapeoko-2-Wasteboard\.html$ https://%{HTTP_HOST}/plain/blog/2016-03-20-Shapeoko-2-clamping-wasteboard.html [R=301,L]
+  RewriteRule ^2016/VGA-cap\.html$ https://%{HTTP_HOST}/plain/blog/2016-01-16-VGA_cap.html [R=301,L]
+  RewriteRule ^2017/Cryptocoin-ticker\.html$ https://%{HTTP_HOST}/plain/blog/2017-06-20-cryptocoin_ticker.html [R=301,L]
+  RewriteRule ^2017/Paris-Opera\.html$ https://%{HTTP_HOST}/plain/blog/2017-06-26-Paris_Opera.html [R=301,L]
+  RewriteRule ^2019/Boldport\.html$ https://%{HTTP_HOST}/plain/blog/2019-01-02-Boldport.html [R=301,L]
+  RewriteRule ^2019/EuroClack_mini_speaker\.html$ https://%{HTTP_HOST}/plain/blog/2019-08-09-euroclack.html [R=301,L]
+  RewriteRule ^2019/Flip-dots\.html$ https://%{HTTP_HOST}/plain/blog/2019-01-03-flipdots.html [R=301,L]
+  RewriteRule ^2024/Build-Your-Own-Modular-book\.html$ https://%{HTTP_HOST}/plain/blog/2024-06-27-Build-Your-Own-Modular-book.html [R=301,L]
+  RewriteRule ^2024/Two-new-kits\.html$ https://%{HTTP_HOST}/plain/blog/2024-06-27-Two-new-kits.html [R=301,L]
+
+  # The WordPress site, 2011–2014, used /category/post-slug/ (and hung image
+  # attachment pages below a post, /…/post-slug/attachment/name). Its category
+  # names were never recorded, so each post is matched by its slug as a whole
+  # path segment under any prefix. The bare-slug match is loose, which is why
+  # any request for a file or directory that really exists is let through
+  # untouched first.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteRule ^feed/?$ https://%{HTTP_HOST}/feed.xml [R=301,L]
+  RewriteRule ^products/wasp-drive/?$ https://%{HTTP_HOST}/plain/blog/2011-07-04-wasp-drive-first-batch-complete.html [NC,R=301,L]
+  RewriteRule ^(?:[^/]+/)*octave-cat-srm-repair(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-01-25-octave-cat-srm-repair.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*amdek-pck-100(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-01-27-amdek-pck-100.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*enclosures(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-01-27-enclosures.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*roland-re201-repair(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-01-31-roland-re201-repair.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*akg-bx-20-repair(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-02-07-akg-bx-20-repair.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*juno-60-memory-repair(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-03-14-juno-60-memory-repair.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*realistic-reverb-noismaking-mods(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-04-07-realistic-reverb-noismaking-mods.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*edp-wasp-restoration-part-1(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-04-20-edp-wasp-restoration-part-1.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*press-n-peel-printing-service(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-04-21-press-n-peel-printing-service.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*roland-sre555(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-04-23-roland-sre555.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*midsoundlab(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-06-05-midsoundlab.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*late-spring-cleanout-avrsyn(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-06-07-late-spring-cleanout-avrsyn.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*edp-wasp-deluxe(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-06-08-edp-wasp-deluxe.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*octave-kitten-repair(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-06-22-octave-kitten-repair.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*video-synthesis-part-1-getting-into-video-circuits(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-06-22-video-synthesis-part-1-getting-into-video-circuits.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*yamahacs10(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-06-22-yamahacs10.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*wasp-drive-first-batch-complete(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-07-04-wasp-drive-first-batch-complete.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*wasp-patch-pad(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-07-28-wasp-patch-pad.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*another-day-another-couple-of-wasps(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-08-30-another-day-another-couple-of-wasps.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*modded-realistic-reverb-2(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-09-05-modded-realistic-reverb-2.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*lazertran-tutorial(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-09-27-lazertran-tutorial.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*oxford-oscar(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-09-27-oxford-oscar.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*star-synare-3-page(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2011-09-29-star-synare-3-page.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*clacktronics-back-in-new-year(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2012-01-25-clacktronics-back-in-new-year.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*592(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2012-07-01-592.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*clacktronics-does-led-projects(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2013-01-04-clacktronics-does-led-projects.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*maplin-ada-delay(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2013-01-04-maplin-ada-delay.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*the-3d-printed-bandwagon(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2013-01-09-the-3d-printed-bandwagon.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*cri-baby-call(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2013-02-16-cri-baby-call.html [R=301,L]
+  RewriteRule ^(?:[^/]+/)*tottenham-to-walthamstow(?:/.*)?$ https://%{HTTP_HOST}/plain/blog/2013-05-07-tottenham-to-walthamstow.html [R=301,L]
+</IfModule>
+
 # ------------------------------------------------------------- Compression
 # On-the-fly compression for the small text assets. Wasm is deliberately absent
 # here: it is handled by the precompressed file above.
