@@ -1116,10 +1116,11 @@ def render_page(md_rel, page_out):
     # Inline 3D models: the import map has to be in the document before any
     # module loads, so it is emitted alongside the embed script itself.
     model = ('<script type="importmap">\n'
-             '{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",'
-             '"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"}}\n'
+             '{"imports":{"three":"%s","three/addons/":"%s"}}\n'
              '</script>\n<script type="module" src="%s"></script>\n'
-             % esc(resolve_site_url('assets/js/model-embed.js', page_out))
+             % (esc(resolve_site_url('vendor/three/build/three.module.min.js', page_out)),
+                esc(resolve_site_url('vendor/three/examples/jsm/', page_out)) + '/',
+                esc(resolve_site_url('assets/js/model-embed.js', page_out)))
              if state['model'] else '')
     # data-auto tells the highlighter to colour this page's code blocks itself
     highlight = ('<script src="%s" data-auto defer></script>\n'
@@ -1139,9 +1140,7 @@ def render_page(md_rel, page_out):
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="only light">
-{crawl_meta}<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
+{crawl_meta}<link rel="stylesheet" href="{css('assets/css/fonts.css')}">
 <link rel="stylesheet" href="{css('assets/css/icons.css')}">
 <link rel="stylesheet" href="{css('assets/css/clackos.css')}">
 <link rel="stylesheet" href="{css('assets/css/content.css')}">
@@ -1293,6 +1292,7 @@ def build_404():
 <meta name="color-scheme" content="only light">
 <title>Page not found — {esc(SITE_NAME)}</title>
 <meta name="robots" content="noindex,follow">
+<link rel="stylesheet" href="{at('assets/css/fonts.css')}">
 <link rel="stylesheet" href="{at('assets/css/icons.css')}">
 <link rel="stylesheet" href="{at('assets/css/clackos.css')}">
 <link rel="stylesheet" href="{at('assets/css/content.css')}">
