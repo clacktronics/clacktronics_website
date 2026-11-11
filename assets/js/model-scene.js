@@ -259,7 +259,7 @@ const THREE_ADDONS = (() => {
     const resolved = import.meta.resolve?.('three/addons/');
     if (resolved) return resolved;
   } catch { /* no import.meta.resolve, or no import map entry for it */ }
-  return 'https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/';
+  return new URL('../../vendor/three/examples/jsm/', import.meta.url).href;
 })();
 
 let gltfPromise = null;

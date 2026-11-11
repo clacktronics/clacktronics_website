@@ -537,6 +537,9 @@ def render_menu(md_rel, page_out):
             '</nav>') % (''.join(file_items), ''.join(apps))
 
 # ---------------------------------------------------------------- inline
+LINK_PATTERN = r'\[([^\]]+)\]\(([^)\s]+)\)'
+
+
 def inline(s, page_out):
     s = esc(s)
     imgs = []
@@ -549,12 +552,25 @@ def inline(s, page_out):
         return '\x00%d\x00' % (len(imgs) - 1)
 
     s = re.sub(r'!\[([^\]]*)\]\(([^)\s]+)\)', img_sub, s)
-    s = re.sub(r'`([^`]+)`', r'<span class="k">\1</span>', s)
+    # Code spans and link destinations are literal text, so they sit out the
+    # emphasis pass as tokens — the same order inline() in markdown.js uses.
+    codes, hrefs = [], []
+
+    def code_sub(m):
+        codes.append('<span class="k">%s</span>' % m.group(1))
+        return '\x02%d\x02' % (len(codes) - 1)
+
+    def href_sub(m):
+        hrefs.append(m.group(2))
+        return '[%s](\x01%d\x01)' % (m.group(1), len(hrefs) - 1)
+
+    s = re.sub(r'`([^`]+)`', code_sub, s)
+    s = re.sub(LINK_PATTERN, href_sub, s)
     s = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', s)
     s = re.sub(r'(^|[^*])\*([^*]+)\*', r'\1<i>\2</i>', s)
 
     def link_sub(m):
-        text, href = m.group(1).strip(), m.group(2)
+        text, href = m.group(1).strip(), hrefs[int(m.group(2)[1:-1])]
         if href.startswith('window:'):
             target = href[len('window:'):]
             if target in PAGES:
@@ -579,7 +595,8 @@ def inline(s, page_out):
                    '' if href.startswith('#') else ' target="_blank" rel="noopener noreferrer"',
                    text))
 
-    s = re.sub(r'\[([^\]]+)\]\(([^)\s]+)\)', link_sub, s)
+    s = re.sub(LINK_PATTERN, link_sub, s)
+    s = re.sub('\x02(\\d+)\x02', lambda m: codes[int(m.group(1))], s)
     s = re.sub('\x00(\\d+)\x00', lambda m: imgs[int(m.group(1))], s)
     return s
 
@@ -1099,10 +1116,11 @@ def render_page(md_rel, page_out):
     # Inline 3D models: the import map has to be in the document before any
     # module loads, so it is emitted alongside the embed script itself.
     model = ('<script type="importmap">\n'
-             '{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",'
-             '"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"}}\n'
+             '{"imports":{"three":"%s","three/addons/":"%s"}}\n'
              '</script>\n<script type="module" src="%s"></script>\n'
-             % esc(resolve_site_url('assets/js/model-embed.js', page_out))
+             % (esc(resolve_site_url('vendor/three/build/three.module.min.js', page_out)),
+                esc(resolve_site_url('vendor/three/examples/jsm/', page_out)) + '/',
+                esc(resolve_site_url('assets/js/model-embed.js', page_out)))
              if state['model'] else '')
     # data-auto tells the highlighter to colour this page's code blocks itself
     highlight = ('<script src="%s" data-auto defer></script>\n'
@@ -1122,9 +1140,7 @@ def render_page(md_rel, page_out):
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="only light">
-{crawl_meta}<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
+{crawl_meta}<link rel="stylesheet" href="{css('assets/css/fonts.css')}">
 <link rel="stylesheet" href="{css('assets/css/icons.css')}">
 <link rel="stylesheet" href="{css('assets/css/clackos.css')}">
 <link rel="stylesheet" href="{css('assets/css/content.css')}">
@@ -1276,6 +1292,7 @@ def build_404():
 <meta name="color-scheme" content="only light">
 <title>Page not found — {esc(SITE_NAME)}</title>
 <meta name="robots" content="noindex,follow">
+<link rel="stylesheet" href="{at('assets/css/fonts.css')}">
 <link rel="stylesheet" href="{at('assets/css/icons.css')}">
 <link rel="stylesheet" href="{at('assets/css/clackos.css')}">
 <link rel="stylesheet" href="{at('assets/css/content.css')}">

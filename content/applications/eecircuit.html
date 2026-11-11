@@ -55,7 +55,7 @@ sim.addEventListener('load', () => {
       doc.head.appendChild(l);
       return l;
     };
-    add('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    add(new URL('../../assets/css/fonts.css', location.href).href);
     add(new URL('../../assets/themes/clackos.css', location.href).href);
     const skin = add(new URL('../../assets/css/eecircuit-skin.css', location.href).href);
     setTimeout(() => doc.head.appendChild(skin), 2500);

@@ -146,7 +146,7 @@ function skin() {
       doc.head.appendChild(link);
       return link;
     };
-    add('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    add(new URL('../../assets/css/fonts.css', location.href).href);
     /* the desktop's palette, so the skin below can refer to --paper and friends
      * even when this page runs outside ClackOS */
     add(new URL('../../assets/themes/clackos.css', location.href).href, 'clackos-fallback-theme');

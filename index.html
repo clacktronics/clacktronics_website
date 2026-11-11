@@ -27,22 +27,23 @@
      mirror, and served from the origin root beside sitemap.xml. -->
 <link rel="alternate" type="application/rss+xml" title="Clacktronics — blog" href="feed.xml">
 <!-- Inline @[model] embeds (assets/js/model-embed.js) and the 3D Model Viewer
-     app share one copy of three.js through these bare specifiers. The map costs
+     app share one copy of three.js through these bare specifiers. It is the
+     copy in vendor/three/, put there by scripts/vendor_web_deps.py. The map costs
      nothing until a module actually imports them, and it has to be in the
      document up front: it cannot be added once module loading has started. -->
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"
+    "three": "./vendor/three/build/three.module.min.js",
+    "three/addons/": "./vendor/three/examples/jsm/"
   }
 }
 </script>
 <!-- Phones get the same desktop as everyone else: the windows shrink to fit the
      screen. The plain mirror is still one tap away in the taskbar. -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Dosis:wght@500;600;700&display=swap" rel="stylesheet">
+<!-- IBM Plex Mono and Dosis, served from vendor/fonts/ rather than a font
+     service: see scripts/vendor_web_deps.py. -->
+<link rel="stylesheet" href="assets/css/fonts.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2309140d'/%3E%3Crect x='3' y='3' width='10' height='10' rx='2' fill='%234fae7d'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/icons.css">
 <link rel="stylesheet" href="assets/css/clackos.css">

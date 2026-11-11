@@ -9,6 +9,7 @@ index.html                  ← page shell (menu bar, desktop, taskbar)
 assets/
   css/clackos.css           ← desktop styling (the "template")
   css/content.css           ← styles for everything rendered from markdown
+  css/fonts.css             ← @font-face rules for the self-hosted typefaces (generated)
   backgrounds/              ← bitmap desktop tiles (PNG/JPEG/GIF/WebP/BMP)
   themes/                   ← one editable colour theme per CSS file
     clackos.css             ← default palette
@@ -784,6 +785,38 @@ Absolute metadata URLs use:
 
 `SUBDIR` is currently empty. Set it in `.github/workflows/deploy-purely.yml` to
 stage both deployed files and generated URLs in a subfolder.
+
+## Self-hosted fonts and three.js
+
+The typefaces and three.js are served from this repository rather than from
+Google Fonts and jsDelivr, so a page makes no request to either: nothing is
+disclosed to them, the desktop works when they are blocked or unreachable, and
+what a page loads cannot change underneath it.
+
+- **Fonts.** IBM Plex Mono (400–700) and Dosis (500–700) live in
+  `vendor/fonts/` as `.woff2`, with each family's OFL licence beside it.
+  `assets/css/fonts.css` declares them, and every page — `index.html`, each
+  app, the plain mirror and `404.html` — links that one stylesheet. A face is
+  only downloaded when text is actually set in it, so declaring every weight in
+  one file costs nothing. The Latin and Latin Extended subsets are included,
+  split by `unicode-range` exactly as Google served them.
+- **three.js.** `vendor/three/` holds the minified module build and the addons
+  the site imports (`OrbitControls`, the STL/OBJ/3MF/glTF loaders and the Draco,
+  Basis and meshopt decoders glTF needs), with their own imports followed. The
+  import maps in `index.html`, the 3D Model Viewer, OpenSCAD, the Markdown
+  Editor and the mirror's pages point `three` and `three/addons/` there.
+
+Both are written by `scripts/vendor_web_deps.py`, which downloads the pinned
+packages from npm. Re-run it to change a version or add a weight; to use a
+three addon that is not vendored yet, add it to `THREE_ADDONS` in the script
+first, or the import will 404. A new page gets the fonts by linking
+`assets/css/fonts.css` with the right number of `../`.
+
+Still loaded from a CDN, each by one application and only when it is used:
+MathLive and the Compute Engine (Graphing Calculator), `openscad-wasm`
+(OpenSCAD), `occt-import-js` (STEP files in the 3D Model Viewer) and the FFmpeg
+core (Video Lab, ClackMosh). KiCanvas's own bundle also asks Google Fonts for
+its interface faces on a page with a `@[kicanvas]` embed.
 
 ## Visitor statistics
 

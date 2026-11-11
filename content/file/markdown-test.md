@@ -31,6 +31,10 @@ Every heading gets an anchor id from its text. This paragraph shows
 keywords` — the last should be a green highlight, which is how prices like
 `£45`, part numbers like `RP2350` and colours like `#00ff88` are marked up.
 
+Asterisks inside a keyword stay asterisks, `a * b * c`, and so do the ones in a
+link's address: [first](https://example.com/a*b) and [second](https://example.com/c*d)
+should be two separate links with nothing in italics between them.
+
 A single line break inside a paragraph
 should stay a line break,
 so these three lines stack without a blank line between them.

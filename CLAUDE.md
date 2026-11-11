@@ -46,6 +46,7 @@ assets/
   css/clackos.css             desktop chrome and window styling
   css/content.css             everything rendered from markdown
   css/app.css                 shared look for application pages
+  css/fonts.css               GENERATED @font-face rules for the self-hosted typefaces
   css/{code,icons,file-manager,*-skin}.css
   themes/*.css                colour palettes — one file per theme, variables only
   backgrounds/                bitmap desktop wallpaper tiles
@@ -97,6 +98,7 @@ Editing any of these gets overwritten by the next script run or CI job:
 | `assets/backgrounds/*.png` | `scripts/build_background_tiles.py` |
 | `vendor/kicanvas/kicanvas-clackos.js` | `scripts/build_kicanvas_theme.py` |
 | `vendor/graphite/branding/` | `scripts/build_graphite_branding.mjs` |
+| `assets/css/fonts.css`, `vendor/fonts/`, `vendor/three/` | `scripts/vendor_web_deps.py` (needs npm + network; run by hand) |
 | `version.json`, `*.wasm.gz` | deploy workflow (gitignored) |
 
 **After editing anything under `content/`, regenerate the mirror:**
@@ -205,6 +207,10 @@ Preserve both modes when editing.
 
 A new app should:
 
+- link `../../assets/css/fonts.css` for the typefaces — they are self-hosted,
+  so never link Google Fonts — and import three.js through the `three` /
+  `three/addons/` import map pointing at `vendor/three/` (README § "Self-hosted
+  fonts and three.js");
 - link `../../assets/css/app.css` for the shared look, and use the theme CSS
   variables (`--ink`, `--paper`, `--paper-deep`, `--leaf`, `--menu-text`, …)
   rather than hardcoded colours, so themes apply;

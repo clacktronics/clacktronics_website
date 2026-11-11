@@ -110,7 +110,13 @@ function isMarkdownLink(s) {
 /* Inline markdown: `code` -> keyword span, **bold**, *italic*, ![alt](src),
  * [text](href). Links may use window:<md-path> to open a content window,
  * app:<registered-page>?<options> to launch an application, or action:<name>
- * to run a desktop action; anything else is a normal external link. */
+ * to run a desktop action; anything else is a normal external link.
+ *
+ * Emphasis is found by pattern, so anything that must be taken literally is
+ * lifted out of the line before that pass and put back after it: the contents
+ * of a code span, where `a * b * c` is arithmetic, and a link's destination,
+ * where an asterisk is part of an address. Left in place, the first came out in
+ * italics and the second had tags written into the middle of its URL. */
 function inline(s) {
   s = esc(s);
   /* images become placeholder tokens so the link pass can wrap them */
@@ -120,10 +126,20 @@ function inline(s) {
     imgs.push(src ? `<img src="${escInlineAttr(src)}" alt="${escInlineAttr(alt)}" loading="lazy">` : '');
     return `\x00${imgs.length - 1}\x00`;
   });
-  s = s.replace(/`([^`]+)`/g, '<span class="k">$1</span>');
+  const codes = [];
+  s = s.replace(/`([^`]+)`/g, (_, code) => {
+    codes.push(`<span class="k">${code}</span>`);
+    return `\x02${codes.length - 1}\x02`;
+  });
+  const hrefs = [];
+  s = markdownLinks(s, (text, href) => {
+    hrefs.push(href);
+    return `[${text}](\x01${hrefs.length - 1}\x01)`;
+  });
   s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
   s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>');
-  s = markdownLinks(s, (text, href) => {
+  s = markdownLinks(s, (text, token) => {
+    const href = hrefs[+token.slice(1, -1)];
     if (href.startsWith('window:'))
       return `<a href="#" data-action="open:${escInlineAttr(href.slice(7))}">${text.trim()}</a>`;
     if (href.startsWith('app:')) {
@@ -141,6 +157,7 @@ function inline(s) {
       ? `<a href="${escInlineAttr(siteUrl(safeHref))}" target="_blank" rel="noopener noreferrer">${text.trim()}</a>`
       : text.trim();
   });
+  s = s.replace(/\x02(\d+)\x02/g, (_, i) => codes[i]);
   s = s.replace(/\x00(\d+)\x00/g, (_, i) => imgs[i]);
   return s;
 }
