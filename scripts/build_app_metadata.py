@@ -63,7 +63,8 @@ BLOCK_RE = re.compile(
 CATEGORIES = {
     'Games': 'GameApplication',
     'Emulation': 'DeveloperApplication',
-    'Multimedia': 'MultimediaApplication',
+    'Audio & Video': 'MultimediaApplication',
+    'CAD': 'DesignApplication',
     'Maths & Programming': 'DeveloperApplication',
     'Electronics': 'DesignApplication',
     'Internet': 'UtilitiesApplication',
