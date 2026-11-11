@@ -537,6 +537,9 @@ def render_menu(md_rel, page_out):
             '</nav>') % (''.join(file_items), ''.join(apps))
 
 # ---------------------------------------------------------------- inline
+LINK_PATTERN = r'\[([^\]]+)\]\(([^)\s]+)\)'
+
+
 def inline(s, page_out):
     s = esc(s)
     imgs = []
@@ -549,12 +552,25 @@ def inline(s, page_out):
         return '\x00%d\x00' % (len(imgs) - 1)
 
     s = re.sub(r'!\[([^\]]*)\]\(([^)\s]+)\)', img_sub, s)
-    s = re.sub(r'`([^`]+)`', r'<span class="k">\1</span>', s)
+    # Code spans and link destinations are literal text, so they sit out the
+    # emphasis pass as tokens — the same order inline() in markdown.js uses.
+    codes, hrefs = [], []
+
+    def code_sub(m):
+        codes.append('<span class="k">%s</span>' % m.group(1))
+        return '\x02%d\x02' % (len(codes) - 1)
+
+    def href_sub(m):
+        hrefs.append(m.group(2))
+        return '[%s](\x01%d\x01)' % (m.group(1), len(hrefs) - 1)
+
+    s = re.sub(r'`([^`]+)`', code_sub, s)
+    s = re.sub(LINK_PATTERN, href_sub, s)
     s = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', s)
     s = re.sub(r'(^|[^*])\*([^*]+)\*', r'\1<i>\2</i>', s)
 
     def link_sub(m):
-        text, href = m.group(1).strip(), m.group(2)
+        text, href = m.group(1).strip(), hrefs[int(m.group(2)[1:-1])]
         if href.startswith('window:'):
             target = href[len('window:'):]
             if target in PAGES:
@@ -579,7 +595,8 @@ def inline(s, page_out):
                    '' if href.startswith('#') else ' target="_blank" rel="noopener noreferrer"',
                    text))
 
-    s = re.sub(r'\[([^\]]+)\]\(([^)\s]+)\)', link_sub, s)
+    s = re.sub(LINK_PATTERN, link_sub, s)
+    s = re.sub('\x02(\\d+)\x02', lambda m: codes[int(m.group(1))], s)
     s = re.sub('\x00(\\d+)\x00', lambda m: imgs[int(m.group(1))], s)
     return s
 

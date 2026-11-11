@@ -264,6 +264,11 @@ ErrorDocument 404 /404.html
   AddOutputFilterByType DEFLATE application/javascript text/javascript
   AddOutputFilterByType DEFLATE application/json application/manifest+json
   AddOutputFilterByType DEFLATE image/svg+xml application/xml
+  # The content itself. Every window is a markdown file fetched at runtime and
+  # the calendar is a CSV; depending on the host's mime.types these are served
+  # as their own types rather than text/plain, and would otherwise be the only
+  # text on the site sent uncompressed.
+  AddOutputFilterByType DEFLATE text/markdown text/x-markdown text/csv
 </IfModule>
 
 # ------------------------------------------------------------------ Caching

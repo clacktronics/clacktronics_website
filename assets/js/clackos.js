@@ -190,7 +190,7 @@ function syncBrowserThemeColor() {
 
 /* ---------------- Content loading ---------------- */
 const contentCache = new Map();   // md path -> { meta, html }
-const metaCache = new Map();      // md path -> frontmatter (null when missing)
+const sourceCache = new Map();    // md path -> promise of { meta, body }
 const windowTitles = new Map();   // md path -> title (for the taskbar)
 
 /* Menus and documents are edited in place, so a copy the browser kept from an
@@ -223,16 +223,29 @@ function upTarget(id, meta) {
   return dir.includes('/') ? dir + '.md' : HOME_PAGE;
 }
 
-/* Frontmatter only, for the title of a page that is not being opened. */
+/* A page's markdown, split into frontmatter and body, fetched once. A page is
+ * wanted twice over — for its title, by the up link of every page beneath it,
+ * and for its content when it is opened — and going up from a child is the
+ * commonest move there is, so both read the same copy. The promise is what is
+ * kept, which also folds two requests made at the same moment into one; a
+ * failed one is dropped so a page that was briefly unreachable can be retried. */
+function loadSource(id) {
+  let source = sourceCache.get(id);
+  if (!source) {
+    source = fetchFresh('content/' + id).then(async res => {
+      if (!res.ok) throw new Error(`Failed to load content/${id}: ${res.status}`);
+      return parseFrontmatter(await res.text());
+    });
+    source.catch(() => sourceCache.delete(id));
+    sourceCache.set(id, source);
+  }
+  return source;
+}
+
+/* Frontmatter only, for the title of a page that is not being opened: null
+ * when there is no such page. */
 async function loadMeta(id) {
-  if (metaCache.has(id)) return metaCache.get(id);
-  let meta = null;
-  try {
-    const res = await fetchFresh('content/' + id);
-    if (res.ok) meta = parseFrontmatter(await res.text()).meta;
-  } catch {}
-  metaCache.set(id, meta);
-  return meta;
+  try { return (await loadSource(id)).meta; } catch { return null; }
 }
 
 /* The "up" link every page but the top one carries, above its title. */
@@ -247,9 +260,7 @@ async function upLinkHTML(id, meta) {
 
 async function loadContent(id) {
   if (contentCache.has(id)) return contentCache.get(id);
-  const res = await fetchFresh('content/' + id);
-  if (!res.ok) throw new Error(`Failed to load content/${id}: ${res.status}`);
-  const { meta, body } = parseFrontmatter(await res.text());
+  const { meta, body } = await loadSource(id);
   const rec = { meta, html: mdToHtml(body, meta, await upLinkHTML(id, meta)) };
   contentCache.set(id, rec);
   windowTitles.set(id, meta.title || id);
@@ -665,7 +676,6 @@ async function openWindow(id, restore = null) {
        * for it: an app that talks to hardware (MIDI, serial) names the
        * permissions it needs in menu.json rather than having them assumed */
       if (def.allow) f.allow = def.allow;
-      else if (page === 'applications/clackbase.html') f.allow = 'midi';
       /* clicks inside the app should still raise its window */
       f.addEventListener('load', () => {
         try {
@@ -748,11 +758,14 @@ async function openWindow(id, restore = null) {
   /* fixed windows keep their exact size: no resize handles, no maximise */
   const isFixed = meta.fixed === true || String(meta.fixed) === 'true';
   if (isFixed) el.classList.add('fixed');
+  /* a title is free text from frontmatter: a quote in one would otherwise end
+   * the attribute it is written into and take the rest of the titlebar with it */
+  const titleAttr = escAttr(title);
   el.innerHTML = `
     <div class="titlebar">
-      <button class="dot close" aria-label="Close ${title}"></button>
-      <button class="dot min" aria-label="Minimise ${title}"></button>
-      ${isFixed ? '' : `<button class="dot max" aria-label="Maximise ${title}"></button>`}
+      <button class="dot close" aria-label="Close ${titleAttr}"></button>
+      <button class="dot min" aria-label="Minimise ${titleAttr}"></button>
+      ${isFixed ? '' : `<button class="dot max" aria-label="Maximise ${titleAttr}"></button>`}
       <span class="title">${iconHTML(meta.icon, 'title-icon')}<span class="title-label">${esc(title)}</span></span>
     </div>
     <div class="winbody"></div>
@@ -797,27 +810,21 @@ async function openWindow(id, restore = null) {
     if (e.target.classList.contains('dot')) return;
     e.preventDefault();
     focusWindow(el);
-    /* iframes must not swallow pointer events mid-drag */
-    document.body.classList.add('win-drag');
     const startX = e.clientX, startY = e.clientY;
     const origL = el.offsetLeft, origT = el.offsetTop;
-    const move = ev => {
+    /* measured once: a drag does not change the window's size, and reading it
+     * back after each move would make the browser lay the window out again on
+     * every pointer event */
+    const width = el.offsetWidth;
+    trackWindowGesture(rec, ev => {
       let nl = origL + (ev.clientX - startX);
       let nt = origT + (ev.clientY - startY);
-      nl = Math.min(Math.max(nl, -el.offsetWidth + 80), desktop.clientWidth - 80);
+      nl = Math.min(Math.max(nl, -width + 80), desktop.clientWidth - 80);
       nt = Math.min(Math.max(nt, 0), desktop.clientHeight - 40);
       el.style.left = nl + 'px';
       el.style.top = nt + 'px';
       rec.maxed = null;
-    };
-    const up = () => {
-      document.body.classList.remove('win-drag');
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      rememberWindowBox(rec);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
+    });
   });
 
   /* resize — all edges and corners */
@@ -826,14 +833,13 @@ async function openWindow(id, restore = null) {
       e.preventDefault();
       e.stopPropagation();
       focusWindow(el);
-      document.body.classList.add('win-drag');
       const dir = handle.dataset.dir;
       /* the floor gives way on a desktop too small to hold it */
       const minW = Math.min(MINW, desktop.clientWidth - FIT_MARGIN);
       const minH = Math.min(rec.minHeight, desktop.clientHeight - FIT_MARGIN);
       const startX = e.clientX, startY = e.clientY;
       const orig = { l: el.offsetLeft, t: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
-      const move = ev => {
+      trackWindowGesture(rec, ev => {
         const dx = ev.clientX - startX, dy = ev.clientY - startY;
         let { l, t, w, h } = orig;
         if (dir.includes('e')) w = Math.max(minW, orig.w + dx);
@@ -852,16 +858,7 @@ async function openWindow(id, restore = null) {
         el.style.width = w + 'px';
         el.style.height = h + 'px';
         rec.maxed = null;
-      };
-      const up = () => {
-        document.body.classList.remove('win-drag');
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        rememberWindowBox(rec);
-        scheduleSessionSave();
-      };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
+      });
     });
   });
 
@@ -874,6 +871,31 @@ async function openWindow(id, restore = null) {
   updateTaskbar();
   /* last, so the window expands from the box it has actually settled at */
   animateOpen(rec);
+}
+
+/* A titlebar drag and an edge resize are the same gesture with a different
+ * `move`: follow the pointer until it lets go, then record where the window was
+ * put. Both endings are listened for. A gesture the browser takes away — a
+ * touch it decides is a scroll, a pen lifted out of range — ends in
+ * pointercancel with no pointerup to follow, and one that was only waiting for
+ * pointerup would leave `win-drag` on the body, which is the class that stops
+ * every app's iframe taking pointer events. */
+function trackWindowGesture(rec, move) {
+  /* iframes must not swallow pointer events mid-drag */
+  document.body.classList.add('win-drag');
+  const end = () => {
+    document.body.classList.remove('win-drag');
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', end);
+    window.removeEventListener('pointercancel', end);
+    rememberWindowBox(rec);
+    /* the save that focusing the window scheduled may already have run, with
+     * the box the window started from */
+    scheduleSessionSave();
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', end);
+  window.addEventListener('pointercancel', end);
 }
 
 /* Grow or shrink a window so its body is exactly the requested size, keeping
@@ -931,7 +953,7 @@ function focusWindow(el) {
   zTop += 1;
   el.style.zIndex = zTop;
   document.querySelectorAll('.window').forEach(w => w.classList.toggle('inactive', w !== el));
-  updateTaskbar();
+  syncTaskbar();
 }
 
 /* The window record a node sits in, if any. */
@@ -1700,31 +1722,46 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveS
 /* scroll does not bubble, so reading position is picked up in the capture phase */
 desktop.addEventListener('scroll', scheduleSessionSave, true);
 
-/* ---------------- Taskbar ---------------- */
+/* ---------------- Taskbar ----------------
+ * Two jobs, kept apart. The row of buttons only changes when a window opens,
+ * closes or turns into another page, and is rebuilt then. Which button is lit
+ * changes on every click into any window, and for that the buttons already
+ * there are re-marked in place — rebuilding the row, listeners and all, on each
+ * pointerdown was the bulk of what a click on the desktop cost. */
 function updateTaskbar() {
   tasksEl.innerHTML = '';
-  const front = frontWindow();
   windows.forEach((rec, id) => {
-    const title = windowTitles.get(id) || id;
     const b = document.createElement('button');
     b.className = 'task';
     /* the box a window minimises into and expands back out of */
     b.dataset.windowId = id;
-    if (rec.minimised) b.classList.add('minimised');
-    if (front && front.id === id && !rec.minimised) b.classList.add('active');
-    b.innerHTML = `${iconHTML(rec.icon || 'file-text', 'task-icon')}<span class="lbl">${esc(title)}</span>`;
-    b.setAttribute('aria-label', title + (rec.minimised ? ' (minimised)' : ''));
+    b.innerHTML = `${iconHTML(rec.icon || 'file-text', 'task-icon')}<span class="lbl">${esc(windowTitles.get(id) || id)}</span>`;
+    /* the front window is looked up when the button is pressed, not when it
+     * was made: the row now outlives any number of changes of focus */
     b.addEventListener('click', () => {
       if (rec.minimised) {
-        openWindow(id);                      /* restore + focus */
-      } else if (front && front.id === id) {
-        minimiseWindow(id);                  /* click active task = minimise */
+        openWindow(rec.id);                  /* restore + focus */
+      } else if (frontWindow() === rec) {
+        minimiseWindow(rec.id);              /* click active task = minimise */
       } else {
         focusWindow(rec.el);                 /* bring to front */
       }
     });
     tasksEl.appendChild(b);
   });
+  syncTaskbar();
+}
+
+function syncTaskbar() {
+  const front = frontWindow();
+  for (const b of tasksEl.children) {
+    const rec = windows.get(b.dataset.windowId);
+    if (!rec) continue;
+    const title = windowTitles.get(rec.id) || rec.id;
+    b.classList.toggle('minimised', rec.minimised);
+    b.classList.toggle('active', rec === front);
+    b.setAttribute('aria-label', title + (rec.minimised ? ' (minimised)' : ''));
+  }
   /* every open, close, focus and minimise ends here, which makes this the one
    * place the session needs to be marked dirty */
   scheduleSessionSave();
@@ -2045,12 +2082,14 @@ function loadEventsPanel() {
   return eventsLoading;
 }
 
-function openEventsPanel() {
+/* `refresh` is off for the one caller that has only just loaded the list and
+ * is opening the panel to show it. */
+function openEventsPanel(refresh = true) {
   closeMenus();                       /* also closes this panel, so open after */
   eventsPanel.hidden = false;
   eventsPill.setAttribute('aria-expanded', 'true');
   if (!eventsList.childElementCount) eventsList.innerHTML = '<p class="empty">Loading…</p>';
-  loadEventsPanel();
+  if (refresh) loadEventsPanel();
 }
 
 /* Opening the desktop with the events showing, once the list is in place rather
@@ -2063,7 +2102,7 @@ document.addEventListener('pointerdown', () => { visitorHasClicked = true; },
 
 async function greetWithEvents() {
   await loadEventsPanel();
-  if (!visitorHasClicked) openEventsPanel();
+  if (!visitorHasClicked) openEventsPanel(false);
 }
 
 eventsPill.addEventListener('click', event => {
@@ -2161,9 +2200,18 @@ observeCpuPressure();
 
 /* ---------------- Boot ---------------- */
 async function boot() {
-  const site = await loadJSON('content/site.json');
+  /* Nothing here waits for anything it does not need. The whitelist does not
+   * depend on site.json, so the two load together; the menus do, but not on the
+   * wallpaper list — which asks GitHub, and can take a second on a slow
+   * connection — so they are requested before that is awaited. */
+  const [site] = await Promise.all([loadJSON('content/site.json'), loadLinkWhitelist()]);
   if (typeof site.repo === 'string' && /^[\w.-]+\/[\w.-]+$/.test(site.repo)) siteRepo = site.repo;
-  await loadLinkWhitelist();
+  const menuDefs = Promise.all(
+    site.menus.map(folder => loadJSON(`content/${folder}/menu.json`))
+  );
+  /* reported by the await further down; this only stops a failure that lands
+   * before then from being logged a second time as unhandled */
+  menuDefs.catch(() => {});
   site.backgrounds = await window.ClackOSBackgrounds.list(site);
   loadWebsiteBackgrounds(site);
   availableThemes = new Set((site.themes || []).map(safeThemeName));
@@ -2182,9 +2230,7 @@ async function boot() {
   applyTheme(savedTheme && availableThemes.has(safeThemeName(savedTheme)) ? savedTheme : site.theme);
   updateTaskbar();
 
-  const defs = await Promise.all(
-    site.menus.map(folder => loadJSON(`content/${folder}/menu.json`))
-  );
+  const defs = await menuDefs;
 
   /* menus fill the bar from the left; the date and clock keep the right-hand end */
   const rightSide = document.getElementById('menubar-right');
