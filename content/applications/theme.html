@@ -570,7 +570,7 @@ function loadCss(css, name) {
 
 async function getSiteConfig(fresh = false) {
   if (siteConfig && !fresh) return siteConfig;
-  const res = await fetch(new URL(`../site.json?_clack=${Date.now()}`, appBaseUrl), { cache: 'no-store' });
+  const res = await fetch(new URL('../site.json', appBaseUrl), { cache: 'no-cache' });
   if (!res.ok) throw new Error(`Could not load content/site.json (${res.status}).`);
   siteConfig = await res.json(); return siteConfig;
 }
@@ -580,7 +580,7 @@ async function getSiteConfig(fresh = false) {
 async function loadWebsiteTheme(name, auto = false) {
   name = safeName(name);
   const seq = ++loadSeq;
-  const res = await fetch(new URL(`../../assets/themes/${encodeURIComponent(name)}?_clack=${Date.now()}`, appBaseUrl), { cache: 'no-store' });
+  const res = await fetch(new URL(`../../assets/themes/${encodeURIComponent(name)}`, appBaseUrl), { cache: 'no-cache' });
   if (!res.ok) throw new Error(`Could not load ${name} (${res.status}).`);
   const css = await res.text();
   if (seq !== loadSeq) return;

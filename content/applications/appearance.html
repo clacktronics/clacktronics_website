@@ -122,7 +122,7 @@ function updatePreview() {
 
 async function load() {
   try {
-    const response = await fetch(new URL(`../site.json?_clack=${Date.now()}`, appBaseUrl), { cache: 'no-store' });
+    const response = await fetch(new URL('../site.json', appBaseUrl), { cache: 'no-cache' });
     if (!response.ok) throw new Error(response.status);
     const site = await response.json();
     siteConfig = site;

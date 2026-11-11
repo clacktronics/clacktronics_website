@@ -796,7 +796,7 @@ function deleteEvent() {
 /* ---------------- committing to GitHub ---------------- */
 async function getSiteConfig() {
   if (siteConfig) return siteConfig;
-  const res = await fetch(new URL(`../site.json?_clack=${Date.now()}`, appBase), { cache: 'no-store' });
+  const res = await fetch(new URL('../site.json', appBase), { cache: 'no-cache' });
   if (!res.ok) throw new Error(`Could not load content/site.json (${res.status}).`);
   siteConfig = await res.json();
   return siteConfig;

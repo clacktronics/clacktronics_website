@@ -829,6 +829,29 @@ removed from the host manually, for example:
 rm public_html/CLAUDE.md public_html/.gitignore
 ```
 
+### Caching
+
+Nearly everything on the site is updated in place under the same filename, so
+the root `.htaccess` sends `Cache-Control: no-cache` for the text files — HTML,
+JS, CSS, JSON, markdown, CSV and XML. That keeps the browser's copy but makes it
+revalidate on every use: an unchanged file costs an empty `304`, and a deploy
+shows up on the next request rather than whenever a heuristic expires.
+
+The desktop asks for the same thing from its side. `fetchFresh` in
+`assets/js/clackos.js` (and the events reader and the editors that read
+`site.json`) fetch with `cache: 'no-cache'`, so menus and markdown are
+revalidated even on a host that sends no header at all — `python3 -m
+http.server` included. They do not add a cache-busting query string: a unique
+URL per request can never be answered with a `304`, so every visit downloaded
+every file in full.
+
+The one exception is `vendor/graphite/assets/`, whose filenames carry a content
+hash and are cached for a year by that folder's own `.htaccess`. It sets the
+header from a `<FilesMatch>` because Apache applies file sections after
+directory ones — a bare `Header` line there would lose to the root rule.
+
+Images, fonts, media and Wasm get no header and keep the host's defaults.
+
 ### The move from `/temp/` to the root
 
 The site was previously staged under `/temp/`. The root `.htaccess` redirects

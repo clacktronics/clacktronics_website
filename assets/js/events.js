@@ -225,7 +225,10 @@ function mergeSources(own, mirrored) {
   return [...own, ...mirrored.filter(event => !claimed.has(`${event.date} ${event.title.toLowerCase()}`))];
 }
 
-const fresh = path => new URL(`${path}?_clack=${Date.now()}`, SITE_ROOT);
+/* Asked for with `no-cache`, so the browser revalidates its copy each time: a
+ * calendar committed since the last look is picked up, and one that has not
+ * changed costs an empty 304 rather than the whole file again. */
+const fresh = path => fetch(new URL(path, SITE_ROOT), { cache: 'no-cache' });
 
 /* Both sources, merged. The CSV is the calendar; the mirror is a bonus that is
  * simply missing until the workflow has run once, so a failure there never
@@ -237,7 +240,7 @@ async function load() {
   };
 
   try {
-    const res = await fetch(fresh(LUMA_PATH), { cache: 'no-store' });
+    const res = await fresh(LUMA_PATH);
     if (res.ok) {
       const { list, source } = eventsFromLuma(await res.json());
       result.mirrored = list;
@@ -251,7 +254,7 @@ async function load() {
   }
 
   try {
-    const res = await fetch(fresh(CSV_PATH), { cache: 'no-store' });
+    const res = await fresh(CSV_PATH);
     if (!res.ok) throw new Error(`Could not load the events CSV (${res.status}).`);
     const { list, skipped } = eventsFromCsv(await res.text());
     result.own = list;
