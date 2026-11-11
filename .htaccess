@@ -266,7 +266,30 @@ ErrorDocument 404 /404.html
   AddOutputFilterByType DEFLATE image/svg+xml application/xml
 </IfModule>
 
-# Long-lived caching is not set here. It is scoped to the one directory where
-# it is provably safe — see vendor/graphite/assets/.htaccess. Everything else,
-# including assets/js/clackos.js and assets/css/, is updated in place, so it
-# keeps whatever the host already does and a deploy shows up immediately.
+# ------------------------------------------------------------------ Caching
+# The site's own text files — pages, scripts, stylesheets, menus, markdown, the
+# events CSV, the feed — are updated in place under the same names, so a browser
+# must never use a copy without asking. "no-cache" does not mean "do not cache":
+# the browser keeps its copy and revalidates it on every use, and Apache answers
+# an unchanged file with an empty 304 from its ETag / Last-Modified. A deploy
+# therefore shows up on the next request, and a file that has not changed is
+# never downloaded twice.
+#
+# Without a header the choice is left to each browser's heuristic, which keeps
+# a file for a fraction of its age: a script untouched for a month could be
+# served stale for days after a deploy, next to freshly fetched content. The
+# desktop's own fetches (fetchFresh in assets/js/clackos.js) ask for
+# revalidation themselves; this covers what the browser loads from markup.
+#
+# Long-lived caching is scoped to the one directory where it is provably safe —
+# see vendor/graphite/assets/.htaccess, which overrides this. It does so from a
+# <FilesMatch> of its own because file sections are applied after plain
+# directory ones: a bare Header line there would be overwritten by this block.
+#
+# Images, fonts, media and Wasm are left to the host's defaults: they are large,
+# rarely replaced under the same name, and not worth a round trip each.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(?:html|js|mjs|css|json|md|csv|xml)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

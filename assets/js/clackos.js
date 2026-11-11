@@ -193,13 +193,15 @@ const contentCache = new Map();   // md path -> { meta, html }
 const metaCache = new Map();      // md path -> frontmatter (null when missing)
 const windowTitles = new Map();   // md path -> title (for the taskbar)
 
-/* GitHub Pages and other static hosts may cache JSON and Markdown longer than
- * the HTML shell. A unique query plus no-store prevents a new shell from being
- * paired with an older menu or document after a deployment. */
+/* Menus and documents are edited in place, so a copy the browser kept from an
+ * earlier visit must never be paired with a newer shell after a deployment.
+ * `no-cache` has the browser ask the server about its copy on every fetch: an
+ * unchanged file comes back as an empty 304 and is read from the cache, a
+ * changed one arrives whole. This used to be a unique query string plus
+ * `no-store`, which was just as fresh but downloaded every file in full on
+ * every visit, because no two requests ever shared a URL to revalidate. */
 function fetchFresh(path) {
-  const url = new URL(path, location.href);
-  url.searchParams.set('_clack', Date.now());
-  return fetch(url, { cache: 'no-store' });
+  return fetch(new URL(path, location.href), { cache: 'no-cache' });
 }
 
 async function loadJSON(path) {

@@ -2,6 +2,13 @@
 # changed file always arrives under a new name and this can never serve stale
 # content. Nowhere else on the site has that property, which is why the long
 # cache is scoped here rather than set in the root .htaccess.
+#
+# The root .htaccess sets "no-cache" on text files from a <FilesMatch>. File
+# sections are merged after directory ones, parent before child, so this has to
+# be a file section too — as a bare Header line it would be applied first and
+# then overwritten for every .js and .css in here.
 <IfModule mod_headers.c>
-  Header set Cache-Control "public, max-age=31536000, immutable"
+  <FilesMatch ".">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
 </IfModule>
