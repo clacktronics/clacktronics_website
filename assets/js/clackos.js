@@ -407,6 +407,12 @@ function buildWallpaperMenu(container) {
 
 /* ---------------- Windows ---------------- */
 const windows = new Map();
+/* Document ids whose markdown is being fetched for a window that is not in the
+ * map yet. A window is only registered once its content has arrived, so
+ * without this a second click on the same link during the fetch finds nothing
+ * open and builds a second window under the same id — one of the two then
+ * drops out of the map and can never be closed from its own buttons. */
+const pendingOpens = new Set();
 /* apps are standalone pages under content/<menu>/ shown in an iframe;
  * defs are registered from menu.json entries at boot */
 const appDefs = new Map();
@@ -619,6 +625,8 @@ async function openWindow(id, restore = null) {
     updateTaskbar();
     return;
   }
+  /* already on its way: the open in flight will put it on the desktop */
+  if (pendingOpens.has(id)) return;
 
   let meta, contentHtml, mount = null;
   if (id.startsWith('app:')) {
@@ -675,11 +683,14 @@ async function openWindow(id, restore = null) {
     };
   } else {
     let content;
+    pendingOpens.add(id);
     try {
       content = await loadContent(id);
     } catch (err) {
       console.error(err);
       return;
+    } finally {
+      pendingOpens.delete(id);
     }
     meta = {
       ...content.meta,
@@ -939,13 +950,20 @@ async function navigateWindow(rec, id) {
     updateTaskbar();
     return;
   }
+  if (pendingOpens.has(id)) return;
   let content;
+  pendingOpens.add(id);
   try {
     content = await loadContent(id);
   } catch (err) {
     console.error(err);
     return;
+  } finally {
+    pendingOpens.delete(id);
   }
+  /* closed while its next page was loading: there is no window left to re-key,
+   * and putting it back in the map would leave a taskbar button for nothing */
+  if (windows.get(rec.id) !== rec) return;
   windows.delete(rec.id);
   rec.id = id;
   windows.set(id, rec);
