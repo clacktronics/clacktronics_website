@@ -31,7 +31,12 @@
    * is right for content/applications/paint.html and for the apps a directory
    * deeper alike, and works on file:// as well as over http */
   const depth = path.slice(marker + 1).split('/').length - 1;
-  const home = '../'.repeat(depth) + 'index.html';
+  /* ?open= asks the desktop to open this app in a window when it boots, so the
+   * link lands on the desktop with the app you were using in front. The id is
+   * the page's path under content/, which is what the desktop registers apps
+   * by; a page that is not a registered app is simply ignored there. */
+  const appId = 'app:' + path.slice(marker + '/content/'.length);
+  const home = '../'.repeat(depth) + 'index.html?open=' + encodeURIComponent(appId).replace(/%2F/g, '/').replace(/%3A/g, ':');
 
   function addHomeLink() {
     if (document.querySelector('.' + HOME_CLASS)) return;

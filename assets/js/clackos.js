@@ -2256,6 +2256,23 @@ async function boot() {
     restored = await restoreSession(saved);
   }
   if (!restored) for (const id of site.boot || []) await openWindow(id);
+
+  /* ?open= names one window to bring to the front on arrival: the plain
+   * mirror's "Switch to the ClackOS desktop version" link and a standalone
+   * app's "ClackOS" link both carry the page they were on, so the visitor
+   * lands on the desktop looking at the same thing rather than at the boot
+   * list. It is opened on top of whatever desktop was restored, not instead of
+   * it, and it is as untrusted as a shared link — safeWindowId and openWindow
+   * hold it to registered apps and markdown under content/. The parameter is
+   * then dropped, so a reload is an ordinary visit to this browser's desktop. */
+  const params = new URLSearchParams(location.search);
+  if (params.has('open')) {
+    const id = safeWindowId(params.get('open'));
+    if (id) await openWindow(id);
+    params.delete('open');
+    const query = params.toString();
+    history.replaceState(null, '', location.pathname + (query ? `?${query}` : '') + location.hash);
+  }
   saveSession();
 
   /* The desktop opens with the events showing. This is a calendar of what is

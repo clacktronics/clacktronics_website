@@ -1134,6 +1134,13 @@ def render_page(md_rel, page_out):
             if '<img ' in article else '')
     theme = site.get('theme', 'clackos.css')
     css = lambda path: esc(resolve_site_url(path, page_out))
+    # The way back to the desktop opens this page's own window there (the
+    # desktop reads ?open= at boot), so switching versions keeps your place.
+    # The markdown path relative to content/ is the desktop's window id.
+    # The query is added after resolving, since normpath would treat its
+    # slashes as part of the path.
+    desktop_href = (resolve_site_url('index.html', page_out)
+                    + '?desktop=1&open=' + urllib.parse.quote(md_rel, safe='/'))
     page = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1155,7 +1162,7 @@ def render_page(md_rel, page_out):
 {article}
 </div>
 </main>
-<div id="plain-site-footer"><a href="{esc(resolve_site_url('index.html?desktop=1', page_out))}">Switch to the ClackOS desktop version</a></div>
+<div id="plain-site-footer"><a href="{esc(desktop_href)}">Switch to the ClackOS desktop version</a></div>
 <script>
 (() => {{
   const topMenus = [...document.querySelectorAll('.plain-menu')];

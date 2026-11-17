@@ -604,6 +604,13 @@ Fragments are not sent to the host. Shared links can open only registered apps
 and safe Markdown paths under `content/`. If app state makes the URL too large,
 only the layout is included.
 
+A `?open=` query names one window to bring to the front at boot, on top of
+whatever desktop was restored — `index.html?open=file/blog.md` or
+`index.html?open=app:applications/paint.html`. The plain mirror's footer link
+and a standalone app's "ClackOS" link use it so switching to the desktop keeps
+your place. It passes the same checks as a shared link and is removed from the
+address once read.
+
 **View → Forget saved desktop** removes the snapshot and disables saving until
 the next load. Reboot options differ in scope:
 
@@ -690,7 +697,9 @@ window, and ignored when the app runs outside ClackOS.
 `plain/` is a generated, crawlable HTML mirror of the Markdown content. It keeps
 the theme, embeds, sanitisation, and heading anchors; `window:` links become
 normal page links and `app:` links open standalone apps. Entries marked
-`"plain": false` are omitted. The desktop and mirror link to each other.
+`"plain": false` are omitted. The desktop and mirror link to each other: each
+mirror page's "Switch to the ClackOS desktop version" link carries
+`?open=<markdown path>`, so the desktop opens with that page's window in front.
 
 Do not edit `plain/` directly. The generator also writes `sitemap.xml`,
 `robots.txt`, `feed.xml`, and `404.html`. The
