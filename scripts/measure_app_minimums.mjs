@@ -10,10 +10,14 @@
 //   - the page itself scrolls (the document, its body, or for an integrated
 //     app the window body around its shadow root);
 //   - something sticks out past the edge that clips it, or a short scrolling
-//     strip (a toolbar, a menu bar) has run out of room sideways.
+//     strip (a toolbar, a menu bar) has run out of room sideways;
+//   - something is squashed instead: an editor, list or page view collapsed
+//     below 100px, a label spilling out of its button, or two neighbouring
+//     blocks piled on top of each other.
 //
 // Panels that scroll by design are left alone: a long settings sidebar, a
-// track list or a CodeMirror editor scrolling is the app working, not failing.
+// track list or a CodeMirror editor scrolling is the app working, not failing,
+// as long as it keeps enough room to be worked in.
 //
 // Narrowing a responsive app makes it taller, as it wraps and finally stacks
 // into one column, so the two minimums cannot be found independently. The
@@ -100,8 +104,31 @@ function probe(title, W, H) {
 		if (r.width < 2 || r.height < 2) continue;
 		const cs = win.getComputedStyle(e);
 		if (cs.visibility === "hidden" || cs.position === "fixed" || cs.opacity === "0") continue;
-		if (e.closest(".CodeMirror, dialog:not([open]), [hidden], .modal, .paint-modal, .clack-fm-modal")) continue;
+		if (e.closest("dialog:not([open]), [hidden], .modal, .paint-modal, .clack-fm-modal")) continue;
 		if (e.offsetParent === null && !["BODY", "HTML"].includes(e.tagName) && !(e instanceof win.SVGElement)) continue;
+		/* an editor, list or page view squeezed to a sliver still "fits" */
+		const scrolls = /auto|scroll/.test(cs.overflowX + cs.overflowY) || e.matches("textarea, .CodeMirror");
+		if (scrolls && !e.matches("select, input") && !e.closest(".rm-dd, .rm-bar, nav")
+			&& (e.scrollHeight > e.clientHeight + 2 || e.matches("textarea, .CodeMirror"))) {
+			if (e.clientWidth < 100) note("x", 100 - e.clientWidth, e);
+			else if (e.clientHeight < 100) note("y", 100 - e.clientHeight, e);
+		}
+		/* CodeMirror's insides overhang its edges by design */
+		if (e.closest(".CodeMirror") && !e.matches(".CodeMirror")) continue;
+		/* a label wider than the button it is printed on */
+		if (!e.children.length && e.clientWidth > 0 && cs.overflowX === "visible" && cs.whiteSpace !== "normal"
+			&& /\S/.test(e.textContent) && !e.closest(".rm-dd"))
+			note("x", e.scrollWidth - e.clientWidth, e);
+		/* neighbouring blocks squeezed on top of one another */
+		const next = e.nextElementSibling;
+		if (next && cs.position !== "absolute" && /^(block|flex|grid|flow-root|inline-block|inline-flex)$/.test(cs.display)) {
+			const ncs = win.getComputedStyle(next), nr = next.getBoundingClientRect();
+			if (ncs.display === cs.display && !/absolute|fixed/.test(ncs.position) && nr.width > 2 && nr.height > 2) {
+				const ix = Math.min(r.right, nr.right) - Math.max(r.left, nr.left);
+				const iy = Math.min(r.bottom, nr.bottom) - Math.max(r.top, nr.top);
+				if (ix > 4 && iy > 4) note("y", Math.min(ix, iy), e);
+			}
+		}
 		/* a toolbar that scrolls sideways has run out of room */
 		if (/auto|scroll/.test(cs.overflowX) && e.clientHeight < 90 && !e.matches("textarea, input, pre, code, .rm-dd"))
 			note("x", e.scrollWidth - e.clientWidth, e);
