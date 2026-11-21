@@ -57,7 +57,7 @@
         <div class="field"><label for="hp-input" title="Set the panel width in Eurorack Horizontal Pitch (1 HP = 5.08mm).">Panel width <span class="hint">?</span></label><div class="control-unit"><input type="number" id="hp-input" value="10" min="1" max="168"><span class="unit">HP</span></div></div>
         <div class="field wide"><label for="format-select" title="Choose standard 3U (Doepfer) or 1U formats (Intellijel/Pulp Logic).">Rack format <span class="hint">?</span></label><select id="format-select"><option value="128.5">Standard 3U · 128.5 mm</option><option value="39.65">Intellijel 1U · 39.65 mm</option><option value="43.2">Pulp Logic 1U · 43.2 mm</option></select></div>
         <div class="field wide"><label for="hole-select" title="Oval slots allow for slight mounting adjustments in the case. Circular holes require high precision.">Mounting hole style <span class="hint">?</span></label><select id="hole-select"><option value="oval">M3 oval slot · 3.2 × 4.2 mm</option><option value="circle">M3 round · 3.2 mm</option></select></div>
-        <div class="field wide"><label for="hole-count-select" title="Auto assigns 2 holes for ≤8HP and 4 holes for >8HP. Override here for custom configurations.">Mounting hole count <span class="hint">?</span></label><select id="hole-count-select"><option value="auto">Auto · 2 ≤8HP, 4 >8HP</option><option value="2">2 holes · centre</option><option value="4">4 holes · corners</option><option value="6">6 holes · corners + centre</option></select></div>
+        <div class="field wide"><label for="hole-count-select" title="Auto assigns 2 holes for ≤8HP and 4 holes for >8HP. Override here for custom configurations.">Mounting hole <span class="hint">?</span></label><select id="hole-count-select"><option value="auto">Auto · 2 ≤8HP, 4 >8HP</option><option value="2">2 holes · left</option><option value="2-centre">2 holes · centre</option><option value="4">4 holes · corners</option><option value="6">6 holes · corners + centre</option></select></div>
         <div class="field"><label for="pcb-height-input" title="Vertical size of the generated internal circuit board. Maximum recommended heights are 110mm for 3U, 22.15mm for Intellijel 1U, and 25.68mm for Pulp Logic 1U.">Main PCB height <span class="hint">?</span></label><div class="control-unit"><input type="number" id="pcb-height-input" value="100" min="10" max="128.5" step="0.01"><span class="unit">mm</span></div><p class="warning" id="pcb-height-warning">Maximum for 3U: 110 mm.</p></div>
         <div class="field"><label for="pcb-count-select" title="How many circuit board projects to generate. The first carries the jacks and pots; extras are duplicates of it you can develop separately.">Circuit boards <span class="hint">?</span></label><select id="pcb-count-select"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></div>
         <details class="collapse"><summary>Allowances</summary>
@@ -196,12 +196,13 @@
             } else {
                 targetCount = parseInt(state.holeCountMode);
             }
+            const centred = state.holeCountMode === '2-centre';
 
             const edgeOffset = 7.5;
 
             if (targetCount === 2) {
                 let leftPoint = edgeOffset;
-                if (state.hp <= 2) {
+                if (centred || state.hp <= 2) {
                     leftPoint = width / 2;
                 }
                 holes.push({ x: leftPoint, y: yTop });
@@ -992,8 +993,11 @@ Open the .kicad_pro in each folder to start work.
             safeBind('hp-input', 'input', e => { if (parseInt(e.target.value) > 0) { state.hp = parseInt(e.target.value); updatePreview(); } });
             safeBind('format-select', 'change', e => {
                 state.heightFormat = parseFloat(e.target.value);
+                // Each format gets its own default board height. 3U needs a branch of its own,
+                // or switching to 1U and back leaves the board stuck at the 1U height.
                 if (state.heightFormat === 39.65) state.pcbHeight = 22.15;
                 else if (state.heightFormat === 43.2) state.pcbHeight = 25.68;
+                else state.pcbHeight = 100;
                 const heightInput = byId('pcb-height-input');
                 if (heightInput) heightInput.value = state.pcbHeight;
                 updatePreview();
