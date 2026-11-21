@@ -116,7 +116,8 @@
             heightFormat: 128.5,
             tolerance: 0.3,
             holeStyle: 'oval',
-            holeCountMode: 'auto',
+            holeCountMode: 'auto',     // the layout in use
+            holeCountRequest: 'auto',  // the layout last picked, restored when the panel widens again
             pcbHeight: 100,
             pcbTolerance: 0.5,
             showPanel: true,
@@ -216,11 +217,17 @@
             // step at all — at 3HP the pairs would land on top of each other and at 2HP the
             // "right" pair would fall left of the left one — so it gets two holes instead.
             const maxGridSteps = Math.floor((width - edgeOffset - 4) / 5.08);
+
+            // A "centre" hole has to land where the case's rail holes or sliding nuts can be, so
+            // it sits on the same HP grid as the left hole, at the step nearest the middle of the
+            // panel, rather than at the literal centre. The 6-hole layout's middle pair and the
+            // 2-hole centre option share this position.
+            const gridCentreX = edgeOffset + (Math.max(0, Math.round(((width / 2) - edgeOffset) / 5.08)) * 5.08);
             if (targetCount > 2 && maxGridSteps < 1) targetCount = 2;
 
             if (targetCount === 2) {
-                let leftPoint = edgeOffset;
-                if (centred || state.hp <= 2) {
+                let leftPoint = centred ? gridCentreX : edgeOffset;
+                if (state.hp <= 2) {
                     leftPoint = width / 2;
                 }
                 holes.push({ x: leftPoint, y: yTop });
@@ -235,8 +242,7 @@
                 holes.push({ x: rightHoleX, y: yBot });
 
                 if (targetCount === 6) {
-                    const stepsToCenter = Math.round(((width / 2) - edgeOffset) / 5.08);
-                    const xMid = edgeOffset + (stepsToCenter * 5.08);
+                    const xMid = gridCentreX;
 
                     if (xMid > edgeOffset + 1 && xMid < rightHoleX - 1) {
                         holes.push({ x: xMid, y: yTop });
@@ -1029,7 +1035,7 @@ Open the .kicad_pro in each folder to start work.
                 schedulePreview();
             });
 
-            bindNumber('hp-input', value => { state.hp = value; }, value => parseInt(value, 10));
+            bindNumber('hp-input', value => { state.hp = value; syncHoleOptions(); }, value => parseInt(value, 10));
             safeBind('format-select', 'change', e => {
                 state.heightFormat = parseFloat(e.target.value);
                 state.pcbHeight = currentFormat().defaultPCB;
@@ -1038,7 +1044,11 @@ Open the .kicad_pro in each folder to start work.
                 schedulePreview();
             });
             safeBind('hole-select', 'change', e => { state.holeStyle = e.target.value; schedulePreview(); });
-            safeBind('hole-count-select', 'change', e => { state.holeCountMode = e.target.value; schedulePreview(); });
+            safeBind('hole-count-select', 'change', e => {
+                state.holeCountRequest = e.target.value;
+                syncHoleOptions();
+                schedulePreview();
+            });
             bindNumber('tolerance-input', value => { state.tolerance = value; });
             bindNumber('pcb-height-input', value => { state.pcbHeight = value; });
             bindNumber('pcb-tolerance-input', value => { state.pcbTolerance = value; });
@@ -1148,8 +1158,36 @@ Open the .kicad_pro in each folder to start work.
             }
         }
 
+        // The hole layouts a panel is wide enough for: six holes need 7HP and four need 5HP.
+        // Layouts that do not fit are taken out of the list, and a choice that no longer fits
+        // steps down to the next smaller layout (six to four, four to two on the left, which
+        // keeps the left hole where it was). The choice itself is remembered, so widening the
+        // panel again brings it back.
+        const HOLE_LAYOUT_MIN_HP = { '6': 7, '4': 5 };
+        const HOLE_LAYOUT_STEP_DOWN = { '6': '4', '4': '2' };
+        function syncHoleOptions() {
+            let mode = state.holeCountRequest;
+            while (HOLE_LAYOUT_MIN_HP[mode] && state.hp < HOLE_LAYOUT_MIN_HP[mode]) mode = HOLE_LAYOUT_STEP_DOWN[mode];
+            state.holeCountMode = mode;
+
+            const select = byId('hole-count-select');
+            if (!select) return;
+            [...select.options].forEach(option => {
+                const fits = !(HOLE_LAYOUT_MIN_HP[option.value] && state.hp < HOLE_LAYOUT_MIN_HP[option.value]);
+                // Safari ignores `hidden` on an <option>, so it is disabled as well.
+                option.hidden = !fits;
+                option.disabled = !fits;
+            });
+            select.value = mode;
+        }
+
         // Browsers can restore form values across a reload, so trust the DOM over the defaults.
         function syncStateFromInputs() {
+            const hpInput = byId('hp-input');
+            const hp = hpInput ? parseInt(hpInput.value, 10) : NaN;
+            if (hp > 0) state.hp = hp;
+            const holeSelect = byId('hole-count-select');
+            if (holeSelect?.value) state.holeCountRequest = holeSelect.value;
             const versionSelect = byId('kicad-version-select');
             if (versionSelect && KICAD_TARGETS[versionSelect.value]) state.kicadVersion = versionSelect.value;
             const projectInput = byId('project-name-input');
@@ -1160,6 +1198,7 @@ Open the .kicad_pro in each folder to start work.
 
         setupEventListeners();
         syncStateFromInputs();
+        syncHoleOptions();
         updatePreview();
     })();
     </script>
