@@ -216,11 +216,17 @@
             // step at all — at 3HP the pairs would land on top of each other and at 2HP the
             // "right" pair would fall left of the left one — so it gets two holes instead.
             const maxGridSteps = Math.floor((width - edgeOffset - 4) / 5.08);
+
+            // A "centre" hole has to land where the case's rail holes or sliding nuts can be, so
+            // it sits on the same HP grid as the left hole, at the step nearest the middle of the
+            // panel, rather than at the literal centre. The 6-hole layout's middle pair and the
+            // 2-hole centre option share this position.
+            const gridCentreX = edgeOffset + (Math.max(0, Math.round(((width / 2) - edgeOffset) / 5.08)) * 5.08);
             if (targetCount > 2 && maxGridSteps < 1) targetCount = 2;
 
             if (targetCount === 2) {
-                let leftPoint = edgeOffset;
-                if (centred || state.hp <= 2) {
+                let leftPoint = centred ? gridCentreX : edgeOffset;
+                if (state.hp <= 2) {
                     leftPoint = width / 2;
                 }
                 holes.push({ x: leftPoint, y: yTop });
@@ -235,8 +241,7 @@
                 holes.push({ x: rightHoleX, y: yBot });
 
                 if (targetCount === 6) {
-                    const stepsToCenter = Math.round(((width / 2) - edgeOffset) / 5.08);
-                    const xMid = edgeOffset + (stepsToCenter * 5.08);
+                    const xMid = gridCentreX;
 
                     if (xMid > edgeOffset + 1 && xMid < rightHoleX - 1) {
                         holes.push({ x: xMid, y: yTop });
