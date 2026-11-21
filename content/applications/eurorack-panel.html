@@ -23,12 +23,12 @@
 .generator{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);background:var(--paper);color:var(--control-text)}
 .generator-bar{min-height:46px;padding:7px 10px 7px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--ink);background:var(--paper-deep)}
 .generator-title{min-width:0}.generator-title h1{font-size:13px;color:var(--heading);line-height:1.2}.generator-title p{font-size:10px;color:var(--sage);margin-top:2px}.dimensions-badge{margin-left:auto;padding:4px 7px;border:1px solid var(--paper-line);border-radius:4px;color:var(--sage);font-size:10px;white-space:nowrap}
-.preview-controls{display:flex;align-items:center;gap:6px;white-space:nowrap}.preview-controls label,.check{display:flex;align-items:center;gap:5px;cursor:pointer}.segmented{display:flex;border:1px solid var(--ink);border-radius:5px;overflow:hidden}.segmented button{all:unset;cursor:pointer;padding:5px 7px;color:var(--control-text);font-size:10px}.segmented button+button{border-left:1px solid var(--ink)}.segmented button:hover{background:var(--paper)}.segmented button.bg-gray-700{background:var(--ink);color:var(--button-text)}
-.generator-main{min-height:0;display:grid;grid-template-columns:330px minmax(0,1fr)}.controls{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;border-right:1px solid var(--ink);background:var(--paper-deep)}.controls-scroll{overflow:auto;padding:10px}.section{border:1px solid var(--paper-line);border-radius:6px;background:var(--paper);padding:9px;margin-bottom:8px}.section h2{margin:0 0 7px;color:var(--leaf-deep);font-size:10px;letter-spacing:.12em;text-transform:uppercase}.field{display:grid;grid-template-columns:minmax(0,1fr) 128px;align-items:center;gap:8px;margin:6px 0}.field>label{font-size:11px;line-height:1.25}.control-unit{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px}.unit{font-size:9px;color:var(--sage);white-space:nowrap}.field input[type=number],.field select{width:100%;min-width:0;height:28px;padding:4px 7px;border:1px solid var(--ink);border-radius:5px;background:var(--paper-deep);color:var(--control-text);font:inherit;font-size:11px}.field input:focus-visible,.field select:focus-visible{outline:2px solid var(--leaf);outline-offset:1px}.field.wide{grid-template-columns:1fr}.field.wide select{margin-top:2px}.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 9px}.check{font-size:10.5px;line-height:1.2}.check input,.preview-controls input{accent-color:var(--leaf-deep)}.guide-matrix{display:grid;grid-template-columns:26px repeat(5,1fr);gap:7px 4px;align-items:center;text-align:center}.guide-matrix .fraction{color:var(--control-text);font-size:28px;font-weight:700;line-height:1}.guide-matrix .axis{color:var(--leaf-deep);font-size:12px;font-weight:700;text-align:left}.guide-matrix label{display:grid;place-items:center;min-height:20px;cursor:pointer}.guide-matrix input{margin:0;width:15px;height:15px;accent-color:var(--leaf-deep)}.warning{grid-column:1/-1;font-size:9px;color:var(--sage);margin-top:-3px}.text-red-400{color:var(--danger)!important}.border-red-500{border-color:var(--danger)!important}
+.preview-controls{display:flex;align-items:center;gap:6px;white-space:nowrap}.preview-controls label,.check{display:flex;align-items:center;gap:5px;cursor:pointer}.segmented{display:flex;border:1px solid var(--ink);border-radius:5px;overflow:hidden}.segmented button{all:unset;cursor:pointer;padding:5px 7px;color:var(--control-text);font-size:10px}.segmented button+button{border-left:1px solid var(--ink)}.segmented button:hover{background:var(--paper)}.segmented button[aria-pressed=true]{background:var(--ink);color:var(--button-text)}
+.generator-main{min-height:0;display:grid;grid-template-columns:330px minmax(0,1fr)}.controls{min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;border-right:1px solid var(--ink);background:var(--paper-deep)}.controls-scroll{overflow:auto;padding:10px}.section{border:1px solid var(--paper-line);border-radius:6px;background:var(--paper);padding:9px;margin-bottom:8px}.section h2{margin:0 0 7px;color:var(--leaf-deep);font-size:10px;letter-spacing:.12em;text-transform:uppercase}.field{display:grid;grid-template-columns:minmax(0,1fr) 128px;align-items:center;gap:8px;margin:6px 0}.field>label{font-size:11px;line-height:1.25}.control-unit{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px}.unit{font-size:9px;color:var(--sage);white-space:nowrap}.field input[type=number],.field select{width:100%;min-width:0;height:28px;padding:4px 7px;border:1px solid var(--ink);border-radius:5px;background:var(--paper-deep);color:var(--control-text);font:inherit;font-size:11px}.field input:focus-visible,.field select:focus-visible{outline:2px solid var(--leaf);outline-offset:1px}.field.wide{grid-template-columns:1fr}.field.wide select{margin-top:2px}.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 9px}.check{font-size:10.5px;line-height:1.2}.check input,.preview-controls input{accent-color:var(--leaf-deep)}.guide-matrix{display:grid;grid-template-columns:26px repeat(5,1fr);gap:7px 4px;align-items:center;text-align:center}.guide-matrix .fraction{color:var(--control-text);font-size:28px;font-weight:700;line-height:1}.guide-matrix .axis{color:var(--leaf-deep);font-size:12px;font-weight:700;text-align:left}.guide-matrix label{display:grid;place-items:center;min-height:20px;cursor:pointer}.guide-matrix input{margin:0;width:15px;height:15px;accent-color:var(--leaf-deep)}.warning{grid-column:1/-1;font-size:9px;color:var(--sage);margin-top:-3px}.warning.invalid{color:var(--danger)}.field input.invalid{border-color:var(--danger)}
 .collapse{border:1px solid var(--paper-line);border-radius:5px;background:var(--paper-deep);margin-top:8px}.collapse>summary{padding:6px 8px;cursor:pointer;color:var(--leaf-deep);font-size:10px;letter-spacing:.12em;text-transform:uppercase;list-style:none}.collapse>summary::-webkit-details-marker{display:none}.collapse>summary::before{content:"\25B8";display:inline-block;margin-right:6px;transition:transform .15s ease}.collapse[open]>summary::before{transform:rotate(90deg)}.collapse>summary:focus-visible{outline:2px solid var(--leaf);outline-offset:1px}.collapse-body{padding:2px 8px 8px}
 .field-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}.field-pair .field{grid-template-columns:minmax(0,1fr);margin:0}.field-pair .field>label{font-size:10.5px}
 .section.collapsible{padding:0}.section.collapsible>summary{padding:9px;cursor:pointer;color:var(--leaf-deep);font-size:10px;letter-spacing:.12em;text-transform:uppercase;list-style:none}.section.collapsible>summary::-webkit-details-marker{display:none}.section.collapsible>summary::before{content:"\25B8";display:inline-block;margin-right:6px;transition:transform .15s ease}.section.collapsible[open]>summary{padding-bottom:0}.section.collapsible[open]>summary::before{transform:rotate(90deg)}.section.collapsible>summary:focus-visible{outline:2px solid var(--leaf);outline-offset:-2px}.section-body{padding:7px 9px 9px}
-.downloads{padding:9px 10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;border-top:1px solid var(--paper-line);background:var(--paper-deep)}.downloads .btn{padding:7px 8px;text-align:center;font-size:10.5px}.downloads .svg-download,.downloads .project-download,.downloads .project-name{grid-column:1/-1}.project-name{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:6px}.project-name label{font-size:10px;color:var(--sage);white-space:nowrap}.project-name input,.project-name select{width:100%;min-width:0;height:28px;padding:4px 7px;border:1px solid var(--ink);border-radius:5px;background:var(--paper);color:var(--control-text);font:inherit;font-size:11px}.project-name input:focus-visible,.project-name select:focus-visible{outline:2px solid var(--leaf);outline-offset:1px}.preview{position:relative;min-width:0;min-height:0;overflow:hidden;background-color:var(--desktop,#e3ddc6);background-image:radial-gradient(color-mix(in srgb,var(--desktop,#e3ddc6) 65%,var(--ink,#09140d)) 1px,transparent 1px);background-size:20px 20px}.preview-note{position:absolute;z-index:2;left:9px;bottom:7px;color:var(--sage);font-size:9px;pointer-events:none}.preview-caution{position:absolute;z-index:3;top:9px;right:9px;display:grid;place-items:center;width:24px;height:22px;border:1px solid var(--ink);border-radius:5px;background:var(--warning);color:var(--ink);font-size:14px;line-height:1;box-shadow:2px 2px 0 color-mix(in srgb,var(--shadow) 25%,transparent)}.preview-caution[hidden]{display:none}.preview svg{width:100%;height:100%;cursor:grab;filter:drop-shadow(0 14px 24px color-mix(in srgb,var(--shadow) 32%,transparent))}.preview svg.cursor-grabbing{cursor:grabbing!important}.preview text{font-family:"IBM Plex Mono",monospace}.preview .fill-kicad-hole{fill:var(--ink)}
+.downloads{padding:9px 10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;border-top:1px solid var(--paper-line);background:var(--paper-deep)}.downloads .btn{padding:7px 8px;text-align:center;font-size:10.5px}.downloads .svg-download,.downloads .project-download,.downloads .project-name{grid-column:1/-1}.project-name{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:6px}.project-name label{font-size:10px;color:var(--sage);white-space:nowrap}.project-name input,.project-name select{width:100%;min-width:0;height:28px;padding:4px 7px;border:1px solid var(--ink);border-radius:5px;background:var(--paper);color:var(--control-text);font:inherit;font-size:11px}.project-name input:focus-visible,.project-name select:focus-visible{outline:2px solid var(--leaf);outline-offset:1px}.preview{position:relative;min-width:0;min-height:0;overflow:hidden;background-color:var(--desktop,#e3ddc6);background-image:radial-gradient(rgba(0,0,0,.18) 1px,transparent 1px);background-image:radial-gradient(color-mix(in srgb,var(--desktop,#e3ddc6) 65%,var(--ink,#09140d)) 1px,transparent 1px);background-size:20px 20px}.preview-note{position:absolute;z-index:2;left:9px;bottom:7px;color:var(--sage);font-size:9px;pointer-events:none}.preview-caution{position:absolute;z-index:3;top:9px;right:9px;display:grid;place-items:center;width:24px;height:22px;border:1px solid var(--ink);border-radius:5px;background:var(--warning);color:var(--ink);font-size:14px;line-height:1;box-shadow:2px 2px 0 rgba(0,0,0,.25);box-shadow:2px 2px 0 color-mix(in srgb,var(--shadow) 25%,transparent)}.preview-caution[hidden]{display:none}.preview svg{width:100%;height:100%;cursor:grab;touch-action:none;filter:drop-shadow(0 14px 24px rgba(0,0,0,.3));filter:drop-shadow(0 14px 24px color-mix(in srgb,var(--shadow) 32%,transparent))}.preview svg.dragging{cursor:grabbing}.preview text{font-family:"IBM Plex Mono",monospace}.preview .fill-kicad-hole{fill:var(--ink)}
 .tip{cursor:help}.hint{display:inline-grid;place-items:center;width:13px;height:13px;margin-left:3px;border:1px solid var(--sage);border-radius:50%;color:var(--sage);font-size:9px;vertical-align:1px;cursor:help}
 @media(max-width:780px){.generator-main{grid-template-columns:290px minmax(320px,1fr)}.generator-title p{display:none}.dimensions-badge{display:none}}@media(max-width:620px){body{overflow:auto}.generator{height:auto;min-height:100%}.generator-bar{flex-wrap:wrap}.generator-main{grid-template-columns:1fr}.controls{border-right:0}.controls-scroll{max-height:none}.preview{height:420px}.check-grid{grid-template-columns:1fr 1fr}}
 </style>
@@ -45,8 +45,8 @@
     <label title="Show or hide the front faceplate in the live preview."><input type="checkbox" id="show-panel-toggle" checked>Panel</label>
     <label title="Show or hide the internal circuit board in the live preview."><input type="checkbox" id="show-pcb-toggle" checked>PCB</label>
     <div class="segmented">
-      <button id="layout-overlaid" class="bg-gray-700 text-white" title="Stack the PCB directly behind the panel to check edge tolerances.">Overlaid</button>
-      <button id="layout-sidebyside" class="bg-transparent text-gray-400" title="Display the panel and PCB next to each other.">Side-by-side</button>
+      <button type="button" id="layout-overlaid" aria-pressed="true" title="Stack the PCB directly behind the panel to check edge tolerances.">Overlaid</button>
+      <button type="button" id="layout-sidebyside" aria-pressed="false" title="Display the panel and PCB next to each other.">Side-by-side</button>
     </div>
   </div>
 </header>
@@ -96,7 +96,7 @@
   <section id="preview-container" class="preview" aria-label="Live panel and PCB preview">
     <span class="preview-caution" id="preview-caution" role="img" aria-label="PCB height warning" hidden>▲</span>
     <span class="preview-note">Scroll to zoom · drag to pan · double-click to reset</span>
-    <svg id="preview-svg" class="cursor-grab" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+    <svg id="preview-svg" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--ink)"/></marker>
         <pattern id="copper-hatch" width="2" height="2" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="2" stroke="#b87333" stroke-width=".5" opacity=".6"/></pattern>
@@ -137,6 +137,17 @@
                 y: { center: true, thirds: false, quarters: false, sixths: false, eighths: false }
             }
         };
+
+        // Everything that differs between rack formats, keyed by the panel height the format
+        // select offers. Keeping it in one table means a new format is one row, and nothing can
+        // fall through to another format's numbers (switching 1U and back once left the board at
+        // the 1U height because only the 1U formats set one).
+        const FORMATS = {
+            '128.5': { name: 'Standard 3U',   shortName: '3U',            suffix: '3U',            defaultPCB: 100,   maxPCB: 110 },
+            '39.65': { name: 'Intellijel 1U', shortName: 'Intellijel 1U', suffix: '1U_Intellijel', defaultPCB: 22.15, maxPCB: 22.15 },
+            '43.2':  { name: 'Pulp Logic 1U', shortName: 'Pulp Logic 1U', suffix: '1U_PulpLogic',  defaultPCB: 25.68, maxPCB: 25.68 }
+        };
+        const currentFormat = () => FORMATS[String(state.heightFormat)] || FORMATS['128.5'];
 
         // Board file format per KiCad release. Files tagged with a newer format version are
         // refused outright by older KiCad ("created with a more recent version"), and KiCad 7
@@ -200,6 +211,13 @@
 
             const edgeOffset = 7.5;
 
+            // The right-hand pair sits a whole number of HP steps from the left one, as far right
+            // as it can go while keeping 4 mm clear of the edge. A narrow panel has no room for a
+            // step at all — at 3HP the pairs would land on top of each other and at 2HP the
+            // "right" pair would fall left of the left one — so it gets two holes instead.
+            const maxGridSteps = Math.floor((width - edgeOffset - 4) / 5.08);
+            if (targetCount > 2 && maxGridSteps < 1) targetCount = 2;
+
             if (targetCount === 2) {
                 let leftPoint = edgeOffset;
                 if (centred || state.hp <= 2) {
@@ -211,15 +229,14 @@
                 holes.push({ x: edgeOffset, y: yTop });
                 holes.push({ x: edgeOffset, y: yBot });
 
-                let maxGridSteps = Math.floor((width - edgeOffset - 4) / 5.08);
-                let rightHoleX = edgeOffset + (maxGridSteps * 5.08);
+                const rightHoleX = edgeOffset + (maxGridSteps * 5.08);
 
                 holes.push({ x: rightHoleX, y: yTop });
                 holes.push({ x: rightHoleX, y: yBot });
 
                 if (targetCount === 6) {
-                    let stepsToCenter = Math.round(((width / 2) - edgeOffset) / 5.08);
-                    let xMid = edgeOffset + (stepsToCenter * 5.08);
+                    const stepsToCenter = Math.round(((width / 2) - edgeOffset) / 5.08);
+                    const xMid = edgeOffset + (stepsToCenter * 5.08);
 
                     if (xMid > edgeOffset + 1 && xMid < rightHoleX - 1) {
                         holes.push({ x: xMid, y: yTop });
@@ -276,6 +293,17 @@
             viewBoxAnimation = requestAnimationFrame(frame);
         }
 
+        // Typing into a number field fires an input event per keystroke, and several controls can
+        // change in one frame; redraw once per frame rather than once per event.
+        let previewFrame = 0;
+        function schedulePreview() {
+            if (previewFrame) return;
+            previewFrame = requestAnimationFrame(() => {
+                previewFrame = 0;
+                updatePreview();
+            });
+        }
+
         function updatePreview() {
             const metrics = calculatePanel();
             const pw = metrics.width;
@@ -286,30 +314,22 @@
 
             const dimBadge = byId('dimensions-badge');
             const boardTally = state.pcbCount > 1 ? ` ×${state.pcbCount}` : '';
-            if (dimBadge) dimBadge.innerText = `Panel: ${pw.toFixed(1)}×${ph.toFixed(1)} | PCB: ${pcbW.toFixed(1)}×${pcbH.toFixed(1)}${boardTally}`;
+            if (dimBadge) dimBadge.textContent = `Panel: ${pw.toFixed(1)}×${ph.toFixed(1)} | PCB: ${pcbW.toFixed(1)}×${pcbH.toFixed(1)}${boardTally}`;
 
             // Validate PCB height against the usable depth for the selected format.
             const heightInput = byId('pcb-height-input');
             const heightWarning = byId('pcb-height-warning');
             const previewCaution = byId('preview-caution');
-            const maxPCBHeight = state.heightFormat === 39.65 ? 22.15 : (state.heightFormat === 43.2 ? 25.68 : 110);
-            const formatName = state.heightFormat === 39.65 ? 'Intellijel 1U' : (state.heightFormat === 43.2 ? 'Pulp Logic 1U' : '3U');
+            const maxPCBHeight = currentFormat().maxPCB;
+            const formatName = currentFormat().shortName;
             const heightTooLarge = state.pcbHeight > maxPCBHeight;
             if (heightInput && heightWarning) {
                 heightWarning.textContent = heightTooLarge
                     ? `Too tall for ${formatName}; maximum ${maxPCBHeight.toFixed(2)} mm.`
                     : `Maximum for ${formatName}: ${maxPCBHeight.toFixed(2)} mm.`;
-                if (heightTooLarge) {
-                    heightInput.classList.add('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
-                    heightInput.classList.remove('border-gray-600', 'focus:ring-blue-500', 'focus:border-blue-500');
-                    heightWarning.classList.add('text-red-400');
-                    heightWarning.classList.remove('text-gray-500');
-                } else {
-                    heightInput.classList.remove('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
-                    heightInput.classList.add('border-gray-600', 'focus:ring-blue-500', 'focus:border-blue-500');
-                    heightWarning.classList.remove('text-red-400');
-                    heightWarning.classList.add('text-gray-500');
-                }
+                heightInput.classList.toggle('invalid', heightTooLarge);
+                heightInput.setAttribute('aria-invalid', String(heightTooLarge));
+                heightWarning.classList.toggle('invalid', heightTooLarge);
             }
             if (previewCaution) {
                 previewCaution.hidden = !heightTooLarge;
@@ -498,8 +518,16 @@
         }
 
         // --- STREAMING_CHUNK: KiCAD Generation... ---
+        // crypto.randomUUID only exists in a secure context, so over plain HTTP — the site served
+        // to another machine on the local network, say — every export would throw. The fallback
+        // builds the same random version 4 UUID from getRandomValues, which has no such limit.
         function generateUUID() {
-            return crypto.randomUUID();
+            if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+            const bytes = crypto.getRandomValues(new Uint8Array(16));
+            bytes[6] = (bytes[6] & 0x0f) | 0x40;
+            bytes[8] = (bytes[8] & 0x3f) | 0x80;
+            const hex = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+            return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
         }
 
         function kicadTarget() {
@@ -517,6 +545,13 @@
             // `generator_version` arrived with KiCad 8; KiCad 7 rejects the token.
             const genVersion = target.generatorVersion ? ` (generator_version "${target.generatorVersion}")` : '';
             return `(kicad_pcb (version ${target.version}) (generator "${generatorName}")${genVersion}`;
+        }
+
+        // One closed rectangle in place of four loose lines: KiCad treats it as a single shape,
+        // which is what an outline is. gr_rect has been in the format since KiCad 6.
+        function kicadRect(x, y, width, height, layer, strokeWidth, strokeType) {
+            const f = n => n.toFixed(4);
+            return `\n  (gr_rect (start ${f(x)} ${f(y)}) (end ${f(x + width)} ${f(y + height)}) (stroke (width ${strokeWidth}) (type ${strokeType})) (fill none) (layer "${layer}") ${idTag()})`;
         }
 
         // Canonical KiCad layer indices — non-copper layers are matched by name, but keeping the
@@ -629,11 +664,7 @@
 ${KICAD_LAYERS}
   (net 0 "")
   (net 1 "GND")
-  ${footprints}${dimensions}${kicadGuides}${kicadZones}${maskRects}
-  (gr_line (start ${offsetX.toFixed(4)} ${offsetY.toFixed(4)}) (end ${(metrics.width + offsetX).toFixed(4)} ${offsetY.toFixed(4)}) (layer "Edge.Cuts") ${idTag()} (stroke (width 0.1) (type solid)))
-  (gr_line (start ${(metrics.width + offsetX).toFixed(4)} ${offsetY.toFixed(4)}) (end ${(metrics.width + offsetX).toFixed(4)} ${(metrics.height + offsetY).toFixed(4)}) (layer "Edge.Cuts") ${idTag()} (stroke (width 0.1) (type solid)))
-  (gr_line (start ${(metrics.width + offsetX).toFixed(4)} ${(metrics.height + offsetY).toFixed(4)}) (end ${offsetX.toFixed(4)} ${(metrics.height + offsetY).toFixed(4)}) (layer "Edge.Cuts") ${idTag()} (stroke (width 0.1) (type solid)))
-  (gr_line (start ${offsetX.toFixed(4)} ${(metrics.height + offsetY).toFixed(4)}) (end ${offsetX.toFixed(4)} ${offsetY.toFixed(4)}) (layer "Edge.Cuts") ${idTag()} (stroke (width 0.1) (type solid)))
+  ${footprints}${dimensions}${kicadGuides}${kicadZones}${maskRects}${kicadRect(offsetX, offsetY, metrics.width, metrics.height, 'Edge.Cuts', 0.1, 'solid')}
 )`;
             return kicadPCB;
         }
@@ -649,17 +680,9 @@ ${KICAD_LAYERS}
             const pcbOriginX = panelOriginX + state.pcbTolerance;
             const pcbOriginY = pageCenterY - (pcbHeight / 2);
 
-            const edgeCuts = `
-  (gr_line (start ${pcbOriginX.toFixed(4)} ${pcbOriginY.toFixed(4)}) (end ${(pcbOriginX + pcbWidth).toFixed(4)} ${pcbOriginY.toFixed(4)}) (layer "Edge.Cuts") ${idTag()} (stroke (width 0.1) (type solid)))
-  (gr_line (start ${(pcbOriginX + pcbWidth).toFixed(4)} ${pcbOriginY.toFixed(4)}) (end ${(pcbOriginX + pcbWidth).toFixed(4)} ${(pcbOriginY + pcbHeight).toFixed(4)}) (layer "Edge.Cuts") ${idTag()} (stroke (width 0.1) (type solid)))
-  (gr_line (start ${(pcbOriginX + pcbWidth).toFixed(4)} ${(pcbOriginY + pcbHeight).toFixed(4)}) (end ${pcbOriginX.toFixed(4)} ${(pcbOriginY + pcbHeight).toFixed(4)}) (layer "Edge.Cuts") ${idTag()} (stroke (width 0.1) (type solid)))
-  (gr_line (start ${pcbOriginX.toFixed(4)} ${(pcbOriginY + pcbHeight).toFixed(4)}) (end ${pcbOriginX.toFixed(4)} ${pcbOriginY.toFixed(4)}) (layer "Edge.Cuts") ${idTag()} (stroke (width 0.1) (type solid)))`;
+            const edgeCuts = kicadRect(pcbOriginX, pcbOriginY, pcbWidth, pcbHeight, 'Edge.Cuts', 0.1, 'solid');
 
-            let ffab = `
-  (gr_line (start ${panelOriginX.toFixed(4)} ${panelOriginY.toFixed(4)}) (end ${(panelOriginX + metrics.width).toFixed(4)} ${panelOriginY.toFixed(4)}) (layer "F.Fab") ${idTag()} (stroke (width 0.15) (type dash)))
-  (gr_line (start ${(panelOriginX + metrics.width).toFixed(4)} ${panelOriginY.toFixed(4)}) (end ${(panelOriginX + metrics.width).toFixed(4)} ${(panelOriginY + metrics.height).toFixed(4)}) (layer "F.Fab") ${idTag()} (stroke (width 0.15) (type dash)))
-  (gr_line (start ${(panelOriginX + metrics.width).toFixed(4)} ${(panelOriginY + metrics.height).toFixed(4)}) (end ${panelOriginX.toFixed(4)} ${(panelOriginY + metrics.height).toFixed(4)}) (layer "F.Fab") ${idTag()} (stroke (width 0.15) (type dash)))
-  (gr_line (start ${panelOriginX.toFixed(4)} ${(panelOriginY + metrics.height).toFixed(4)}) (end ${panelOriginX.toFixed(4)} ${panelOriginY.toFixed(4)}) (layer "F.Fab") ${idTag()} (stroke (width 0.15) (type dash)))`;
+            let ffab = kicadRect(panelOriginX, panelOriginY, metrics.width, metrics.height, 'F.Fab', 0.15, 'dash');
 
             metrics.holes.forEach(hole => {
                 const hx = panelOriginX + hole.x;
@@ -763,7 +786,7 @@ ${KICAD_LAYERS}${ffab}${edgeCuts}${pcbDimensions}${kicadGuides}
         }
 
         function formatSuffix() {
-            return state.heightFormat === 39.65 ? "1U_Intellijel" : (state.heightFormat === 43.2 ? "1U_PulpLogic" : "3U");
+            return currentFormat().suffix;
         }
 
         function saveBlob(blob, filename) {
@@ -771,7 +794,10 @@ ${KICAD_LAYERS}${ffab}${edgeCuts}${pcbDimensions}${kicadGuides}
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            document.body.appendChild(a); a.click(); a.remove();
+            // Safari and older Firefox read the blob after click() returns, so revoking the URL
+            // straight away can cancel the download. A minute is long enough to start any save.
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
         }
 
         function triggerDownload() {
@@ -881,10 +907,6 @@ ${KICAD_LAYERS}${ffab}${edgeCuts}${pcbDimensions}${kicadGuides}
             return cleaned || 'Eurorack';
         }
 
-        function formatName() {
-            return state.heightFormat === 39.65 ? 'Intellijel 1U' : (state.heightFormat === 43.2 ? 'Pulp Logic 1U' : 'Standard 3U');
-        }
-
         // The circuit board projects: the first carries the jacks and pots, any extras are
         // duplicates of it to develop separately.
         function pcbProjectNames(project) {
@@ -926,7 +948,7 @@ Generated by the ClackOS Eurorack Panel Generator.
 
 PANEL
   Width           ${state.hp} HP, ${metrics.width.toFixed(2)} mm wide (${state.tolerance} mm allowance removed)
-  Height          ${metrics.height.toFixed(2)} mm (${formatName()})
+  Height          ${metrics.height.toFixed(2)} mm (${currentFormat().name})
   Mounting holes  ${metrics.holes.length} x ${holeStyle}
   Plating         ${plating}
   Guides          X: ${guideSummary(state.guides.x)}   Y: ${guideSummary(state.guides.y)}
@@ -986,80 +1008,76 @@ Open the .kicad_pro in each folder to start work.
             appRoot.querySelectorAll('input[data-guide-axis]').forEach(cb => {
                 cb.addEventListener('change', (e) => {
                     state.guides[e.target.dataset.guideAxis][e.target.value] = e.target.checked;
-                    updatePreview();
+                    schedulePreview();
                 });
             });
 
-            safeBind('hp-input', 'input', e => { if (parseInt(e.target.value) > 0) { state.hp = parseInt(e.target.value); updatePreview(); } });
+            // A number field reads back as its value clamped to the field's own min and max, so
+            // a typed-in negative allowance cannot turn into a negative board width. Blank or
+            // half-typed values ("", "-") are ignored until they parse.
+            const readNumber = (input, parse = parseFloat) => {
+                const value = parse(input.value);
+                if (!Number.isFinite(value)) return null;
+                const min = input.min === '' ? -Infinity : parseFloat(input.min);
+                const max = input.max === '' ? Infinity : parseFloat(input.max);
+                return Math.min(max, Math.max(min, value));
+            };
+            const bindNumber = (id, apply, parse) => safeBind(id, 'input', e => {
+                const value = readNumber(e.target, parse);
+                if (value === null) return;
+                apply(value);
+                schedulePreview();
+            });
+
+            bindNumber('hp-input', value => { state.hp = value; }, value => parseInt(value, 10));
             safeBind('format-select', 'change', e => {
                 state.heightFormat = parseFloat(e.target.value);
-                // Each format gets its own default board height. 3U needs a branch of its own,
-                // or switching to 1U and back leaves the board stuck at the 1U height.
-                if (state.heightFormat === 39.65) state.pcbHeight = 22.15;
-                else if (state.heightFormat === 43.2) state.pcbHeight = 25.68;
-                else state.pcbHeight = 100;
+                state.pcbHeight = currentFormat().defaultPCB;
                 const heightInput = byId('pcb-height-input');
                 if (heightInput) heightInput.value = state.pcbHeight;
-                updatePreview();
+                schedulePreview();
             });
-            safeBind('hole-select', 'change', e => { state.holeStyle = e.target.value; updatePreview(); });
-            safeBind('hole-count-select', 'change', e => { state.holeCountMode = e.target.value; updatePreview(); });
-            safeBind('tolerance-input', 'input', e => { if (!isNaN(parseFloat(e.target.value))) { state.tolerance = parseFloat(e.target.value); updatePreview(); } });
-            safeBind('pcb-height-input', 'input', e => { if (!isNaN(parseFloat(e.target.value))) { state.pcbHeight = parseFloat(e.target.value); updatePreview(); } });
-            safeBind('pcb-tolerance-input', 'input', e => { if (!isNaN(parseFloat(e.target.value))) { state.pcbTolerance = parseFloat(e.target.value); updatePreview(); } });
+            safeBind('hole-select', 'change', e => { state.holeStyle = e.target.value; schedulePreview(); });
+            safeBind('hole-count-select', 'change', e => { state.holeCountMode = e.target.value; schedulePreview(); });
+            bindNumber('tolerance-input', value => { state.tolerance = value; });
+            bindNumber('pcb-height-input', value => { state.pcbHeight = value; });
+            bindNumber('pcb-tolerance-input', value => { state.pcbTolerance = value; });
 
-            safeBind('plating-pth', 'change', e => { state.plating.pth = e.target.checked; updatePreview(); });
-            safeBind('plating-fill-front', 'change', e => { state.plating.fillFront = e.target.checked; updatePreview(); });
-            safeBind('plating-fill-back', 'change', e => { state.plating.fillBack = e.target.checked; updatePreview(); });
-            safeBind('plating-rails-exposed', 'change', e => { state.plating.railsExposed = e.target.checked; updatePreview(); });
-            safeBind('plating-connect-gnd', 'change', e => { state.plating.connectGnd = e.target.checked; updatePreview(); });
+            const platingInputs = { 'plating-pth': 'pth', 'plating-fill-front': 'fillFront', 'plating-fill-back': 'fillBack', 'plating-rails-exposed': 'railsExposed', 'plating-connect-gnd': 'connectGnd' };
+            Object.entries(platingInputs).forEach(([id, key]) => {
+                safeBind(id, 'change', e => { state.plating[key] = e.target.checked; schedulePreview(); });
+            });
 
             safeBind('kicad-version-select', 'change', e => { state.kicadVersion = e.target.value; });
             safeBind('project-name-input', 'input', e => { state.projectName = e.target.value; });
             safeBind('pcb-count-select', 'change', e => {
                 state.pcbCount = parseInt(e.target.value, 10) || 1;
                 animateNextViewBox = true;
-                updatePreview();
+                schedulePreview();
             });
 
             // Keep at least one of the two visible: switching the last one off flips the other on.
-            safeBind('show-panel-toggle', 'change', e => {
-                state.showPanel = e.target.checked;
-                if (!state.showPanel && !state.showPCB) {
-                    state.showPCB = true;
-                    const other = byId('show-pcb-toggle');
+            const bindVisibility = (id, key, otherId, otherKey) => safeBind(id, 'change', e => {
+                state[key] = e.target.checked;
+                if (!state[key] && !state[otherKey]) {
+                    state[otherKey] = true;
+                    const other = byId(otherId);
                     if (other) other.checked = true;
                 }
-                updatePreview();
+                schedulePreview();
             });
-            safeBind('show-pcb-toggle', 'change', e => {
-                state.showPCB = e.target.checked;
-                if (!state.showPCB && !state.showPanel) {
-                    state.showPanel = true;
-                    const other = byId('show-panel-toggle');
-                    if (other) other.checked = true;
-                }
-                updatePreview();
-            });
+            bindVisibility('show-panel-toggle', 'showPanel', 'show-pcb-toggle', 'showPCB');
+            bindVisibility('show-pcb-toggle', 'showPCB', 'show-panel-toggle', 'showPanel');
 
-            safeBind('layout-overlaid', 'click', () => {
-                state.layoutMode = 'overlaid';
-                animateNextViewBox = true;
-                byId('layout-overlaid')?.classList.replace('bg-transparent', 'bg-gray-700');
-                byId('layout-overlaid')?.classList.replace('text-gray-400', 'text-white');
-                byId('layout-sidebyside')?.classList.replace('bg-gray-700', 'bg-transparent');
-                byId('layout-sidebyside')?.classList.replace('text-white', 'text-gray-400');
-                updatePreview();
-            });
-
-            safeBind('layout-sidebyside', 'click', () => {
-                state.layoutMode = 'sidebyside';
-                animateNextViewBox = true;
-                byId('layout-sidebyside')?.classList.replace('bg-transparent', 'bg-gray-700');
-                byId('layout-sidebyside')?.classList.replace('text-gray-400', 'text-white');
-                byId('layout-overlaid')?.classList.replace('bg-gray-700', 'bg-transparent');
-                byId('layout-overlaid')?.classList.replace('text-white', 'text-gray-400');
-                updatePreview();
+            // aria-pressed is both the styling hook and what a screen reader announces.
+            const layoutButtons = { overlaid: byId('layout-overlaid'), sidebyside: byId('layout-sidebyside') };
+            Object.entries(layoutButtons).forEach(([mode, button]) => {
+                button?.addEventListener('click', () => {
+                    state.layoutMode = mode;
+                    animateNextViewBox = true;
+                    Object.entries(layoutButtons).forEach(([other, b]) => b?.setAttribute('aria-pressed', String(other === mode)));
+                    schedulePreview();
+                });
             });
 
             safeBind('download-panel-btn', 'click', triggerDownload);
@@ -1067,23 +1085,38 @@ Open the .kicad_pro in each folder to start work.
             safeBind('download-pcb-btn', 'click', triggerMainPCBDownload);
             safeBind('download-project-btn', 'click', triggerProjectDownload);
 
-            // Pan and Zoom
+            // Pan and zoom. Pointer events cover mouse, pen and touch alike, and capturing the
+            // pointer keeps a drag tracking even when it leaves the preview — which is what the
+            // old window-level mousemove/mouseup listeners were for. Those were never removed,
+            // and this app runs integrated with one instance per window, so every closed window
+            // left a pair behind on the desktop.
             const container = byId('preview-container');
             const svgEl = byId('preview-svg');
 
             if (container && svgEl) {
                 container.addEventListener('wheel', (e) => {
                     e.preventDefault();
-                    const zoomFactor = 1.1;
-                    if (e.deltaY < 0) zoom *= zoomFactor;
-                    else zoom /= zoomFactor;
+                    // Scale by how far the wheel actually moved: a trackpad sends dozens of tiny
+                    // deltas per gesture, and a fixed step per event sent the zoom racing off.
+                    const lineHeight = 16;
+                    const pixels = e.deltaY * (e.deltaMode === 1 ? lineHeight : (e.deltaMode === 2 ? container.clientHeight : 1));
+                    const nextZoom = Math.min(40, Math.max(0.1, zoom * Math.exp(-pixels * 0.0015)));
+                    // Zoom about the cursor: keep the drawing point under it fixed on screen.
+                    const ctm = svgEl.getScreenCTM();
+                    if (ctm) {
+                        const cursor = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+                        panX = cursor.x - ((cursor.x - panX) * nextZoom / zoom);
+                        panY = cursor.y - ((cursor.y - panY) * nextZoom / zoom);
+                    }
+                    zoom = nextZoom;
                     applyTransform();
-                });
+                }, { passive: false });
 
-                container.addEventListener('mousedown', (e) => {
-                    if (e.button !== 0) return;
+                svgEl.addEventListener('pointerdown', (e) => {
+                    if (e.pointerType === 'mouse' && e.button !== 0) return;
                     e.preventDefault();
                     isDragging = true;
+                    svgEl.setPointerCapture(e.pointerId);
                     // Pan lives in viewBox units, so convert the pointer delta into those units
                     // to keep the drag tracking the cursor 1:1 instead of racing ahead of it.
                     dragUnitsPerPixel = previewUnitsPerPixel();
@@ -1091,20 +1124,22 @@ Open the .kicad_pro in each folder to start work.
                     startY = e.clientY;
                     dragStartPanX = panX;
                     dragStartPanY = panY;
-                    svgEl.classList.replace('cursor-grab', 'cursor-grabbing');
+                    svgEl.classList.add('dragging');
                 });
 
-                window.addEventListener('mousemove', (e) => {
+                svgEl.addEventListener('pointermove', (e) => {
                     if (!isDragging) return;
                     panX = dragStartPanX + ((e.clientX - startX) * dragUnitsPerPixel);
                     panY = dragStartPanY + ((e.clientY - startY) * dragUnitsPerPixel);
                     applyTransform();
                 });
 
-                window.addEventListener('mouseup', () => {
+                const endDrag = () => {
                     isDragging = false;
-                    svgEl.classList.replace('cursor-grabbing', 'cursor-grab');
-                });
+                    svgEl.classList.remove('dragging');
+                };
+                svgEl.addEventListener('pointerup', endDrag);
+                svgEl.addEventListener('pointercancel', endDrag);
 
                 container.addEventListener('dblclick', () => {
                     panX = 0; panY = 0; zoom = 1;
