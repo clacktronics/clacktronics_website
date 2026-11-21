@@ -49,7 +49,10 @@
    end cap is taller than one on the waist, and one shading layer laid over body
    and bands alike makes the whole thing read as a cylinder. */
 .res-visual { display: block; width: 100%; max-width: 600px; height: auto; margin: 0 auto; }
-.res-band { transition: x 140ms ease, fill 140ms ease; }
+.res-band {
+  stroke: var(--ink, #1c1a14); stroke-opacity: 0.55; stroke-width: 1;
+  transition: x 140ms ease, fill 140ms ease;
+}
 .res-body-fill { transition: fill 200ms ease; }
 
 .res-controls {
@@ -108,54 +111,69 @@
     <section class="res-visual-wrap" aria-label="Resistor preview">
       <svg class="res-visual" viewBox="0 0 600 140" aria-hidden="true">
         <defs>
-          <!-- Tinned copper leads: bright along the top, darker underneath. -->
+          <!-- Shaded the way an old parts catalogue printed it rather than with
+               smooth airbrushed gradients: a few flat tones with hard edges
+               (paired stops at the same offset), halftone dots for the shadow
+               side, and a firm ink outline. -->
           <linearGradient id="res-lead" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#f1f2ee"/>
-            <stop offset="0.45" stop-color="#b9bcb6"/>
-            <stop offset="1" stop-color="#6f736d"/>
+            <stop offset="0" stop-color="#e9e6da"/>
+            <stop offset="0.4" stop-color="#e9e6da"/>
+            <stop offset="0.4" stop-color="#aeab9f"/>
+            <stop offset="0.75" stop-color="#aeab9f"/>
+            <stop offset="0.75" stop-color="#77746a"/>
+            <stop offset="1" stop-color="#77746a"/>
           </linearGradient>
-          <!-- Laid over the body and the bands together, so they shade as one cylinder. -->
           <linearGradient id="res-shade" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#000" stop-opacity="0.28"/>
-            <stop offset="0.16" stop-color="#fff" stop-opacity="0.10"/>
-            <stop offset="0.3" stop-color="#fff" stop-opacity="0.42"/>
-            <stop offset="0.42" stop-color="#fff" stop-opacity="0.06"/>
-            <stop offset="0.72" stop-color="#000" stop-opacity="0.06"/>
-            <stop offset="1" stop-color="#000" stop-opacity="0.42"/>
+            <stop offset="0.27" stop-color="#fff8e6" stop-opacity="0"/>
+            <stop offset="0.27" stop-color="#fff8e6" stop-opacity="0.55"/>
+            <stop offset="0.35" stop-color="#fff8e6" stop-opacity="0.55"/>
+            <stop offset="0.35" stop-color="#fff8e6" stop-opacity="0"/>
+            <stop offset="0.7" stop-color="#2a2418" stop-opacity="0"/>
+            <stop offset="0.7" stop-color="#2a2418" stop-opacity="0.2"/>
+            <stop offset="1" stop-color="#2a2418" stop-opacity="0.2"/>
           </linearGradient>
-          <!-- Darkens the rounded ends so the caps look domed rather than flat. -->
-          <linearGradient id="res-ends" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#000" stop-opacity="0.3"/>
-            <stop offset="0.07" stop-color="#000" stop-opacity="0"/>
-            <stop offset="0.93" stop-color="#000" stop-opacity="0"/>
-            <stop offset="1" stop-color="#000" stop-opacity="0.3"/>
-          </linearGradient>
+          <pattern id="res-dots" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <circle cx="2.5" cy="2.5" r="1.3" fill="#2a2418" fill-opacity="0.45"/>
+          </pattern>
+          <pattern id="res-dots-fine" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <circle cx="2" cy="2" r="0.8" fill="#2a2418" fill-opacity="0.35"/>
+          </pattern>
           <linearGradient id="res-gold" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#8a6416"/>
-            <stop offset="0.3" stop-color="#f6dc84"/>
-            <stop offset="0.55" stop-color="#c99a30"/>
-            <stop offset="1" stop-color="#7a5612"/>
+            <stop offset="0.27" stop-color="#b48a34"/>
+            <stop offset="0.27" stop-color="#ead08a"/>
+            <stop offset="0.35" stop-color="#ead08a"/>
+            <stop offset="0.35" stop-color="#b48a34"/>
           </linearGradient>
           <linearGradient id="res-silver" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#7d817e"/>
-            <stop offset="0.3" stop-color="#f4f6f4"/>
-            <stop offset="0.55" stop-color="#b3b7b4"/>
-            <stop offset="1" stop-color="#6a6e6b"/>
+            <stop offset="0.27" stop-color="#9c9b92"/>
+            <stop offset="0.27" stop-color="#e6e4da"/>
+            <stop offset="0.35" stop-color="#e6e4da"/>
+            <stop offset="0.35" stop-color="#9c9b92"/>
           </linearGradient>
+          <!-- Knocks the saturation back a little, like inks on aged paper. -->
+          <filter id="res-faded" color-interpolation-filters="sRGB">
+            <feColorMatrix type="saturate" values="0.72"/>
+          </filter>
           <clipPath id="res-clip"><use href="#res-outline"/></clipPath>
           <path id="res-outline" d="M150 22 H180 C196 22 200 33 216 33 H384 C400 33 404 22 420 22 H450
             C478 22 492 44 492 70 C492 96 478 118 450 118 H420 C404 118 400 107 384 107 H216
             C200 107 196 118 180 118 H150 C122 118 108 96 108 70 C108 44 122 22 150 22 Z"/>
         </defs>
-        <ellipse cx="300" cy="126" rx="190" ry="6" fill="#000" opacity="0.1"/>
-        <rect x="0" y="64" width="600" height="12" rx="6" fill="url(#res-lead)"/>
-        <g clip-path="url(#res-clip)">
-          <rect class="res-body-fill" id="res-body" x="100" y="0" width="400" height="140" fill="#dcc08e"/>
-          <g id="resistor"></g>
-          <rect x="100" y="0" width="400" height="140" fill="url(#res-shade)"/>
-          <rect x="108" y="0" width="384" height="140" fill="url(#res-ends)"/>
+        <ellipse cx="304" cy="127" rx="190" ry="7" fill="url(#res-dots)"/>
+        <g filter="url(#res-faded)">
+          <rect x="0" y="64" width="600" height="12" rx="6" fill="url(#res-lead)"/>
+          <rect x="0" y="64" width="600" height="12" rx="6" fill="none" stroke="var(--ink, #1c1a14)" stroke-opacity="0.7" stroke-width="1.2"/>
+          <g clip-path="url(#res-clip)">
+            <rect class="res-body-fill" id="res-body" x="100" y="0" width="400" height="140" fill="#d8bf8e"/>
+            <g id="resistor"></g>
+            <rect x="100" y="0" width="400" height="140" fill="url(#res-shade)"/>
+            <!-- Halftone over the lower third and the far ends: the shadow side. -->
+            <rect x="100" y="86" width="400" height="54" fill="url(#res-dots-fine)"/>
+            <rect x="100" y="0" width="30" height="140" fill="url(#res-dots-fine)"/>
+            <rect x="470" y="0" width="30" height="140" fill="url(#res-dots-fine)"/>
+          </g>
+          <use href="#res-outline" fill="none" stroke="var(--ink, #1c1a14)" stroke-width="2.2" stroke-linejoin="round"/>
         </g>
-        <use href="#res-outline" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="1.5"/>
       </svg>
     </section>
 
@@ -208,7 +226,7 @@ const positions = {
 };
 const bandWidth = { 4: 22, 5: 18 };
 /* Carbon film parts are usually beige, metal film (most five-band parts) blue. */
-const bodyColours = { 4: '#dcc08e', 5: '#7eaed3' };
+const bodyColours = { 4: '#d8bf8e', 5: '#86aac4' };
 const svgNS = 'http://www.w3.org/2000/svg';
 const bodyEl = document.getElementById('res-body');
 const bandFill = name => name === 'gold' || name === 'silver' ? `url(#res-${name})` : colours[name].hex;
