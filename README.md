@@ -417,8 +417,10 @@ that still fits inside the app's default height, and reports the height
 needed at that width. An app whose layout stacks into one column when narrow
 gets the width just above the stacking point, rather than a tall, thin minimum.
 Internal panels that scroll by design (a long settings sidebar, a track list,
-an editor) are fine. The page itself scrolling, or a toolbar running out of
-room, is what counts as not fitting.
+an editor) are fine, as long as they keep enough room to work in. The page
+itself scrolling, a toolbar running out of room, an editor or list squashed
+below 100px, or a label spilling out of its button is what counts as not
+fitting.
 
 An app can request a natural window size with a bubbling, composed
 `clackos-resize` event:
