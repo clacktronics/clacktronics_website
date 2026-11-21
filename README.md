@@ -401,6 +401,27 @@ trusted shadow-root utilities, `plain: false` to omit desktop-only apps from
 the [plain mirror](#plain-html-mirror), and `allow` for iframe permissions such
 as `serial; usb` or `midi`.
 
+`minWidth` and `minHeight` set the smallest window box an app can be resized
+down to, in pixels. They are the size at which the app's own layout still fits
+without its page scrolling or anything being cut off, so dragging an edge simply
+stops there instead of hiding part of the app. Windows open no smaller than this,
+saved desktops are grown back up to it, and the browser shrinking pushes windows
+no further. The floor gives way only on a desktop too small to hold it (a phone),
+where the app's own narrow layout takes over. Without them every window stops at
+320 × 180. Fixed windows ignore `minWidth`.
+
+The numbers are measured rather than guessed: serve the site and run
+`node scripts/measure_app_minimums.mjs` (it needs Playwright) after changing
+an app's layout. It opens each app on the desktop, finds the narrowest width
+that still fits inside the app's default height, and reports the height
+needed at that width. An app whose layout stacks into one column when narrow
+gets the width just above the stacking point, rather than a tall, thin minimum.
+Internal panels that scroll by design (a long settings sidebar, a track list,
+an editor) are fine, as long as they keep enough room to work in. The page
+itself scrolling, a toolbar running out of room, an editor or list squashed
+below 100px, or a label spilling out of its button is what counts as not
+fitting.
+
 An app can request a natural window size with a bubbling, composed
 `clackos-resize` event:
 

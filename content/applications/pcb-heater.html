@@ -31,12 +31,15 @@
         }
         * { box-sizing: border-box; }
         body {
-            margin: 0; min-height: 100vh; overflow: hidden; display: flex;
+            /* a definite height, not a minimum: the app bar goes above the
+               sidebar and board, and a page that was allowed to grow past the
+               window would scroll the bar away and cut off the sidebar's end */
+            margin: 0; height: 100vh; overflow: hidden; display: flex;
             background: var(--bg); color: var(--text);
             font-family: "IBM Plex Mono", monospace;
         }
         .sidebar {
-            width: 330px; flex: 0 0 330px; height: 100vh; overflow-y: auto;
+            width: 330px; flex: 0 0 330px; min-height: 0; overflow-y: auto;
             display: flex; flex-direction: column; background: var(--panel);
             border-right: 1px solid var(--border);
         }

@@ -82,6 +82,19 @@ kbd { font: inherit; color: var(--sage); }
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; flex: 1; min-height: 0; }
 .viewer-column { display: flex; min-width: 0; flex-direction: column; gap: 12px; }
 .control-column { display: flex; flex-direction: column; gap: 12px; }
+/* Side by side, the app is exactly as tall as its window: the effects, audio
+   and export panels together are far taller than the viewer, and a page grown
+   to hold them scrolled the viewer and the timeline out of sight. The panel
+   column scrolls on its own instead. Stacked on a narrow screen there is no
+   column to hand the overflow to, so the page scrolls as before. */
+@media (min-width: 861px) {
+  .app { height: 100vh; min-height: 0; }
+  .workspace { overflow: hidden; }
+  .control-column { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+  .viewer-column { min-height: 0; }
+  /* the viewer is what gives way when the window is short */
+  .workspace .viewer { min-height: 160px; }
+}
 
 .viewer {
   position: relative; display: grid; place-items: center; min-height: 310px; flex: 1;
