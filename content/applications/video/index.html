@@ -199,7 +199,7 @@
       <aside class="control-column" aria-label="Audio and export settings">
         <section class="control-section" id="fx-panel" aria-labelledby="fx-title">
           <div class="section-head">
-            <span class="app-lbl" id="fx-title">// Effects</span>
+            <button class="section-toggle" type="button" data-section-toggle="effects" aria-expanded="true"><span class="section-caret" aria-hidden="true">▾</span><span class="app-lbl" id="fx-title">// Effects</span></button>
             <button class="text-btn" type="button" data-action="fx-clear"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span> CLEAR</button>
           </div>
           <div class="fx-add-row">
@@ -218,9 +218,9 @@
           <p class="note" id="fx-note">Effects run on every frame. The preview works at a reduced size to keep up; the export renders at full size.</p>
         </section>
 
-        <section class="control-section" aria-labelledby="audio-title">
+        <section class="control-section" id="audio-panel" aria-labelledby="audio-title">
           <div class="section-head">
-            <span class="app-lbl" id="audio-title">// Audio layer</span>
+            <button class="section-toggle" type="button" data-section-toggle="audio" aria-expanded="true"><span class="section-caret" aria-hidden="true">▾</span><span class="app-lbl" id="audio-title">// Audio layer</span></button>
             <button class="text-btn" type="button" data-action="audio-remove"><span class="pixel-icon" data-icon="trash" aria-hidden="true"></span> CLEAR</button>
           </div>
           <div class="audio-drop" id="audio-drop">
@@ -240,7 +240,7 @@
 
         <section class="control-section" id="export-panel" aria-labelledby="export-title">
           <div class="section-head">
-            <span class="app-lbl" id="export-title">// Export</span>
+            <button class="section-toggle" type="button" data-section-toggle="export" aria-expanded="true"><span class="section-caret" aria-hidden="true">▾</span><span class="app-lbl" id="export-title">// Export</span></button>
             <span class="local-badge">LOCAL ONLY</span>
           </div>
           <label class="field">Target
@@ -336,7 +336,9 @@
         </section>
 
         <section class="control-section details-section" aria-labelledby="project-title">
-          <span class="app-lbl" id="project-title">// Project</span>
+          <div class="section-head">
+            <button class="section-toggle" type="button" data-section-toggle="project" aria-expanded="true"><span class="section-caret" aria-hidden="true">▾</span><span class="app-lbl" id="project-title">// Project</span></button>
+          </div>
           <dl class="project-details">
             <div><dt>Canvas</dt><dd id="project-size">—</dd></div>
             <div><dt>Duration</dt><dd id="project-duration">—</dd></div>
