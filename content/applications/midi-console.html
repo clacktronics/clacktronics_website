@@ -36,21 +36,37 @@ button, input, select, textarea { font: inherit; }
 
 .midi-work { display: flex; flex: 1; min-height: 0; }
 
-/* ---- side panel ---- */
+/* ---- side panel ----
+   Every card folds away under its heading, so the panel fits a short window
+   without scrolling: Ports and Show start open because they are what a first
+   visit reaches for, the rest start shut. The lamps sit in the heading so a
+   folded card still says whether it is doing anything. */
 .midi-side {
-  width: 296px; flex: none; min-height: 0; overflow-y: auto; padding: 9px;
+  width: 252px; flex: none; min-height: 0; overflow-y: auto; padding: 6px;
   border-right: 1px solid var(--ink); background: var(--paper-deep); scrollbar-width: thin;
 }
 .midi-side[hidden] { display: none; }
 .card {
-  border: 1px solid var(--paper-line); border-radius: 6px;
-  background: var(--paper); padding: 9px; margin-bottom: 8px;
+  border: 1px solid var(--paper-line); border-radius: 5px;
+  background: var(--paper); margin-bottom: 5px;
 }
-.card > h2 {
-  display: flex; align-items: center; gap: 6px; margin: 0 0 8px;
+.card > summary {
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px; cursor: pointer; list-style: none;
   color: var(--leaf-deep); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
 }
-.card > h2 .lamp { margin-left: auto; }
+.card > summary::-webkit-details-marker { display: none; }
+.card > summary::before { content: "\25B8"; display: inline-block; transition: transform 0.15s ease; }
+.card[open] > summary::before { transform: rotate(90deg); }
+.card > summary:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+.card > summary .lamp { margin-left: auto; }
+.card-body { padding: 0 8px 8px; }
+.fold { margin-top: 6px; }
+.fold > summary { cursor: pointer; font-size: 10px; color: var(--sage); list-style: none; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: "\25B8"; display: inline-block; margin-right: 4px; transition: transform 0.15s ease; }
+.fold[open] > summary::before { transform: rotate(90deg); }
+.fold > summary:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
+.lamp { margin-left: auto; }
 .lamp {
   width: 9px; height: 9px; flex: none; border-radius: 50%;
   border: 1px solid var(--ink); background: var(--paper-deep);
@@ -59,7 +75,8 @@ button, input, select, textarea { font: inherit; }
 .lamp.busy { background: var(--warning); }
 .lamp.err { background: var(--bad); }
 
-.field { display: grid; grid-template-columns: minmax(0, 1fr) 132px; align-items: center; gap: 8px; margin: 6px 0; }
+.field { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 6px; margin: 4px 0; }
+.field.num { grid-template-columns: minmax(0, 1fr) 64px; }
 .field > label { font-size: 11px; line-height: 1.25; }
 .field.wide { grid-template-columns: minmax(0, 1fr); }
 .field.hidden { display: none; }
@@ -71,13 +88,13 @@ input[type="number"], input[type="text"], select, textarea {
 textarea { height: auto; resize: vertical; line-height: 1.45; font-size: 10.5px; }
 input[type="range"] { height: auto; padding: 0; border: 0; background: none; }
 input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
-.check { display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; margin: 6px 0; }
+.check { display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; margin: 4px 0; }
 .check input { accent-color: var(--leaf-deep); width: auto; height: auto; }
 .note { font-size: 9.5px; color: var(--sage); line-height: 1.5; margin-top: 6px; }
 .note.warn { color: var(--bad); }
 
-.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
-.btn-row .btn { padding: 7px 6px; text-align: center; font-size: 10.5px; }
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px; }
+.btn-row .btn { padding: 5px 6px; text-align: center; font-size: 10.5px; }
 .btn-row .btn.full { grid-column: 1 / -1; }
 .btn:disabled { color: var(--disabled-text); border-color: var(--paper-line); cursor: default; background: var(--paper-deep); }
 .btn.primary:disabled { background: var(--paper-deep); }
@@ -97,7 +114,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px
 .chan-btn:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
 
 .kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
-.kinds .check { margin: 2px 0; font-size: 10.5px; }
+.kinds .check { margin: 1px 0; font-size: 10px; }
 
 /* ---- keyboard ---- */
 .keys { position: relative; height: 88px; user-select: none; touch-action: none; }
@@ -354,67 +371,77 @@ document.addEventListener('DOMContentLoaded', () => {
   <div class="midi-work">
     <aside class="midi-side" id="side" aria-label="Ports, filters and sending">
 
-      <section class="card">
-        <h2>Ports<span class="lamp" id="lamp-port"></span></h2>
-        <div class="field wide">
-          <label for="port-in">Input</label>
-          <select id="port-in"><option value="">— none —</option></select>
+      <details class="card" id="card-ports" open>
+        <summary>Ports<span class="lamp" id="lamp-port"></span></summary>
+        <div class="card-body">
+          <div class="field">
+            <label for="port-in">Input</label>
+            <select id="port-in"><option value="">— none —</option></select>
+          </div>
+          <div class="field">
+            <label for="port-out">Output</label>
+            <select id="port-out"><option value="">— none —</option></select>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn primary" id="connect">Open MIDI</button>
+            <button type="button" class="btn ghost" id="disconnect" disabled>Close</button>
+          </div>
+          <details class="fold" id="port-options">
+            <summary>Options</summary>
+            <label class="check"><input type="checkbox" id="listen-all">Listen to every input at once</label>
+            <label class="check"><input type="checkbox" id="sysex-permission" checked>Ask for SysEx permission</label>
+            <p class="note" id="port-note">Web MIDI needs Chrome, Edge or Opera. SysEx permission is asked for once, and is what a dump needs to get through.</p>
+          </details>
         </div>
-        <div class="field wide">
-          <label for="port-out">Output</label>
-          <select id="port-out"><option value="">— none —</option></select>
-        </div>
-        <label class="check"><input type="checkbox" id="listen-all">Listen to every input at once</label>
-        <label class="check"><input type="checkbox" id="sysex-permission" checked>Ask for SysEx permission</label>
-        <div class="btn-row">
-          <button type="button" class="btn primary" id="connect">Open MIDI</button>
-          <button type="button" class="btn ghost" id="disconnect" disabled>Close</button>
-        </div>
-        <p class="note" id="port-note">Web MIDI needs Chrome, Edge or Opera. SysEx permission is asked for once, and is what a dump needs to get through.</p>
-      </section>
+      </details>
 
-      <section class="card">
-        <h2>Demo instrument<span class="lamp" id="lamp-demo"></span></h2>
-        <div class="field wide">
-          <label for="demo-kind">Pretend to be</label>
-          <select id="demo-kind"></select>
+      <details class="card" id="card-show" open>
+        <summary>Show</summary>
+        <div class="card-body">
+          <div class="kinds" id="kinds"></div>
+          <p class="note" style="margin-bottom:4px">Channels</p>
+          <div class="chan-grid" id="chan-filter"></div>
         </div>
-        <div class="btn-row">
-          <button type="button" class="btn primary" id="demo-start">Start</button>
-          <button type="button" class="btn ghost" id="demo-stop" disabled>Stop</button>
-        </div>
-        <p class="note">A simulated instrument playing into the monitor, for trying the filters, the plotter and the keyboard without hardware — and in browsers with no Web MIDI at all.</p>
-      </section>
+      </details>
 
-      <section class="card">
-        <h2>Show</h2>
-        <div class="kinds" id="kinds"></div>
-        <p class="note" style="margin-bottom:6px">Channels</p>
-        <div class="chan-grid" id="chan-filter"></div>
-      </section>
+      <details class="card" id="card-demo">
+        <summary>Demo instrument<span class="lamp" id="lamp-demo"></span></summary>
+        <div class="card-body">
+          <div class="field">
+            <label for="demo-kind">Be a</label>
+            <select id="demo-kind"></select>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn primary" id="demo-start">Start</button>
+            <button type="button" class="btn ghost" id="demo-stop" disabled>Stop</button>
+          </div>
+          <p class="note">A simulated instrument playing into the monitor, for trying the filters, the plotter and the keyboard without hardware — and in browsers with no Web MIDI at all.</p>
+        </div>
+      </details>
 
-      <section class="card">
-        <h2>SysEx<span class="lamp" id="lamp-sysex"></span></h2>
-        <div class="field wide">
-          <label for="sysex-hex">Bytes to send</label>
-          <textarea id="sysex-hex" rows="3" spellcheck="false">F0 7E 7F 06 01 F7</textarea>
+      <details class="card" id="card-sysex">
+        <summary>SysEx<span class="lamp" id="lamp-sysex"></span></summary>
+        <div class="card-body">
+          <textarea id="sysex-hex" rows="2" spellcheck="false" aria-label="SysEx bytes to send">F0 7E 7F 06 01 F7</textarea>
+          <div class="btn-row">
+            <button type="button" class="btn ghost" id="send-sysex">Send</button>
+            <button type="button" class="btn ghost" id="load-sysex">Load .syx…</button>
+            <button type="button" class="btn ghost full" id="save-sysex" disabled>Save what has arrived (.syx)</button>
+          </div>
+          <div class="field num">
+            <label for="sysex-gap">Gap between messages (ms)</label>
+            <input type="number" id="sysex-gap" value="60" min="0" max="2000" step="5">
+          </div>
+          <p class="note" id="sysex-note">Dumps from a synth are captured as they arrive. Old instruments need the gap when a file is sent back to them.</p>
         </div>
-        <div class="btn-row">
-          <button type="button" class="btn ghost" id="send-sysex">Send</button>
-          <button type="button" class="btn ghost" id="load-sysex">Load .syx…</button>
-          <button type="button" class="btn ghost full" id="save-sysex" disabled>Save what has arrived (.syx)</button>
-        </div>
-        <div class="field">
-          <label for="sysex-gap">Gap between messages (ms)</label>
-          <input type="number" id="sysex-gap" value="60" min="0" max="2000" step="5">
-        </div>
-        <p class="note" id="sysex-note">Dumps from a synth are captured as they arrive. Old instruments need the gap when a file is sent back to them.</p>
-      </section>
+      </details>
 
-      <section class="card">
-        <h2>Traffic</h2>
-        <div class="stat-list" id="stats"></div>
-      </section>
+      <details class="card" id="card-traffic">
+        <summary>Traffic</summary>
+        <div class="card-body">
+          <div class="stat-list" id="stats"></div>
+        </div>
+      </details>
     </aside>
 
     <main class="midi-main">
@@ -1299,6 +1326,7 @@ function syncChrome() {
   $('play').hidden = !state.showPlay;
   $('side').hidden = !state.showSide;
   $('port-note').classList.toggle('warn', !midiSupported);
+  if (!midiSupported) $('port-options').open = true;
   if (!midiSupported) $('port-note').textContent = 'This browser has no Web MIDI — Chrome, Edge and Opera have it. The demo instrument below works anywhere.';
   $('sysex-note').textContent = sysexCaptured.length
     ? `${sysexCaptured.length} message${sysexCaptured.length === 1 ? '' : 's'} captured, ${sysexBytes} bytes. Save them as a .syx file, or send one back.`
@@ -1564,10 +1592,14 @@ window.addEventListener('pagehide', () => { stopClock?.(); demoStop(true); });
 
 /* ---- remembered by the desktop ----------------------------------------- */
 
-ClackOSAppState.connect({
+const appState = ClackOSAppState.connect({
   controls: true,
-  save: () => ({ view: { ...state } }),
+  save: () => ({
+    view: { ...state },
+    folds: Object.fromEntries([...$('side').querySelectorAll('details[id]')].map(el => [el.id, el.open]))
+  }),
   restore: saved => {
+    for (const [id, isOpen] of Object.entries(saved?.folds || {})) if ($(id)) $(id).open = !!isOpen;
     if (!saved?.view) return;
     for (const key of Object.keys(state)) if (key in saved.view) state[key] = saved.view[key];
     state.paused = false;
@@ -1577,6 +1609,9 @@ ClackOSAppState.connect({
     if (state.showPlot) requestAnimationFrame(sizePlot);
   }
 });
+
+/* toggle does not bubble, so it is listened for in the capture phase */
+$('side').addEventListener('toggle', () => appState?.schedule?.(), true);
 
 /* ---- go ---------------------------------------------------------------- */
 

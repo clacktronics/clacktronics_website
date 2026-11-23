@@ -566,7 +566,9 @@ OpenSCAD, Markdown windows, and desktop actions.
   permission support.
 - `applications/midi-console.html` — MIDIterm Web MIDI monitor and sender with
   decoded messages, channel/type filters, activity lanes, plotting, recording,
-  and demo input. MIDI parsing is shared with ClackTerm.
+  and demo input. MIDI parsing is shared with ClackTerm. The side panel's
+  sections fold away (Ports and Show start open), and the desktop remembers
+  which are open.
 - `applications/kicad.html` — KiCanvas schematic and board viewer (MIT,
   vendored in `vendor/kicanvas/`) with local files and `?file=` startup. Run
   `scripts/build_kicanvas_theme.py` after updating the vendor bundle.
