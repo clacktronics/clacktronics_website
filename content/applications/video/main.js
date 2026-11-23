@@ -572,6 +572,7 @@ function chooseInsert(mode) {
 
 function chooseAudio(mode) {
   state.audioPickMode = mode;
+  setSectionOpen('audio', true);
   $(`input[name="audio-mode"][value="${mode}"]`).checked = true;
   $('#audio-picker').click();
 }
@@ -829,6 +830,7 @@ async function exportProject() {
 function chooseExportTarget(target) {
   $('#export-target').value = target;
   updateExportPanel();
+  setSectionOpen('export', true);
   $('#export-panel').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   $('#export-target').focus({ preventScroll: true });
   setStatus(target === 'raw'
@@ -1401,6 +1403,9 @@ function addEffect(kind) {
   const entry = makeEntry(kind);
   if (!entry) return;
   state.effects.push(entry);
+  /* a filter added from the menu bar into a folded panel would otherwise
+     arrive out of sight, with nothing to say where its controls went */
+  setSectionOpen('effects', true);
   refreshFx();
   setStatus(`${entry.title} added — it runs on every frame from here on.`);
 }
@@ -1513,6 +1518,7 @@ const actions = {
   help: () => showDialog('formats'),
   shortcuts: () => showDialog('shortcuts'),
   'fx-focus': () => {
+    setSectionOpen('effects', true);
     $('#fx-panel').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     $('#fx-picker').focus({ preventScroll: true });
   },
@@ -1735,6 +1741,38 @@ for (const id of ['#fx-fg', '#fx-bg']) {
    otherwise keep showing the frame before it. */
 player.addEventListener('seeked', () => scheduleFxPreview());
 player.addEventListener('loadeddata', () => scheduleFxPreview());
+
+/* ---- folding panels ------------------------------------------------------
+   Which side panels are folded is a per-viewer convenience, so it lives in
+   localStorage and is wrapped against the storage being unavailable (a private
+   window, blocked site data) — the panels then simply start open. Anything
+   that sends the user to a panel's controls (the Export submenu, Effect
+   stack…, choosing audio, adding a filter) unfolds that panel first. */
+const SECTION_STORE = 'clack-video-lab:folded';
+const sectionToggles = new Map($$('[data-section-toggle]').map(button => [button.dataset.sectionToggle, button]));
+
+function readFolded() {
+  try { return new Set(JSON.parse(localStorage.getItem(SECTION_STORE) || '[]')); }
+  catch { return new Set(); }
+}
+
+function setSectionOpen(key, open, { save = true } = {}) {
+  const button = sectionToggles.get(key);
+  if (!button) return;
+  button.closest('.control-section').classList.toggle('collapsed', !open);
+  button.setAttribute('aria-expanded', String(open));
+  button.title = open ? 'Fold this panel away' : 'Unfold this panel';
+  if (!save) return;
+  const folded = readFolded();
+  open ? folded.delete(key) : folded.add(key);
+  try { localStorage.setItem(SECTION_STORE, JSON.stringify([...folded])); } catch { /* not kept */ }
+}
+
+const initiallyFolded = readFolded();
+for (const [key, button] of sectionToggles) {
+  setSectionOpen(key, !initiallyFolded.has(key), { save: false });
+  button.addEventListener('click', () => setSectionOpen(key, button.getAttribute('aria-expanded') !== 'true'));
+}
 
 renderTimeline();
 buildFxMenus();

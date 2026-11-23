@@ -183,6 +183,21 @@ kbd { font: inherit; color: var(--sage); }
 .spacer { flex: 1; }
 
 .control-section { padding: 13px 14px; }
+/* Each panel folds down to its heading. Opened together they are far taller
+   than the window, so the column scrolled to reach Export; folding the ones not
+   in use keeps the rest in view. Only the heading row stays when folded — the
+   CLEAR buttons and the LOCAL ONLY badge ride in it and still work. */
+.section-toggle {
+  all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  margin: -3px -5px; padding: 3px 5px; border-radius: 4px;
+}
+.section-toggle:hover { background: color-mix(in srgb, var(--paper-deep) 84%, var(--ink)); }
+.section-toggle:focus-visible { outline: 2px solid var(--leaf); outline-offset: 0; }
+.section-caret { display: inline-block; width: 9px; color: var(--leaf-deep); font-size: 10px; line-height: 1; transition: transform .12s ease; }
+.control-section.collapsed .section-caret { transform: rotate(-90deg); }
+.control-section.collapsed > .section-head { margin-bottom: 0; }
+.control-section.collapsed > :not(.section-head) { display: none !important; }
+.control-section.collapsed { padding-block: 10px; }
 .audio-drop { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 11px; border: 1px dashed var(--sage); border-radius: 5px; background: var(--paper); }
 .audio-drop.has-audio { border-style: solid; border-color: var(--leaf-deep); }
 #audio-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }

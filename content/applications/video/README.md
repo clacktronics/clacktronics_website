@@ -24,6 +24,11 @@ own page and inside a ClackOS iframe window.
 - **File → Export → Raw**: the pair of raw files Popcorn wants (see below).
 - **File → Export → Images**: one still per frame, zipped, at a frame rate and
   width you choose.
+- Side panels (Effects, Audio layer, Export, Project) that fold down to their
+  headings, so the ones in use fit without scrolling the column. The folded
+  set is remembered per browser, and anything that sends you to a panel's
+  controls (File → Export, Effects → Effect stack…, choosing audio, adding a
+  filter) unfolds it first.
 - Drag-and-drop and keyboard transport controls (`J`, `K`, `L`, `B`, `I`, `O`,
   comma/period, and Space).
 
