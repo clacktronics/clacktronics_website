@@ -60,7 +60,7 @@ assets/
   js/highlight.js             syntax highlighter for fenced code blocks
   js/model-scene.js           three.js viewer core (3D Model Viewer + inline @[model])
   js/analytics.js             GoatCounter visitor counting — the one place the endpoint is named
-  js/{events,file-manager,image-zoom,backgrounds,midi-bytes,model-embed,model-squish}.js
+  js/{events,file-manager,image-zoom,backgrounds,halftone,midi-bytes,model-embed,model-squish}.js
   upload.php                  media upload endpoint (runs on the web host)
   upload-config.example.php   template — the real config is host-only, never committed
 

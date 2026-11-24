@@ -177,6 +177,7 @@
   .mock-desktop { min-height: 390px; }
 }
 </style>
+<script src="../../assets/js/halftone.js"></script>
 <script src="../../assets/js/app-menu.js" defer></script>
 <script src="../../assets/js/app-bar.js" defer></script>
 <script src="../../assets/js/app-home.js" defer></script>
@@ -215,6 +216,7 @@
             <option value="mono">Black &amp; white</option>
             <option value="warm">Warm tint</option>
             <option value="orange">Orange monochrome</option>
+            <option value="newsprint">Newsprint halftone</option>
             <option value="custom">Custom</option>
           </select>
         </div>
@@ -253,7 +255,7 @@
             <p class="eyebrow">// Palette in context</p>
             <p>Change a colour to update this sample. <b>Strong text</b> sits alongside body text.</p>
             <div class="mock-list"><div>Dividers between rows</div><div>Raised surface behind them</div></div>
-            <div class="mock-media"><img id="mockMedia" alt="Media treatment preview"><span>Photos, video, canvases and wallpaper follow this treatment.</span></div>
+            <div class="mock-media"><img id="mockMedia" alt="Media treatment preview"><span>Photos, video and wallpaper follow this treatment; canvases skip the halftone.</span></div>
             <div class="mock-actions"><span class="mock-button">Primary</span><span class="mock-button alt">Secondary</span><span class="mock-button off">Disabled</span></div>
           </div>
         </div>
@@ -338,14 +340,22 @@ const MEDIA_SLIDERS = [
   ['--media-saturate', 'Colour intensity', 0, 800, 10, '%'],
   ['--media-hue', 'Tint hue', -180, 180, 5, 'deg'],
   ['--media-brightness', 'Brightness', 50, 150, 5, '%'],
-  ['--media-contrast', 'Contrast', 50, 150, 5, '%']
+  ['--media-contrast', 'Contrast', 50, 150, 5, '%'],
+  /* Dot pitch of the halftone screen in CSS pixels; 0 is no screen. The range
+     is the set of screens assets/js/halftone.js builds. */
+  ['--media-halftone', 'Halftone dots (0 is off)', 0, 12, 1, 'px']
 ];
 const ALL_SLIDERS = [...SLIDERS, ...MEDIA_SLIDERS];
+/* The halftone screens the images and wallpaper; the rest is a colour chain
+   that also reaches canvases. The screen goes first so that warmth, tint and
+   brightness then colour its ink and paper. */
+const COLOUR_MEDIA = MEDIA_SLIDERS.map(([name]) => name).filter(name => name !== '--media-halftone');
 const MEDIA_PRESETS = {
-  none: { '--media-grayscale':'0%', '--media-sepia':'0%', '--media-saturate':'100%', '--media-hue':'0deg', '--media-brightness':'100%', '--media-contrast':'100%' },
-  mono: { '--media-grayscale':'100%', '--media-sepia':'0%', '--media-saturate':'100%', '--media-hue':'0deg', '--media-brightness':'100%', '--media-contrast':'105%' },
-  warm: { '--media-grayscale':'0%', '--media-sepia':'30%', '--media-saturate':'110%', '--media-hue':'-5deg', '--media-brightness':'103%', '--media-contrast':'95%' },
-  orange: { '--media-grayscale':'100%', '--media-sepia':'100%', '--media-saturate':'600%', '--media-hue':'-15deg', '--media-brightness':'100%', '--media-contrast':'105%' }
+  none: { '--media-grayscale':'0%', '--media-sepia':'0%', '--media-saturate':'100%', '--media-hue':'0deg', '--media-brightness':'100%', '--media-contrast':'100%', '--media-halftone':'0px' },
+  mono: { '--media-grayscale':'100%', '--media-sepia':'0%', '--media-saturate':'100%', '--media-hue':'0deg', '--media-brightness':'100%', '--media-contrast':'105%', '--media-halftone':'0px' },
+  warm: { '--media-grayscale':'0%', '--media-sepia':'30%', '--media-saturate':'110%', '--media-hue':'-5deg', '--media-brightness':'103%', '--media-contrast':'95%', '--media-halftone':'0px' },
+  orange: { '--media-grayscale':'100%', '--media-sepia':'100%', '--media-saturate':'600%', '--media-hue':'-15deg', '--media-brightness':'100%', '--media-contrast':'105%', '--media-halftone':'0px' },
+  newsprint: { '--media-grayscale':'100%', '--media-sepia':'25%', '--media-saturate':'100%', '--media-hue':'0deg', '--media-brightness':'100%', '--media-contrast':'100%', '--media-halftone':'4px' }
 };
 const DEFAULTS = {
   '--ink':'#09140d', '--heading':'#09140d', '--ink-soft':'#14231a',
@@ -361,7 +371,7 @@ const DEFAULTS = {
   '--disabled-text':'#b3ab8d',
   '--danger':'#a04a3a', '--warning':'#b58b3a',
   '--ok':'#276b47', '--info':'#3f66ad',
-  ...MEDIA_PRESETS.none, '--media-filter':'none'
+  ...MEDIA_PRESETS.none, '--media-filter':'none', '--media-image-filter':'none'
 };
 const palette = byId('palette');
 const sliders = byId('sliders');
@@ -383,6 +393,9 @@ let edited = false;
 let loadSeq = 0;
 const SLIDER_UNITS = Object.fromEntries(ALL_SLIDERS.map(([name, , , , , unit]) => [name, unit]));
 byId('mockMedia').src = new URL('../../assets/backgrounds/Shoe-Throwing-Clown-4.JPG', appBaseUrl).href;
+/* The preview's own pictures need the halftone screens in this document or
+   shadow root; inside ClackOS the desktop has usually put them there already. */
+window.ClackHalftone?.install(appRoot);
 
 /* Apply, save and commit read the controls rather than trusting the cached
    palette, so what leaves the editor is always what is on screen. */
@@ -392,15 +405,28 @@ function readControls() {
     if (!Object.hasOwn(values, name)) continue;
     values[name] = input.type === 'range' ? `${input.value}${SLIDER_UNITS[name]}` : input.value;
   }
-  values['--media-filter'] = makeMediaFilter();
+  refreshFilters();
   return { ...values };
 }
 
 function makeMediaFilter() {
-  if (Object.entries(MEDIA_PRESETS.none).every(([name, value]) => values[name] === value)) return 'none';
+  if (COLOUR_MEDIA.every(name => values[name] === MEDIA_PRESETS.none[name])) return 'none';
   return `grayscale(${values['--media-grayscale']}) sepia(${values['--media-sepia']}) ` +
     `saturate(${values['--media-saturate']}) hue-rotate(${values['--media-hue']}) ` +
     `brightness(${values['--media-brightness']}) contrast(${values['--media-contrast']})`;
+}
+
+function makeImageFilter() {
+  const colour = makeMediaFilter();
+  const pitch = Math.round(parseFloat(values['--media-halftone']) || 0);
+  if (pitch < 1) return colour;
+  const screen = `url(#clackos-halftone-${pitch})`;
+  return colour === 'none' ? screen : `${screen} ${colour}`;
+}
+
+function refreshFilters() {
+  values['--media-filter'] = makeMediaFilter();
+  values['--media-image-filter'] = makeImageFilter();
 }
 
 function safeName(value) {
@@ -496,7 +522,7 @@ function renderSliders() {
 }
 
 function updateLivePreview() {
-  values['--media-filter'] = makeMediaFilter();
+  refreshFilters();
   for (const [name, value] of Object.entries(values)) mockDesktop.style.setProperty(name, value);
   status.textContent = `${safeName(themeName.value)} — previewing locally`;
 }
@@ -513,7 +539,7 @@ function applyToDesktop() {
 
 function restoreDesktopTheme() {
   if (appRoot === document && window.parent === window) {
-    for (const [name] of [...COLOURS, ...ALL_SLIDERS, ['--media-filter']]) document.documentElement.style.removeProperty(name);
+    for (const [name] of [...COLOURS, ...ALL_SLIDERS, ['--media-filter'], ['--media-image-filter']]) document.documentElement.style.removeProperty(name);
   } else sendToClackOS({ type: 'clackos-theme-preview', variables: null });
   status.textContent = 'Desktop restored to its active theme.';
 }
@@ -522,6 +548,7 @@ function makeCss() {
   const current = readControls();
   const lines = [...COLOURS, ...ALL_SLIDERS].map(([name]) => `  ${name}: ${current[name]};`);
   lines.push(`  --media-filter: ${current['--media-filter']};`);
+  lines.push(`  --media-image-filter: ${current['--media-image-filter']};`);
   return `/* ${safeName(themeName.value)} — generated by the ClackOS Theme Editor */\n:root {\n${lines.join('\n')}\n}\n`;
 }
 
@@ -537,7 +564,10 @@ function loadCss(css, name) {
   for (const [name, , min, max, , unit] of ALL_SLIDERS) {
     const match = new RegExp(`${name}\\s*:\\s*(-?[0-9.]+)\\s*${unit}`, 'i').exec(css);
     if (!match) continue;
-    next[name] = `${Math.min(max, Math.max(min, parseFloat(match[1])))}${unit}`;
+    let number = Math.min(max, Math.max(min, parseFloat(match[1])));
+    /* Only whole-pixel screens exist. */
+    if (name === '--media-halftone') number = Math.round(number);
+    next[name] = `${number}${unit}`;
     seen.add(name);
   }
   /* Themes made before these roles existed remain readable on both light and
@@ -558,7 +588,7 @@ function loadCss(css, name) {
   if (!seen.has('--ok')) next['--ok'] = next['--leaf-deep'];
   if (!seen.has('--info')) next['--info'] = next['--sage'];
   values = next;
-  values['--media-filter'] = makeMediaFilter();
+  refreshFilters();
   themeName.value = safeName(name);
   themeTemplate.value = [...themeTemplate.options].some(option => option.value === themeName.value) ? themeName.value : '';
   edited = false;

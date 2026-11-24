@@ -36,10 +36,21 @@ const THEME_UNIT_VARS = {
   '--media-saturate': /^\d{1,3}(\.\d+)?%$/,
   '--media-hue': /^-?\d{1,3}(\.\d+)?deg$/,
   '--media-brightness': /^\d{1,3}(\.\d+)?%$/,
-  '--media-contrast': /^\d{1,3}(\.\d+)?%$/
+  '--media-contrast': /^\d{1,3}(\.\d+)?%$/,
+  '--media-halftone': /^\d{1,2}px$/
 };
 const THEME_FILTER_VAR = '--media-filter';
-const THEME_FILTER_PATTERN = /^(?:none|grayscale\(\d{1,3}(?:\.\d+)?%\) sepia\(\d{1,3}(?:\.\d+)?%\) saturate\(\d{1,3}(?:\.\d+)?%\) hue-rotate\(-?\d{1,3}(?:\.\d+)?deg\) brightness\(\d{1,3}(?:\.\d+)?%\) contrast\(\d{1,3}(?:\.\d+)?%\))$/;
+const THEME_COLOUR_FILTER = String.raw`grayscale\(\d{1,3}(?:\.\d+)?%\) sepia\(\d{1,3}(?:\.\d+)?%\) saturate\(\d{1,3}(?:\.\d+)?%\) hue-rotate\(-?\d{1,3}(?:\.\d+)?deg\) brightness\(\d{1,3}(?:\.\d+)?%\) contrast\(\d{1,3}(?:\.\d+)?%\)`;
+const THEME_FILTER_PATTERN = new RegExp(`^(?:none|${THEME_COLOUR_FILTER})$`);
+/* The image filter is the colour treatment, optionally preceded by a reference
+ * to one of the halftone screens in assets/js/halftone.js. The reference is the
+ * only url() a preview can carry, and only to those fixed ids, so an editor
+ * cannot point another document's filter at anything else. */
+const THEME_IMAGE_FILTER_VAR = '--media-image-filter';
+const THEME_HALFTONE_REF = String.raw`url\(#clackos-halftone-(?:[1-9]|1[0-2])\)`;
+const THEME_IMAGE_FILTER_PATTERN = new RegExp(
+  `^(?:none|${THEME_HALFTONE_REF}|(?:${THEME_HALFTONE_REF} )?${THEME_COLOUR_FILTER})$`);
+const installHalftone = root => window.ClackHalftone?.install(root);
 let activeTheme = 'clackos.css';
 let themePreview = null;
 let availableThemes = new Set(['clackos.css']);
@@ -79,10 +90,12 @@ function setPreviewOnDocument(doc, variables) {
     else
       doc.documentElement.style.removeProperty(name);
   }
-  if (variables && THEME_FILTER_PATTERN.test(String(variables[THEME_FILTER_VAR] || '').trim()))
-    doc.documentElement.style.setProperty(THEME_FILTER_VAR, String(variables[THEME_FILTER_VAR]).trim());
-  else
-    doc.documentElement.style.removeProperty(THEME_FILTER_VAR);
+  for (const [name, pattern] of [[THEME_FILTER_VAR, THEME_FILTER_PATTERN], [THEME_IMAGE_FILTER_VAR, THEME_IMAGE_FILTER_PATTERN]]) {
+    if (variables && pattern.test(String(variables[name] || '').trim()))
+      doc.documentElement.style.setProperty(name, String(variables[name]).trim());
+    else
+      doc.documentElement.style.removeProperty(name);
+  }
 }
 
 function revealThemedFrame(frame, link) {
@@ -96,7 +109,7 @@ function revealThemedFrame(frame, link) {
 
 function themeVariablesForDocument(doc) {
   const styles = doc.defaultView.getComputedStyle(doc.documentElement);
-  return Object.fromEntries([...THEME_VARS, ...Object.keys(THEME_UNIT_VARS), THEME_FILTER_VAR]
+  return Object.fromEntries([...THEME_VARS, ...Object.keys(THEME_UNIT_VARS), THEME_FILTER_VAR, THEME_IMAGE_FILTER_VAR]
     .map(name => [name, styles.getPropertyValue(name).trim()]));
 }
 
@@ -136,6 +149,7 @@ function applyThemeToFrame(frame) {
     }
     const href = themeHref(activeTheme);
     const finish = () => {
+      installHalftone(doc);
       setPreviewOnDocument(doc, themePreview);
       dispatchThemeChange(doc);
       doc.querySelectorAll('iframe').forEach(nestedFrame => {
@@ -536,6 +550,9 @@ async function mountIntegratedApp(body, launchPage, title, onClose) {
   host.setAttribute('aria-label', title);
   const root = host.attachShadow({ mode: 'open' });
   body.appendChild(host);
+  /* A url(#id) filter reference resolves inside the shadow root, not the
+   * desktop document, so the halftone screens need a copy here too. */
+  installHalftone(root);
 
   onClose(() => host.dispatchEvent(new CustomEvent('clackos-disconnect')));
 

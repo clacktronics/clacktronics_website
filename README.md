@@ -18,6 +18,7 @@ assets/
   js/markdown.js            ← the markdown renderer (desktop + editor preview)
   js/model-scene.js         ← three.js viewer core (app + inline @[model])
   js/clack-fx.js            ← the image filters, shared by ClackPaint and Video Lab
+  js/halftone.js            ← SVG halftone screens for a theme's media treatment
   js/app-state.js           ← opt-in state persistence for application pages
   js/events.js              ← shared events reader (Calendar app + menu-bar pull-down)
   js/midi-bytes.js          ← shared MIDI message parser
@@ -94,6 +95,32 @@ CSS, applies optional media filters, and can commit a theme to GitHub. A commit
 writes under `assets/themes/`, registers the file in `content/site.json`, and
 can make it active. The fine-grained token stays in memory. Filenames may use
 letters, numbers, dots, underscores, and hyphens, and must end in `.css`.
+
+### Media treatment and halftone
+
+A theme can also treat pictures without touching the interface colours. The
+Theme Editor's *Media treatment* sliders build two variables:
+
+- `--media-filter` — a CSS colour chain (black & white, warmth, intensity,
+  tint, brightness, contrast) applied to images, video, canvases and the
+  desktop wallpaper.
+- `--media-image-filter` — the same chain, optionally preceded by a halftone
+  screen, applied to images, video, YouTube embeds and the wallpaper but not to
+  canvases, which are mostly surfaces someone is drawing on. A theme that sets
+  only `--media-filter` gets the same value here.
+
+The *Halftone dots* slider sets `--media-halftone` (dot pitch in CSS pixels,
+1–12, 0 for none) and puts `url(#clackos-halftone-N)` at the head of the image
+chain, so warmth and tint then colour the dots' ink and paper; *Newsprint
+halftone* is a preset for it. CSS has no halftone function, so the screens are
+SVG filters built by `assets/js/halftone.js`: luminance plus a tiled 45° dot
+ramp, thresholded. A `url(#…)` reference only resolves inside its own document
+or shadow root, so ClackOS installs the filters on the desktop, in each
+same-origin app frame and in each integrated app's shadow root, and
+`app-home.js` loads them for an app opened on its own. A page without them
+simply shows the colour treatment. `clackos.js` accepts only those twelve
+filter ids in a preview, so an editor cannot aim another document's `filter`
+anywhere else.
 
 ### Status, scrim and series roles
 

@@ -117,6 +117,23 @@
    * does the same for the page on its own, including a frame that loads, or
    * reloads, after the theme was chosen. A cross-origin frame throws on the
    * contentDocument read and is left as it is. */
+  /* A theme may halftone its pictures with a url(#…) reference to one of the
+   * screens in assets/js/halftone.js, which have to be present in each
+   * document that shows one. Most apps do not load that script themselves, so
+   * it comes in here, once, the first time a palette goes on. */
+  let halftoneLoad = null;
+  function withHalftone(install) {
+    if (window.ClackHalftone) return install(window.ClackHalftone);
+    halftoneLoad ||= new Promise(resolve => {
+      const script = document.createElement('script');
+      script.src = siteRoot + 'assets/js/halftone.js';
+      script.addEventListener('load', resolve, { once: true });
+      script.addEventListener('error', resolve, { once: true });
+      document.head.appendChild(script);
+    });
+    halftoneLoad.then(() => { if (window.ClackHalftone) install(window.ClackHalftone); });
+  }
+
   const themedFrames = new WeakSet();
   function themeFrame(frame, href) {
     if (!themedFrames.has(frame)) {
@@ -135,6 +152,7 @@
       }
       if (link.href !== href) link.href = href;
       doc.documentElement.dataset.theme = activeTheme.replace(/\.css$/i, '');
+      withHalftone(halftone => halftone.install(doc));
     } catch {}
   }
   let currentHref = null;
@@ -153,6 +171,7 @@
     }
     const href = new URL(siteRoot + 'assets/themes/' + encodeURIComponent(name), location.href).href;
     currentHref = href;
+    withHalftone(halftone => halftone.install(document));
     document.querySelectorAll('iframe').forEach(frame => themeFrame(frame, href));
     if (link.href === href && link.sheet) announceTheme();
     else {

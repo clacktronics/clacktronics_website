@@ -53,6 +53,12 @@
   --media-brightness: 100%;
   --media-contrast: 100%;
   --media-filter: none;
+  --media-halftone: 0px;
+  /* Photographs, video and the wallpaper may also carry a halftone screen
+     (assets/js/halftone.js); canvases keep the colour treatment alone, since
+     many of them are surfaces someone is drawing on. A theme that predates
+     the screen sets only --media-filter and this follows it. */
+  --media-image-filter: var(--media-filter);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; }
@@ -62,7 +68,10 @@ body {
   color: var(--ink-soft);
   background: var(--paper);
 }
-:where(img, video, canvas):not([data-media-treatment="none"]) {
+:where(img, video):not([data-media-treatment="none"]) {
+  filter: var(--media-image-filter);
+}
+:where(canvas):not([data-media-treatment="none"]) {
   filter: var(--media-filter);
 }
 .app { display: flex; flex-direction: column; min-height: 100%; }
