@@ -43,13 +43,13 @@
   border-radius: 0 0 8px 8px; display: none; padding: 6px 2px;
 }
 .rm-standalone-bar .rm.open > .rm-dd { display: block; }
-.rm-standalone-bar .rm-dd a {
+.rm-standalone-bar .rm-dd a, .rm-standalone-bar .rm-dd button {
   all: unset; box-sizing: border-box; display: flex; align-items: center; width: 100%;
   cursor: pointer; gap: 8px; padding: 7px 14px; font: inherit; font-size: 12px;
   color: var(--control-text, #2f2a1f); white-space: nowrap;
 }
-.rm-standalone-bar .rm-dd a:hover { background: var(--ink, #2f2a1f); color: var(--menu-text, #f6f2e6); }
-.rm-standalone-bar .rm-dd a:focus-visible { outline: 2px solid var(--leaf, #4c7a4c); outline-offset: -2px; }
+.rm-standalone-bar .rm-dd a:hover, .rm-standalone-bar .rm-dd button:hover { background: var(--ink, #2f2a1f); color: var(--menu-text, #f6f2e6); }
+.rm-standalone-bar .rm-dd a:focus-visible, .rm-standalone-bar .rm-dd button:focus-visible { outline: 2px solid var(--leaf, #4c7a4c); outline-offset: -2px; }
 .rm-standalone-bar .rm-dd .sep { height: 1px; background: var(--paper-line, #c9c2ae); margin: 6px 0; }
 
 /* the way back to the desktop, first thing in the bar of an app open on its
@@ -72,6 +72,11 @@
 }
 .rm-bar .rm-home .pixel-icon { width: 14px; height: 14px; }
 .rm-standalone-bar .pixel-icon[data-icon="open"] { --pixel-icon: url('${icon('open')}'); }
+
+/* the Theme menu of an app open on its own: a tick beside the palette in use,
+ * in a fixed-width slot so the names line up whichever is ticked */
+.rm-bar .rm-theme-item .rm-theme-tick { flex: none; width: 1em; text-align: center; visibility: hidden; }
+.rm-bar .rm-theme-item[aria-checked="true"] .rm-theme-tick { visibility: visible; }
 .rm-bar .rm-home .pixel-icon[data-icon="arrow-left"] { --pixel-icon: url('${icon('arrow-left')}'); }
 
 /* the app's shell keeps whatever layout the app had; the bar sits above it */
@@ -140,23 +145,29 @@
     return create(root);
   }
 
-  /* The app's own File menu if it has one, otherwise a new one at the head of
-   * the menu bar, wired to open and close like the app's other menus. Apps bind
-   * their menu toggles at load over the menus that existed then, so a menu added
-   * afterwards brings its own behaviour. */
-  function ensureFileMenu(root, bar) {
+  /* A named menu in the bar — the app's own if it has one by that name,
+   * otherwise a new one, wired to open and close like the app's other menus.
+   * Apps bind their menu toggles at load over the menus that existed then, so a
+   * menu added afterwards brings its own behaviour. A new File menu goes at the
+   * head of the bar where File always is; anything else goes on the end. */
+  function ensureMenu(root, bar, name) {
     const doc = root.ownerDocument || root;
     const label = menu => (menu.querySelector(':scope > button')?.textContent || '').trim().toLowerCase();
     const menus = [...bar.querySelectorAll(':scope > .rm')];
-    const existing = menus.find(menu => label(menu) === 'file');
+    const existing = menus.find(menu => label(menu) === name.toLowerCase());
     if (existing) return existing;
 
     const menu = doc.createElement('div');
     menu.className = 'rm';
-    menu.innerHTML = '<button>File</button><div class="rm-dd"></div>';
-    bar.prepend(menu);
+    const button = doc.createElement('button');
+    button.textContent = name;
+    const dd = doc.createElement('div');
+    dd.className = 'rm-dd';
+    menu.append(button, dd);
+    if (name.toLowerCase() === 'file') bar.prepend(menu);
+    else bar.appendChild(menu);
 
-    menu.querySelector(':scope > button').addEventListener('click', event => {
+    button.addEventListener('click', event => {
       event.stopPropagation();
       const opening = !menu.classList.contains('open');
       bar.querySelectorAll('.rm.open').forEach(other => other.classList.remove('open'));
@@ -172,5 +183,7 @@
     return menu;
   }
 
-  window.ClackOSAppBar = { ensureStyle, create, ensureBar, ensureFileMenu };
+  const ensureFileMenu = (root, bar) => ensureMenu(root, bar, 'File');
+
+  window.ClackOSAppBar = { ensureStyle, create, ensureBar, ensureMenu, ensureFileMenu };
 })();

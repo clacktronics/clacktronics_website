@@ -479,6 +479,10 @@ function rememberWindowBox(rec) {
  * them. Every other app gets the item, including the full-window ones with no
  * menu bar of their own — those are given a bar to hold it.
  *
+ * The link names the desktop's current theme, so the tab opens looking like
+ * the window it came from; the page's own Theme menu (assets/js/app-home.js)
+ * can change it from there.
+ *
  * The bar itself, and the File menu the item goes in, come from
  * assets/js/app-bar.js: the same code makes the bar for the link an app opened
  * on its own puts back the other way, to the desktop. */
@@ -504,6 +508,17 @@ function addStandaloneAppLink(root, pageUrl, def) {
   link.target = '_blank';
   link.rel = 'noopener';
   link.innerHTML = '<span class="pixel-icon" data-icon="open" aria-hidden="true"></span>Open app in new tab';
+  /* The tab opens in the desktop's palette: ?theme= carries the theme in use
+   * now, which app-home.js puts on the standalone page and ticks in its Theme
+   * menu. Written just before the link is followed or copied rather than once
+   * at mount, because the theme can change while the window is open. */
+  const withTheme = () => {
+    const url = new URL(pageUrl, location.href);
+    url.searchParams.set('theme', activeTheme);
+    link.href = url.href;
+  };
+  withTheme();
+  for (const type of ['pointerdown', 'focus', 'contextmenu']) link.addEventListener(type, withTheme);
   link.addEventListener('click', () => {
     bar.querySelectorAll('.rm.open').forEach(menu => menu.classList.remove('open'));
   });

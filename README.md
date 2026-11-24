@@ -63,7 +63,14 @@ They use iframes by default; trusted utilities marked `"integrated": true` in
 is marked `"plain": false`, which identifies desktop-only utilities.
 
 Standalone apps show a **ClackOS** link back to the desktop through
-`assets/js/app-home.js` and `app-bar.js`. App menus wrap and clamp dropdowns on
+`assets/js/app-home.js` and `app-bar.js`, and a **Theme** menu listing the
+palettes in `content/site.json`. **Open app in new tab** adds `?theme=` with the
+desktop's live theme, so the tab opens in the same palette; without it the page
+uses the desktop's saved theme in that browser, then the site default. Picking
+a theme from the menu changes that tab only (it rewrites `?theme=` so a reload
+keeps it) and never the desktop's own setting. Same-origin iframes inside the
+app (CircuitJS and the other vendored wrappers) are themed with it, as they
+are on the desktop. App menus wrap and clamp dropdowns on
 narrow screens. Video Lab and ClackMosh keep private menu styles, so update
 their CSS when changing this behavior.
 
