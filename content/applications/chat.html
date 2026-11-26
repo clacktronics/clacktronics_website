@@ -63,6 +63,32 @@
 .chat-compose textarea:focus-visible { outline: 2px solid var(--leaf); outline-offset: 1px; }
 .chat-compose .btn { padding: 7px 12px; display: inline-flex; align-items: center; gap: 6px; }
 .chat-compose .pixel-icon { width: 15px; height: 15px; }
+.chat-msg.out { opacity: 0.45; border-style: dashed; }
+
+/* ---- context meter and panel ---- */
+.chat-ctx {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 14px;
+  border: 0; border-top: 1px solid var(--paper-line); background: var(--paper-deep);
+  font: inherit; font-size: 10.5px; color: var(--sage); cursor: pointer; text-align: left;
+}
+.chat-ctx:hover .chat-ctx-text, .chat-ctx[aria-expanded="true"] .chat-ctx-text { color: var(--leaf-deep); }
+.chat-ctx:focus-visible { outline: 2px solid var(--leaf); outline-offset: -2px; }
+.chat-ctx-bar { flex: 0 0 72px; height: 7px; border: 1px solid var(--ink); border-radius: 4px; background: var(--paper); overflow: hidden; }
+.chat-ctx-bar > div { height: 100%; width: 0%; background: var(--leaf-deep); transition: width 0.2s; }
+.chat-ctx.warn .chat-ctx-bar > div { background: var(--warning); }
+.chat-ctx.full .chat-ctx-bar > div { background: var(--danger); }
+.chat-ctx-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-context { margin: 0 14px 10px; max-height: 45%; overflow-y: auto; font-size: 11px; line-height: 1.55; flex-shrink: 0; }
+.chat-context table { width: 100%; border-collapse: collapse; }
+.chat-context td { padding: 3px 0; vertical-align: top; border-top: 1px solid var(--paper-line); }
+.chat-context tr:first-child td { border-top: 0; }
+.chat-context td.who { width: 1%; padding-right: 10px; white-space: nowrap; font-size: 9.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--leaf-deep); }
+.chat-context td.text { color: var(--ink); word-break: break-word; }
+.chat-context td.n { width: 1%; padding-left: 10px; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; color: var(--sage); }
+.chat-context tr.out td { opacity: 0.5; text-decoration: line-through; }
+.chat-context tr.note td { color: var(--sage); font-style: italic; }
+.chat-context tr.total td { font-weight: 600; color: var(--ink); }
+.chat-context .chat-small { margin-top: 6px; }
 .chat-status { padding: 4px 14px 8px; background: var(--paper-deep); min-height: 22px; }
 .chat-about { margin: 10px 14px; }
 .chat-credit {
@@ -83,6 +109,7 @@
     <div class="rm"><button>Chat</button><div class="rm-dd">
       <button data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New Conversation</button>
       <button data-cmd="model" data-need="ready"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Change Model…</button>
+      <button data-cmd="context" data-need="ready"><span class="pixel-icon" data-icon="bulletlist" aria-hidden="true"></span>Show Context</button>
       <button data-cmd="stop" data-need="busy"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop Generating</button>
     </div></div>
     <div class="rm"><button>Help</button><div class="rm-dd">
@@ -134,6 +161,13 @@
       in your browser.
     </div>
 
+    <div class="app-panel chat-context" hidden></div>
+
+    <button class="chat-ctx" type="button" aria-expanded="false" title="Show what the model can see" hidden>
+      <span class="chat-ctx-bar" aria-hidden="true"><div></div></span>
+      <span class="chat-ctx-text"></span>
+    </button>
+
     <div class="chat-compose" hidden>
       <textarea rows="1" placeholder="Type a message…" aria-label="Message"></textarea>
       <button class="btn primary chat-send" title="Send (Enter)"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Send</button>
@@ -165,6 +199,10 @@ const picker = appRoot.querySelector('#chat-model');
 const pickInfo = appRoot.querySelector('.chat-pick-info');
 const creditModel = appRoot.querySelector('.chat-credit-model');
 const aboutModel = appRoot.querySelector('.chat-about-model');
+const ctxMeter = appRoot.querySelector('.chat-ctx');
+const ctxBar = ctxMeter.querySelector('.chat-ctx-bar > div');
+const ctxText = ctxMeter.querySelector('.chat-ctx-text');
+const ctxPanel = appRoot.querySelector('.chat-context');
 
 const SYSTEM_PROMPT = 'You are ClackChat, a small helpful assistant running locally ' +
   'inside ClackOS on the Clacktronics website. Keep answers short and friendly.';
@@ -227,15 +265,32 @@ let busy = false;
 let ready = false;
 let hasF16 = false;
 let model = MODELS[0];
-let history = [];             /* [{role, content}] excluding system prompt */
+let history = [];             /* [{role, content, el}] excluding system prompt */
 let currentBody = null;       /* streaming assistant .chat-body element */
 let currentMsg = null;
 let currentThink = null;
 let streamText = '';
 
+/* What the model can see. The worker counts with the model's own tokenizer
+ * and chat template, so these are real token figures rather than a
+ * characters-over-four guess. `dropped` is how many of the oldest history
+ * messages have been trimmed out to make room; once out they stay out, so
+ * the model's view of the conversation never jumps backwards. `genId` tags
+ * every request, so a late report from a reply that New Conversation
+ * abandoned cannot overwrite the fresh page's figures. */
+let ctx = { limit: 0, used: 0, parts: [] };
+let dropped = 0;
+let generating = 0;           /* tokens streamed so far in the current reply */
+let genId = 0;
+
 const say = t => { status.textContent = t; };
 const show = name => views.forEach(v => { v.hidden = v.dataset.view !== name; });
-const showCompose = on => { compose.hidden = !on; };
+const showCompose = on => {
+  compose.hidden = !on;
+  ctxMeter.hidden = !on;
+  if (!on) { ctxPanel.hidden = true; ctxMeter.setAttribute('aria-expanded', 'false'); }
+};
+const fmtN = n => n.toLocaleString('en-GB');
 
 if (store.get(LEGACY_DOWNLOADED_KEY)) store.set(downloadedKey(MODELS[0].key), '1');
 
@@ -359,10 +414,92 @@ function finishStream(finalAnswer) {
   currentMsg.el.classList.remove('busy');
   if (currentThink) { currentThink.open = false; currentThink.querySelector('summary').textContent = 'thought process'; }
   if (finalAnswer !== undefined && currentBody) currentBody.textContent = finalAnswer;
-  history.push({ role: 'assistant', content: currentBody ? currentBody.textContent : '' });
+  history.push({ role: 'assistant', content: currentBody ? currentBody.textContent : '', el: currentMsg.el });
   currentMsg = null; currentBody = null; currentThink = null; streamText = '';
   setBusy(false);
   say('Ready.');
+  recount();
+}
+
+/* ---- context ---- */
+const sent = () => [{ role: 'system', content: SYSTEM_PROMPT },
+  ...history.slice(dropped).map(({ role, content }) => ({ role, content }))];
+
+function recount() {
+  if (worker && ready) worker.postMessage({ type: 'count', id: genId, messages: sent() });
+}
+
+function renderMeter() {
+  const used = ctx.used + generating;
+  const { limit } = ctx;
+  const pct = limit ? Math.min(100, used / limit * 100) : 0;
+  ctxBar.style.width = pct.toFixed(1) + '%';
+  ctxMeter.classList.toggle('warn', pct >= 75 && pct < 95);
+  ctxMeter.classList.toggle('full', pct >= 95);
+  let t = limit
+    ? `Context ${fmtN(used)} / ${fmtN(limit)} tokens · ${fmtN(Math.max(0, limit - used))} left`
+    : `Context ${fmtN(used)} tokens`;
+  if (dropped) t += ` · ${dropped} older message${dropped === 1 ? '' : 's'} out of view`;
+  ctxText.textContent = t;
+  ctxMeter.title = limit
+    ? `${pct.toFixed(1)}% of ${model.name}'s context window in use. Click to see what it holds.`
+    : 'This model does not say how long its context is. Click to see what it holds.';
+}
+
+function cell(tr, cls, text) {
+  const td = document.createElement('td');
+  td.className = cls;
+  td.textContent = text;
+  tr.appendChild(td);
+}
+
+/* the system prompt, then every message — those trimmed out struck through
+ * and uncounted, since the model no longer sees them */
+function renderPanel() {
+  if (ctxPanel.hidden) return;
+  const table = document.createElement('table');
+  const row = (cls, who, text, n) => {
+    const tr = document.createElement('tr');
+    if (cls) tr.className = cls;
+    cell(tr, 'who', who); cell(tr, 'text', text); cell(tr, 'n', n);
+    table.appendChild(tr);
+  };
+  const clip = t => t.length > 160 ? t.slice(0, 157) + '…' : t;
+  row('', 'System', clip(SYSTEM_PROMPT), ctx.parts.length ? fmtN(ctx.parts[0]) : '');
+  history.forEach((m, i) => {
+    const out = i < dropped;
+    const n = out ? '—' : ctx.parts[i - dropped + 1];
+    row(out ? 'out' : '', m.role === 'user' ? 'You' : 'Reply', clip(m.content || '(empty)'), n == null ? '…' : typeof n === 'number' ? fmtN(n) : n);
+  });
+  if (busy) row('note', 'Reply', 'being written…', fmtN(generating));
+  const listed = ctx.parts.reduce((a, b) => a + b, 0);
+  if (ctx.used > listed) row('note', 'Format', 'role markers and turn separators from the chat template', fmtN(ctx.used - listed));
+  row('total', 'Total', ctx.limit ? `of ${fmtN(ctx.limit)} tokens` : '', fmtN(ctx.used + generating));
+  const note = document.createElement('p');
+  note.className = 'chat-small';
+  note.textContent = (ctx.limit
+    ? `${fmtN(Math.max(0, ctx.limit - ctx.used - generating))} tokens left in ${model.name}'s window. `
+    : '') +
+    'When the conversation gets too long to leave room for a reply, the oldest exchanges are dropped from what the model sees; they stay on screen, faded. A long context also takes more GPU memory and makes each reply slower to start.';
+  ctxPanel.replaceChildren(table, note);
+}
+
+function toggleContext(force) {
+  ctxPanel.hidden = force === undefined ? !ctxPanel.hidden : !force;
+  ctxMeter.setAttribute('aria-expanded', String(!ctxPanel.hidden));
+  renderPanel();
+}
+
+function applyContext(msg) {
+  if (msg.id !== genId) return;
+  if (msg.dropped) {
+    for (let i = dropped; i < dropped + msg.dropped && i < history.length; i++) history[i].el?.classList.add('out');
+    dropped += msg.dropped;
+  }
+  ctx = { limit: msg.limit, used: msg.used, parts: msg.parts };
+  generating = 0;
+  renderMeter();
+  renderPanel();
 }
 
 /* ---- worker wiring ---- */
@@ -400,22 +537,43 @@ function ensureWorker() {
         store.set(downloadedKey(model.key), '1');
         show('chat');
         showCompose(true);
+        ctx = { limit: msg.limit || 0, used: 0, parts: [] };
+        recount();
         if (!log.childElementCount) addMsg('assistant', `Hello! I'm ${model.name}, a little language model running right here on your GPU. What shall we talk about?`);
         say(`${model.name} ready — everything runs locally.`);
         setBusy(false);
         break;
+      case 'context': applyContext(msg); break;
       case 'token':
+        if (msg.id !== genId) break;
+        generating = msg.generated || 0;
+        renderMeter();
+        renderPanel();
         if (currentBody) { streamText += msg.text; renderStream(); }
         break;
       case 'done':
+        if (msg.id !== genId) break;
+        /* keep the reply's tokens on the meter until the recount lands */
+        generating = msg.generated || generating;
         finishStream(msg.text ? renderFinal(msg.text) : undefined);
         break;
       case 'error':
+        /* a message too long for the window would fail on every later send
+         * too, so it comes off the conversation, with its empty reply, and
+         * goes back into the text box */
+        if (msg.tooLong && msg.id === genId && history.at(-1)?.role === 'user') {
+          const refused = history.pop();
+          refused.el?.remove();
+          currentMsg?.el.remove();
+          input.value = refused.content;   /* handed back to be shortened */
+        }
         if (currentMsg) { currentMsg.el.classList.remove('busy'); }
         if (!ready) { show('gate'); say(''); loadingDetail.textContent = ''; }
         say('Error: ' + msg.message);
         setBusy(false);
         currentMsg = null; currentBody = null; currentThink = null; streamText = '';
+        generating = 0;
+        renderMeter();
         break;
     }
   };
@@ -449,6 +607,8 @@ function changeModel() {
   if (worker) { worker.terminate(); worker = null; }
   ready = false;
   history = [];
+  dropped = 0; generating = 0; genId++;
+  ctx = { limit: 0, used: 0, parts: [] };
   log.replaceChildren();
   currentMsg = null; currentBody = null; currentThink = null; streamText = '';
   setBusy(false);
@@ -463,24 +623,27 @@ function send() {
   if (!text || busy || !ready) return;
   input.value = '';
   input.style.height = 'auto';
-  addMsg('user', text);
-  history.push({ role: 'user', content: text });
+  const { el } = addMsg('user', text);
+  history.push({ role: 'user', content: text, el });
   currentMsg = addMsg('assistant', '');
   currentMsg.el.classList.add('busy');
   currentBody = currentMsg.body;
   streamText = '';
   setBusy(true);
   say('Thinking…');
-  worker.postMessage({ type: 'generate', messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history] });
+  generating = 0;
+  genId++;
+  worker.postMessage({ type: 'generate', id: genId, messages: sent() });
 }
 
 function newConversation() {
   if (busy) worker.postMessage({ type: 'interrupt' });
   history = [];
+  dropped = 0; generating = 0; genId++;
   log.replaceChildren();
   currentMsg = null; currentBody = null; currentThink = null; streamText = '';
   setBusy(false);
-  if (ready) { addMsg('assistant', 'Fresh page! What next?'); say('Ready.'); }
+  if (ready) { addMsg('assistant', 'Fresh page! What next?'); say('Ready.'); recount(); }
 }
 
 /* ---- UI events ---- */
@@ -514,11 +677,13 @@ appRoot.querySelector('.rm-bar').addEventListener('click', e => {
   switch (cmd.dataset.cmd) {
     case 'new': newConversation(); break;
     case 'model': changeModel(); break;
+    case 'context': toggleContext(); break;
     case 'stop': if (busy) { worker.postMessage({ type: 'interrupt' }); say('Stopping…'); } break;
     case 'about': aboutPanel.hidden = !aboutPanel.hidden; break;
   }
 });
 appRoot.addEventListener('click', closeRm);
+ctxMeter.addEventListener('click', () => toggleContext());
 appRoot.querySelector('[data-cmd="download"]').addEventListener('click', startLoad);
 
 if (appRoot !== document) appRoot.host.addEventListener('clackos-disconnect', () => {
