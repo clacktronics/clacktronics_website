@@ -498,7 +498,18 @@ OpenSCAD, Markdown windows, and desktop actions.
   leaves room for a full-length reply (1,024 tokens, or a quarter of a smaller
   window); dropped messages stay on screen, faded, and stay out of the model's
   view from then on. A single message too long for the window is refused and
-  handed back to the text box.
+  handed back to the text box, with any files it carried.
+
+  Files can be attached with the button beside the text box, Chat → Attach
+  Files…, drag and drop, or paste. Nothing is uploaded: the File API hands the
+  page the bytes and their text goes into the prompt, each file fenced and
+  named ahead of the question. Each chip shows the file's token count, and is
+  outlined red if it will not fit in what is left of the window. The models
+  are text-only, so anything that decodes as text is accepted (up to 2 MB),
+  images, audio, video and other binaries are refused with a reason, and PDFs
+  are turned into text page by page with the vendored MuPDF.js, imported only
+  when the first PDF is attached since its WebAssembly is 10 MB. A PDF with
+  no text layer — scanned pages — is refused rather than sent empty.
 - `applications/audiogen/index.html` — local text-to-audio workspace; prompts
   and WAV output stay in the browser. Five models share one interface: **Meta
   MusicGen Small** (music, 656 MB), **Google Magenta RealTime 2** (music,

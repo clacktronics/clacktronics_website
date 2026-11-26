@@ -166,6 +166,7 @@ self.onmessage = async e => {
     case 'load': await load(msg); break;
     case 'generate': await generate(msg); break;
     case 'count': count(msg); break;
+    case 'count-text': if (generator) postMessage({ type: 'text-count', key: msg.key, n: countText(msg.text) }); break;
     case 'interrupt': stopper.interrupt(); break;
   }
 };

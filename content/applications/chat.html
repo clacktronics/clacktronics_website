@@ -89,6 +89,30 @@
 .chat-context tr.note td { color: var(--sage); font-style: italic; }
 .chat-context tr.total td { font-weight: 600; color: var(--ink); }
 .chat-context .chat-small { margin-top: 6px; }
+/* ---- attachments ---- */
+.chat-files { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 0; background: var(--paper-deep); }
+.chat-file {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  border: 1px solid var(--ink); border-radius: 5px; background: var(--paper);
+  padding: 2px 4px 2px 8px; font-size: 10.5px; line-height: 1.5; color: var(--ink);
+}
+.chat-file .pixel-icon { width: 12px; height: 12px; flex: none; }
+.chat-file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.chat-file-n { color: var(--sage); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.chat-file.warn { border-color: var(--danger); }
+.chat-file.warn .chat-file-n { color: var(--danger); }
+.chat-file button { border: 0; background: none; padding: 0 2px; cursor: pointer; color: var(--sage); font: inherit; font-size: 13px; line-height: 1; }
+.chat-file button:hover { color: var(--ink); }
+.chat-msg .chat-files { padding: 0; margin-bottom: 5px; background: none; }
+.chat-msg .chat-file { background: var(--paper); }
+.chat-compose .chat-attach { padding: 7px 8px; }
+.app.dropping .app-main::after {
+  content: "Drop to attach — read here, never uploaded"; position: absolute; inset: 6px;
+  display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px;
+  border: 2px dashed var(--leaf-deep); border-radius: 8px; background: var(--paper);
+  opacity: 0.94; font-size: 12px; color: var(--leaf-deep); pointer-events: none; z-index: 5;
+}
+.app-main { position: relative; }
 .chat-status { padding: 4px 14px 8px; background: var(--paper-deep); min-height: 22px; }
 .chat-about { margin: 10px 14px; }
 .chat-credit {
@@ -109,6 +133,7 @@
     <div class="rm"><button>Chat</button><div class="rm-dd">
       <button data-cmd="new"><span class="pixel-icon" data-icon="file" aria-hidden="true"></span>New Conversation</button>
       <button data-cmd="model" data-need="ready"><span class="pixel-icon" data-icon="repeat" aria-hidden="true"></span>Change Model…</button>
+      <button data-cmd="attach" data-need="idle"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span>Attach Files…</button>
       <button data-cmd="context" data-need="ready"><span class="pixel-icon" data-icon="bulletlist" aria-hidden="true"></span>Show Context</button>
       <button data-cmd="stop" data-need="busy"><span class="pixel-icon" data-icon="square" aria-hidden="true"></span>Stop Generating</button>
     </div></div>
@@ -126,6 +151,8 @@
         downloaded, the conversation stays on your machine.</p>
         <p>The first start downloads the model's weights from the Hugging Face
         Hub. Your browser caches them, so later starts are quick.</p>
+        <p>You can attach text files, code and PDFs for it to read. They are
+        opened by your browser and go no further than the model on your GPU.</p>
       </div>
       <div class="chat-pick">
         <label class="app-lbl" for="chat-model">Model</label>
@@ -158,6 +185,7 @@
       <b>ClackChat</b> — local AI chat for ClackOS.<br>
       Model: <span class="chat-about-model"></span>. Runs via Transformers.js
       (Apache-2.0) on ONNX&nbsp;Runtime (MIT) with WebGPU. All inference happens
+      in your browser. Attached PDFs are read with MuPDF.js (AGPL-3.0), also
       in your browser.
     </div>
 
@@ -168,7 +196,10 @@
       <span class="chat-ctx-text"></span>
     </button>
 
+    <div class="chat-files chat-pending" hidden></div>
     <div class="chat-compose" hidden>
+      <button class="btn chat-attach" type="button" title="Attach text, code or PDF files — read here, never uploaded" aria-label="Attach files"><span class="pixel-icon" data-icon="upload" aria-hidden="true"></span></button>
+      <input type="file" class="chat-file-input" multiple hidden>
       <textarea rows="1" placeholder="Type a message…" aria-label="Message"></textarea>
       <button class="btn primary chat-send" title="Send (Enter)"><span class="pixel-icon" data-icon="arrow-right" aria-hidden="true"></span>Send</button>
     </div>
@@ -177,7 +208,9 @@
       Engine: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
       by Hugging Face, <a href="../../vendor/transformers/LICENSE" target="_blank">Apache-2.0</a> ·
       <a href="https://github.com/microsoft/onnxruntime" target="_blank" rel="noopener">ONNX&nbsp;Runtime</a>
-      by Microsoft, <a href="../../vendor/transformers/LICENSE-onnxruntime.txt" target="_blank">MIT</a>
+      by Microsoft, <a href="../../vendor/transformers/LICENSE-onnxruntime.txt" target="_blank">MIT</a> ·
+      PDF text: <a href="https://github.com/ArtifexSoftware/mupdf.js" target="_blank" rel="noopener">MuPDF.js</a>
+      by Artifex, <a href="../../vendor/mupdf/LICENSE-AGPL-3.0.txt" target="_blank">AGPL-3.0</a>
     </p>
   </div>
 </div>
@@ -203,6 +236,10 @@ const ctxMeter = appRoot.querySelector('.chat-ctx');
 const ctxBar = ctxMeter.querySelector('.chat-ctx-bar > div');
 const ctxText = ctxMeter.querySelector('.chat-ctx-text');
 const ctxPanel = appRoot.querySelector('.chat-context');
+const pendingBox = appRoot.querySelector('.chat-pending');
+const fileInput = compose.querySelector('.chat-file-input');
+const attachBtn = compose.querySelector('.chat-attach');
+const appEl = appRoot.querySelector('.app');
 
 const SYSTEM_PROMPT = 'You are ClackChat, a small helpful assistant running locally ' +
   'inside ClackOS on the Clacktronics website. Keep answers short and friendly.';
@@ -265,7 +302,7 @@ let busy = false;
 let ready = false;
 let hasF16 = false;
 let model = MODELS[0];
-let history = [];             /* [{role, content, el}] excluding system prompt */
+let history = [];             /* [{role, content, el, text?, files?}] excluding system prompt */
 let currentBody = null;       /* streaming assistant .chat-body element */
 let currentMsg = null;
 let currentThink = null;
@@ -283,11 +320,16 @@ let dropped = 0;
 let generating = 0;           /* tokens streamed so far in the current reply */
 let genId = 0;
 
+/* files waiting to go with the next message: { key, name, text, tokens } */
+let pending = [];
+let fileKey = 0;
+
 const say = t => { status.textContent = t; };
 const show = name => views.forEach(v => { v.hidden = v.dataset.view !== name; });
 const showCompose = on => {
   compose.hidden = !on;
   ctxMeter.hidden = !on;
+  pendingBox.hidden = !on || !pending.length;
   if (!on) { ctxPanel.hidden = true; ctxMeter.setAttribute('aria-expanded', 'false'); }
 };
 const fmtN = n => n.toLocaleString('en-GB');
@@ -354,7 +396,7 @@ picker.addEventListener('change', () => {
 function nearBottom() { return log.scrollHeight - log.scrollTop - log.clientHeight < 60; }
 function scrollDown(force) { if (force || nearBottom()) log.scrollTop = log.scrollHeight; }
 
-function addMsg(role, text) {
+function addMsg(role, text, files) {
   const el = document.createElement('div');
   el.className = 'chat-msg ' + role;
   const who = document.createElement('span');
@@ -363,7 +405,14 @@ function addMsg(role, text) {
   const body = document.createElement('div');
   body.className = 'chat-body';
   body.textContent = text;
-  el.append(who, body);
+  el.append(who);
+  if (files?.length) {
+    const box = document.createElement('div');
+    box.className = 'chat-files';
+    for (const f of files) box.appendChild(fileChip(f));
+    el.append(box);
+  }
+  el.append(body);
   log.appendChild(el);
   scrollDown(true);
   return { el, body };
@@ -406,6 +455,7 @@ function setBusy(on) {
   busy = on;
   sendBtn.disabled = on;
   input.disabled = on;
+  attachBtn.disabled = on;
   if (!on) input.focus();
 }
 
@@ -469,7 +519,8 @@ function renderPanel() {
   history.forEach((m, i) => {
     const out = i < dropped;
     const n = out ? '—' : ctx.parts[i - dropped + 1];
-    row(out ? 'out' : '', m.role === 'user' ? 'You' : 'Reply', clip(m.content || '(empty)'), n == null ? '…' : typeof n === 'number' ? fmtN(n) : n);
+    const label = m.files?.length ? `[${m.files.map(f => f.name).join(', ')}] ${m.text}` : m.content;
+    row(out ? 'out' : '', m.role === 'user' ? 'You' : 'Reply', clip(label.trim() || '(empty)'), n == null ? '…' : typeof n === 'number' ? fmtN(n) : n);
   });
   if (busy) row('note', 'Reply', 'being written…', fmtN(generating));
   const listed = ctx.parts.reduce((a, b) => a + b, 0);
@@ -500,7 +551,153 @@ function applyContext(msg) {
   generating = 0;
   renderMeter();
   renderPanel();
+  if (pending.length) renderPending();
 }
+
+/* ---- attachments ----
+ * "Upload" is the familiar word but nothing is uploaded: the File API hands
+ * the page the bytes, and the text goes into the prompt for the model on
+ * this machine. The models are text-only, so text is all a file can become —
+ * anything that decodes as text, and PDFs through MuPDF, which is loaded
+ * only the first time a PDF is attached since its WebAssembly is 10 MB. */
+const MAX_TEXT_BYTES = 2 * 1024 * 1024;   /* ~500k tokens: beyond every window offered */
+const MAX_PDF_BYTES = 100 * 1024 * 1024;
+const isPdf = f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+const fmtBytes = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+
+let mupdfLoad = null;
+async function pdfText(file) {
+  mupdfLoad ||= import(new URL('../../vendor/mupdf/mupdf.js', location.href).href);
+  let mupdf;
+  try { mupdf = await mupdfLoad; } catch (err) { mupdfLoad = null; throw err; }
+  const doc = mupdf.Document.openDocument(await file.arrayBuffer(), 'application/pdf');
+  try {
+    if (doc.needsPassword()) throw new Error(`${file.name} is password-protected.`);
+    const pages = [];
+    for (let i = 0, n = doc.countPages(); i < n; i++) {
+      const page = doc.loadPage(i);
+      try {
+        const st = page.toStructuredText();
+        try { pages.push(st.asText().trim()); } finally { st.destroy(); }
+      } finally { page.destroy(); }
+    }
+    const text = pages.map((t, i) => `--- page ${i + 1} ---\n${t}`).join('\n\n');
+    if (!pages.some(Boolean)) throw new Error(`${file.name} has no text layer — probably scanned pages, which these text-only models cannot read.`);
+    return text;
+  } finally { doc.destroy(); }
+}
+
+/* A NUL byte in the first 8 KB is the usual tell of a binary file; text in
+ * other encodings than UTF-8 still decodes, with the odd replacement mark. */
+async function readFile(file) {
+  if (isPdf(file)) {
+    if (file.size > MAX_PDF_BYTES) throw new Error(`${file.name} is ${fmtBytes(file.size)} — too big to open here.`);
+    return pdfText(file);
+  }
+  if (file.type.startsWith('image/') || file.type.startsWith('audio/') || file.type.startsWith('video/'))
+    throw new Error(`${file.name}: ClackChat's models read text only, so images, audio and video can't be attached.`);
+  if (file.size > MAX_TEXT_BYTES) throw new Error(`${file.name} is ${fmtBytes(file.size)} — far longer than any of these models can read.`);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (bytes.subarray(0, 8192).includes(0)) throw new Error(`${file.name} isn't a text file. ClackChat can read text, code and PDFs.`);
+  return new TextDecoder().decode(bytes).replace(/^\uFEFF/, '');
+}
+
+function fileChip(f, onRemove) {
+  const chip = document.createElement('span');
+  chip.className = 'chat-file';
+  chip.title = f.name;
+  const icon = document.createElement('span');
+  icon.className = 'pixel-icon';
+  icon.dataset.icon = 'file-text';
+  icon.setAttribute('aria-hidden', 'true');
+  const name = document.createElement('span');
+  name.className = 'chat-file-name';
+  name.textContent = f.name;
+  const n = document.createElement('span');
+  n.className = 'chat-file-n';
+  n.textContent = f.tokens == null ? (f.reading ? 'reading…' : 'counting…') : `${fmtN(f.tokens)} tokens`;
+  chip.append(icon, name, n);
+  const room = ctx.limit ? ctx.limit - ctx.used : Infinity;
+  if (onRemove && f.tokens != null && f.tokens > room) {
+    chip.classList.add('warn');
+    chip.title = `${f.name} — ${fmtN(f.tokens)} tokens, more than the ${fmtN(Math.max(0, room))} left in this conversation's context`;
+  }
+  if (onRemove) {
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.textContent = '×';
+    x.title = 'Remove ' + f.name;
+    x.setAttribute('aria-label', 'Remove ' + f.name);
+    x.addEventListener('click', e => { e.stopPropagation(); onRemove(); });
+    chip.append(x);
+  }
+  return chip;
+}
+
+function renderPending() {
+  pendingBox.replaceChildren(...pending.map(f =>
+    fileChip(f, () => { pending = pending.filter(p => p !== f); renderPending(); })));
+  pendingBox.hidden = compose.hidden || !pending.length;
+}
+
+async function attach(files) {
+  if (!ready || busy) return;
+  for (const file of files) {
+    const f = { key: ++fileKey, name: file.name || 'pasted text', text: null, tokens: null, reading: true };
+    pending.push(f);
+    renderPending();
+    try {
+      say(isPdf(file) && !mupdfLoad ? 'Loading the PDF reader…' : `Reading ${f.name}…`);
+      f.text = await readFile(file);
+      f.reading = false;
+      worker.postMessage({ type: 'count-text', key: f.key, text: f.text });
+      say(`Attached ${f.name} — it stays on this machine.`);
+    } catch (err) {
+      pending = pending.filter(p => p !== f);
+      say(String(err?.message || err));
+    }
+    renderPending();
+  }
+}
+
+/* Each file goes in front of the question, fenced and named, which small
+ * models follow better than a question followed by a wall of text. The fence
+ * is made longer than any run of backticks inside the file so a Markdown or
+ * code file cannot close it early. */
+function withFiles(text, files) {
+  if (!files.length) return text;
+  const blocks = files.map(f => {
+    const run = Math.max(2, ...(f.text.match(/`+/g) || []).map(m => m.length));
+    const fence = '`'.repeat(run + 1);
+    return `File: ${f.name}\n${fence}\n${f.text}\n${fence}`;
+  });
+  return blocks.join('\n\n') + '\n\n' + (text || (files.length > 1 ? 'Here are some files.' : 'Here is a file.'));
+}
+
+attachBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => { attach([...fileInput.files]); fileInput.value = ''; });
+input.addEventListener('paste', e => {
+  const files = [...(e.clipboardData?.files || [])];
+  if (files.length) { e.preventDefault(); attach(files); }
+});
+
+/* dragenter/leave fire for every child crossed, so count them */
+let dragDepth = 0;
+const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+appEl.addEventListener('dragenter', e => {
+  if (!hasFiles(e) || !ready || busy) return;
+  e.preventDefault();
+  if (dragDepth++ === 0) appEl.classList.add('dropping');
+});
+appEl.addEventListener('dragover', e => { if (hasFiles(e) && ready && !busy) e.preventDefault(); });
+appEl.addEventListener('dragleave', () => { if (dragDepth && --dragDepth === 0) appEl.classList.remove('dropping'); });
+appEl.addEventListener('drop', e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  dragDepth = 0;
+  appEl.classList.remove('dropping');
+  attach([...e.dataTransfer.files]);
+});
 
 /* ---- worker wiring ---- */
 function ensureWorker() {
@@ -544,6 +741,11 @@ function ensureWorker() {
         setBusy(false);
         break;
       case 'context': applyContext(msg); break;
+      case 'text-count': {
+        const f = pending.find(p => p.key === msg.key);
+        if (f) { f.tokens = msg.n; renderPending(); }
+        break;
+      }
       case 'token':
         if (msg.id !== genId) break;
         generating = msg.generated || 0;
@@ -560,12 +762,13 @@ function ensureWorker() {
       case 'error':
         /* a message too long for the window would fail on every later send
          * too, so it comes off the conversation, with its empty reply, and
-         * goes back into the text box */
+         * goes back into the text box, its files back beside it */
         if (msg.tooLong && msg.id === genId && history.at(-1)?.role === 'user') {
           const refused = history.pop();
           refused.el?.remove();
           currentMsg?.el.remove();
-          input.value = refused.content;   /* handed back to be shortened */
+          input.value = refused.text ?? refused.content;   /* handed back to be shortened */
+          if (refused.files?.length) { pending = refused.files; renderPending(); }
         }
         if (currentMsg) { currentMsg.el.classList.remove('busy'); }
         if (!ready) { show('gate'); say(''); loadingDetail.textContent = ''; }
@@ -609,6 +812,7 @@ function changeModel() {
   history = [];
   dropped = 0; generating = 0; genId++;
   ctx = { limit: 0, used: 0, parts: [] };
+  pending = []; renderPending();
   log.replaceChildren();
   currentMsg = null; currentBody = null; currentThink = null; streamText = '';
   setBusy(false);
@@ -620,11 +824,16 @@ function changeModel() {
 
 function send() {
   const text = input.value.trim();
-  if (!text || busy || !ready) return;
+  if (busy || !ready) return;
+  if (pending.some(f => f.reading)) { say('Still reading a file — one moment.'); return; }
+  const files = pending.filter(f => f.text != null);
+  if (!text && !files.length) return;
   input.value = '';
   input.style.height = 'auto';
-  const { el } = addMsg('user', text);
-  history.push({ role: 'user', content: text, el });
+  pending = [];
+  renderPending();
+  const { el } = addMsg('user', text, files);
+  history.push({ role: 'user', content: withFiles(text, files), el, text, files });
   currentMsg = addMsg('assistant', '');
   currentMsg.el.classList.add('busy');
   currentBody = currentMsg.body;
@@ -640,6 +849,7 @@ function newConversation() {
   if (busy) worker.postMessage({ type: 'interrupt' });
   history = [];
   dropped = 0; generating = 0; genId++;
+  pending = []; renderPending();
   log.replaceChildren();
   currentMsg = null; currentBody = null; currentThink = null; streamText = '';
   setBusy(false);
@@ -666,6 +876,7 @@ rms.forEach(m => {
     if (!was) {
       m.querySelectorAll('[data-need="busy"]').forEach(b => { b.disabled = !busy; });
       m.querySelectorAll('[data-need="ready"]').forEach(b => { b.disabled = !ready; });
+      m.querySelectorAll('[data-need="idle"]').forEach(b => { b.disabled = !ready || busy; });
       m.classList.add('open');
     }
   });
@@ -678,6 +889,7 @@ appRoot.querySelector('.rm-bar').addEventListener('click', e => {
     case 'new': newConversation(); break;
     case 'model': changeModel(); break;
     case 'context': toggleContext(); break;
+    case 'attach': fileInput.click(); break;
     case 'stop': if (busy) { worker.postMessage({ type: 'interrupt' }); say('Stopping…'); } break;
     case 'about': aboutPanel.hidden = !aboutPanel.hidden; break;
   }
